@@ -34,7 +34,7 @@
         <div>
             <div style="position:relative;border-radius:var(--radius);overflow:hidden;background:var(--bg-soft);border:1px solid var(--border);aspect-ratio:1">
                 @if ($firstImg)
-                    <img id="main-product-img" src="{{ $firstImg->url }}" alt="{{ $product->title }}" style="width:100%;height:100%;object-fit:cover">
+                    <img id="main-product-img" src="{{ $firstImg->url }}" alt="{{ $product->title }}" style="width:100%;height:100%;object-fit:cover" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $product->id }}&color={{ urlencode($shop->brand_color ?: '#10b981') }}'">
                 @else
                     <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-faint)">
                         <x-icon name="shopping-bag" size="48" />
@@ -196,7 +196,7 @@
                         <div class="product-img-wrap">
                             <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $rel->slug) }}">
                                 @if ($relImg)
-                                    <img src="{{ $relImg->thumbnail_url }}" alt="{{ $rel->title }}" loading="lazy">
+                                    <img src="{{ $relImg->thumbnail_url }}" alt="{{ $rel->title }}" loading="lazy" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $rel->id }}&color={{ urlencode($shop->brand_color ?: '#10b981') }}'">
                                 @else
                                     <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg-soft);color:var(--text-faint)">
                                         <x-icon name="shopping-bag" size="32" />

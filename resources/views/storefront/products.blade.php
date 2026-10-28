@@ -86,7 +86,7 @@
                     <div class="product-img-wrap">
                         <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $product->slug) }}">
                             @if ($firstImg)
-                                <img src="{{ $firstImg->thumbnail_url }}" alt="{{ $product->title }}" loading="lazy">
+                                <img src="{{ $firstImg->thumbnail_url }}" alt="{{ $product->title }}" loading="lazy" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $product->id }}&color={{ urlencode($shop->brand_color ?: '#10b981') }}'">
                             @else
                                 <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg-soft);color:var(--text-faint)">
                                     <x-icon name="shopping-bag" size="40" />

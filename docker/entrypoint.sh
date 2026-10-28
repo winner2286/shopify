@@ -48,10 +48,9 @@ chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /
 chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database 2>/dev/null || true
 
 # 5. Lien symbolique public/storage
-if [ ! -L /var/www/html/public/storage ]; then
-    echo "Création du lien symbolique public/storage..."
-    php artisan storage:link || true
-fi
+echo "Configuration du lien symbolique public/storage..."
+rm -rf /var/www/html/public/storage 2>/dev/null || true
+php artisan storage:link --force || ln -s /var/www/html/storage/app/public /var/www/html/public/storage || true
 
 # 6. Exécution des migrations de base de données
 if [ "$AUTO_MIGRATE" = "true" ] || [ "$1" = "start-web" ] || [ -n "$RENDER" ]; then

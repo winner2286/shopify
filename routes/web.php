@@ -159,3 +159,13 @@ Route::get('/api/keep-alive', function () {
     ]);
 })->name('api.keep-alive');
 
+// Restitution et secours persistant des médias (/storage/{path})
+Route::get('/storage/{path}', [\App\Http\Controllers\MediaController::class, 'serve'])
+    ->where('path', '.*')
+    ->name('media.serve');
+
+// API image de substitution dynamique
+Route::get('/api/placeholder-image', [\App\Http\Controllers\MediaController::class, 'placeholder'])
+    ->name('api.placeholder');
+
+

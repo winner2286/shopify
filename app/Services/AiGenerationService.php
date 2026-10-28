@@ -271,6 +271,7 @@ class AiGenerationService
                 'thumbnail_path' => $thumbPath,
                 'sort_order' => 0,
                 'size_bytes' => $sizeBytes,
+                'image_data' => $opt['image_data'] ?? null,
             ]);
 
             // Distribuer intelligemment dans les catégories créées

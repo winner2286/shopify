@@ -137,6 +137,7 @@ class ProductController extends Controller
                     'thumbnail_path' => $processed['thumbnail_path'],
                     'sort_order' => $sortOrder++,
                     'size_bytes' => $processed['size_bytes'],
+                    'image_data' => $processed['image_data'] ?? null,
                 ]);
             }
         }
@@ -215,6 +216,7 @@ class ProductController extends Controller
                     'thumbnail_path' => $processed['thumbnail_path'],
                     'sort_order' => $sortOrder++,
                     'size_bytes' => $processed['size_bytes'],
+                    'image_data' => $processed['image_data'] ?? null,
                 ]);
                 $currentCount++;
             }

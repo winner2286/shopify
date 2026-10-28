@@ -42,11 +42,13 @@ class ImageService
             // Fallback si l'extension GD est désactivée
             $filename = 'img_' . Str::random(20) . '.' . (pathinfo($filePath, PATHINFO_EXTENSION) ?: 'jpg');
             $fullPath = trim($directory, '/') . '/' . $filename;
-            Storage::disk('public')->put($fullPath, file_get_contents($filePath));
+            $content = file_get_contents($filePath);
+            Storage::disk('public')->put($fullPath, $content);
             return [
                 'path' => $fullPath,
                 'thumbnail_path' => null,
                 'size_bytes' => filesize($filePath),
+                'image_data' => base64_encode($content),
             ];
         }
 
@@ -55,11 +57,13 @@ class ImageService
         if (! $sourceImage) {
             $filename = 'img_' . Str::random(20) . '.' . (pathinfo($filePath, PATHINFO_EXTENSION) ?: 'jpg');
             $fullPath = trim($directory, '/') . '/' . $filename;
-            Storage::disk('public')->put($fullPath, file_get_contents($filePath));
+            $content = file_get_contents($filePath);
+            Storage::disk('public')->put($fullPath, $content);
             return [
                 'path' => $fullPath,
                 'thumbnail_path' => null,
                 'size_bytes' => filesize($filePath),
+                'image_data' => base64_encode($content),
             ];
         }
 
@@ -110,11 +114,14 @@ class ImageService
         imagedestroy($sourceImage);
 
         $fileSize = file_exists($diskPath) ? filesize($diskPath) : $originalSize;
+        $savedFile = file_exists($thumbDiskPath) ? $thumbDiskPath : (file_exists($diskPath) ? $diskPath : null);
+        $imageData = $savedFile ? base64_encode(file_get_contents($savedFile)) : null;
 
         return [
             'path' => $fullPath,
             'thumbnail_path' => $thumbFullPath,
             'size_bytes' => $fileSize,
+            'image_data' => $imageData,
         ];
     }
 
