@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Shop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -17,52 +20,73 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $shop = $request->user()->shop;
+        try {
+            $user = $request->user();
+            if (! $user) {
+                return redirect()->route('login');
+            }
 
-        $query = $shop->products()->with(['categories', 'primaryImage'])->latest('id');
+            $shop = $user->shop;
+            if (! $shop) {
+                $shop = Shop::firstOrCreate(['user_id' => $user->id], [
+                    'name' => 'Ma Boutique',
+                    'status' => Shop::DRAFT,
+                ]);
+            }
 
-        // Filtre par recherche textuelle (titre ou sku)
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
-            });
+            $query = $shop->products()->with(['categories', 'images'])->latest('id');
+
+            // Filtre par recherche textuelle (titre ou sku)
+            if ($search = $request->input('search')) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('sku', 'like', "%{$search}%");
+                });
+            }
+
+            // Filtre par statut (active, hidden, archived)
+            if ($status = $request->input('status')) {
+                $query->where('status', $status);
+            } else {
+                // Par défaut on exclut les archivés de la vue standard
+                $query->where('status', '!=', Product::STATUS_ARCHIVED);
+            }
+
+            // Filtre par catégorie
+            if ($categoryId = $request->input('category_id')) {
+                $query->whereHas('categories', function ($q) use ($categoryId) {
+                    $q->where('categories.id', $categoryId);
+                });
+            }
+
+            // Filtre stock bas / épuisé
+            if ($request->input('filter') === 'low_stock') {
+                $query->where('track_stock', true)
+                      ->where('stock', '>', 0)
+                      ->whereColumn('stock', '<=', 'low_stock_threshold');
+            } elseif ($request->input('filter') === 'out_of_stock') {
+                $query->where('track_stock', true)
+                      ->where('stock', '<=', 0);
+            }
+
+            $products = $query->paginate(20)->withQueryString();
+            $categories = $shop->categories()->get();
+
+            return view('products.index', compact('products', 'categories'));
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('Erreur catalogue produits: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            $categories = collect();
+            $products = (new LengthAwarePaginator([], 0, 20))->withPath(route('products.index'));
+            return view('products.index', compact('products', 'categories'))
+                ->with('error', 'Chargement du catalogue : ' . $e->getMessage());
         }
-
-        // Filtre par statut (active, hidden, archived)
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        } else {
-            // Par défaut on exclut les archivés de la vue standard
-            $query->where('status', '!=', Product::STATUS_ARCHIVED);
-        }
-
-        // Filtre par catégorie
-        if ($categoryId = $request->input('category_id')) {
-            $query->whereHas('categories', function ($q) use ($categoryId) {
-                $q->where('categories.id', $categoryId);
-            });
-        }
-
-        // Filtre stock bas / épuisé
-        if ($request->input('filter') === 'low_stock') {
-            $query->where('track_stock', true)
-                  ->where('stock', '>', 0)
-                  ->whereColumn('stock', '<=', 'low_stock_threshold');
-        } elseif ($request->input('filter') === 'out_of_stock') {
-            $query->where('track_stock', true)
-                  ->where('stock', '<=', 0);
-        }
-
-        $products = $query->paginate(20)->withQueryString();
-        $categories = $shop->categories()->get();
-
-        return view('products.index', compact('products', 'categories'));
     }
 
     public function create(Request $request)
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? Shop::firstOrCreate(['user_id' => $user->id], ['name' => 'Ma Boutique', 'status' => Shop::DRAFT]);
         $categories = $shop->categories()->get();
 
         return view('products.create', compact('categories'));
@@ -70,7 +94,8 @@ class ProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? Shop::firstOrCreate(['user_id' => $user->id], ['name' => 'Ma Boutique', 'status' => Shop::DRAFT]);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:120'],
@@ -147,7 +172,8 @@ class ProductController extends Controller
 
     public function edit(Request $request, Product $product)
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? Shop::firstOrCreate(['user_id' => $user->id], ['name' => 'Ma Boutique', 'status' => Shop::DRAFT]);
         $categories = $shop->categories()->get();
         $product->load(['categories', 'images', 'stockMovements.author']);
 
@@ -156,7 +182,8 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product): RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? Shop::firstOrCreate(['user_id' => $user->id], ['name' => 'Ma Boutique', 'status' => Shop::DRAFT]);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:120'],

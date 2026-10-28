@@ -52,7 +52,22 @@ class Product extends Model
 
     public function primaryImage(): HasOne
     {
-        return $this->hasOne(ProductImage::class)->ofMany('sort_order', 'min');
+        return $this->hasOne(ProductImage::class)->ofMany([
+            'sort_order' => 'min',
+            'id' => 'min',
+        ]);
+    }
+
+    public function getPrimaryImageAttribute(): ?ProductImage
+    {
+        if ($this->relationLoaded('primaryImage')) {
+            $img = $this->getRelation('primaryImage');
+            if ($img) return $img;
+        }
+        if ($this->relationLoaded('images')) {
+            return $this->images->first();
+        }
+        return $this->images()->first();
     }
 
     public function stockMovements(): HasMany
