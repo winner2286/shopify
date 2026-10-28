@@ -754,7 +754,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 
         <div class="growth-calc-slider-wrap">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
-                <span style="font-weight:600;font-size:1.05rem;color:#ffffff">Volume estimé de commandes par mois :</span>
+                <span class="growth-calc-slider-title">Volume estimé de commandes par mois :</span>
                 <span class="growth-calc-badge"><strong id="calc-orders-display">60</strong> commandes / mois</span>
             </div>
             <input type="range" id="growth-slider" min="10" max="300" step="5" value="60" class="growth-slider" aria-label="Nombre de commandes mensuelles">
