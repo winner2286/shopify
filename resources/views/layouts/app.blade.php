@@ -27,6 +27,7 @@
     @endauth
 </head>
 <body>
+    @include('partials.splash-screen')
     <div id="scroll-progress-bar" class="scroll-progress-bar" aria-hidden="true"></div>
     @guest
         <div class="top-announcement">
