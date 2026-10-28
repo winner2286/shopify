@@ -130,3 +130,21 @@ Route::prefix('b/{subdomain}')->group(function () {
     Route::get('/suivi', [\App\Http\Controllers\CheckoutController::class, 'tracking'])->name('storefront.tracking');
 });
 
+// Route d'initialisation et de vérification des migrations Render
+Route::get('/migrate-now', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'PlanSeeder', '--force' => true]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Migrations et plans initialisés avec succès.',
+            'output' => \Illuminate\Support\Facades\Artisan::output(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'file' => $e->getFile() . ':' . $e->getLine(),
+        ], 500);
+    }
+});

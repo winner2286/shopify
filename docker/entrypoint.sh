@@ -53,22 +53,10 @@ if [ ! -L /var/www/html/public/storage ]; then
     php artisan storage:link || true
 fi
 
-# 6. Attente et migrations de base de données
+# 6. Exécution des migrations de base de données
 if [ "$AUTO_MIGRATE" = "true" ] || [ "$1" = "start-web" ] || [ -n "$RENDER" ]; then
-    if [ -n "$DATABASE_URL" ] || [ "$DB_CONNECTION" = "pgsql" ]; then
-        echo "Vérification de la disponibilité de la base de données..."
-        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-            if php artisan migrate:status >/dev/null 2>&1; then
-                echo "Base de données connectée !"
-                break
-            fi
-            echo "En attente de la base de données ($i/15)..."
-            sleep 2
-        done
-    fi
-
     echo "Exécution des migrations de base de données..."
-    php artisan migrate --force || true
+    php artisan migrate --force --verbose || true
 
     echo "Initialisation des formules d'abonnement (PlanSeeder)..."
     php artisan db:seed --class=PlanSeeder --force || true
