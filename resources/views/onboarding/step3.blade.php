@@ -50,6 +50,17 @@
         <form method="POST" action="{{ route('onboarding.step3.store') }}" enctype="multipart/form-data" data-once>
             @csrf
 
+            <!-- Bannière Retouche & Ajustement automatique Studio -->
+            <div style="background:rgba(234, 88, 12, 0.08);border:1px solid rgba(234, 88, 12, 0.25);border-radius:12px;padding:.85rem 1rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:.75rem">
+                <div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg, #ea580c, #f97316);display:grid;place-items:center;color:#fff;flex-shrink:0">
+                    <x-icon name="sparkles" size="20" />
+                </div>
+                <div style="font-size:.88rem;line-height:1.35">
+                    <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés ✨</strong>
+                    <span style="color:var(--text-soft)">Prenez vos photos directement au téléphone : l'IA et le système équilibrent la lumière, renforcent la netteté et cadrent vos articles au format studio blanc.</span>
+                </div>
+            </div>
+
             <!-- Boutons d'action : Appareil photo & Galerie -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;margin-bottom:1.2rem">
                 <button type="button" id="btn-snap-camera" class="btn" style="background:linear-gradient(135deg, #ea580c, #f97316);color:#fff;border:none;display:flex;align-items:center;justify-content:center;gap:.7rem;padding:1.1rem 1.4rem;font-weight:600;font-size:1.05rem;border-radius:14px;box-shadow:0 6px 18px rgba(234, 88, 12, 0.35);cursor:pointer;transition:transform .15s, box-shadow .15s;">
@@ -220,6 +231,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    window.rotateOnboardingPhoto = function(index) {
+        if (index < 0 || index >= selectedFiles.length) return;
+        const file = selectedFiles[index];
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.height;
+            canvas.height = img.width;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            canvas.toBlob(function(blob) {
+                if (blob) {
+                    const rotatedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    });
+                    selectedFiles[index] = rotatedFile;
+                    syncMasterInput();
+                    renderPreviews();
+                }
+                URL.revokeObjectURL(url);
+            }, 'image/jpeg', 0.92);
+        };
+        img.src = url;
+    };
+
     function renderPreviews() {
         if (!previewGrid || !counterBadge) return;
         const count = selectedFiles.length;
@@ -238,31 +278,93 @@ document.addEventListener('DOMContentLoaded', function() {
             const item = document.createElement('div');
             item.className = 'gallery-item';
             item.style.position = 'relative';
+            item.style.background = '#ffffff';
+            item.style.padding = '5px';
+            item.style.boxSizing = 'border-box';
+            item.style.border = '1px solid rgba(255,255,255,0.15)';
+            item.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
 
             const img = document.createElement('img');
             img.src = URL.createObjectURL(file);
             img.alt = file.name;
+            img.style.objectFit = 'contain';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.borderRadius = '4px';
+            img.style.filter = 'contrast(1.05) brightness(1.02)';
             item.appendChild(img);
 
             const badge = document.createElement('span');
             badge.style.position = 'absolute';
             badge.style.bottom = '6px';
             badge.style.left = '6px';
-            badge.style.fontSize = '0.72rem';
+            badge.style.fontSize = '0.7rem';
             badge.style.fontWeight = '700';
-            badge.style.padding = '2px 7px';
-            badge.style.borderRadius = '5px';
+            badge.style.padding = '2px 6px';
+            badge.style.borderRadius = '4px';
             badge.style.background = idx === 0 ? 'rgba(234, 88, 12, 0.95)' : 'rgba(0, 0, 0, 0.75)';
             badge.style.color = '#fff';
             badge.textContent = idx === 0 ? '★ Photo 1' : '#' + (idx + 1);
             item.appendChild(badge);
 
+            const studioBadge = document.createElement('span');
+            studioBadge.style.position = 'absolute';
+            studioBadge.style.bottom = '6px';
+            studioBadge.style.right = '6px';
+            studioBadge.style.fontSize = '0.65rem';
+            studioBadge.style.fontWeight = '600';
+            studioBadge.style.padding = '2px 5px';
+            studioBadge.style.borderRadius = '4px';
+            studioBadge.style.background = 'rgba(16, 185, 129, 0.9)';
+            studioBadge.style.color = '#fff';
+            studioBadge.textContent = '✨ Studio';
+            studioBadge.style.zIndex = '2';
+            item.appendChild(studioBadge);
+
+            // Bouton rotation 90°
+            const rotBtn = document.createElement('button');
+            rotBtn.type = 'button';
+            rotBtn.title = 'Faire pivoter de 90°';
+            rotBtn.setAttribute('aria-label', 'Pivoter');
+            rotBtn.innerHTML = '↺';
+            rotBtn.style.position = 'absolute';
+            rotBtn.style.top = '6px';
+            rotBtn.style.left = '6px';
+            rotBtn.style.width = '26px';
+            rotBtn.style.height = '26px';
+            rotBtn.style.background = 'rgba(0, 0, 0, 0.75)';
+            rotBtn.style.border = '1px solid rgba(255, 255, 255, 0.25)';
+            rotBtn.style.color = '#fff';
+            rotBtn.style.borderRadius = '50%';
+            rotBtn.style.fontSize = '14px';
+            rotBtn.style.display = 'grid';
+            rotBtn.style.placeItems = 'center';
+            rotBtn.style.cursor = 'pointer';
+            rotBtn.style.zIndex = '3';
+            rotBtn.onclick = function(e) {
+                e.stopPropagation();
+                window.rotateOnboardingPhoto(idx);
+            };
+            item.appendChild(rotBtn);
+
             const delBtn = document.createElement('button');
             delBtn.type = 'button';
             delBtn.title = 'Supprimer cette photo';
+            delBtn.setAttribute('aria-label', 'Supprimer');
             delBtn.innerHTML = '×';
-            delBtn.style.fontSize = '18px';
+            delBtn.style.position = 'absolute';
+            delBtn.style.top = '6px';
+            delBtn.style.right = '6px';
+            delBtn.style.width = '26px';
+            delBtn.style.height = '26px';
+            delBtn.style.background = 'rgba(0, 0, 0, 0.75)';
+            delBtn.style.border = '1px solid rgba(255, 255, 255, 0.25)';
+            delBtn.style.color = '#fff';
+            delBtn.style.borderRadius = '50%';
+            delBtn.style.fontSize = '17px';
             delBtn.style.lineHeight = '1';
+            delBtn.style.cursor = 'pointer';
+            delBtn.style.zIndex = '3';
             delBtn.onclick = function(e) {
                 e.stopPropagation();
                 window.removeOnboardingPhoto(idx);

@@ -80,9 +80,20 @@
                                 <label style="font-weight:600;margin:0">Ajouter de nouvelles photos</label>
                                 <span id="photo-counter-badge" class="badge-status badge-hidden" style="font-size:.8rem;padding:.2rem .6rem">0 / {{ $remainingPhotos }} nouvelle(s) photo(s)</span>
                             </div>
-                            <p style="font-size:.85rem;color:var(--text-soft);margin-bottom:1rem">
+                            <p style="font-size:.85rem;color:var(--text-soft);margin-bottom:.8rem">
                                 Vous pouvez encore ajouter jusqu'à {{ $remainingPhotos }} photo(s).
                             </p>
+
+                            <!-- Bannière Retouche & Ajustement automatique Studio -->
+                            <div style="background:rgba(234, 88, 12, 0.08);border:1px solid rgba(234, 88, 12, 0.25);border-radius:10px;padding:.65rem .85rem;margin-bottom:1rem;display:flex;align-items:center;gap:.65rem">
+                                <div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg, #ea580c, #f97316);display:grid;place-items:center;color:#fff;flex-shrink:0">
+                                    <x-icon name="sparkles" size="16" />
+                                </div>
+                                <div style="font-size:.82rem;line-height:1.3">
+                                    <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés ✨</strong>
+                                    <span style="color:var(--text-soft)">Luminosité rééquilibrée, netteté renforcée et cadrage studio carré 1:1.</span>
+                                </div>
+                            </div>
 
                             <!-- Boutons d'action : Appareil photo & Galerie -->
                             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:.75rem;margin-bottom:1rem">
@@ -377,6 +388,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    window.rotateEditPhoto = function(index) {
+        if (index < 0 || index >= selectedFiles.length) return;
+        const file = selectedFiles[index];
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.height;
+            canvas.height = img.width;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(90 * Math.PI / 180);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            canvas.toBlob(function(blob) {
+                if (blob) {
+                    const rotatedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    });
+                    selectedFiles[index] = rotatedFile;
+                    syncMasterInput();
+                    renderPreviews();
+                }
+                URL.revokeObjectURL(url);
+            }, 'image/jpeg', 0.92);
+        };
+        img.src = url;
+    };
+
     function renderPreviews() {
         if (!previewGrid || !counterBadge) return;
 
@@ -400,31 +440,93 @@ document.addEventListener('DOMContentLoaded', function() {
             const item = document.createElement('div');
             item.className = 'gallery-item';
             item.style.position = 'relative';
+            item.style.background = '#ffffff';
+            item.style.padding = '5px';
+            item.style.boxSizing = 'border-box';
+            item.style.border = '1px solid rgba(255,255,255,0.15)';
+            item.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
 
             const img = document.createElement('img');
             img.src = URL.createObjectURL(file);
             img.alt = file.name;
+            img.style.objectFit = 'contain';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.borderRadius = '4px';
+            img.style.filter = 'contrast(1.05) brightness(1.02)';
             item.appendChild(img);
 
             const badge = document.createElement('span');
             badge.style.position = 'absolute';
             badge.style.bottom = '6px';
             badge.style.left = '6px';
-            badge.style.fontSize = '0.72rem';
+            badge.style.fontSize = '0.7rem';
             badge.style.fontWeight = '700';
-            badge.style.padding = '2px 7px';
-            badge.style.borderRadius = '5px';
+            badge.style.padding = '2px 6px';
+            badge.style.borderRadius = '4px';
             badge.style.background = 'rgba(234, 88, 12, 0.9)';
             badge.style.color = '#fff';
             badge.textContent = '+ Nouvelle';
             item.appendChild(badge);
 
+            const studioBadge = document.createElement('span');
+            studioBadge.style.position = 'absolute';
+            studioBadge.style.bottom = '6px';
+            studioBadge.style.right = '6px';
+            studioBadge.style.fontSize = '0.65rem';
+            studioBadge.style.fontWeight = '600';
+            studioBadge.style.padding = '2px 5px';
+            studioBadge.style.borderRadius = '4px';
+            studioBadge.style.background = 'rgba(16, 185, 129, 0.9)';
+            studioBadge.style.color = '#fff';
+            studioBadge.textContent = '✨ Studio';
+            studioBadge.style.zIndex = '2';
+            item.appendChild(studioBadge);
+
+            // Bouton rotation 90°
+            const rotBtn = document.createElement('button');
+            rotBtn.type = 'button';
+            rotBtn.title = 'Faire pivoter de 90°';
+            rotBtn.setAttribute('aria-label', 'Pivoter');
+            rotBtn.innerHTML = '↺';
+            rotBtn.style.position = 'absolute';
+            rotBtn.style.top = '6px';
+            rotBtn.style.left = '6px';
+            rotBtn.style.width = '26px';
+            rotBtn.style.height = '26px';
+            rotBtn.style.background = 'rgba(0, 0, 0, 0.75)';
+            rotBtn.style.border = '1px solid rgba(255, 255, 255, 0.25)';
+            rotBtn.style.color = '#fff';
+            rotBtn.style.borderRadius = '50%';
+            rotBtn.style.fontSize = '14px';
+            rotBtn.style.display = 'grid';
+            rotBtn.style.placeItems = 'center';
+            rotBtn.style.cursor = 'pointer';
+            rotBtn.style.zIndex = '3';
+            rotBtn.onclick = function(e) {
+                e.stopPropagation();
+                window.rotateEditPhoto(idx);
+            };
+            item.appendChild(rotBtn);
+
             const delBtn = document.createElement('button');
             delBtn.type = 'button';
             delBtn.title = 'Retirer cette photo';
+            delBtn.setAttribute('aria-label', 'Supprimer');
             delBtn.innerHTML = '×';
-            delBtn.style.fontSize = '18px';
+            delBtn.style.position = 'absolute';
+            delBtn.style.top = '6px';
+            delBtn.style.right = '6px';
+            delBtn.style.width = '26px';
+            delBtn.style.height = '26px';
+            delBtn.style.background = 'rgba(0, 0, 0, 0.75)';
+            delBtn.style.border = '1px solid rgba(255, 255, 255, 0.25)';
+            delBtn.style.color = '#fff';
+            delBtn.style.borderRadius = '50%';
+            delBtn.style.fontSize = '17px';
             delBtn.style.lineHeight = '1';
+            delBtn.style.cursor = 'pointer';
+            delBtn.style.zIndex = '3';
             delBtn.onclick = function(e) {
                 e.stopPropagation();
                 window.removeEditPhoto(idx);

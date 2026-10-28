@@ -67,17 +67,15 @@ class ImageService
             ];
         }
 
-        // Correction orientation EXIF (photos smartphone)
+        // 1. Correction orientation EXIF (photos smartphone)
         $sourceImage = $this->autoRotate($sourceImage, $filePath);
 
-        $origWidth = imagesx($sourceImage);
-        $origHeight = imagesy($sourceImage);
+        // 2. Retouche automatique IA & Studio : luminosité intelligente, contraste et netteté
+        $sourceImage = $this->enhancePhotoQuality($sourceImage);
 
-        // 1. Image principale standardisée (max 1200x1200px)
-        [$newWidth, $newHeight] = $this->calculateDimensions($origWidth, $origHeight, self::MAX_WIDTH, self::MAX_HEIGHT);
-        $mainImage = imagecreatetruecolor($newWidth, $newHeight);
-        $this->preserveTransparency($mainImage);
-        imagecopyresampled($mainImage, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+        // 3. Cadrage e-commerce studio carré (1:1) propre : centre le produit et évite les coupures
+        $targetSize = min(self::MAX_WIDTH, self::MAX_HEIGHT);
+        $mainImage = $this->formatStudioSquare($sourceImage, $targetSize);
 
         $filename = 'img_' . Str::random(20) . '.webp';
         $fullPath = trim($directory, '/') . '/' . $filename;
@@ -96,14 +94,13 @@ class ImageService
             $diskPath = Storage::disk('public')->path($fullPath);
             imagejpeg($mainImage, $diskPath, 85);
         }
-        imagedestroy($mainImage);
 
-        // 2. Miniature carrée optimisée (300x300 pour affichage fluide)
+        // 4. Miniature carrée optimisée (300x300 pour affichage fluide)
         $thumbFilename = 'thumb_' . $filename;
         $thumbFullPath = trim($directory, '/') . '/' . $thumbFilename;
         $thumbDiskPath = Storage::disk('public')->path($thumbFullPath);
 
-        $thumbImage = $this->createSquareThumbnail($sourceImage, self::THUMB_SIZE);
+        $thumbImage = $this->createSquareThumbnail($mainImage, self::THUMB_SIZE);
         if (function_exists('imagewebp')) {
             imagewebp($thumbImage, $thumbDiskPath, 80);
         } else {
@@ -111,6 +108,7 @@ class ImageService
         }
         imagedestroy($thumbImage);
 
+        imagedestroy($mainImage);
         imagedestroy($sourceImage);
 
         $fileSize = file_exists($diskPath) ? filesize($diskPath) : $originalSize;
@@ -246,5 +244,140 @@ class ImageService
         imagesavealpha($image, true);
         $transparent = imagecolorallocatealpha($image, 255, 255, 255, 127);
         imagefilledrectangle($image, 0, 0, imagesx($image), imagesy($image), $transparent);
+    }
+
+    /**
+     * Améliore automatiquement la luminosité, le contraste et la netteté
+     * pour rendre les photos de produits bien présentables et professionnelles.
+     */
+    public function enhancePhotoQuality($image)
+    {
+        if (! is_resource($image) && ! ($image instanceof \GdImage)) {
+            return $image;
+        }
+
+        try {
+            // 1. Analyse intelligente de la luminosité moyenne
+            $avgLuminance = $this->calculateAverageLuminance($image);
+
+            if (function_exists('imagefilter')) {
+                // Si la photo est sombre (prise en intérieur, boutique mal éclairée, ombres)
+                if ($avgLuminance < 118) {
+                    $boost = (int) round(min(22, max(6, (120 - $avgLuminance) * 0.35)));
+                    @imagefilter($image, IMG_FILTER_BRIGHTNESS, $boost);
+                } elseif ($avgLuminance > 225) {
+                    // Si légèrement surexposée / reflet trop fort
+                    @imagefilter($image, IMG_FILTER_BRIGHTNESS, -6);
+                }
+
+                // Amélioration du contraste (en GD, valeur négative = augmentation du contraste)
+                // -8 donne un contraste chaleureux et vibrant sans brûler les couleurs
+                @imagefilter($image, IMG_FILTER_CONTRAST, -8);
+            }
+
+            // 2. Renforcement de la netteté (élimine le micro-flou des photos smartphone prises à main levée)
+            if (function_exists('imageconvolution')) {
+                $sharpenMatrix = [
+                    [-0.15, -0.20, -0.15],
+                    [-0.20,  2.40, -0.20],
+                    [-0.15, -0.20, -0.15],
+                ];
+                @imageconvolution($image, $sharpenMatrix, 1.0, 0);
+            }
+        } catch (\Throwable $e) {
+            // Fail-safe : ne jamais bloquer l'upload en cas d'erreur de filtre
+        }
+
+        return $image;
+    }
+
+    /**
+     * Calcule la luminance perçue moyenne d'une image (0 = noir, 255 = blanc)
+     */
+    private function calculateAverageLuminance($image): float
+    {
+        $w = imagesx($image);
+        $h = imagesy($image);
+        if ($w <= 0 || $h <= 0) return 128.0;
+
+        // Échantillonnage rapide sur une miniature 30x30
+        $sampleW = min(30, $w);
+        $sampleH = min(30, $h);
+        $sample = imagecreatetruecolor($sampleW, $sampleH);
+        imagecopyresampled($sample, $image, 0, 0, 0, 0, $sampleW, $sampleH, $w, $h);
+
+        $totalLuminance = 0;
+        $pixelCount = $sampleW * $sampleH;
+
+        for ($x = 0; $x < $sampleW; $x++) {
+            for ($y = 0; $y < $sampleH; $y++) {
+                $rgb = imagecolorat($sample, $x, $y);
+                $r = ($rgb >> 16) & 0xFF;
+                $g = ($rgb >> 8) & 0xFF;
+                $b = $rgb & 0xFF;
+                // Formule standard de luminance perçue ITU-R BT.601
+                $totalLuminance += (0.299 * $r) + (0.587 * $g) + (0.114 * $b);
+            }
+        }
+
+        imagedestroy($sample);
+
+        return $pixelCount > 0 ? ($totalLuminance / $pixelCount) : 128.0;
+    }
+
+    /**
+     * Cadre la photo dans un carré Studio E-Commerce parfait (1:1)
+     * Évite que les vêtements ou chaussures en format portrait (3:4 ou 9:16) soient tronqués.
+     */
+    public function formatStudioSquare($source, int $targetSize = 1000)
+    {
+        $origW = imagesx($source);
+        $origH = imagesy($source);
+
+        $canvas = imagecreatetruecolor($targetSize, $targetSize);
+
+        // Détection de transparence
+        $hasAlpha = $this->hasTransparency($source);
+
+        if ($hasAlpha) {
+            $this->preserveTransparency($canvas);
+        } else {
+            // Fond studio blanc épuré pour e-commerce professionnel
+            $studioBg = imagecolorallocate($canvas, 255, 255, 255);
+            imagefilledrectangle($canvas, 0, 0, $targetSize, $targetSize, $studioBg);
+        }
+
+        // Marge de respiration studio (4% de chaque côté pour une présentation aérée)
+        $usableSize = (int) round($targetSize * 0.94);
+        $padding = (int) round(($targetSize - $usableSize) / 2);
+
+        // Calcul des dimensions proportionnelles pour entrer dans l'espace utile
+        $ratio = min($usableSize / $origW, $usableSize / $origH);
+        $newW = max(1, (int) round($origW * $ratio));
+        $newH = max(1, (int) round($origH * $ratio));
+
+        // Centrage parfait
+        $dstX = $padding + (int) round(($usableSize - $newW) / 2);
+        $dstY = $padding + (int) round(($usableSize - $newH) / 2);
+
+        imagecopyresampled($canvas, $source, $dstX, $dstY, 0, 0, $newW, $newH, $origW, $origH);
+
+        return $canvas;
+    }
+
+    private function hasTransparency($image): bool
+    {
+        if (! function_exists('imagecolorat')) return false;
+        $w = imagesx($image);
+        $h = imagesy($image);
+        $points = [[0, 0], [$w - 1, 0], [0, $h - 1], [$w - 1, $h - 1]];
+        foreach ($points as [$x, $y]) {
+            if ($x >= 0 && $y >= 0 && $x < $w && $y < $h) {
+                $color = imagecolorat($image, $x, $y);
+                $alpha = ($color >> 24) & 0x7F;
+                if ($alpha > 10) return true;
+            }
+        }
+        return false;
     }
 }
