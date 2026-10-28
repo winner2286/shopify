@@ -356,10 +356,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     observer.unobserve(entry.target);
                 }
             });
-        }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+        }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
 
         document.querySelectorAll('.reveal, .reveal-on-scroll, .product-card').forEach(function (el) {
-            observer.observe(el);
+            var rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight * 0.55 && rect.bottom > 0) {
+                el.classList.add('in-view');
+                el.classList.add('in');
+            } else {
+                observer.observe(el);
+            }
         });
     }
 });

@@ -993,5 +993,5 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         </div>
     </div>
 </footer>
-<script src="{{ asset('js/ascii-hero.js') }}" defer></script>
+<script src="{{ asset('js/ascii-hero.js') }}?v={{ file_exists(public_path('js/ascii-hero.js')) ? filemtime(public_path('js/ascii-hero.js')) : '1.1' }}" defer></script>
 @endsection

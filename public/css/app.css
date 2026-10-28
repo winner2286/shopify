@@ -567,7 +567,14 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 .live-orders-toast.fade-out { opacity: 0; transform: translateY(12px); }
 .live-orders-toast.fade-in { opacity: 1; transform: translateY(0); }
 @media (max-width: 640px) {
-  .live-orders-toast { display: none; }
+  .live-orders-toast {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    max-width: calc(100% - 24px);
+    font-size: 0.76rem;
+    padding: 0.45rem 0.8rem;
+  }
 }
 .live-pulse-indicator {
   width: 8px; height: 8px; border-radius: 50%; background: #f43f5e;

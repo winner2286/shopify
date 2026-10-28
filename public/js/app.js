@@ -102,20 +102,21 @@
         });
       }, {
         threshold: 0.08,
-        rootMargin: '0px 0px -40px 0px' // Déclenche avec anticipation naturelle
+        rootMargin: '0px 0px -30px 0px'
       });
 
       var initialInViewportIndex = 0;
       items.forEach(function (el) {
         var rect = el.getBoundingClientRect();
-        // Éléments déjà visibles à l'écran dès l'arrivée sur la page
-        if (rect.top < window.innerHeight && rect.bottom > 0) {
+        // Seuls les éléments situés dans la partie haute visible (Hero) démarrent immédiatement
+        if (rect.top < window.innerHeight * 0.55 && rect.bottom > 0) {
           setTimeout(function () {
             el.classList.add('in');
             el.classList.add('in-view');
           }, Math.min(initialInViewportIndex * 80, 400));
           initialInViewportIndex++;
         } else {
+          // Tous les éléments en dessous attendent que l'utilisateur défile vers eux
           io.observe(el);
         }
       });
@@ -226,7 +227,7 @@
             countObserver.unobserve(el);
           }
         });
-      }, { threshold: 0.3 });
+      }, { threshold: 0.15 });
 
       statNumbers.forEach(function (num) { countObserver.observe(num); });
     }
