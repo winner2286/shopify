@@ -1,0 +1,72 @@
+services:
+  # Service 1 : Application Laravel (PHP 8.4-FPM avec GD WebP)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boutiq_app
+    restart: unless-stopped
+    command: ["php-fpm"]
+    working_dir: /var/www/html
+    environment:
+      - AUTO_MIGRATE=${AUTO_MIGRATE:-true}
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/storage/framework/cache
+      - /var/www/html/storage/framework/sessions
+      - /var/www/html/storage/framework/views
+    networks:
+      - boutiq_network
+
+  # Service 2 : Serveur Web Nginx
+  web:
+    image: nginx:alpine
+    container_name: boutiq_web
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_APP_PORT:-8080}:80"
+    volumes:
+      - .:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - boutiq_network
+
+  # Service 3 : Serveur de mails de test (Mailpit)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: boutiq_mailpit
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_MAILPIT_PORT:-8026}:8025"
+      - "1026:1025"
+    networks:
+      - boutiq_network
+
+  # Service 4 (Optionnel) : Base MySQL 8.0 (activer avec: docker compose --profile mysql up -d)
+  mysql:
+    image: mysql:8.0
+    container_name: boutiq_mysql
+    restart: unless-stopped
+    profiles:
+      - mysql
+    environment:
+      MYSQL_DATABASE: boutiq
+      MYSQL_USER: boutiq_user
+      MYSQL_PASSWORD: secret_password
+      MYSQL_ROOT_PASSWORD: root_secret_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - boutiq_db_data:/var/lib/mysql
+    networks:
+      - boutiq_network
+
+networks:
+  boutiq_network:
+    driver: bridge
+
+volumes:
+  boutiq_db_data:
+    driver: local
