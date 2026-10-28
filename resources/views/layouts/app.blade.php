@@ -9,7 +9,8 @@
     <script>document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('theme','dark');}catch(e){}</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/brand/02_icone_application.jpg') }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <script src="{{ asset('js/app.js') }}" defer></script>
     @auth
@@ -28,9 +29,9 @@
     <header class="nav">
         <div class="container nav-inner">
             <div style="display:flex;align-items:center;gap:2rem">
-                <a href="{{ route('home') }}" class="logo" aria-label="Accueil {{ config('platform.name') }}">
-                    <span class="logo-mark" aria-hidden="true"><x-icon name="shop" :size="20" /></span>
-                    <span>{{ config('platform.name') }}</span>
+                <a href="{{ route('home') }}" class="logo" aria-label="Accueil {{ config('platform.name') }}" style="display:inline-flex;align-items:center;gap:.65rem;text-decoration:none">
+                    <img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:34px;width:34px;border-radius:9px;object-fit:cover;box-shadow:0 2px 10px rgba(255,45,109,0.35)">
+                    <span style="font-family:'Montserrat',var(--font-display),sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-0.02em;color:#fff">ZANIKA</span>
                 </a>
 
                 @guest

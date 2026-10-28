@@ -1,8 +1,12 @@
 <?php
 
 return [
-    // Nom provisoire : le nom définitif est un point ouvert du cahier des charges (section 18, n°1).
-    'name' => env('APP_NAME', 'Boutiq'),
+    // Nom officiel de la plateforme
+    'name' => env('APP_NAME', 'Zanika'),
+    'tagline' => 'Le commerce à votre manière.',
+    'brand_color' => '#FF2D6D',
+    'logo_path' => '/images/brand/01_logo_principal.jpg',
+    'icon_path' => '/images/brand/02_icone_application.jpg',
 
     // Pays proposés à l'inscription (Togo en premier : marché de lancement).
     'countries' => [
@@ -22,7 +26,7 @@ return [
     // Noms de sous-domaine interdits (RG-09).
     'reserved_subdomains' => [
         'admin', 'www', 'api', 'support', 'app', 'mail', 'help', 'blog', 'static', 'cdn',
-        'boutiq', 'shopify', 'billing', 'login', 'register', 'dashboard', 'auth', 'root',
+        'zanika', 'boutiq', 'shopify', 'billing', 'login', 'register', 'dashboard', 'auth', 'root',
         'test', 'dev', 'status', 'account', 'shop', 'store', 'cart', 'checkout', 'pay',
     ],
 ];

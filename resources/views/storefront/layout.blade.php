@@ -19,9 +19,10 @@
         <meta property="og:image" content="{{ url('/api/placeholder-image?title=' . urlencode($shop->name) . '&color=' . urlencode($shop->brand_color ?: '#10b981')) }}">
     @endif
 
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/brand/02_icone_application.jpg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <script src="{{ asset('js/storefront.js') }}" defer></script>
 
@@ -719,8 +720,10 @@
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.85rem;color:var(--text-faint)">
                 <div>© {{ date('Y') }} {{ $shop->name }}. Tous droits réservés.</div>
                 <div>
-                    <a href="{{ route('home') }}" style="color:var(--text-faint);display:inline-flex;align-items:center;gap:.3rem" target="_blank">
-                        <span>Propulsé par <strong style="color:var(--text)">Boutiq</strong></span>
+                    <a href="{{ route('home') }}" style="color:var(--text-faint);display:inline-flex;align-items:center;gap:.35rem" target="_blank">
+                        <span>Propulsé par</span>
+                        <img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:17px;width:17px;border-radius:4px;vertical-align:middle">
+                        <strong style="color:var(--text);font-family:'Montserrat',sans-serif">Zanika</strong>
                         <x-icon name="sparkles" :size="12" />
                     </a>
                 </div>

@@ -15,7 +15,7 @@
         <!-- Colonne gauche : Titre, Promesse de valeur, Formulaire email -->
         <div class="hero-content reveal">
             <span class="badge badge-ok floating-badge" style="margin-bottom:1.4rem">
-                <span class="braille-loader" title="Moteur Boutiq Core">⠋</span>
+                <span class="braille-loader" title="Moteur Zanika Core">⠋</span>
                 <span class="dot"></span>
                 <span>Plateforme e-commerce conçue pour l'Afrique</span>
             </span>
@@ -240,7 +240,7 @@
                         </div>
                     </div>
 
-                    <!-- VUE 4 : Mode ASCII & Braille Art (Moteur Cyber Boutiq) -->
+                    <!-- VUE 4 : Mode ASCII & Braille Art (Moteur Cyber Zanika) -->
                     <div id="view-ascii" class="mockup-view-panel">
                         <div class="mockup-ascii-box">
                             <div class="mockup-ascii-header">
@@ -343,7 +343,7 @@
 <section class="section container">
     <div class="section-head reveal">
         <span class="pillar-tag"><x-icon name="sparkles" :size="16" /> Démonstration interactive</span>
-        <h2>Testez l'assistant IA de Boutiq en direct</h2>
+        <h2>Testez l'assistant IA de Zanika en direct</h2>
         <p>Cliquez sur un exemple ou saisissez un produit : observez comment l'IA rédige votre argumentaire de vente et votre publicité WhatsApp en quelques secondes.</p>
     </div>
 
@@ -401,7 +401,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="section-head reveal">
         <span class="pillar-tag"><x-icon name="shop" :size="16" /> Tout pour votre commerce</span>
         <h2>Une seule plateforme pour tout gérer et vendre partout</h2>
-        <p>De la création de votre catalogue jusqu'à la livraison entre les mains de votre client, Boutiq rassemble tous les outils indispensables au succès de votre commerce.</p>
+        <p>De la création de votre catalogue jusqu'à la livraison entre les mains de votre client, Zanika rassemble tous les outils indispensables au succès de votre commerce.</p>
     </div>
 
     <!-- Pilier 1 : Boutique en ligne -->
@@ -643,14 +643,14 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 <section class="section container" id="temoignages">
     <div class="section-head reveal">
         <span class="pillar-tag"><x-icon name="users" :size="16" /> Témoignages marchands</span>
-        <h2>Ils développent leur entreprise avec Boutiq</h2>
+        <h2>Ils développent leur entreprise avec Zanika</h2>
         <p>Découvrez comment des entrepreneurs comme vous ont automatisé leurs ventes et multiplié leur chiffre d'affaires.</p>
     </div>
 
     <div class="grid grid-3">
         <div class="testimonial-card reveal">
             <blockquote class="testimonial-quote">
-                « Avant Boutiq, je perdais un temps fou chaque jour à renvoyer les prix et photos sur WhatsApp et à noter mes commandes sur un carnet. Aujourd'hui, tout est automatisé, mes clientes commandent en 2 minutes et je reçois les alertes T-Money en direct. Mes ventes ont fait un bond de 40% ! »
+                « Avant Zanika, je perdais un temps fou chaque jour à renvoyer les prix et photos sur WhatsApp et à noter mes commandes sur un carnet. Aujourd'hui, tout est automatisé, mes clientes commandent en 2 minutes et je reçois les alertes T-Money en direct. Mes ventes ont fait un bond de 40% ! »
             </blockquote>
             <div class="testimonial-author">
                 <div class="author-avatar">AK</div>
@@ -696,7 +696,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="growth-calc-widget reveal">
         <div class="growth-calc-head">
             <span class="pillar-tag"><x-icon name="chart" :size="16" /> Simulateur de rentabilité</span>
-            <h3>Estimez ce que Boutiq va vous rapporter chaque mois</h3>
+            <h3>Estimez ce que Zanika va vous rapporter chaque mois</h3>
             <p>Glissez le curseur selon votre volume de ventes estimé pour observer le temps gagné et les commandes supplémentaires débloquées.</p>
         </div>
 
@@ -831,7 +831,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="section-head reveal">
         <span class="pillar-tag"><x-icon name="info" :size="16" /> Support & Aide</span>
         <h2>Questions fréquemment posées</h2>
-        <p>Tout ce que vous devez savoir pour démarrer sereinement sur Boutiq.</p>
+        <p>Tout ce que vous devez savoir pour démarrer sereinement sur Zanika.</p>
     </div>
 
     <div class="faq-wrap">
