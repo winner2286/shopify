@@ -990,9 +990,9 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <div class="footer-grid-shopify">
             <!-- Colonne Marque -->
             <div>
-                <a href="{{ route('home') }}" class="logo" style="margin-bottom:1rem">
-                    <span class="logo-mark"><x-icon name="shop" :size="20" /></span>
-                    <span>{{ config('platform.name') }}</span>
+                <a href="{{ route('home') }}" class="logo" aria-label="Accueil {{ config('platform.name') }}" style="margin-bottom:1rem;display:inline-flex;align-items:center;gap:.65rem;text-decoration:none">
+                    <img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:34px;width:34px;border-radius:9px;object-fit:cover;box-shadow:0 2px 10px rgba(158,27,50,0.35)">
+                    <span class="logo-text" style="font-family:'Montserrat',var(--font-display),sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-0.02em;">ZANIKA</span>
                 </a>
                 <p style="font-size:.9rem;line-height:1.6;color:var(--text-soft);max-width:300px">
                     La plateforme de commerce tout-en-un des entreprises et entrepreneurs en Afrique de l'Ouest.
