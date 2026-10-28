@@ -6,7 +6,7 @@ return [
     'tagline' => 'Le commerce à votre manière.',
     'brand_color' => '#FF2D6D',
     'logo_path' => '/images/brand/01_logo_principal.jpg',
-    'icon_path' => '/images/brand/02_icone_application.jpg',
+    'icon_path' => '/images/brand/icon-512.png',
 
     // Pays proposés à l'inscription (Togo en premier : marché de lancement).
     'countries' => [
