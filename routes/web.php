@@ -148,3 +148,14 @@ Route::get('/migrate-now', function () {
         ], 500);
     }
 });
+
+// API Keep-Alive anti-mise en veille (Render / Uptime monitors)
+Route::get('/api/keep-alive', function () {
+    return response()->json([
+        'status' => 'alive',
+        'app' => config('platform.name', 'Boutiq'),
+        'environment' => app()->environment(),
+        'timestamp' => now()->toIso8601String(),
+    ]);
+})->name('api.keep-alive');
+

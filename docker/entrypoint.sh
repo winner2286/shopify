@@ -88,6 +88,18 @@ if [ "$1" = "start-web" ] || [ -z "$1" ] || [ -n "$PORT" -a "$1" != "php-fpm" ];
     echo "Démarrage de PHP-FPM 8.4..."
     php-fpm -D
 
+    # Démon de keep-alive en tâche de fond (envoie un ping toutes les 9 min pour empêcher la mise en veille)
+    if [ -n "$APP_URL" ] && [ "$APP_URL" != "http://localhost" ]; then
+        (
+            echo "Démon keep-alive anti-veille actif pour $APP_URL (ping toutes les 9 min)..."
+            sleep 45
+            while true; do
+                curl -s -m 15 -A "BoutiqKeepAliveBot/1.0" "$APP_URL/api/keep-alive" >/dev/null 2>&1 || true
+                sleep 540
+            done
+        ) &
+    fi
+
     echo "Boutiq est en ligne et écoute sur le port ${PORT_VALUE} !"
     exec nginx -g "daemon off;"
 fi

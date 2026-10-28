@@ -1,0 +1,22 @@
+name: Keep-Alive Render Bot
+
+on:
+  schedule:
+    # Exécution automatique toutes les 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-render:
+    name: Ping Boutiq Render App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Keep-Alive Ping
+        run: |
+          TARGET_URL="${{ secrets.RENDER_APP_URL }}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="https://boutiq-app.onrender.com"
+          fi
+          echo "Envoi d'un ping de maintien en vie vers : $TARGET_URL/api/keep-alive"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -m 25 -A "GitHubActionKeepAlive/1.0" "$TARGET_URL/api/keep-alive" || echo "000")
+          echo "Code réponse HTTP : $STATUS"
