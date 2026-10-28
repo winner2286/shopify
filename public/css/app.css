@@ -2190,3 +2190,258 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 .gallery-item button:hover {
   background: #ef4444;
 }
+
+/* ==========================================================================
+   OPTIMISATIONS MOBILE-FIRST UX (Ultra-clean, zéro fatigue de défilement)
+   Strictement scopé à max-width: 768px (Desktop 100% préservé)
+   ========================================================================== */
+
+@media (min-width: 769px) {
+  .mobile-pillars-nav,
+  .mobile-plan-nav,
+  .mobile-swipe-hint,
+  .mobile-sticky-cta {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* 1. HERO COMPACT & PERCUTANT */
+  .shopify-hero {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.75rem !important;
+  }
+  .shopify-hero-grid {
+    gap: 1.25rem !important;
+  }
+  .shopify-hero h1 {
+    font-size: clamp(1.8rem, 6.8vw, 2.2rem) !important;
+    line-height: 1.15 !important;
+    letter-spacing: -0.025em !important;
+    margin-bottom: 0.75rem !important;
+  }
+  .shopify-hero p.lead {
+    font-size: 0.92rem !important;
+    line-height: 1.45 !important;
+    margin-bottom: 1rem !important;
+    color: var(--text-soft) !important;
+  }
+  .hero-email-form {
+    margin-bottom: 0.75rem !important;
+  }
+  .hero-input-wrap {
+    padding: 3px !important;
+  }
+  .hero-trust-row {
+    font-size: 0.76rem !important;
+    gap: 0.4rem 0.8rem !important;
+    margin-top: 0.6rem !important;
+  }
+
+  /* Mockup Frame sur Mobile : compacté de 250px */
+  .hero-mockup-frame {
+    margin-top: 1rem !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  }
+  /* Masquer le graphique lourd 7 barres sur mobile pour soulager l'écran */
+  .sales-chart-wrap {
+    display: none !important;
+  }
+  /* Masquer le toast flottant qui cache les boutons sur mobile */
+  .live-orders-toast {
+    display: none !important;
+  }
+
+  /* 2. ESPACEMENTS DES SECTIONS */
+  .section {
+    padding-block: 2.2rem !important;
+  }
+  .section-head {
+    margin-bottom: 1.4rem !important;
+    text-align: center !important;
+  }
+  .section-head h2 {
+    font-size: clamp(1.45rem, 5.5vw, 1.8rem) !important;
+    line-height: 1.22 !important;
+  }
+  .section-head p {
+    font-size: 0.88rem !important;
+    line-height: 1.45 !important;
+  }
+
+  /* 3. SECTION SOLUTIONS : ONGLETS MOBILES PUNCHY (Économise 2000px de scroll) */
+  .mobile-pillars-nav {
+    display: flex !important;
+    gap: 0.45rem !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 0.2rem 0.2rem 0.8rem !important;
+    margin-bottom: 0.6rem !important;
+  }
+  .mobile-pillars-nav::-webkit-scrollbar {
+    display: none !important;
+  }
+  .mobile-pillar-tab {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+    padding: 0.5rem 0.85rem !important;
+    border-radius: 100px !important;
+    background: var(--bg-soft) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-soft) !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+  }
+  .mobile-pillar-tab.active {
+    background: rgba(255, 45, 109, 0.16) !important;
+    border-color: var(--brand-1) !important;
+    color: #fff !important;
+    box-shadow: 0 0 14px rgba(255, 45, 109, 0.25) !important;
+  }
+  .pillar-row {
+    display: none !important;
+    margin-bottom: 0 !important;
+  }
+  .pillar-row.mobile-active {
+    display: grid !important;
+    animation: mobilePillarFade 0.3s ease-out !important;
+  }
+  @keyframes mobilePillarFade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 4. SECTEUR D'ACTIVITÉ : DÉFILEMENT HORIZONTAL FLUIDE DES CHIPS */
+  .industry-nav-bar {
+    display: flex !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 0.45rem !important;
+    padding-bottom: 0.6rem !important;
+    flex-wrap: nowrap !important;
+  }
+  .industry-nav-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+  .industry-nav-btn {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    font-size: 0.82rem !important;
+    padding: 0.45rem 0.85rem !important;
+  }
+
+  /* 5. TÉMOIGNAGES MARCHANDS : CARROUSEL HORIZONTAL TACTILE AVEC SNAP */
+  #temoignages .grid-3 {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 0.85rem !important;
+    padding: 0.4rem 0.25rem 0.85rem !important;
+    scrollbar-width: none !important;
+  }
+  #temoignages .grid-3::-webkit-scrollbar {
+    display: none !important;
+  }
+  #temoignages .testimonial-card {
+    flex: 0 0 86% !important;
+    max-width: 86% !important;
+    min-width: 275px !important;
+    scroll-snap-align: center !important;
+    margin-bottom: 0 !important;
+    padding: 1.25rem !important;
+  }
+
+  /* 6. GRILLE TARIFAIRE : SÉLECTEUR & CARROUSEL SNAP HORIZONTAL */
+  .mobile-plan-nav {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+    margin-bottom: 0.8rem !important;
+  }
+  .mobile-plan-pill {
+    padding: 0.4rem 0.8rem !important;
+    border-radius: 100px !important;
+    background: var(--bg-soft) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-soft) !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+  }
+  .mobile-plan-pill.active {
+    background: rgba(255, 45, 109, 0.16) !important;
+    border-color: var(--brand-1) !important;
+    color: #fff !important;
+    box-shadow: 0 0 12px rgba(255, 45, 109, 0.25) !important;
+  }
+  .pricing-grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 0.85rem !important;
+    padding: 0.5rem 0.25rem 1.2rem !important;
+    scrollbar-width: none !important;
+    max-width: 100% !important;
+  }
+  .pricing-grid::-webkit-scrollbar {
+    display: none !important;
+  }
+  .pricing-grid .plan-shopify {
+    flex: 0 0 86% !important;
+    max-width: 86% !important;
+    min-width: 275px !important;
+    scroll-snap-align: center !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Indicateurs de glissement tactile (Swipe Hint) */
+  .mobile-swipe-hint {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    font-size: 0.74rem !important;
+    color: var(--text-faint) !important;
+    text-align: center !important;
+    margin-bottom: 0.4rem !important;
+  }
+
+  /* 7. BOUTON FLOTTANT D'ACTION RAPIDE (STICKY MOBILE CTA) */
+  .mobile-sticky-cta {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.8rem !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 9999 !important;
+    padding: 0.65rem 1rem calc(env(safe-area-inset-bottom, 12px) + 0.35rem) !important;
+    background: rgba(11, 13, 18, 0.94) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-top: 1px solid rgba(255, 45, 109, 0.25) !important;
+    box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.55) !important;
+    transform: translateY(100%) !important;
+    -webkit-transform: translateY(100%) !important;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    -webkit-transition: -webkit-transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    pointer-events: none !important;
+  }
+  .mobile-sticky-cta.visible {
+    transform: translateY(0) !important;
+    -webkit-transform: translateY(0) !important;
+    pointer-events: auto !important;
+  }
+}

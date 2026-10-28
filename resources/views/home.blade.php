@@ -404,8 +404,28 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <p>De la création de votre catalogue jusqu'à la livraison entre les mains de votre client, Zanika rassemble tous les outils indispensables au succès de votre commerce.</p>
     </div>
 
+    <!-- Sélecteur d'onglets tactile pour mobile (Économise 2000px de scroll) -->
+    <div class="mobile-pillars-nav" id="mobile-pillars-nav">
+        <button type="button" class="mobile-pillar-tab active" data-pillar-idx="0">
+            <x-icon name="laptop" :size="15" />
+            <span>01. Boutique</span>
+        </button>
+        <button type="button" class="mobile-pillar-tab" data-pillar-idx="1">
+            <x-icon name="whatsapp" :size="15" />
+            <span>02. WhatsApp</span>
+        </button>
+        <button type="button" class="mobile-pillar-tab" data-pillar-idx="2">
+            <x-icon name="credit-card" :size="15" />
+            <span>03. Paiements</span>
+        </button>
+        <button type="button" class="mobile-pillar-tab" data-pillar-idx="3">
+            <x-icon name="sparkles" :size="15" />
+            <span>04. IA Studio</span>
+        </button>
+    </div>
+
     <!-- Pilier 1 : Boutique en ligne -->
-    <div class="pillar-row reveal" id="fonctionnalites">
+    <div class="pillar-row mobile-active reveal" id="fonctionnalites" data-pillar-row="0">
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="laptop" :size="16" /> 01. Boutique Web & Mobile</div>
             <h3>Créez votre boutique en ligne sans aucune compétence technique</h3>
@@ -447,7 +467,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     </div>
 
     <!-- Pilier 2 : WhatsApp & Vente Omnicanale -->
-    <div class="pillar-row reversed reveal">
+    <div class="pillar-row reversed reveal" data-pillar-row="1">
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="whatsapp" :size="16" /> 02. Vente Omnicanale</div>
             <h3>Vendez là où vos clients passent leur temps : WhatsApp, TikTok, Réseaux Sociaux</h3>
@@ -482,7 +502,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     </div>
 
     <!-- Pilier 3 : Paiements & Livraisons intégrés -->
-    <div class="pillar-row reveal">
+    <div class="pillar-row reveal" data-pillar-row="2">
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="credit-card" :size="16" /> 03. Paiements & Logistique</div>
             <h3>Encaissez par T-Money, Flooz et livrez sans tracas partout au Togo</h3>
@@ -531,7 +551,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     </div>
 
     <!-- Pilier 4 : Intelligence Artificielle & Marketing -->
-    <div class="pillar-row reversed reveal">
+    <div class="pillar-row reversed reveal" data-pillar-row="3">
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="sparkles" :size="16" /> 04. Intelligence Artificielle</div>
             <h3>L'intelligence artificielle qui rédige vos fiches et conçoit vos publicités</h3>
@@ -647,6 +667,10 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <p>Découvrez comment des entrepreneurs comme vous ont automatisé leurs ventes et multiplié leur chiffre d'affaires.</p>
     </div>
 
+    <div class="mobile-swipe-hint">
+        <span>← Glissez pour voir les retours d'expérience marchands →</span>
+    </div>
+
     <div class="grid grid-3">
         <div class="testimonial-card reveal">
             <blockquote class="testimonial-quote">
@@ -757,6 +781,16 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                 <button id="btn-billing-yearly" type="button" class="billing-toggle-btn">Facturation Annuelle</button>
             </div>
             <span class="billing-discount-badge">-20% d'économie</span>
+        </div>
+
+        <!-- Sélecteur de formules pour mobile (Accès direct en 1 clic) -->
+        <div class="mobile-plan-nav" id="mobile-plan-nav">
+            <button type="button" class="mobile-plan-pill" data-plan-idx="0">Starter</button>
+            <button type="button" class="mobile-plan-pill active" data-plan-idx="1">⭐ Pro (Recommandé)</button>
+            <button type="button" class="mobile-plan-pill" data-plan-idx="2">Business</button>
+        </div>
+        <div class="mobile-swipe-hint">
+            <span>← Glissez pour comparer les 3 formules →</span>
         </div>
 
         <div class="pricing-grid">
@@ -993,5 +1027,83 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         </div>
     </div>
 </footer>
+
+<!-- Bouton d'action rapide flottant sur mobile (Sticky CTA) -->
+<div id="mobile-sticky-cta" class="mobile-sticky-cta" aria-hidden="true">
+    <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:0.88rem;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zanika • E-commerce</div>
+        <div style="font-size:0.72rem;color:var(--text-soft)">14 jours d'essai gratuit • Prêt en 3 min</div>
+    </div>
+    <a href="{{ route('register') }}" class="btn btn-primary btn-sm" style="font-weight:700;padding:0.48rem 1rem;white-space:nowrap;box-shadow:0 0 16px rgba(255,45,109,0.4)">
+        Démarrer →
+    </a>
+</div>
+
+<!-- Script d'interaction Mobile-First (Tabs, Carrousels & Sticky CTA) -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Commutateur d'onglets Piliers sur mobile
+        var pillarTabs = document.querySelectorAll('.mobile-pillar-tab');
+        var pillarRows = document.querySelectorAll('[data-pillar-row]');
+        pillarTabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                var idx = this.getAttribute('data-pillar-idx');
+                pillarTabs.forEach(function (t) { t.classList.remove('active'); });
+                this.classList.add('active');
+                pillarRows.forEach(function (row) {
+                    if (row.getAttribute('data-pillar-row') === idx) {
+                        row.classList.add('mobile-active');
+                    } else {
+                        row.classList.remove('mobile-active');
+                    }
+                });
+            });
+        });
+
+        // 2. Commutateur de formules Tarifs sur mobile
+        var planPills = document.querySelectorAll('.mobile-plan-pill');
+        var planCards = document.querySelectorAll('.pricing-grid .plan-shopify');
+        var pricingGrid = document.querySelector('.pricing-grid');
+        planPills.forEach(function (pill) {
+            pill.addEventListener('click', function () {
+                var idx = parseInt(this.getAttribute('data-plan-idx'), 10);
+                planPills.forEach(function (p) { p.classList.remove('active'); });
+                this.classList.add('active');
+                if (planCards[idx]) {
+                    planCards[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }
+            });
+        });
+
+        // Détecter le défilement horizontal des tarifs pour synchroniser les pilules
+        if (pricingGrid && 'IntersectionObserver' in window) {
+            var planObserver = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                        var card = entry.target;
+                        var idx = Array.prototype.indexOf.call(planCards, card);
+                        if (idx !== -1 && planPills[idx]) {
+                            planPills.forEach(function (p) { p.classList.remove('active'); });
+                            planPills[idx].classList.add('active');
+                        }
+                    }
+                });
+            }, { root: pricingGrid, threshold: 0.5 });
+            planCards.forEach(function (c) { planObserver.observe(c); });
+        }
+
+        // 3. Barre flottante Sticky CTA sur mobile
+        var stickyCta = document.getElementById('mobile-sticky-cta');
+        if (stickyCta) {
+            window.addEventListener('scroll', function () {
+                if (window.scrollY > 420) {
+                    stickyCta.classList.add('visible');
+                } else {
+                    stickyCta.classList.remove('visible');
+                }
+            }, { passive: true });
+        }
+    });
+</script>
 <script src="{{ asset('js/ascii-hero.js') }}?v={{ file_exists(public_path('js/ascii-hero.js')) ? filemtime(public_path('js/ascii-hero.js')) : '1.1' }}" defer></script>
 @endsection
