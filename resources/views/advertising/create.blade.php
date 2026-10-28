@@ -8,7 +8,7 @@
         <div>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
                 <span class="svg-icon" style="color:var(--brand-2)"><x-icon name="ads" :size="24" /></span>
-                <h1 style="font-size:1.8rem;margin:0">Assistant Publicitaire IA (Module H)</h1>
+                <h1 style="font-size:1.8rem;margin:0">Assistant Publicitaire IA</h1>
             </div>
             <p style="margin:0;color:var(--text-soft)">Générez en quelques secondes des textes captivants pour vos statuts WhatsApp, TikTok et SMS.</p>
         </div>
@@ -104,7 +104,7 @@
             </div>
 
             <!-- Objectif & Ton -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:1.2rem;margin-bottom:1.5rem">
                 <div>
                     <label for="objective" class="label">Objectif commercial *</label>
                     <select id="objective" name="objective" class="input">
@@ -141,14 +141,61 @@
                 </div>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;gap:1rem">
+            <div class="ad-submit-actions">
                 <a href="{{ route('dashboard') }}" class="btn btn-ghost">Annuler</a>
-                <button type="submit" class="btn btn-primary" style="font-size:1.05rem;padding:.8rem 1.8rem;display:inline-flex;align-items:center;gap:.5rem">
+                <button type="submit" class="btn btn-primary btn-submit-ad">
                     <x-icon name="sparkles" :size="18" />
-                    <span>Générer ma publicité & mes scripts vidéo</span>
+                    <span class="btn-full-text">Générer ma publicité & mes scripts vidéo</span>
+                    <span class="btn-short-text">Générer la publicité</span>
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<style>
+    .ad-submit-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .btn-submit-ad {
+        font-size: 1.05rem;
+        padding: .8rem 1.8rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        white-space: nowrap;
+    }
+    .btn-submit-ad .btn-short-text {
+        display: none;
+    }
+
+    @media (max-width: 640px) {
+        .ad-submit-actions {
+            flex-direction: column-reverse;
+            gap: .75rem;
+            width: 100%;
+        }
+        .ad-submit-actions .btn {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+            padding: .85rem 1rem;
+        }
+        .btn-submit-ad {
+            font-size: 1rem;
+            white-space: normal;
+        }
+        .btn-submit-ad .btn-full-text {
+            display: none;
+        }
+        .btn-submit-ad .btn-short-text {
+            display: inline;
+        }
+    }
+</style>
 @endsection
