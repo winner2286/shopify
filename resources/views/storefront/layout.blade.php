@@ -7,6 +7,18 @@
     <meta name="description" content="@yield('description', $shop->description ?: 'Découvrez notre sélection d\'articles de qualité sur notre boutique en ligne. Livraison rapide et paiement sécurisé.')">
     <meta name="theme-color" content="{{ $shop->brand_color ?: '#6d3df2' }}">
 
+    <!-- Balises Open Graph pour WhatsApp, Facebook & Réseaux sociaux -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:site_name" content="{{ $shop->name }}">
+    <meta property="og:title" content="@yield('title', $shop->name . ' : Boutique officielle')">
+    <meta property="og:description" content="@yield('description', $shop->description ?: 'Découvrez notre sélection de produits sur notre boutique en ligne. Livraison rapide et paiement sécurisé.')">
+    @if ($shop->logo_path)
+        <meta property="og:image" content="{{ asset($shop->logo_path) }}">
+    @else
+        <meta property="og:image" content="{{ url('/api/placeholder-image?title=' . urlencode($shop->name) . '&color=' . urlencode($shop->brand_color ?: '#10b981')) }}">
+    @endif
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
