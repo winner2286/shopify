@@ -191,6 +191,7 @@
                         data-product-description="{{ e($rel->description) }}"
                         data-product-category="{{ $relCat }}"
                         data-product-url="{{ url('/b/' . $shop->subdomain . '/produits/' . $rel->slug) }}"
+                        data-product-color="{{ $shop->brand_color ?: '#10b981' }}"
                         data-product-images='@json($rel->images->map(fn($i) => ["url" => $i->url, "thumb" => $i->thumbnail_url]))'
                     >
                         <div class="product-img-wrap">

@@ -39,7 +39,16 @@ class MediaController extends Controller
             if ($binary) {
                 @mkdir(dirname($diskPath), 0755, true);
                 @file_put_contents($diskPath, $binary);
-                return response()->file($diskPath, [
+                if (file_exists($diskPath) && filesize($diskPath) > 0) {
+                    return response()->file($diskPath, [
+                        'Cache-Control' => 'public, max-age=2592000',
+                    ]);
+                }
+                // Si l'écriture sur disque est restreinte, servir directement depuis la mémoire
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $mimeType = $finfo->buffer($binary) ?: 'image/webp';
+                return response($binary, 200, [
+                    'Content-Type' => $mimeType,
                     'Cache-Control' => 'public, max-age=2592000',
                 ]);
             }

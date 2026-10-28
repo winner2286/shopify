@@ -254,8 +254,14 @@ document.addEventListener('DOMContentLoaded', function () {
             mOldPrice.style.display = oldPrice ? 'inline' : 'none';
         }
         if (mDiscount) {
-            mDiscount.textContent = discount ? '-' + discount + '% ÉCONOMIE' : '';
-            mDiscount.style.display = discount ? 'inline-block' : 'none';
+            const dVal = parseInt(discount, 10);
+            if (!isNaN(dVal) && dVal > 0) {
+                mDiscount.textContent = '-' + dVal + '% ÉCONOMIE';
+                mDiscount.style.display = 'inline-block';
+            } else {
+                mDiscount.textContent = '';
+                mDiscount.style.display = 'none';
+            }
         }
         if (mDesc) mDesc.textContent = desc;
         if (mCategory) {
@@ -274,15 +280,28 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Galerie photos
+        // Galerie photos & Fallback robuste anti-[?]
         let images = [];
         try {
             if (imagesRaw) images = JSON.parse(imagesRaw);
         } catch (e) {}
 
-        if (images.length > 0 && mMainImg) {
-            mMainImg.src = images[0].url;
-            mMainImg.style.display = 'block';
+        const brandColor = card.getAttribute('data-product-color') || '#10b981';
+        const fallbackPlaceholder = '/api/placeholder-image?id=' + encodeURIComponent(productId) + '&color=' + encodeURIComponent(brandColor);
+
+        if (mMainImg) {
+            mMainImg.onerror = function () {
+                this.onerror = null;
+                this.src = fallbackPlaceholder;
+            };
+
+            if (images.length > 0 && images[0] && images[0].url) {
+                mMainImg.src = images[0].url;
+                mMainImg.style.display = 'block';
+            } else {
+                mMainImg.src = fallbackPlaceholder;
+                mMainImg.style.display = 'block';
+            }
 
             if (mThumbs) {
                 mThumbs.innerHTML = '';
@@ -291,9 +310,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         const thumbBtn = document.createElement('button');
                         thumbBtn.type = 'button';
                         thumbBtn.className = 'qv-thumb-btn' + (idx === 0 ? ' active' : '');
-                        thumbBtn.innerHTML = '<img src="' + (imgObj.thumb || imgObj.url) + '" alt="">';
+                        const thumbUrl = imgObj.thumb || imgObj.url || fallbackPlaceholder;
+                        thumbBtn.innerHTML = '<img src="' + thumbUrl + '" alt="" onerror="this.onerror=null; this.src=\'' + fallbackPlaceholder + '\';">';
                         thumbBtn.addEventListener('click', function () {
-                            mMainImg.src = imgObj.url;
+                            mMainImg.src = imgObj.url || fallbackPlaceholder;
                             mThumbs.querySelectorAll('.qv-thumb-btn').forEach(function (b) { b.classList.remove('active'); });
                             thumbBtn.classList.add('active');
                         });
@@ -304,9 +324,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     mThumbs.style.display = 'none';
                 }
             }
-        } else if (mMainImg) {
-            mMainImg.style.display = 'none';
-            if (mThumbs) mThumbs.style.display = 'none';
         }
 
         qvModal.classList.add('open');

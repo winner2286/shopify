@@ -131,6 +131,7 @@
                     data-product-categories="{{ $categoriesList }}"
                     data-product-url="{{ url('/b/' . $shop->subdomain . '/produits/' . $product->slug) }}"
                     data-product-wa="{{ $waProductUrl }}"
+                    data-product-color="{{ $shop->brand_color ?: '#10b981' }}"
                     data-product-images='@json($product->images->map(fn($i) => ["url" => $i->url, "thumb" => $i->thumbnail_url]))'
                 >
                     <div class="product-img-wrap">

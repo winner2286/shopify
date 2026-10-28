@@ -721,7 +721,7 @@
             <div class="qv-grid">
                 <div>
                     <div class="qv-main-img-wrap">
-                        <img id="qv-main-img" src="" alt="">
+                        <img id="qv-main-img" src="" alt="" onerror="this.onerror=null; this.src='/api/placeholder-image?id=' + (document.getElementById('qv-product-id')?.value || '')">
                         <span id="qv-discount" class="product-discount-badge" style="display:none"></span>
                     </div>
                     <div id="qv-thumbs" class="qv-thumbs-wrap" style="display:none"></div>
