@@ -23,7 +23,8 @@
             <h1>La plateforme de commerce <span class="cypher-word" data-word="tout-en-un">tout-en-un</span> pour <span class="cypher-word" data-word="développer">développer</span> votre entreprise.</h1>
 
             <p class="lead">
-                Créez votre boutique en ligne en quelques minutes, vendez sur WhatsApp, TikTok et les réseaux sociaux, encaissez par T-Money, Flooz et cartes, et gérez vos stocks et livraisons sur une seule interface intuitive.
+                <span class="desktop-only">Créez votre boutique en ligne en quelques minutes, vendez sur WhatsApp, TikTok et les réseaux sociaux, encaissez par T-Money, Flooz et cartes, et gérez vos stocks et livraisons sur une seule interface intuitive.</span>
+                <span class="mobile-only">Vendez sur le web et WhatsApp. Encaissez par T-Money & Flooz. Gérez tout facilement.</span>
             </p>
 
             <!-- Formulaire d'inscription instantané (Signature Shopify) -->
@@ -40,7 +41,7 @@
             <div class="hero-trust-row">
                 <span><x-icon name="check-circle" :size="15" /> 14 jours d'essai gratuit</span>
                 <span><x-icon name="check-circle" :size="15" /> Sans carte bancaire</span>
-                <span><x-icon name="check-circle" :size="15" /> Prêt en 3 minutes chrono</span>
+                <span><x-icon name="check-circle" :size="15" /> <span class="desktop-only">Prêt en 3 minutes chrono</span><span class="mobile-only">Prêt en 3 min</span></span>
             </div>
         </div>
 
@@ -401,7 +402,10 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="section-head reveal">
         <span class="pillar-tag"><x-icon name="shop" :size="16" /> Tout pour votre commerce</span>
         <h2>Une seule plateforme pour tout gérer et vendre partout</h2>
-        <p>De la création de votre catalogue jusqu'à la livraison entre les mains de votre client, Zanika rassemble tous les outils indispensables au succès de votre commerce.</p>
+        <p>
+            <span class="desktop-only">De la création de votre catalogue jusqu'à la livraison entre les mains de votre client, Zanika rassemble tous les outils indispensables au succès de votre commerce.</span>
+            <span class="mobile-only">Tout ce qu'il faut pour vendre en ligne et encaisser au Togo.</span>
+        </p>
     </div>
 
     <!-- Sélecteur d'onglets tactile pour mobile (Économise 2000px de scroll) -->
@@ -428,13 +432,16 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="pillar-row mobile-active reveal" id="fonctionnalites" data-pillar-row="0">
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="laptop" :size="16" /> 01. Boutique Web & Mobile</div>
-            <h3>Créez votre boutique en ligne sans aucune compétence technique</h3>
-            <p>Offrez à vos clients un site e-commerce ultra-rapide, moderne et personnalisé à vos couleurs, accessible sur mobile comme sur ordinateur.</p>
+            <h3>
+                <span class="desktop-only">Créez votre boutique en ligne sans aucune compétence technique</span>
+                <span class="mobile-only">Votre boutique pro prête en quelques minutes</span>
+            </h3>
+            <p class="desktop-only">Offrez à vos clients un site e-commerce ultra-rapide, moderne et personnalisé à vos couleurs, accessible sur mobile comme sur ordinateur.</p>
             <ul class="pillar-checklist">
-                <li><x-icon name="check" :size="16" /> <strong>Design responsive optimisé</strong> pour les connexions mobiles 3G/4G</li>
-                <li><x-icon name="check" :size="16" /> <strong>Catalogue complet</strong> avec variantes de tailles, couleurs et gestion des stocks en temps réel</li>
-                <li><x-icon name="check" :size="16" /> <strong>Adresse web personnalisée</strong> ou sous-domaine offert à vie (nom.zanika.tg)</li>
-                <li><x-icon name="check" :size="16" /> <strong>Fiches produits rédigées en 1 clic</strong> grâce à l'intelligence artificielle</li>
+                <li><x-icon name="check" :size="16" /> <strong>Design responsive optimisé</strong> <span class="desktop-only">pour les connexions mobiles 3G/4G</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Catalogue & stocks en temps réel</strong> <span class="desktop-only">avec variantes de tailles et couleurs</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Adresse web personnalisée</strong> <span class="desktop-only">ou sous-domaine offert à vie (nom.zanika.tg)</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Fiches produits en 1 clic</strong> <span class="desktop-only">grâce à l'intelligence artificielle</span></li>
             </ul>
             <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Créer ma boutique maintenant →</a>
         </div>
@@ -470,13 +477,16 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="pillar-row reversed reveal" data-pillar-row="1">
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="whatsapp" :size="16" /> 02. Vente Omnicanale</div>
-            <h3>Vendez là où vos clients passent leur temps : WhatsApp, TikTok, Réseaux Sociaux</h3>
-            <p>Fini les discussions interminables pour répéter les prix et prendre les coordonnées manuellement. Vos clients commandent en 1 clic et vous recevez un panier propre et prêt à expédier.</p>
+            <h3>
+                <span class="desktop-only">Vendez là où vos clients passent leur temps : WhatsApp, TikTok, Réseaux Sociaux</span>
+                <span class="mobile-only">Vendez directement sur WhatsApp et TikTok</span>
+            </h3>
+            <p class="desktop-only">Fini les discussions interminables pour répéter les prix et prendre les coordonnées manuellement. Vos clients commandent en 1 clic et vous recevez un panier propre et prêt à expédier.</p>
             <ul class="pillar-checklist">
-                <li><x-icon name="check" :size="16" /> <strong>Commande WhatsApp en 1 clic :</strong> le client valide son panier et le message complet arrive sur votre WhatsApp</li>
-                <li><x-icon name="check" :size="16" /> <strong>Liens de produits instantanés</strong> à partager dans vos statuts, stories et bios TikTok</li>
-                <li><x-icon name="check" :size="16" /> <strong>QR Codes marchands prêts à imprimer</strong> pour vos boutiques physiques et vos cartes de visite</li>
-                <li><x-icon name="check" :size="16" /> <strong>Gestion centralisée :</strong> toutes vos commandes sont regroupées dans un seul fichier client</li>
+                <li><x-icon name="check" :size="16" /> <strong>Commande WhatsApp en 1 clic</strong> <span class="desktop-only">: le client valide son panier et le message complet arrive sur votre WhatsApp</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Liens de produits instantanés</strong> <span class="desktop-only">à partager dans vos statuts, stories et bios TikTok</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>QR Codes marchands</strong> <span class="desktop-only">prêts à imprimer pour vos boutiques physiques et cartes</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Commandes centralisées</strong> <span class="desktop-only">: toutes vos commandes dans un seul fichier client</span></li>
             </ul>
             <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Découvrir WhatsApp Commerce →</a>
         </div>
@@ -505,13 +515,16 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="pillar-row reveal" data-pillar-row="2">
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="credit-card" :size="16" /> 03. Paiements & Logistique</div>
-            <h3>Encaissez par T-Money, Flooz et livrez sans tracas partout au Togo</h3>
-            <p>Intégrez immédiatement les modes de paiement préférés de vos clients d'Afrique de l'Ouest et organisez vos livraisons avec vos livreurs habituels en toute transparence.</p>
+            <h3>
+                <span class="desktop-only">Encaissez par T-Money, Flooz et livrez sans tracas partout au Togo</span>
+                <span class="mobile-only">Encaissez par T-Money, Flooz & Cash</span>
+            </h3>
+            <p class="desktop-only">Intégrez immédiatement les modes de paiement préférés de vos clients d'Afrique de l'Ouest et organisez vos livraisons avec vos livreurs habituels en toute transparence.</p>
             <ul class="pillar-checklist">
-                <li><x-icon name="check" :size="16" /> <strong>Mobile Money togolais & sous-régional :</strong> T-Money, Flooz, Wave et cartes bancaires</li>
-                <li><x-icon name="check" :size="16" /> <strong>Paiement à la livraison (Cash on Delivery)</strong> supporté et sécurisé</li>
-                <li><x-icon name="check" :size="16" /> <strong>Zones de livraison personnalisées :</strong> Lomé intra-muros, banlieues, régions et diaspora</li>
-                <li><x-icon name="check" :size="16" /> <strong>Suivi de commande transparent :</strong> vos clients reçoivent un lien de suivi en direct de leur colis</li>
+                <li><x-icon name="check" :size="16" /> <strong>Mobile Money T-Money, Flooz & Wave</strong> <span class="desktop-only">et cartes bancaires</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Paiement à la livraison</strong> <span class="desktop-only">(Cash on Delivery) supporté et sécurisé</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Zones de livraison personnalisées</strong> <span class="desktop-only">: Lomé, banlieues et régions</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Suivi de commande en direct</strong> <span class="desktop-only">envoyé par lien automatique au client</span></li>
             </ul>
             <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Configurer mes paiements →</a>
         </div>
@@ -554,13 +567,16 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="pillar-row reversed reveal" data-pillar-row="3">
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="sparkles" :size="16" /> 04. Intelligence Artificielle</div>
-            <h3>L'intelligence artificielle qui rédige vos fiches et conçoit vos publicités</h3>
-            <p>Gagnez des heures précieuses. Envoyez simplement les photos de vos articles : l'IA reconnaît le produit, rédige un argumentaire commercial percutant et génère vos textes publicitaires.</p>
+            <h3>
+                <span class="desktop-only">L'intelligence artificielle qui rédige vos fiches et conçoit vos publicités</span>
+                <span class="mobile-only">L'IA qui rédige vos fiches et publicités</span>
+            </h3>
+            <p class="desktop-only">Gagnez des heures précieuses. Envoyez simplement les photos de vos articles : l'IA reconnaît le produit, rédige un argumentaire commercial percutant et génère vos textes publicitaires.</p>
             <ul class="pillar-checklist">
-                <li><x-icon name="check" :size="16" /> <strong>Fiches produits vendeuses générées en 5 secondes</strong> à partir de vos photos mobiles</li>
-                <li><x-icon name="check" :size="16" /> <strong>Studio publicitaire IA :</strong> créez des textes captivants pour vos statuts WhatsApp et SMS de relance</li>
-                <li><x-icon name="check" :size="16" /> <strong>Scripts de vidéos TikTok & Reels</strong> guidés pas-à-pas pour filmer avec votre téléphone</li>
-                <li><x-icon name="check" :size="16" /> <strong>Conseils personnalisés</strong> pour optimiser vos marges et écouler vos invendus</li>
+                <li><x-icon name="check" :size="16" /> <strong>Fiches produits en 5 secondes</strong> <span class="desktop-only">générées à partir de vos photos mobiles</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Studio publicitaire pour statuts WhatsApp</strong> <span class="desktop-only">et SMS captivants</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Scripts de vidéos TikTok & Reels</strong> <span class="desktop-only">guidés pour filmer au téléphone</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Conseils personnalisés de marges</strong> <span class="desktop-only">pour écouler vos invendus</span></li>
             </ul>
             <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Tester l'assistant IA →</a>
         </div>
@@ -590,7 +606,10 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <div class="section-head reveal">
             <span class="pillar-tag"><x-icon name="tag" :size="16" /> Pour tous les commerces</span>
             <h2>Conçu sur mesure pour votre secteur</h2>
-            <p>Cliquez sur votre domaine d'activité pour prévisualiser instantanément une boutique et des produits adaptés.</p>
+            <p>
+                <span class="desktop-only">Cliquez sur votre domaine d'activité pour prévisualiser instantanément une boutique et des produits adaptés.</span>
+                <span class="mobile-only">Touchez un domaine pour voir la boutique adaptée.</span>
+            </p>
         </div>
 
         <!-- Boutons de commutation par secteur -->
@@ -664,7 +683,10 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="section-head reveal">
         <span class="pillar-tag"><x-icon name="users" :size="16" /> Témoignages marchands</span>
         <h2>Ils développent leur entreprise avec Zanika</h2>
-        <p>Découvrez comment des entrepreneurs comme vous ont automatisé leurs ventes et multiplié leur chiffre d'affaires.</p>
+        <p>
+            <span class="desktop-only">Découvrez comment des entrepreneurs comme vous ont automatisé leurs ventes et multiplié leur chiffre d'affaires.</span>
+            <span class="mobile-only">Retours d'expérience de commerçants togolais.</span>
+        </p>
     </div>
 
     <div class="mobile-swipe-hint">
@@ -674,7 +696,8 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="grid grid-3">
         <div class="testimonial-card reveal">
             <blockquote class="testimonial-quote">
-                « Avant Zanika, je perdais un temps fou chaque jour à renvoyer les prix et photos sur WhatsApp et à noter mes commandes sur un carnet. Aujourd'hui, tout est automatisé, mes clientes commandent en 2 minutes et je reçois les alertes T-Money en direct. Mes ventes ont fait un bond de 40% ! »
+                <span class="desktop-only">« Avant Zanika, je perdais un temps fou chaque jour à renvoyer les prix et photos sur WhatsApp et à noter mes commandes sur un carnet. Aujourd'hui, tout est automatisé, mes clientes commandent en 2 minutes et je reçois les alertes T-Money en direct. Mes ventes ont fait un bond de 40% ! »</span>
+                <span class="mobile-only">« Mes ventes ont fait un bond de <strong>+40%</strong> ! Mes clientes commandent en 2 minutes sur WhatsApp et je reçois les alertes T-Money en direct. »</span>
             </blockquote>
             <div class="testimonial-author">
                 <div class="author-avatar">AK</div>
@@ -687,7 +710,8 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 
         <div class="testimonial-card reveal">
             <blockquote class="testimonial-quote">
-                « La création de ma boutique n'a pris que 15 minutes avec l'IA. Elle a créé les fiches de mes écouteurs et montres connectées automatiquement. Les clients adorent le paiement par Flooz et le lien de suivi de livraison. C'est le Shopify togolais que nous attendions tous. »
+                <span class="desktop-only">« La création de ma boutique n'a pris que 15 minutes avec l'IA. Elle a créé les fiches de mes écouteurs et montres connectées automatiquement. Les clients adorent le paiement par Flooz et le lien de suivi de livraison. C'est le Shopify togolais que nous attendions tous. »</span>
+                <span class="mobile-only">« Boutique créée en <strong>15 minutes</strong> avec l'IA. Les clients adorent payer par Flooz et suivre leur colis. C'est le Shopify togolais ! »</span>
             </blockquote>
             <div class="testimonial-author">
                 <div class="author-avatar">KD</div>
@@ -700,7 +724,8 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 
         <div class="testimonial-card reveal">
             <blockquote class="testimonial-quote">
-                « Le studio publicitaire IA m'a bluffée : il me rédige mes textes WhatsApp en 5 secondes avec les bons emojis et les hashtags. Je n'ai plus besoin de payer une agence de communication pour faire mes promotions du week-end. »
+                <span class="desktop-only">« Le studio publicitaire IA m'a bluffée : il me rédige mes textes WhatsApp en 5 secondes avec les bons emojis et les hashtags. Je n'ai plus besoin de payer une agence de communication pour faire mes promotions du week-end. »</span>
+                <span class="mobile-only">« L'IA me rédige mes textes WhatsApp en <strong>5 secondes</strong> avec les bons emojis. Plus besoin de payer une agence chaque week-end. »</span>
             </blockquote>
             <div class="testimonial-author">
                 <div class="author-avatar">MA</div>
@@ -721,7 +746,10 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <div class="growth-calc-head">
             <span class="pillar-tag"><x-icon name="chart" :size="16" /> Simulateur de rentabilité</span>
             <h3>Estimez ce que Zanika va vous rapporter chaque mois</h3>
-            <p>Glissez le curseur selon votre volume de ventes estimé pour observer le temps gagné et les commandes supplémentaires débloquées.</p>
+            <p>
+                <span class="desktop-only">Glissez le curseur selon votre volume de ventes estimé pour observer le temps gagné et les commandes supplémentaires débloquées.</span>
+                <span class="mobile-only">Glissez pour estimer vos gains et le temps économisé.</span>
+            </p>
         </div>
 
         <div class="growth-calc-slider-wrap">
@@ -771,7 +799,10 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <div class="section-head reveal">
             <span class="pillar-tag"><x-icon name="wallet" :size="16" /> Tarifs transparents</span>
             <h2>Des formules simples pour chaque étape de votre croissance</h2>
-            <p>14 jours d'essai gratuit sur toutes les formules. Sans carte bancaire et sans aucun engagement.</p>
+            <p>
+                <span class="desktop-only">14 jours d'essai gratuit sur toutes les formules. Sans carte bancaire et sans aucun engagement.</span>
+                <span class="mobile-only">14 jours d'essai gratuit • 0% de commission sur vos ventes.</span>
+            </p>
         </div>
 
         <!-- Basculeur dynamique Mensuel / Annuel avec remise de 20% -->
@@ -865,7 +896,10 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="section-head reveal">
         <span class="pillar-tag"><x-icon name="info" :size="16" /> Support & Aide</span>
         <h2>Questions fréquemment posées</h2>
-        <p>Tout ce que vous devez savoir pour démarrer sereinement sur Zanika.</p>
+        <p>
+            <span class="desktop-only">Tout ce que vous devez savoir pour démarrer sereinement sur Zanika.</span>
+            <span class="mobile-only">Réponses directes à vos questions fréquentes.</span>
+        </p>
     </div>
 
     <div class="faq-wrap">
@@ -926,8 +960,14 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
      ========================================================================== -->
 <section class="shopify-cta-banner">
     <div class="container reveal">
-        <h2>Rejoignez la nouvelle génération d'e-commerçants.</h2>
-        <p>Lancez votre boutique en ligne aujourd'hui et commencez à recevoir des commandes sur le Web et WhatsApp en toute simplicité.</p>
+        <h2>
+            <span class="desktop-only">Rejoignez la nouvelle génération d'e-commerçants.</span>
+            <span class="mobile-only">Lancez votre boutique aujourd'hui.</span>
+        </h2>
+        <p>
+            <span class="desktop-only">Lancez votre boutique en ligne aujourd'hui et commencez à recevoir des commandes sur le Web et WhatsApp en toute simplicité.</span>
+            <span class="mobile-only">Recevez vos premières commandes dès ce soir. Prêt en 3 min chrono.</span>
+        </p>
         <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap">
             <a href="{{ route('register') }}" class="btn btn-white btn-lg">
                 <span>Créer ma boutique gratuitement</span>

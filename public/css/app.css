@@ -2200,12 +2200,41 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   .mobile-pillars-nav,
   .mobile-plan-nav,
   .mobile-swipe-hint,
-  .mobile-sticky-cta {
+  .mobile-sticky-cta,
+  .mobile-only {
     display: none !important;
   }
 }
 
 @media (max-width: 768px) {
+  /* Helper de visibilité pour alléger les textes sur mobile (Desktop 100% conservé) */
+  .desktop-only {
+    display: none !important;
+  }
+  .mobile-only {
+    display: inline !important;
+  }
+  p.mobile-only, div.mobile-only {
+    display: block !important;
+  }
+
+  /* Allègement des sous-textes et fatigue de lecture */
+  .growth-calc-sub {
+    display: none !important;
+  }
+  .pillar-checklist {
+    margin-bottom: 1.1rem !important;
+  }
+  .pillar-checklist li {
+    font-size: 0.85rem !important;
+    line-height: 1.35 !important;
+    margin-bottom: 0.45rem !important;
+  }
+  .testimonial-quote {
+    font-size: 0.88rem !important;
+    line-height: 1.45 !important;
+    margin-bottom: 0.8rem !important;
+  }
   /* 1. HERO COMPACT & PERCUTANT */
   .shopify-hero {
     padding-top: 1.25rem !important;
