@@ -21,6 +21,68 @@
         <div class="alert alert-ok" role="status">{{ session('status') }}</div>
     @endif
 
+<style>
+    .logo-option {
+        width: 100% !important;
+        cursor: pointer !important;
+        border-radius: 16px !important;
+        padding: 1.4rem 1rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        background: var(--bg-soft) !important;
+        border: 2px solid var(--border) !important;
+        transition: all 0.2s ease !important;
+        box-sizing: border-box !important;
+    }
+    .logo-option:hover {
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        transform: translateY(-2px) !important;
+    }
+    .logo-option.selected {
+        border-color: #10b981 !important;
+        background: rgba(16, 185, 129, 0.08) !important;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.15) !important;
+    }
+    .logo-svg-wrap {
+        width: 96px !important;
+        height: 96px !important;
+        min-width: 96px !important;
+        min-height: 96px !important;
+        max-width: 96px !important;
+        max-height: 96px !important;
+        margin: 0 auto 1rem !important;
+        border-radius: 24px !important;
+        overflow: hidden !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+    }
+    .logo-svg-wrap svg {
+        width: 96px !important;
+        height: 96px !important;
+        max-width: 96px !important;
+        max-height: 96px !important;
+        object-fit: contain !important;
+        display: block !important;
+    }
+    .thumb-preview {
+        width: 52px !important;
+        height: 52px !important;
+        min-width: 52px !important;
+        min-height: 52px !important;
+        max-width: 52px !important;
+        max-height: 52px !important;
+        border-radius: 10px !important;
+        object-fit: cover !important;
+        display: block !important;
+    }
+</style>
+
     <!-- Section 1 : Sélection du logo (B-05) -->
     <section class="card panel" style="margin-bottom:2rem">
         <h3>1. Choisissez votre logo officiel (3 propositions de l'IA)</h3>
@@ -29,16 +91,16 @@
         </p>
 
         @php $chosenLogoId = $shop->onboarding_data['chosen_logo']['id'] ?? 1; @endphp
-        <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));gap:1rem;">
             @foreach ($logos as $logo)
                 <form method="POST" action="{{ route('onboarding.select_logo') }}">
                     @csrf
                     <input type="hidden" name="logo_id" value="{{ $logo['id'] }}">
-                    <button type="submit" class="logo-option {{ $chosenLogoId == $logo['id'] ? 'selected' : '' }}" style="width:100%;background:transparent;color:inherit;font:inherit;">
+                    <button type="submit" class="logo-option {{ $chosenLogoId == $logo['id'] ? 'selected' : '' }}">
                         <div class="logo-svg-wrap">
-                            {!! $logo['svg'] !!}
+                            {!! str_contains($logo['svg'], 'width=') ? $logo['svg'] : str_replace('<svg ', '<svg width="96" height="96" style="width:96px;height:96px;max-width:96px;max-height:96px;display:block;" ', $logo['svg']) !!}
                         </div>
-                        <strong>{{ $logo['name'] }}</strong>
+                        <strong style="display:block;margin-top:.2rem">{{ $logo['name'] }}</strong>
                         <div style="margin-top:.4rem;font-size:.82rem;color:{{ $chosenLogoId == $logo['id'] ? 'var(--ok)' : 'var(--text-soft)' }}">
                             @if ($chosenLogoId == $logo['id'])
                                 <span style="display:inline-flex;align-items:center;gap:.3rem"><x-icon name="check" size="14" /> Logo sélectionné</span>
@@ -94,11 +156,11 @@
                 <tbody>
                     @foreach ($shop->products as $p)
                         <tr>
-                            <td>
+                            <td style="width:60px">
                                 @if ($p->primaryImage)
-                                    <img src="{{ $p->primaryImage->thumbnail_url }}" alt="{{ $p->title }}" class="thumb-preview" loading="lazy">
+                                    <img src="{{ $p->primaryImage->thumbnail_url }}" alt="{{ $p->title }}" class="thumb-preview" loading="lazy" style="width:52px;height:52px;min-width:52px;min-height:52px;max-width:52px;max-height:52px;border-radius:10px;object-fit:cover;display:block;">
                                 @else
-                                    <div class="thumb-preview" style="display:grid;place-items:center;color:var(--text-soft)">
+                                    <div class="thumb-preview" style="width:52px;height:52px;min-width:52px;min-height:52px;max-width:52px;max-height:52px;border-radius:10px;display:grid;place-items:center;color:var(--text-soft)">
                                         <x-icon name="camera" size="18" />
                                     </div>
                                 @endif

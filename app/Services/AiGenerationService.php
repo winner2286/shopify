@@ -153,19 +153,19 @@ class AiGenerationService
                 'id' => 1,
                 'name' => 'Monogramme Étoile Moderne',
                 'type' => 'svg',
-                'svg' => '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="'.$color.'"/><stop offset="100%" stop-color="#00d2ff"/></linearGradient></defs><rect width="120" height="120" rx="32" fill="url(#g1)"/><text x="60" y="74" font-family="Arial, sans-serif" font-weight="bold" font-size="44" fill="#ffffff" text-anchor="middle">'.$initials.'</text></svg>',
+                'svg' => '<svg width="100%" height="100%" viewBox="0 0 120 120" style="width:100%;height:100%;max-width:100%;max-height:100%;display:block;" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="'.$color.'"/><stop offset="100%" stop-color="#00d2ff"/></linearGradient></defs><rect width="120" height="120" rx="32" fill="url(#g1)"/><text x="60" y="74" font-family="Arial, sans-serif" font-weight="bold" font-size="44" fill="#ffffff" text-anchor="middle">'.$initials.'</text></svg>',
             ],
             [
                 'id' => 2,
                 'name' => 'Cercle Minimaliste Or',
                 'type' => 'svg',
-                'svg' => '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="60" r="54" fill="none" stroke="'.$color.'" stroke-width="6"/><text x="60" y="72" font-family="serif" font-weight="600" font-size="42" fill="'.$color.'" text-anchor="middle">'.$initials.'</text></svg>',
+                'svg' => '<svg width="100%" height="100%" viewBox="0 0 120 120" style="width:100%;height:100%;max-width:100%;max-height:100%;display:block;" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="60" r="54" fill="none" stroke="'.$color.'" stroke-width="6"/><text x="60" y="72" font-family="serif" font-weight="600" font-size="42" fill="'.$color.'" text-anchor="middle">'.$initials.'</text></svg>',
             ],
             [
                 'id' => 3,
                 'name' => 'Écusson Hexagonal Urbain',
                 'type' => 'svg',
-                'svg' => '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><polygon points="60,6 114,33 114,87 60,114 6,87 6,33" fill="'.$color.'"/><text x="60" y="73" font-family="sans-serif" font-weight="900" font-size="40" fill="#ffffff" text-anchor="middle">'.$initials.'</text></svg>',
+                'svg' => '<svg width="100%" height="100%" viewBox="0 0 120 120" style="width:100%;height:100%;max-width:100%;max-height:100%;display:block;" xmlns="http://www.w3.org/2000/svg"><polygon points="60,6 114,33 114,87 60,114 6,87 6,33" fill="'.$color.'"/><text x="60" y="73" font-family="sans-serif" font-weight="900" font-size="40" fill="#ffffff" text-anchor="middle">'.$initials.'</text></svg>',
             ],
         ];
     }

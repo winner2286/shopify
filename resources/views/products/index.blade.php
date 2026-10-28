@@ -81,11 +81,11 @@
                     <tbody>
                         @foreach ($products as $prod)
                             <tr>
-                                <td>
+                                <td style="width:60px">
                                     @if ($prod->primaryImage)
-                                        <img src="{{ $prod->primaryImage->thumbnail_url }}" alt="{{ $prod->title }}" class="thumb-preview" loading="lazy">
+                                        <img src="{{ $prod->primaryImage->thumbnail_url }}" alt="{{ $prod->title }}" class="thumb-preview" loading="lazy" style="width:52px;height:52px;min-width:52px;min-height:52px;max-width:52px;max-height:52px;border-radius:10px;object-fit:cover;display:block;">
                                     @else
-                                        <div class="thumb-preview" style="display:grid;place-items:center;color:var(--text-faint)">
+                                        <div class="thumb-preview" style="width:52px;height:52px;min-width:52px;min-height:52px;max-width:52px;max-height:52px;border-radius:10px;display:grid;place-items:center;color:var(--text-faint)">
                                             <x-icon name="camera" size="18" />
                                         </div>
                                     @endif

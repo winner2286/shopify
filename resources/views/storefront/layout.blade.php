@@ -87,6 +87,12 @@
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 1.1rem; flex-shrink: 0;
             box-shadow: 0 4px 14px var(--store-primary-glow);
+            overflow: hidden;
+        }
+        .store-logo svg, .store-logo img {
+            width: 100% !important; height: 100% !important;
+            max-width: 40px !important; max-height: 40px !important;
+            object-fit: cover; display: block;
         }
         .store-nav-actions {
             display: flex; align-items: center; gap: .75rem;
@@ -599,7 +605,13 @@
         <div class="container store-header-inner">
             <a href="{{ url('/b/' . $shop->subdomain) }}" class="store-brand">
                 <span class="store-logo">
-                    {{ strtoupper(substr($shop->name ?: 'B', 0, 1)) }}
+                    @if (!empty($shop->onboarding_data['chosen_logo']['svg']))
+                        {!! str_contains($shop->onboarding_data['chosen_logo']['svg'], 'width=') ? $shop->onboarding_data['chosen_logo']['svg'] : str_replace('<svg ', '<svg width="40" height="40" style="width:100%;height:100%;max-width:40px;max-height:40px;display:block;" ', $shop->onboarding_data['chosen_logo']['svg']) !!}
+                    @elseif ($shop->logo_path)
+                        <img src="{{ asset('storage/' . $shop->logo_path) }}" alt="{{ $shop->name }}" style="width:100%;height:100%;object-fit:cover;display:block">
+                    @else
+                        {{ strtoupper(substr($shop->name ?: 'B', 0, 1)) }}
+                    @endif
                 </span>
                 <span>{{ $shop->name }}</span>
             </a>

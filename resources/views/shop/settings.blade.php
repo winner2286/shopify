@@ -157,8 +157,18 @@
 
             <!-- Aperçu de marque -->
             <div style="width:240px;background:var(--bg-soft);padding:1.2rem;border-radius:var(--radius-sm);text-align:center;border:1px solid var(--border)">
-                <div style="width:64px;height:64px;border-radius:50%;background:{{ $shop->brand_color ?: '#6d3df2' }};margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 8px 24px {{ $shop->brand_color ?: '#6d3df2' }}44">
-                    <x-icon name="sparkles" size="28" />
+                <div style="width:64px;height:64px;border-radius:18px;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 8px 24px {{ $shop->brand_color ?: '#6d3df2' }}44;background:{{ $shop->brand_color ?: '#6d3df2' }}">
+                    @if (!empty($shop->onboarding_data['chosen_logo']['svg']))
+                        <div style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;">
+                            {!! str_contains($shop->onboarding_data['chosen_logo']['svg'], 'width=') ? $shop->onboarding_data['chosen_logo']['svg'] : str_replace('<svg ', '<svg width="64" height="64" style="width:64px;height:64px;max-width:64px;max-height:64px;display:block;" ', $shop->onboarding_data['chosen_logo']['svg']) !!}
+                        </div>
+                    @elseif ($shop->logo_path)
+                        <img src="{{ asset('storage/' . $shop->logo_path) }}" alt="{{ $shop->name }}" style="width:100%;height:100%;object-fit:cover;display:block">
+                    @else
+                        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff">
+                            <x-icon name="sparkles" size="28" />
+                        </div>
+                    @endif
                 </div>
                 <div style="font-weight:700;font-size:1.1rem;margin-bottom:.3rem">{{ $shop->name ?: 'Ma Boutique' }}</div>
                 <div style="font-size:.85rem;color:var(--text-soft);margin-bottom:.8rem">
