@@ -17,7 +17,7 @@ services:
       - key: APP_DEBUG
         value: "false"
       - key: APP_KEY
-        generateValue: true
+        value: "base64:rrVYcG6eKF+cstCcBCUpeK3uLfPYKda8hkkP16jMl5Y="
       - key: APP_URL
         sync: false
       - key: LOG_CHANNEL

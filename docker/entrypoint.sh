@@ -11,11 +11,22 @@ if [ ! -f /var/www/html/.env ]; then
     fi
 fi
 
-# 2. Génération de clé d'application si absente
-if [ -z "$APP_KEY" ] && ! grep -q "^APP_KEY=base64:" /var/www/html/.env 2>/dev/null; then
-    echo "Génération de la clé d'application APP_KEY..."
-    php artisan key:generate --force || true
-fi
+# 2. Validation et génération de la clé d'application
+case "$APP_KEY" in
+    base64:*)
+        echo "Clé APP_KEY valide détectée."
+        ;;
+    *)
+        echo "Génération d'une clé APP_KEY Laravel valide..."
+        NEW_KEY=$(php artisan key:generate --show 2>/dev/null || true)
+        if [ -n "$NEW_KEY" ]; then
+            export APP_KEY="$NEW_KEY"
+            if [ -f /var/www/html/.env ]; then
+                sed -i "s|^APP_KEY=.*|APP_KEY=${NEW_KEY}|g" /var/www/html/.env 2>/dev/null || echo "APP_KEY=${NEW_KEY}" >> /var/www/html/.env
+            fi
+        fi
+        ;;
+esac
 
 # 3. Base SQLite si utilisée
 if [ "${DB_CONNECTION:-sqlite}" = "sqlite" ] && [ -z "$DATABASE_URL" ]; then
@@ -42,8 +53,20 @@ if [ ! -L /var/www/html/public/storage ]; then
     php artisan storage:link || true
 fi
 
-# 6. Migrations de base de données
+# 6. Attente et migrations de base de données
 if [ "$AUTO_MIGRATE" = "true" ] || [ "$1" = "start-web" ] || [ -n "$RENDER" ]; then
+    if [ -n "$DATABASE_URL" ] || [ "$DB_CONNECTION" = "pgsql" ]; then
+        echo "Vérification de la disponibilité de la base de données..."
+        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+            if php artisan migrate:status >/dev/null 2>&1; then
+                echo "Base de données connectée !"
+                break
+            fi
+            echo "En attente de la base de données ($i/15)..."
+            sleep 2
+        done
+    fi
+
     echo "Exécution des migrations de base de données..."
     php artisan migrate --force || true
 
