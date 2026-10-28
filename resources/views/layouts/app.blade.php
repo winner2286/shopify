@@ -5,8 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', config('platform.name').' : votre boutique en ligne créée par l\'IA')</title>
     <meta name="description" content="@yield('description', 'Créez, promouvez et gérez votre boutique en ligne en quelques minutes grâce à l\'intelligence artificielle. Paiement Mobile Money, carte et à la livraison.')">
-    <meta name="theme-color" content="#09090b">
-    <script>document.documentElement.setAttribute('data-theme','dark');try{localStorage.setItem('theme','dark');}catch(e){}</script>
+    <script>
+        (function() {
+            var savedTheme = 'dark';
+            try {
+                savedTheme = localStorage.getItem('theme') || 'dark';
+            } catch(e) {}
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
@@ -43,8 +50,8 @@
         <div class="container nav-inner">
             <div style="display:flex;align-items:center;gap:2rem">
                 <a href="{{ route('home') }}" class="logo" aria-label="Accueil {{ config('platform.name') }}" style="display:inline-flex;align-items:center;gap:.65rem;text-decoration:none">
-                    <img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:34px;width:34px;border-radius:9px;object-fit:cover;box-shadow:0 2px 10px rgba(255,45,109,0.35)">
-                    <span style="font-family:'Montserrat',var(--font-display),sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-0.02em;color:#fff">ZANIKA</span>
+                    <img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:34px;width:34px;border-radius:9px;object-fit:cover;box-shadow:0 2px 10px rgba(158,27,50,0.35)">
+                    <span class="logo-text" style="font-family:'Montserrat',var(--font-display),sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-0.02em;">ZANIKA</span>
                 </a>
 
                 @guest
@@ -59,6 +66,10 @@
             </div>
 
             <nav class="nav-actions" aria-label="Navigation principale">
+                <!-- Bouton de bascule Mode Sombre / Mode Clair -->
+                <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </button>
                 @auth
                     @if (auth()->user()->shop && auth()->user()->shop->subdomain)
                         <a id="nav-preview-store" href="{{ url('/b/' . auth()->user()->shop->subdomain) }}" target="_blank" class="btn btn-ghost btn-sm" style="color:var(--brand-1);display:inline-flex;align-items:center;gap:.35rem" title="Voir ma boutique en direct">
