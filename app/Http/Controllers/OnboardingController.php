@@ -25,7 +25,16 @@ class OnboardingController extends Controller
 
     public function storeStep1(Request $request): RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop;
+        if (! $shop) {
+            $shop = Shop::create([
+                'user_id' => $user->id,
+                'name' => 'Ma Boutique',
+                'status' => Shop::DRAFT,
+                'onboarding_step' => 1,
+            ]);
+        }
 
         $validated = $request->validate([
             'description' => ['required', 'string', 'min:20', 'max:1000'],

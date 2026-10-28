@@ -6,6 +6,8 @@ use App\Models\Shop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ShopSettingsController extends Controller
@@ -145,5 +147,50 @@ class ShopSettingsController extends Controller
             'is_reserved' => $isReserved,
             'exists' => $exists,
         ]);
+    }
+
+    /**
+     * Supprime définitivement la boutique et toutes ses données associées (Zone de danger)
+     */
+    public function destroy(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $shop = $user->shop;
+
+        if (! $shop) {
+            return redirect()->route('dashboard')->with('error', 'Aucune boutique associée à ce compte.');
+        }
+
+        $request->validate([
+            'confirm_shop_name' => ['required', 'string'],
+            'password' => ['required', 'string'],
+        ], [
+            'confirm_shop_name.required' => 'Veuillez saisir le nom exact de votre boutique pour confirmer la suppression.',
+            'password.required' => 'Veuillez renseigner votre mot de passe actuel pour confirmer.',
+        ]);
+
+        // Vérification 1 : Nom de la boutique conforme
+        if (trim(strtolower($request->input('confirm_shop_name'))) !== trim(strtolower($shop->name))) {
+            return back()->withErrors(['confirm_shop_name' => 'Le nom saisi ne correspond pas exactement au nom de votre boutique ("' . $shop->name . '").']);
+        }
+
+        // Vérification 2 : Mot de passe du marchand
+        if (! Hash::check($request->input('password'), $user->password)) {
+            return back()->withErrors(['password' => 'Le mot de passe saisi est incorrect.']);
+        }
+
+        $shopName = $shop->name;
+
+        // Nettoyage physique des fichiers
+        try {
+            Storage::disk('public')->deleteDirectory("shops/{$shop->id}");
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        // Suppression de la boutique (cascade sur categories, products, orders, etc.)
+        $shop->delete();
+
+        return redirect()->route('onboarding.step1')->with('status', 'La boutique "' . $shopName . '" a été définitivement supprimée. Vous pouvez désormais créer une nouvelle boutique.');
     }
 }

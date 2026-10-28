@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/boutique/parametres', [ShopSettingsController::class, 'update'])->name('shop.settings.update');
     Route::post('/boutique/publier', [ShopSettingsController::class, 'publish'])->name('shop.publish');
     Route::post('/boutique/pause', [ShopSettingsController::class, 'togglePause'])->name('shop.toggle_pause');
+    Route::delete('/boutique/supprimer', [ShopSettingsController::class, 'destroy'])->name('shop.destroy');
     Route::get('/boutique/verifier-sous-domaine', [ShopSettingsController::class, 'checkSubdomain'])->name('shop.check_subdomain');
 
     Route::get('/boutique/pages', [ShopPageController::class, 'index'])->name('shop.pages.index');

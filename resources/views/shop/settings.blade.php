@@ -274,5 +274,93 @@
             </div>
         </form>
     </div>
+
+    <!-- Bloc 3 : Zone de Danger (Suppression définitive de la boutique) -->
+    <div class="card danger-card" style="margin-top:2.5rem;border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.03)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1.5rem">
+            <div style="flex:1;min-width:280px">
+                <h3 style="margin-top:0;color:var(--danger);display:flex;align-items:center;gap:.5rem;font-size:1.2rem">
+                    <x-icon name="alert-triangle" size="22" style="color:var(--danger)" />
+                    Zone de danger : Supprimer cette boutique
+                </h3>
+                <p style="color:var(--text-soft);font-size:.92rem;line-height:1.6;margin-bottom:0">
+                    La suppression de votre boutique <strong>« {{ $shop->name }} »</strong> est une action <strong>irréversible</strong>.<br>
+                    Elle efface définitivement tous vos produits, photos, commandes, catégories, et libère instantanément l'adresse web <code>{{ $shop->subdomain }}</code> pour de nouveaux utilisateurs.
+                </p>
+            </div>
+
+            <div style="display:flex;align-items:center">
+                <button type="button" class="btn btn-sm" style="background:var(--danger);color:#fff;display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.1rem;font-weight:600;border:none;border-radius:var(--radius-sm);cursor:pointer" onclick="document.getElementById('delete-shop-modal').classList.add('open')">
+                    <x-icon name="trash" size="16" />
+                    Supprimer ma boutique
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de Confirmation de Suppression Sécurisée -->
+    <div id="delete-shop-modal" class="delete-modal {{ ($errors->has('confirm_shop_name') || $errors->has('password')) ? 'open' : '' }}" aria-hidden="true" role="dialog">
+        <div class="delete-backdrop" onclick="document.getElementById('delete-shop-modal').classList.remove('open')"></div>
+        <div class="delete-dialog">
+            <button type="button" onclick="document.getElementById('delete-shop-modal').classList.remove('open')" class="delete-close-btn">&times;</button>
+            
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
+                <div style="width:42px;height:42px;border-radius:10px;background:rgba(239,68,68,0.15);color:var(--danger);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <x-icon name="alert-triangle" size="24" />
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:1.25rem;color:var(--danger)">Supprimer la boutique ?</h3>
+                    <p style="margin:0;font-size:.82rem;color:var(--text-faint)">Cette action est irréversible et sans retour possible.</p>
+                </div>
+            </div>
+
+            <div style="background:rgba(239,68,68,0.06);border-left:3px solid var(--danger);padding:.8rem 1rem;border-radius:6px;margin-bottom:1.5rem;font-size:.86rem;color:var(--text-soft);line-height:1.5">
+                Vous êtes sur le point de supprimer la boutique <strong>{{ $shop->name }}</strong>. Tous vos catalogues, historiques et configurations seront perdus définitivement.
+            </div>
+
+            <form method="POST" action="{{ route('shop.destroy') }}">
+                @csrf
+                @method('DELETE')
+
+                <div style="margin-bottom:1.2rem">
+                    <label for="confirm_shop_name" class="label" style="font-size:.88rem">
+                        Pour confirmer, tapez le nom exact de la boutique : <strong style="color:var(--text)">{{ $shop->name }}</strong>
+                    </label>
+                    <input id="confirm_shop_name" type="text" name="confirm_shop_name" class="input" required autocomplete="off" placeholder="{{ $shop->name }}" style="border-color:rgba(239,68,68,0.4)">
+                    @error('confirm_shop_name')
+                        <p style="color:var(--danger);font-size:.82rem;margin-top:.3rem">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div style="margin-bottom:1.5rem">
+                    <label for="delete_password" class="label" style="font-size:.88rem">
+                        Votre mot de passe de compte (sécurité) :
+                    </label>
+                    <input id="delete_password" type="password" name="password" class="input" required autocomplete="current-password" placeholder="••••••••" style="border-color:rgba(239,68,68,0.4)">
+                    @error('password')
+                        <p style="color:var(--danger);font-size:.82rem;margin-top:.3rem">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:.8rem;align-items:center">
+                    <button type="button" class="btn btn-ghost" onclick="document.getElementById('delete-shop-modal').classList.remove('open')">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn" style="background:var(--danger);color:#fff;border:none;padding:.6rem 1.2rem;font-weight:700;cursor:pointer;border-radius:var(--radius-sm)">
+                        Supprimer définitivement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<style>
+    .delete-modal { display: none; position: fixed; inset: 0; z-index: 9999; align-items: center; justify-content: center; padding: 1rem; }
+    .delete-modal.open { display: flex !important; }
+    .delete-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px); }
+    .delete-dialog { position: relative; background: var(--surface); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 16px; max-width: 520px; width: 100%; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); z-index: 1; }
+    .delete-close-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 1.5rem; line-height: 1; padding: .25rem; }
+    .delete-close-btn:hover { color: var(--text); }
+</style>
 @endsection
