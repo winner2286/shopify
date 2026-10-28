@@ -1,9 +1,9 @@
 @echo off
-title Boutiq - Serveur Local
+title Zanika - Serveur Local
 cd /d "%~dp0"
 cls
 echo ========================================================
-echo          LANCEMENT DU SERVEUR BOUTIQ
+echo          LANCEMENT DU SERVEUR ZANIKA
 echo ========================================================
 echo.
 echo  - Sur ce PC        : http://localhost:8000

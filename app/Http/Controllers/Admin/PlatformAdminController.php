@@ -17,7 +17,7 @@ class PlatformAdminController extends Controller
     private function checkAdmin(Request $request): void
     {
         if (! $request->user() || ! $request->user()->isAdmin()) {
-            abort(403, 'Accès réservé aux administrateurs de la plateforme Boutiq.');
+            abort(403, 'Accès réservé aux administrateurs de la plateforme Zanika.');
         }
     }
 

@@ -154,7 +154,7 @@ Route::get('/migrate-now', function () {
 Route::get('/api/keep-alive', function () {
     return response()->json([
         'status' => 'alive',
-        'app' => config('platform.name', 'Boutiq'),
+        'app' => config('platform.name', 'Zanika'),
         'environment' => app()->environment(),
         'timestamp' => now()->toIso8601String(),
     ]);

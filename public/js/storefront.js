@@ -1,5 +1,5 @@
 /**
- * Boutiq Storefront Dynamic Interactions
+ * Zanika Storefront Dynamic Interactions
  * Smooth AJAX Cart, Live Search, Instant Category Filter & Quick View Modal
  */
 document.addEventListener('DOMContentLoaded', function () {

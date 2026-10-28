@@ -6,8 +6,8 @@
 <div class="container" style="max-width:1120px;padding:2rem 1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
         <div>
-            <h1 style="font-size:1.8rem;margin:0">Annuaire des Boutiques (J-02)</h1>
-            <p style="margin:0;color:var(--text-soft)">Gestion, modération et suivi des boutiques hébergées sur Boutiq.</p>
+            <h1 style="font-size:1.8rem;margin:0">Annuaire des Boutiques</h1>
+            <p style="margin:0;color:var(--text-soft)">Gestion, modération et suivi des boutiques hébergées sur Zanika.</p>
         </div>
 
         <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">

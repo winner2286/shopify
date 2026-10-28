@@ -167,8 +167,8 @@ class MediaController extends Controller
             $titleX = max(30, (int) (300 - (mb_strlen($prodTitle) * 4.5)));
             imagestring($im, 5, $titleX, 450, $prodTitle, $textWhite);
 
-            // Mention Boutiq
-            $shopName = 'Boutiq - ' . ($product?->shop?->name ?: 'Commerce');
+            // Mention Zanika
+            $shopName = 'Zanika - ' . ($product?->shop?->name ?: 'Commerce');
             $shopX = max(40, (int) (300 - (mb_strlen($shopName) * 4)));
             imagestring($im, 2, $shopX, 490, $shopName, $textSoft);
 
@@ -256,9 +256,9 @@ class MediaController extends Controller
         {$safeTitle}
     </text>
 
-    <!-- Signature Boutiq -->
+    <!-- Signature Zanika -->
     <text x="300" y="525" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="500" fill="#94a3b8" letter-spacing="2" text-anchor="middle">
-        BOUTIQ SIGNATURE
+        ZANIKA SIGNATURE
     </text>
 </svg>
 SVG;

@@ -51,9 +51,9 @@ class WhatsAppNotificationService
             . "💵 *TOTAL À ENCAISSER : {$total} FCFA*\n"
             . "💳 Mode de règlement : *{$order->payment_method_label}*\n"
             . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "👉 Traiter la commande sur Boutiq :\n"
+            . "👉 Traiter la commande sur Zanika :\n"
             . "{$orderUrl}\n\n"
-            . "🚀 _Boutiq — Votre commerce tout-en-un_";
+            . "🚀 _Zanika — Le commerce à votre manière_";
     }
 
     /**

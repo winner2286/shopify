@@ -1,8 +1,8 @@
 @echo off
-title Boutiq - Arret du Serveur
+title Zanika - Arret du Serveur
 cls
 echo ========================================================
-echo          ARRET DU SERVEUR BOUTIQ
+echo          ARRET DU SERVEUR ZANIKA
 echo ========================================================
 echo.
 echo Recherche et arret du processus ecoutant sur le port 8000...
@@ -11,5 +11,5 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000" ^| findstr "LISTENING
     echo Processus PID %%a arrete.
 )
 echo.
-echo Le serveur Boutiq est maintenant arrete.
+echo Le serveur Zanika est maintenant arrete.
 timeout /t 3 >nul

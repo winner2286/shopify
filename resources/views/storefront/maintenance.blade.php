@@ -4,9 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $shop->name }} : Boutique temporairement en pause</title>
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/brand/02_icone_application.jpg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <style>
         body {
@@ -60,8 +61,8 @@
             </div>
         @endif
 
-        <div style="font-size:.8rem;color:var(--text-faint)">
-            Propulsé par <a href="{{ route('home') }}" style="color:var(--text);display:inline-flex;align-items:center;gap:.25rem">Boutiq <x-icon name="sparkles" size="12" /></a>
+        <div style="font-size:.85rem;color:var(--text-faint)">
+            Propulsé par <a href="{{ route('home') }}" style="color:var(--text);display:inline-flex;align-items:center;gap:.35rem"><img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:16px;width:16px;border-radius:4px;vertical-align:middle"> <strong style="font-family:'Montserrat',sans-serif">Zanika</strong> <x-icon name="sparkles" size="12" /></a>
         </div>
     </div>
 </body>

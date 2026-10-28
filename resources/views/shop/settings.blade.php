@@ -80,7 +80,7 @@
                             <button type="button" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem" onclick="navigator.clipboard.writeText(document.getElementById('store-url-input').value); alert('Lien copié dans le presse-papier !');">
                                 <x-icon name="copy" size="14" /> Copier le lien
                             </button>
-                            <a href="https://wa.me/?text={{ urlencode('Bonjour, venez découvrir notre nouvelle boutique en ligne « '.$shop->name.' » sur Boutiq : ' . $shop->public_url) }}" target="_blank" class="btn btn-primary btn-sm" style="background:#25D366;border-color:#25D366;color:#fff;display:inline-flex;align-items:center;gap:.4rem">
+                            <a href="https://wa.me/?text={{ urlencode('Bonjour, venez découvrir notre nouvelle boutique en ligne « '.$shop->name.' » sur Zanika : ' . $shop->public_url) }}" target="_blank" class="btn btn-primary btn-sm" style="background:#25D366;border-color:#25D366;color:#fff;display:inline-flex;align-items:center;gap:.4rem">
                                 <x-icon name="whatsapp" size="16" /> Partager sur WhatsApp
                             </a>
                         </div>

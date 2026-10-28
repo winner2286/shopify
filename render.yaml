@@ -1,5 +1,5 @@
 services:
-  # Service Web Boutiq (Laravel 12 + PHP 8.4 + Nginx)
+  # Service Web Zanika (Laravel 12 + PHP 8.4 + Nginx)
   - type: web
     name: boutiq-app
     runtime: docker

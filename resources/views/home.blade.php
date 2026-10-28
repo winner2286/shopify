@@ -55,7 +55,7 @@
                         <span class="mockup-dot green"></span>
                     </div>
                     <div class="mockup-url">
-                        <span>boutiq.tg/wax-lome</span>
+                        <span>zanika.tg/wax-lome</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:.35rem;color:var(--brand-1);font-weight:600;font-size:.78rem">
                         <span class="live-pulse-indicator"></span>
@@ -258,7 +258,7 @@
 ⢸⣿⡇  ⢸⣿⣿   ⢸⣿⡇  ⣿⣿      ⣿⣿  ⢸⣿⡇  ⢸⣿⣿   ⢸⣿⡇
  ⠻⣿⣦⣄⣈⣉⣀⣤⣾⣿⠃   ⠻⣿⣦⣀⣀⣠⣴⣿⠟   ⠻⣿⣦⣄⣈⣉⣀⣤⣾⣿⠃ 
    ⠉⠛⠿⠿⠿⠿⠛⠉       ⠉⠛⠿⠿⠛⠉       ⠉⠛⠿⠿⠿⠿⠛⠉   
-  [ BOUTIQ CYBER-ENGINE ACTIVE • MATRICE BRAILLE 2×4 ]
+  [ ZANIKA CYBER-ENGINE ACTIVE • MATRICE BRAILLE 2×4 ]
                             </pre>
 
                             <div class="mockup-ascii-stream">
@@ -413,7 +413,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
             <ul class="pillar-checklist">
                 <li><x-icon name="check" :size="16" /> <strong>Design responsive optimisé</strong> pour les connexions mobiles 3G/4G</li>
                 <li><x-icon name="check" :size="16" /> <strong>Catalogue complet</strong> avec variantes de tailles, couleurs et gestion des stocks en temps réel</li>
-                <li><x-icon name="check" :size="16" /> <strong>Adresse web personnalisée</strong> ou sous-domaine offert à vie (nom.boutiq.tg)</li>
+                <li><x-icon name="check" :size="16" /> <strong>Adresse web personnalisée</strong> ou sous-domaine offert à vie (nom.zanika.tg)</li>
                 <li><x-icon name="check" :size="16" /> <strong>Fiches produits rédigées en 1 clic</strong> grâce à l'intelligence artificielle</li>
             </ul>
             <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Créer ma boutique maintenant →</a>
@@ -871,7 +871,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                 <span class="faq-chevron"><x-icon name="arrow-right" :size="16" /></span>
             </button>
             <div class="faq-answer">
-                Oui ! Chaque boutique bénéficie d'une adresse gratuite sécurisée (ex: maboutique.boutiq.tg) et vous pouvez à tout moment connecter votre propre nom de domaine en .tg, .com ou toute autre extension.
+                Oui ! Chaque boutique bénéficie d'une adresse gratuite sécurisée (ex: maboutique.zanika.tg) et vous pouvez à tout moment connecter votre propre nom de domaine en .tg, .com ou toute autre extension.
             </div>
         </div>
 
@@ -970,7 +970,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
             <div>
                 <div class="footer-col-title">Assistance</div>
                 <ul class="footer-col-links">
-                    <li><a href="mailto:support@boutiq.tg">Contact Support</a></li>
+                    <li><a href="mailto:support@zanika.tg">Contact Support</a></li>
                     <li><a href="https://wa.me/22890000000" target="_blank">Aide sur WhatsApp</a></li>
                     <li><a href="#">Conditions d'utilisation</a></li>
                     <li><a href="#">Politique de confidentialité</a></li>

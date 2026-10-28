@@ -8,7 +8,7 @@ on:
 
 jobs:
   ping-render:
-    name: Ping Boutiq Render App
+    name: Ping Zanika Render App
     runs-on: ubuntu-latest
     steps:
       - name: Send Keep-Alive Ping

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "=== Initialisation de Boutiq ==="
+echo "=== Initialisation de Zanika ==="
 
 # 1. Gestion du fichier .env
 if [ ! -f /var/www/html/.env ]; then
@@ -93,13 +93,13 @@ if [ "$1" = "start-web" ] || [ -z "$1" ] || [ -n "$PORT" -a "$1" != "php-fpm" ];
             echo "Démon keep-alive anti-veille actif pour $APP_URL (ping toutes les 9 min)..."
             sleep 45
             while true; do
-                curl -s -m 15 -A "BoutiqKeepAliveBot/1.0" "$APP_URL/api/keep-alive" >/dev/null 2>&1 || true
+                curl -s -m 15 -A "ZanikaKeepAliveBot/1.0" "$APP_URL/api/keep-alive" >/dev/null 2>&1 || true
                 sleep 540
             done
         ) &
     fi
 
-    echo "Boutiq est en ligne et écoute sur le port ${PORT_VALUE} !"
+    echo "Zanika est en ligne et écoute sur le port ${PORT_VALUE} !"
     exec nginx -g "daemon off;"
 fi
 

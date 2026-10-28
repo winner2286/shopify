@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 > nul
 echo ========================================================
-echo   Arrêt des conteneurs Docker Boutiq...
+echo   Arrêt des conteneurs Docker Zanika...
 echo ========================================================
 echo.
 

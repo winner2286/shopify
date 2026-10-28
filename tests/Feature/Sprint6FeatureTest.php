@@ -234,7 +234,7 @@ class Sprint6FeatureTest extends TestCase
         if (! $admin) {
             $admin = User::create([
                 'name' => 'Super Administrateur',
-                'email' => 'admin.test@boutiq.tg',
+                'email' => 'admin.test@zanika.tg',
                 'password' => bcrypt('admin123456'),
                 'role' => User::ROLE_ADMIN,
                 'country' => 'TG',
@@ -248,7 +248,7 @@ class Sprint6FeatureTest extends TestCase
         // Super Admin dashboard
         $response = $this->actingAs($admin)->get(route('admin.dashboard'));
         $response->assertStatus(200);
-        $response->assertSee('Super-Administration Boutiq');
+        $response->assertSee('Super-Administration Zanika');
 
         // Super Admin shops list
         $shopsResponse = $this->actingAs($admin)->get(route('admin.shops'));
@@ -288,7 +288,7 @@ class Sprint6FeatureTest extends TestCase
         if (! $admin) {
             $admin = User::create([
                 'name' => 'Super Administrateur',
-                'email' => 'admin.test2@boutiq.tg',
+                'email' => 'admin.test2@zanika.tg',
                 'password' => bcrypt('admin123456'),
                 'role' => User::ROLE_ADMIN,
                 'country' => 'TG',

@@ -1,5 +1,5 @@
 /**
- * Boutiq ASCII & Braille Dynamic Hero Engine
+ * Zanika ASCII & Braille Dynamic Hero Engine
  * Features:
  * 1. Cypher / Scramble Text Decoding on Hero Keywords
  * 2. Interactive Braille Ambient Canvas with Wave & Mouse Tracking

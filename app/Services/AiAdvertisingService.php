@@ -113,9 +113,9 @@ class AiAdvertisingService
 
         if ($channel === Advertisement::CHANNEL_TIKTOK) {
             return [
-                "✨ Vous cherchiez la perfection ? Voici « {$title} » chez {$shop->name} ! {$priceText}\n\n📦 Livraison express partout à Lomé et au Togo ! Commandez directement via le lien en bio ou WhatsApp.\n\n#LomeShopping #TogoMode #BoutiqTg #TikTokTogo #StyleLome",
-                "POV : Tu viens de trouver le meilleur plan shopping à Lomé 😍 « {$title} » est enfin disponible chez {$shop->name} !\n\n👉 {$priceText}\n🚚 Paiement T-Money, Flooz ou à la livraison !\n\n#TogoFashion #BoutiqLome #TogolaisAuTop #ModeLome",
-                "Stop au scrolling 🛑 Ce modèle « {$title} » fait fureur en ce moment chez {$shop->name} ! {$priceText}\n\nCliquez sur le lien pour commander avant rupture de stock 📲\n\n#TikTokTogo #LomeTogo #BonPlanLome #Boutiq",
+                "✨ Vous cherchiez la perfection ? Voici « {$title} » chez {$shop->name} ! {$priceText}\n\n📦 Livraison express partout à Lomé et au Togo ! Commandez directement via le lien en bio ou WhatsApp.\n\n#LomeShopping #TogoMode #ZanikaTg #TikTokTogo #StyleLome",
+                "POV : Tu viens de trouver le meilleur plan shopping à Lomé 😍 « {$title} » est enfin disponible chez {$shop->name} !\n\n👉 {$priceText}\n🚚 Paiement T-Money, Flooz ou à la livraison !\n\n#TogoFashion #ZanikaLome #TogolaisAuTop #ModeLome",
+                "Stop au scrolling 🛑 Ce modèle « {$title} » fait fureur en ce moment chez {$shop->name} ! {$priceText}\n\nCliquez sur le lien pour commander avant rupture de stock 📲\n\n#TikTokTogo #LomeTogo #BonPlanLome #Zanika",
             ];
         }
 

@@ -8,10 +8,10 @@
         <div>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
                 <x-icon name="zap" size="24" style="color:var(--brand-primary)" />
-                <h1 style="font-size:1.8rem;margin:0">Super-Administration Boutiq (Module J)</h1>
+                <h1 style="font-size:1.8rem;margin:0">Super-Administration Zanika</h1>
                 <span class="badge badge-ok">Super-Admin</span>
             </div>
-            <p style="margin:0;color:var(--text-soft)">Supervision globale de l'écosystème Boutiq, des commerçants, des ventes et des quotas d'IA.</p>
+            <p style="margin:0;color:var(--text-soft)">Supervision globale de l'écosystème Zanika, des commerçants, des ventes et des quotas d'IA.</p>
         </div>
 
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">

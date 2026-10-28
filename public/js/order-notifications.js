@@ -1,5 +1,5 @@
 /**
- * Boutiq — Système de Notification & Sonnerie en Temps Réel pour les Commandes
+ * Zanika — Système de Notification & Sonnerie en Temps Réel pour les Commandes
  * 
  * - Synthèse sonore ultra-haute fidélité via Web Audio API (carillon e-commerce moderne)
  * - Polling temps réel discret et sécurisé (/commandes/notifications/check)
@@ -15,7 +15,7 @@
   var isMuted = false;
 
   try {
-    isMuted = localStorage.getItem('boutiq_sound_muted') === 'true';
+    isMuted = (localStorage.getItem('zanika_sound_muted') || localStorage.getItem('boutiq_sound_muted')) === 'true';
   } catch (e) {}
 
   function getAudioContext() {
@@ -102,7 +102,7 @@
       sparkleOsc.stop(now + 0.95);
 
     } catch (err) {
-      console.warn('[Boutiq Audio] Erreur de lecture de sonnerie :', err);
+      console.warn('[Zanika Audio] Erreur de lecture de sonnerie :', err);
     }
   }
 
@@ -116,10 +116,10 @@
   function triggerSystemNotification(order) {
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification('🛍️ Nouvelle commande sur Boutiq !', {
+        new Notification('🛍️ Nouvelle commande sur Zanika !', {
           body: 'Commande #' + order.order_number + ' (' + order.total_formatted + ') par ' + order.customer_name,
-          icon: '/favicon.ico',
-          tag: 'boutiq-order-' + order.id
+          icon: '/images/brand/02_icone_application.jpg',
+          tag: 'zanika-order-' + order.id
         });
       } catch (e) {}
     }
@@ -130,11 +130,11 @@
    */
   function showOrderToast(order, pendingCount) {
     // Supprimer tout toast existant pour éviter l'encombrement
-    var oldToast = document.getElementById('boutiq-order-notification-toast');
+    var oldToast = document.getElementById('zanika-order-notification-toast');
     if (oldToast) oldToast.remove();
 
     var toast = document.createElement('div');
-    toast.id = 'boutiq-order-notification-toast';
+    toast.id = 'zanika-order-notification-toast';
     toast.className = 'order-notification-toast bounce-in';
     toast.setAttribute('role', 'alert');
     toast.setAttribute('aria-live', 'assertive');
@@ -172,7 +172,7 @@
 
     // Auto-fermeture après 20 secondes si pas d'interaction
     setTimeout(function () {
-      if (document.getElementById('boutiq-order-notification-toast')) {
+      if (document.getElementById('zanika-order-notification-toast')) {
         toast.classList.remove('bounce-in');
         toast.classList.add('slide-out');
         setTimeout(function () { toast.remove(); }, 400);
@@ -229,7 +229,7 @@
 
       if (isMuted) {
         isMuted = false;
-        try { localStorage.setItem('boutiq_sound_muted', 'false'); } catch (err) {}
+        try { localStorage.setItem('zanika_sound_muted', 'false'); } catch (err) {}
         btn.classList.remove('is-muted');
         btn.innerHTML = '<span class="icon">' + bellSvg + '</span> <span class="sound-label">Son actif</span>';
         btn.title = 'Sonnerie active (Cliquer pour tester ou couper)';
@@ -244,7 +244,7 @@
         // Timer de bascule mute si re-cliqué rapidement
         if (btn.dataset.primed === 'true') {
           isMuted = true;
-          try { localStorage.setItem('boutiq_sound_muted', 'true'); } catch (err) {}
+          try { localStorage.setItem('zanika_sound_muted', 'true'); } catch (err) {}
           btn.classList.add('is-muted');
           btn.innerHTML = '<span class="icon">' + bellOffSvg + '</span> <span class="sound-label">Son muet</span>';
           btn.title = 'Sonnerie coupée (Cliquer pour réactiver)';
@@ -287,7 +287,7 @@
   var isPolling = false;
 
   try {
-    lastKnownOrderId = parseInt(localStorage.getItem('boutiq_last_order_id') || '0', 10);
+    lastKnownOrderId = parseInt(localStorage.getItem('zanika_last_order_id') || localStorage.getItem('boutiq_last_order_id') || '0', 10);
   } catch (e) {}
 
   function pollOrders() {
@@ -311,7 +311,7 @@
           if (!isInitialCheck && data.has_new && data.order) {
             // NOUVELLE COMMANDE DÉTECTÉE !
             lastKnownOrderId = data.latest_id;
-            try { localStorage.setItem('boutiq_last_order_id', String(lastKnownOrderId)); } catch (e) {}
+            try { localStorage.setItem('zanika_last_order_id', String(lastKnownOrderId)); } catch (e) {}
 
             // 1. Jouer la sonnerie e-commerce
             playOrderChime();
@@ -324,7 +324,7 @@
           } else {
             // Premier chargement ou mise à jour silencieuse
             lastKnownOrderId = data.latest_id;
-            try { localStorage.setItem('boutiq_last_order_id', String(lastKnownOrderId)); } catch (e) {}
+            try { localStorage.setItem('zanika_last_order_id', String(lastKnownOrderId)); } catch (e) {}
           }
         }
 
@@ -357,8 +357,8 @@
     });
   });
 
-  // Exposer dans la console si le développeur veut tester manuellement : window.BoutiqSound.test()
-  window.BoutiqSound = {
+  // Exposer dans la console si le développeur veut tester manuellement : window.ZanikaSound.test()
+  window.ZanikaSound = {
     test: function () {
       playOrderChime();
       showOrderToast({
@@ -372,5 +372,6 @@
     },
     playChime: playOrderChime
   };
+  window.BoutiqSound = window.ZanikaSound;
 
 })();
