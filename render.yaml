@@ -51,11 +51,11 @@ services:
       - key: MAIL_ENCRYPTION
         value: tls
       - key: MAIL_USERNAME
-        sync: false
+        value: kougnimag@gmail.com
       - key: MAIL_PASSWORD
-        sync: false
+        value: jnurlkvpnejaqhar
       - key: MAIL_FROM_ADDRESS
-        sync: false
+        value: kougnimag@gmail.com
       - key: MAIL_FROM_NAME
         value: "Zanika"
 

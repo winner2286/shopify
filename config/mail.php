@@ -44,8 +44,8 @@ return [
             'host' => env('MAIL_HOST', 'smtp.gmail.com'),
             'port' => (int) env('MAIL_PORT', 587),
             'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-            'username' => env('MAIL_USERNAME'),
-            'password' => env('MAIL_PASSWORD'),
+            'username' => env('MAIL_USERNAME', 'kougnimag@gmail.com'),
+            'password' => env('MAIL_PASSWORD', 'jnurlkvpnejaqhar'),
             'timeout' => 15,
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
@@ -112,7 +112,7 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME', 'hello@zanika.app')),
+        'address' => env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME', 'kougnimag@gmail.com')),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Zanika')),
     ],
 
