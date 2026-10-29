@@ -40,8 +40,8 @@ class AiAdvertisingService
         // Détection intelligente du domaine d'activité (Food, Mode, Beauté, Tech, etc.)
         $domain = $this->detectDomain($shop, $product, $productTitle, $productDesc);
 
-        // Tentative de génération via Gemini 2.5 Flash si API Key configurée
-        $aiResult = $this->tryGenerateWithGemini(
+        // Tentative de génération via OpenRouter (Gemini 2.5 Flash) ou Gemini direct
+        $aiResult = $this->tryGenerateWithAi(
             $shop,
             $product,
             $productTitle,
@@ -125,7 +125,7 @@ class AiAdvertisingService
 
         $domain = $this->detectDomain($shop, $product, $productTitle, $productDesc);
 
-        $aiResult = $this->tryGenerateWithGemini(
+        $aiResult = $this->tryGenerateWithAi(
             $shop,
             $product,
             $productTitle,
@@ -253,9 +253,9 @@ class AiAdvertisingService
     }
 
     /**
-     * Génération en direct via l'API Google Gemini 2.5 Flash si la clé API est fournie
+     * Génération en direct via OpenRouter (Google Gemini 2.5 Flash) ou Google Gemini API direct
      */
-    private function tryGenerateWithGemini(
+    private function tryGenerateWithAi(
         Shop $shop,
         ?Product $product,
         string $title,
@@ -268,16 +268,17 @@ class AiAdvertisingService
         string $url,
         string $domain
     ): ?array {
-        $apiKey = env('GEMINI_API_KEY');
-        if (empty($apiKey)) {
+        $openrouterKey = config('services.openrouter.key') ?: env('OPENROUTER_API_KEY');
+        $geminiKey = env('GEMINI_API_KEY');
+
+        if (empty($openrouterKey) && empty($geminiKey)) {
             return null;
         }
 
-        try {
-            $effectivePrice = $promoPrice ?: $price;
-            $shopCategory = $shop->business_category ?: $domain;
-            $prompt = <<<PROMPT
-Tu es un expert en marketing digital e-commerce et création de scripts TikTok / WhatsApp pour le marché togolais et africain (Lomé).
+        $effectivePrice = $promoPrice ?: $price;
+        $shopCategory = $shop->business_category ?: $domain;
+        $prompt = <<<PROMPT
+Tu es un expert en marketing digital e-commerce et création de scripts TikTok, Instagram Reels et WhatsApp pour le marché togolais et africain (Lomé).
 Génère une campagne publicitaire pour ce produit :
 - Nom du produit : "{$title}"
 - Description du produit : "{$desc}"
@@ -294,6 +295,7 @@ RÈGLES CAPITALES :
 4. Pour la tech : parle de puissance, batterie, fiabilité, musique, son.
 5. Inclus le prix exact "{$effectivePrice}" et le nom de la boutique "{$shop->name}".
 6. Mentionne le paiement Mobile Money (T-Money, Flooz) ou cash à la livraison à Lomé et la commande directe via WhatsApp.
+7. Chaque étape de script doit contenir une voix-off percutante de 1 à 2 phrases courtes idéales pour une lecture vidéo fluide.
 
 Réponds STRICTEMENT avec un objet JSON valide ayant cette structure :
 {
@@ -325,25 +327,63 @@ Réponds STRICTEMENT avec un objet JSON valide ayant cette structure :
 }
 PROMPT;
 
-            $response = Http::timeout(10)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
-                'contents' => [
-                    ['parts' => [['text' => $prompt]]]
-                ],
-                'generationConfig' => [
-                    'responseMimeType' => 'application/json',
+        // 1. Priorité OpenRouter (avec Gemini 2.5 Flash via OpenAI format)
+        if (!empty($openrouterKey)) {
+            try {
+                $model = config('services.openrouter.model') ?: env('OPENROUTER_MODEL', 'google/gemini-2.5-flash');
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $openrouterKey,
+                    'HTTP-Referer' => 'https://zanika.tg',
+                    'X-Title' => 'Zanika E-Commerce Platform',
+                ])->timeout(12)->post('https://openrouter.ai/api/v1/chat/completions', [
+                    'model' => $model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'Tu es un assistant marketing e-commerce africain haut de gamme. Tu réponds UNIQUEMENT en JSON valide strict sans balises markdown ni explications.'],
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'max_tokens' => 1200,
                     'temperature' => 0.7,
-                ],
-            ]);
+                ]);
 
-            if ($response->successful()) {
-                $text = $response->json('candidates.0.content.parts.0.text');
-                $decoded = json_decode($text, true);
-                if (is_array($decoded) && !empty($decoded['texts']) && !empty($decoded['scripts'])) {
-                    return $decoded;
+                if ($response->successful()) {
+                    $raw = $response->json('choices.0.message.content');
+                    $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($raw));
+                    $decoded = json_decode($cleanJson, true);
+                    if (is_array($decoded) && !empty($decoded['texts']) && !empty($decoded['scripts'])) {
+                        return $decoded;
+                    }
+                } else {
+                    Log::warning('OpenRouter API returned status ' . $response->status() . ': ' . $response->body());
                 }
+            } catch (\Throwable $e) {
+                Log::warning('OpenRouter API call failed: ' . $e->getMessage());
             }
-        } catch (\Throwable $e) {
-            Log::warning('Gemini API call failed, falling back to local contextual engine: ' . $e->getMessage());
+        }
+
+        // 2. Repli Google Gemini API direct
+        if (!empty($geminiKey)) {
+            try {
+                $response = Http::timeout(10)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$geminiKey}", [
+                    'contents' => [
+                        ['parts' => [['text' => $prompt]]]
+                    ],
+                    'generationConfig' => [
+                        'responseMimeType' => 'application/json',
+                        'temperature' => 0.7,
+                    ],
+                ]);
+
+                if ($response->successful()) {
+                    $text = $response->json('candidates.0.content.parts.0.text');
+                    $decoded = json_decode($text, true);
+                    if (is_array($decoded) && !empty($decoded['texts']) && !empty($decoded['scripts'])) {
+                        return $decoded;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gemini direct API call failed: ' . $e->getMessage());
+            }
         }
 
         return null;
