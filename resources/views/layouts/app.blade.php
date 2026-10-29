@@ -66,15 +66,11 @@
             </div>
 
             <nav class="nav-actions" aria-label="Navigation principale">
-                <!-- Bouton de bascule Mode Sombre / Mode Clair -->
-                <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-                </button>
                 @auth
                     @if (auth()->user()->shop && auth()->user()->shop->subdomain)
                         <a id="nav-preview-store" href="{{ url('/b/' . auth()->user()->shop->subdomain) }}" target="_blank" class="btn btn-ghost btn-sm" style="color:var(--brand-1);display:inline-flex;align-items:center;gap:.35rem" title="Voir ma boutique en direct">
                             <x-icon name="eye" :size="15" />
-                            <span>Ma boutique</span>
+                            <span class="nav-btn-text">Ma boutique</span>
                             <x-icon name="external-link" :size="12" />
                         </a>
                     @endif
@@ -101,6 +97,11 @@
                         <span class="btn-short-text">Essai gratuit</span>
                     </a>
                 @endauth
+
+                <!-- Bouton de bascule Mode Sombre / Mode Clair (à l'extrémité droite) -->
+                <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </button>
             </nav>
         </div>
     </header>
