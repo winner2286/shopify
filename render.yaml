@@ -41,7 +41,12 @@ services:
         fromDatabase:
           name: boutiq-db
           property: connectionString
-      # Configuration SMTP pour envoi réel des emails OTP (Gmail)
+      # Relais Google Apps Script HTTPS (Port 443 - contourne le blocage Render Free)
+      - key: GOOGLE_MAIL_WEBHOOK_URL
+        sync: false
+      - key: GOOGLE_MAIL_WEBHOOK_TOKEN
+        value: "ZanikaSecureMailToken2026"
+      # Configuration SMTP de secours
       - key: MAIL_MAILER
         value: smtp
       - key: MAIL_HOST

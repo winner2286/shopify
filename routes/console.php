@@ -144,11 +144,16 @@ Artisan::command('mail:test {to?}', function (?string $to = null) {
     $to = $to ?: config('mail.from.address');
     $this->info("--- Test d'envoi d'email Zanika ---");
     $this->info("Destinataire : {$to}");
-    $this->line("Mailer : " . config('mail.default'));
-    $this->line("Host : " . config('mail.mailers.smtp.host'));
-    $this->line("Port : " . config('mail.mailers.smtp.port'));
-    $this->line("Encryption : " . config('mail.mailers.smtp.encryption'));
-    $this->line("Username : " . (config('mail.mailers.smtp.username') ?: '(aucun)'));
+    $mailer = config('mail.default');
+    $this->line("Mailer actif : " . $mailer);
+    if ($mailer === 'google_webhook') {
+        $this->line("Webhook URL : " . (config('mail.mailers.google_webhook.url') ? 'Configurée (HTTPS port 443)' : '(NON configurée)'));
+    } else {
+        $this->line("Host : " . config('mail.mailers.smtp.host'));
+        $this->line("Port : " . config('mail.mailers.smtp.port'));
+        $this->line("Encryption : " . config('mail.mailers.smtp.encryption'));
+        $this->line("Username : " . (config('mail.mailers.smtp.username') ?: '(aucun)'));
+    }
     $this->line("From : " . config('mail.from.name') . ' <' . config('mail.from.address') . '>');
 
     try {
