@@ -175,7 +175,7 @@
                                 <span class="badge badge-ok" style="font-size:.7rem">En stock</span>
                             </div>
 
-                            <div style="height:110px;background:linear-gradient(135deg, rgba(158, 27, 50, 0.25), rgba(115, 16, 34, 0.45));border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fda4af;margin-bottom:.8rem">
+                            <div class="mockup-product-visual" style="height:110px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:.8rem">
                                 <x-icon name="shirt" :size="48" />
                             </div>
 
