@@ -716,7 +716,7 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 /* Carte standard épurée */
 .card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1.8rem; color: #ffffff;
+  border-radius: var(--radius); padding: 1.8rem; color: var(--text);
   transition: transform .25s var(--ease), border-color .2s, box-shadow .25s var(--ease);
 }
 .card:hover {
@@ -1193,9 +1193,9 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 
 /* Tableaux & Catalogues */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); }
-.table { width: 100%; border-collapse: collapse; text-align: left; font-size: .95rem; }
+.table { width: 100%; border-collapse: collapse; text-align: left; font-size: .95rem; color: var(--text); }
 .table th { background: #16161e; padding: .9rem 1rem; font-weight: 600; color: var(--text-soft); border-bottom: 1px solid var(--border); }
-.table td { padding: .9rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table td { padding: .9rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
 .table tr:last-child td { border-bottom: none; }
 .table tr:hover td { background: #191924; }
 
@@ -3109,4 +3109,125 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 }
 [data-theme='light'] .auth-card h1 {
   color: #0b0d12 !important;
+}
+
+/* Tableaux, Catalogues & Cartes Dashboard en mode clair */
+[data-theme='light'] .card,
+[data-theme='light'] .panel {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  color: #0b0d12 !important;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme='light'] .card h1,
+[data-theme='light'] .card h2,
+[data-theme='light'] .card h3,
+[data-theme='light'] .card h4 {
+  color: #0b0d12 !important;
+}
+
+[data-theme='light'] .card strong {
+  color: #0b0d12 !important;
+}
+
+[data-theme='light'] .table-wrap {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.09) !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+}
+
+[data-theme='light'] .table {
+  color: #0b0d12 !important;
+}
+
+[data-theme='light'] .table th {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.1) !important;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
+[data-theme='light'] .table td {
+  color: #0b0d12 !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.07) !important;
+}
+
+[data-theme='light'] .table td a {
+  color: #0b0d12 !important;
+  font-weight: 600;
+}
+
+[data-theme='light'] .table td a:hover {
+  color: var(--brand-1) !important;
+}
+
+[data-theme='light'] .table td strong {
+  color: #0b0d12 !important;
+}
+
+[data-theme='light'] .table tr:hover td {
+  background: #f8fafc !important;
+}
+
+[data-theme='light'] .thumb-preview {
+  background: #f8fafc !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  color: #64748b !important;
+}
+
+/* Statuts & Badges en mode clair */
+[data-theme='light'] .badge-active {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border: 1px solid #bbf7d0 !important;
+}
+
+[data-theme='light'] .badge-hidden {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+[data-theme='light'] .badge-low-stock {
+  background: #fef9c3 !important;
+  color: #a16207 !important;
+  border: 1px solid #fef08a !important;
+}
+
+[data-theme='light'] .badge-out-of-stock {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border: 1px solid #fecaca !important;
+}
+
+[data-theme='light'] .empty {
+  color: #64748b !important;
+}
+
+[data-theme='light'] .pill {
+  background: #f1f5f9 !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  color: #334155 !important;
+}
+
+[data-theme='light'] .todo li {
+  color: #0b0d12 !important;
+}
+
+[data-theme='light'] .todo .box {
+  background: #f1f5f9 !important;
+  border: 1px solid rgba(15, 23, 42, 0.15) !important;
+  color: var(--brand-1) !important;
+}
+
+[data-theme='light'] .progress {
+  background: #e2e8f0 !important;
+}
+
+[data-theme='light'] .progress i {
+  background: var(--brand-1) !important;
 }
