@@ -26,14 +26,17 @@ class VerificationCodeService
             'expires_at' => now()->addMinutes(VerificationCode::TTL_MINUTES),
         ]);
 
+        $mailSent = false;
         try {
             Mail::to($user->email)->send(new VerificationCodeMail($user->name, $code, VerificationCode::TTL_MINUTES));
+            $mailSent = true;
         } catch (\Throwable $e) {
             report($e);
+            \Illuminate\Support\Facades\Log::error('Erreur envoi email OTP Zanika: ' . $e->getMessage());
         }
 
-        // Si le mailer est 'log' ou SMTP local / non configuré, stocker le code en session pour débloquer les tests
-        if (config('mail.default') === 'log' || ! config('mail.mailers.smtp.host') || config('mail.mailers.smtp.host') === '127.0.0.1') {
+        // Si l'envoi email a échoué ou si SMTP n'est pas encore configuré, secours en session
+        if (! $mailSent || config('mail.default') === 'log' || empty(config('mail.mailers.smtp.username')) || ! config('mail.mailers.smtp.host') || config('mail.mailers.smtp.host') === '127.0.0.1') {
             session()->flash('dev_code', $code);
         }
     }

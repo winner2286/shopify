@@ -139,3 +139,26 @@ Artisan::command('media:restore-defaults', function () {
 
     $this->info("Restauration terminée : {$restoredCount} média(s) restauré(s) avec succès !");
 })->purpose('Restaure et persiste les médias produits sur disque et en base de données');
+
+Artisan::command('mail:test {to?}', function (?string $to = null) {
+    $to = $to ?: config('mail.from.address');
+    $this->info("--- Test d'envoi d'email Zanika ---");
+    $this->info("Destinataire : {$to}");
+    $this->line("Mailer : " . config('mail.default'));
+    $this->line("Host : " . config('mail.mailers.smtp.host'));
+    $this->line("Port : " . config('mail.mailers.smtp.port'));
+    $this->line("Encryption : " . config('mail.mailers.smtp.encryption'));
+    $this->line("Username : " . (config('mail.mailers.smtp.username') ?: '(aucun)'));
+    $this->line("From : " . config('mail.from.name') . ' <' . config('mail.from.address') . '>');
+
+    try {
+        \Illuminate\Support\Facades\Mail::to($to)->send(
+            new \App\Mail\VerificationCodeMail('Client Zanika', '482915', 10)
+        );
+        $this->info("✅ Succès ! L'email de test (code OTP) a été envoyé avec succès à {$to} !");
+    } catch (\Throwable $e) {
+        $this->error("❌ Échec de l'envoi de l'email :");
+        $this->error($e->getMessage());
+    }
+})->purpose('Teste l\'envoi d\'un email OTP via la configuration SMTP active');
+
