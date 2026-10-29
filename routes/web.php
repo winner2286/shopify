@@ -136,9 +136,10 @@ Route::get('/migrate-now', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'PlanSeeder', '--force' => true]);
+        \Illuminate\Support\Facades\Artisan::call('media:restore-defaults');
         return response()->json([
             'status' => 'success',
-            'message' => 'Migrations et plans initialisés avec succès.',
+            'message' => 'Migrations, plans et médias initialisés avec succès.',
             'output' => \Illuminate\Support\Facades\Artisan::output(),
         ]);
     } catch (\Throwable $e) {

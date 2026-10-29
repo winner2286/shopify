@@ -28,10 +28,13 @@ class MediaController extends Controller
         }
 
         // 2. Recherche en base de données pour restauration persistante
+        $basename = basename($cleanPath);
         $productImage = ProductImage::where('path', $cleanPath)
             ->orWhere('thumbnail_path', $cleanPath)
-            ->orWhere('path', 'like', '%' . basename($cleanPath))
-            ->orWhere('thumbnail_path', 'like', '%' . basename($cleanPath))
+            ->orWhere('path', '/' . $cleanPath)
+            ->orWhere('thumbnail_path', '/' . $cleanPath)
+            ->orWhere('path', 'like', '%' . $basename)
+            ->orWhere('thumbnail_path', 'like', '%' . $basename)
             ->first();
 
         if ($productImage && ! empty($productImage->image_data)) {
@@ -54,7 +57,7 @@ class MediaController extends Controller
             }
         }
 
-        // 3. Fichier manquant (ex. redémarrage Render sans persistance) : génération dynamique
+        // 3. Fichier manquant : association avec le catalogue réaliste permanent
         $product = $productImage?->product;
         if (! $product) {
             if (preg_match('/shops\/(\d+)/', $cleanPath, $m)) {
@@ -62,14 +65,33 @@ class MediaController extends Controller
             }
         }
 
-        // Tenter de générer un fichier WebP réel via GD
+        $catalogPhoto = $this->resolveCatalogPhoto($product, $cleanPath);
+        if ($catalogPhoto && file_exists($catalogPhoto)) {
+            $content = file_get_contents($catalogPhoto);
+            @mkdir(dirname($diskPath), 0755, true);
+            @file_put_contents($diskPath, $content);
+
+            // Persistance définitive dans PostgreSQL
+            if ($productImage && empty($productImage->image_data)) {
+                $productImage->update(['image_data' => base64_encode($content)]);
+            }
+
+            return response()->file($diskPath, [
+                'Cache-Control' => 'public, max-age=2592000',
+            ]);
+        }
+
+        // 4. Génération dynamique WebP avec GD
         if ($this->generateWebPPlaceholder($product, $diskPath)) {
+            if ($productImage && empty($productImage->image_data) && file_exists($diskPath)) {
+                $productImage->update(['image_data' => base64_encode(file_get_contents($diskPath))]);
+            }
             return response()->file($diskPath, [
                 'Cache-Control' => 'public, max-age=86400',
             ]);
         }
 
-        // Fallback vectoriel SVG pur
+        // 5. Fallback vectoriel SVG pur
         $svg = $this->generateSvgPlaceholder($product);
         return response($svg, 200, [
             'Content-Type' => 'image/svg+xml',
@@ -80,7 +102,7 @@ class MediaController extends Controller
     /**
      * Endpoint API public pour générer une image de substitution
      */
-    public function placeholder(Request $request): Response
+    public function placeholder(Request $request): BinaryFileResponse|Response
     {
         $product = null;
         if ($request->filled('id')) {
@@ -91,11 +113,69 @@ class MediaController extends Controller
         $cat = $request->input('cat', $product?->categories?->first()?->name ?? 'Collection');
         $color = $request->input('color', $product?->shop?->brand_color ?? '#10b981');
 
+        // Vérifier si une photo réaliste correspond à l'article
+        $catalogPhoto = $this->resolveCatalogPhoto($product, $title . ' ' . $cat);
+        if ($catalogPhoto && file_exists($catalogPhoto)) {
+            if ($product) {
+                $primary = $product->primaryImage;
+                $b64 = base64_encode(file_get_contents($catalogPhoto));
+                if ($primary) {
+                    if (empty($primary->image_data)) {
+                        $primary->update(['image_data' => $b64]);
+                    }
+                } else {
+                    $product->images()->create([
+                        'path' => "shops/{$product->shop_id}/products/" . basename($catalogPhoto),
+                        'thumbnail_path' => "shops/{$product->shop_id}/products/thumb_" . basename($catalogPhoto),
+                        'sort_order' => 0,
+                        'size_bytes' => filesize($catalogPhoto),
+                        'image_data' => $b64,
+                    ]);
+                }
+            }
+
+            return response()->file($catalogPhoto, [
+                'Cache-Control' => 'public, max-age=86400',
+            ]);
+        }
+
         $svg = $this->buildSvgContent($title, $cat, $color);
         return response($svg, 200, [
             'Content-Type' => 'image/svg+xml',
             'Cache-Control' => 'public, max-age=86400',
         ]);
+    }
+
+    /**
+     * Associe un produit à une photo haute définition du catalogue
+     */
+    private function resolveCatalogPhoto(?Product $product, string $hint = ''): ?string
+    {
+        $text = mb_strtolower(($product?->title ?? '') . ' ' . ($product?->categories?->first()?->name ?? '') . ' ' . $hint);
+        $isThumb = str_contains($hint, 'thumb');
+
+        if (str_contains($text, 'frite') || str_contains($text, 'snack')) {
+            $file = $isThumb ? 'thumb_frites.webp' : 'frites.webp';
+            $path = public_path("images/catalog/{$file}");
+            if (file_exists($path)) return $path;
+            return public_path('images/catalog/frites.webp');
+        }
+
+        if (str_contains($text, 'poisson') || str_contains($text, 'fish')) {
+            $file = $isThumb ? 'thumb_poisson.webp' : 'poisson.webp';
+            $path = public_path("images/catalog/{$file}");
+            if (file_exists($path)) return $path;
+            return public_path('images/catalog/poisson.webp');
+        }
+
+        if (str_contains($text, 'burger') || str_contains($text, 'sandwich') || str_contains($text, 'pain')) {
+            $file = $isThumb ? 'thumb_burger.webp' : 'burger.webp';
+            $path = public_path("images/catalog/{$file}");
+            if (file_exists($path)) return $path;
+            return public_path('images/catalog/burger.webp');
+        }
+
+        return null;
     }
 
     /**

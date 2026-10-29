@@ -59,6 +59,9 @@ if [ "$AUTO_MIGRATE" = "true" ] || [ "$1" = "start-web" ] || [ -n "$RENDER" ]; t
 
     echo "Initialisation des formules d'abonnement (PlanSeeder)..."
     php artisan db:seed --class=PlanSeeder --force || true
+
+    echo "Vérification et restauration persistante des médias..."
+    php artisan media:restore-defaults || true
 fi
 
 # 7. Optimisation du cache pour production

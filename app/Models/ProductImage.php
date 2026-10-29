@@ -9,6 +9,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['product_id', 'path', 'thumbnail_path', 'sort_order', 'size_bytes', 'image_data'])]
 class ProductImage extends Model
 {
+    protected $fillable = [
+        'product_id',
+        'path',
+        'thumbnail_path',
+        'sort_order',
+        'size_bytes',
+        'image_data',
+    ];
+
     protected function casts(): array
     {
         return [

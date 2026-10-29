@@ -62,11 +62,24 @@ class Product extends Model
     {
         if ($this->relationLoaded('primaryImage')) {
             $img = $this->getRelation('primaryImage');
-            if ($img) return $img;
+            if ($img && ! empty($img->image_data)) {
+                return $img;
+            }
         }
+
         if ($this->relationLoaded('images')) {
+            $withData = $this->images->first(fn($i) => ! empty($i->image_data));
+            if ($withData) {
+                return $withData;
+            }
             return $this->images->first();
         }
+
+        $withData = $this->images()->whereNotNull('image_data')->where('image_data', '!=', '')->first();
+        if ($withData) {
+            return $withData;
+        }
+
         return $this->images()->first();
     }
 

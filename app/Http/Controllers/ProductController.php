@@ -230,6 +230,12 @@ class ProductController extends Controller
 
         // Nouvelles photos
         if ($request->hasFile('photos')) {
+            // Nettoyage des anciennes images fantômes sans données binaires si l'utilisateur en téléverse de nouvelles
+            $hasValidImages = $product->images()->whereNotNull('image_data')->where('image_data', '!=', '')->exists();
+            if (! $hasValidImages) {
+                $product->images()->delete();
+            }
+
             $currentCount = $product->images()->count();
             $sortOrder = $currentCount;
 
