@@ -352,10 +352,111 @@ SVG;
         if (strlen($hex) !== 6) {
             return [16, 185, 129];
         }
+
         return [
             hexdec(substr($hex, 0, 2)),
             hexdec(substr($hex, 2, 2)),
             hexdec(substr($hex, 4, 2)),
         ];
     }
+
+    /**
+     * Synthèse vocale IA en français avec mise en cache disque (/api/tts)
+     */
+    public function tts(Request $request): Response
+    {
+        $text = trim((string) $request->input('text', ''));
+        if (empty($text)) {
+            return response('', 400);
+        }
+
+        $cleanText = mb_substr(strip_tags($text), 0, 200);
+
+        // Répertoire de cache pour les fichiers audio de voix-off
+        $cacheDir = storage_path('app/tts');
+        if (! file_exists($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+        }
+        $cacheFile = $cacheDir . '/' . md5('fr_' . $cleanText) . '.mp3';
+
+        if (file_exists($cacheFile) && filesize($cacheFile) > 0) {
+            $mp3 = file_get_contents($cacheFile);
+        } else {
+            $mp3 = $this->fetchGoogleTts($cleanText);
+
+            if ($mp3 && strlen($mp3) > 300) {
+                @file_put_contents($cacheFile, $mp3);
+            } else {
+                return response('', 502);
+            }
+        }
+
+        return response($mp3, 200, $this->imageHeaders(31536000, 'audio/mpeg'));
+    }
+
+    /**
+     * Pré-génère et met en cache un segment audio pour une latence nulle
+     */
+    public function warmTtsCache(string $text): bool
+    {
+        $cleanText = mb_substr(strip_tags(trim($text)), 0, 200);
+        if (empty($cleanText)) {
+            return false;
+        }
+
+        $cacheDir = storage_path('app/tts');
+        if (! file_exists($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+        }
+        $cacheFile = $cacheDir . '/' . md5('fr_' . $cleanText) . '.mp3';
+
+        if (file_exists($cacheFile) && filesize($cacheFile) > 0) {
+            return true;
+        }
+
+        $mp3 = $this->fetchGoogleTts($cleanText);
+        if ($mp3 && strlen($mp3) > 300) {
+            @file_put_contents($cacheFile, $mp3);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Récupère le flux audio MP3 depuis Google Translate TTS avec plusieurs endpoints de secours
+     */
+    private function fetchGoogleTts(string $cleanText): ?string
+    {
+        $encoded = urlencode($cleanText);
+        $candidates = [
+            "https://translate.google.com/translate_tts?ie=UTF-8&tl=fr&client=tw-ob&q={$encoded}",
+            "https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=fr&q={$encoded}",
+            "https://translate.google.com/translate_tts?ie=UTF-8&tl=fr-FR&client=tw-ob&q={$encoded}",
+        ];
+
+        foreach ($candidates as $url) {
+            try {
+                $context = stream_context_create([
+                    'http' => [
+                        'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0\r\nReferer: https://translate.google.com/\r\n",
+                        'timeout' => 5,
+                    ],
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                    ],
+                ]);
+                $mp3 = @file_get_contents($url, false, $context);
+                if ($mp3 && strlen($mp3) > 300) {
+                    return $mp3;
+                }
+            } catch (\Throwable $e) {
+                // Essayer candidat suivant
+            }
+        }
+
+        return null;
+    }
 }
+

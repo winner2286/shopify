@@ -1,7 +1,7 @@
 /**
  * Studio Vidéo Publicitaire IA - Moteur Motion Canvas 9:16
  * Générateur et Exportateur Vidéo Social Commerce (TikTok, Reels, Statuts WhatsApp)
- * 100% Client-Side : 0 coût serveur, 0 dépendance API externe, Rendu instantané.
+ * Avec Synthèse Vocale IA (Voix-Off) intégrée dans la vidéo et choix de format MP4 / WebM
  */
 
 (function () {
@@ -36,9 +36,15 @@
             this.currentTheme = 'boutique';
             this.audioPreset = 'afrobeat';
             this.soundEnabled = true;
-            this.voiceoverEnabled = false;
+            this.voiceoverEnabled = true; // Activé par défaut pour un impact maximal
+            this.selectedFormat = 'mp4';  // Format par défaut : MP4
             this.lastFrameTime = performance.now();
             this.animationFrameId = null;
+
+            // Buffers audio pour la voix-off synthétisée
+            this.voiceBuffers = [null, null, null];
+            this.voicePlayed = { 0: false, 1: false, 2: false };
+            this.activeVoiceSource = null;
 
             // Système de particules ambiantes
             this.particles = [];
@@ -70,7 +76,6 @@
                     };
                     img.onerror = () => {
                         if (allowCors && !isDataUri) {
-                            // En cas de restriction CORS par le navigateur, réessayer sans crossOrigin
                             loadImg(false);
                         } else {
                             this.productImgLoaded = false;
@@ -84,10 +89,11 @@
 
             this.initAudio();
             this.initEvents();
+            this.loadVoiceoverAudio();
             this.render();
         },
 
-        // --- MOTEUR AUDIO SYNTHÉTISÉ WEB AUDIO API ---
+        // --- MOTEUR AUDIO & VOIX-OFF INTÉGRÉE (WEB AUDIO API) ---
         initAudio: function () {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -95,9 +101,19 @@
                 this.audioCtx = new AudioContext();
                 this.audioDest = this.audioCtx.createMediaStreamDestination();
                 this.masterGain = this.audioCtx.createGain();
-                this.masterGain.gain.value = 0.45;
+                this.masterGain.gain.value = 0.55;
 
-                // Route vers les haut-parleurs et vers la destination d'enregistrement
+                // Nœud de gain dédié à la musique pour le ducking (baisse pendant la voix)
+                this.beatGain = this.audioCtx.createGain();
+                this.beatGain.gain.value = 0.40;
+                this.beatGain.connect(this.masterGain);
+
+                // Nœud de gain dédié à la voix-off
+                this.voiceGain = this.audioCtx.createGain();
+                this.voiceGain.gain.value = 1.35;
+                this.voiceGain.connect(this.masterGain);
+
+                // Route le master vers les haut-parleurs ET vers le flux d'enregistrement vidéo
                 this.masterGain.connect(this.audioCtx.destination);
                 this.masterGain.connect(this.audioDest);
 
@@ -113,6 +129,103 @@
             }
         },
 
+        // Chargement asynchrone des 3 segments de voix-off IA depuis l'API TTS
+        loadVoiceoverAudio: function () {
+            if (!this.audioCtx) return Promise.resolve();
+            const activeScript = this.config.scripts[this.currentScriptIndex];
+
+            const defaultTexts = [
+                `Attendez, ne scrollez pas ! Si vous cherchez ${this.config.productTitle} à Lomé, regardez ça.`,
+                `La qualité est incroyable, c'est disponible chez ${this.config.shopName} à seulement ${this.config.price}.`,
+                `Paiement à la livraison ou par T-Money. Cliquez ou écrivez-moi sur WhatsApp pour être livré aujourd'hui !`
+            ];
+
+            const texts = [
+                activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : defaultTexts[0],
+                activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : defaultTexts[1],
+                activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : defaultTexts[2]
+            ];
+
+            this.voiceBuffers = [null, null, null];
+            const statusEl = document.getElementById('ad-voice-status');
+            if (statusEl) {
+                statusEl.textContent = 'Voix en chargement...';
+                statusEl.className = 'badge badge-draft';
+            }
+
+            const decodeBuffer = (buf) => {
+                return new Promise((resolve, reject) => {
+                    this.audioCtx.decodeAudioData(buf, resolve, reject);
+                });
+            };
+
+            this.voiceLoadPromise = Promise.all(
+                texts.map((txt, idx) => {
+                    return fetch('/api/tts?text=' + encodeURIComponent(txt))
+                        .then(res => {
+                            if (!res.ok) throw new Error('TTS status ' + res.status);
+                            return res.arrayBuffer();
+                        })
+                        .then(buf => decodeBuffer(buf))
+                        .then(decoded => {
+                            if (decoded) {
+                                this.voiceBuffers[idx] = decoded;
+                            }
+                        })
+                        .catch(err => {
+                            console.warn('Erreur chargement voix-off segment ' + idx, err);
+                        });
+                })
+            ).then(() => {
+                if (statusEl) {
+                    const loadedCount = this.voiceBuffers.filter(b => b !== null).length;
+                    if (loadedCount > 0) {
+                        statusEl.textContent = `Voix prête (${loadedCount}/3)`;
+                        statusEl.className = 'badge badge-ok';
+                    } else {
+                        statusEl.textContent = 'Audio non disponible';
+                        statusEl.className = 'badge badge-draft';
+                    }
+                }
+            });
+
+            return this.voiceLoadPromise;
+        },
+
+        // Déclenchement d'un segment de voix-off avec ducking automatique de la musique
+        playVoiceSegment: function (idx) {
+            if (!this.voiceoverEnabled || !this.audioCtx || !this.voiceBuffers[idx]) return;
+
+            try {
+                this.ensureAudioActive();
+
+                // Arrêt de toute voix précédente en cours
+                if (this.activeVoiceSource) {
+                    try { this.activeVoiceSource.stop(); } catch (e) {}
+                    this.activeVoiceSource = null;
+                }
+
+                const source = this.audioCtx.createBufferSource();
+                source.buffer = this.voiceBuffers[idx];
+                source.connect(this.voiceGain);
+
+                const now = this.audioCtx.currentTime;
+                source.start(now);
+                this.activeVoiceSource = source;
+
+                // Audio Ducking : atténuation douce de la musique pendant la parole
+                if (this.beatGain) {
+                    const dur = source.buffer.duration || 2.5;
+                    this.beatGain.gain.cancelScheduledValues(now);
+                    this.beatGain.gain.setValueAtTime(0.12, now);
+                    this.beatGain.gain.setValueAtTime(0.12, now + dur - 0.2);
+                    this.beatGain.gain.linearRampToValueAtTime(0.40, now + dur + 0.35);
+                }
+            } catch (e) {
+                console.warn('Erreur lecture voix-off:', e);
+            }
+        },
+
         playSynthBeat: function (time) {
             if (!this.soundEnabled || !this.audioCtx || this.audioPreset === 'none') return;
             const bpm = this.audioPreset === 'amapiano' ? 112 : (this.audioPreset === 'electro' ? 124 : 106);
@@ -123,23 +236,23 @@
                 this.lastBeat = currentBeat;
                 const now = this.audioCtx.currentTime;
 
-                // Kick sur les temps forts (0, 2, 4...)
+                // Kick sur les temps forts
                 if (currentBeat % 2 === 0) {
                     this.triggerKick(now);
                 }
 
-                // Snare / Clap sur les contretemps
+                // Snare / Clap
                 if (currentBeat % 4 === 2) {
                     this.triggerSnare(now);
                 }
 
-                // Hi-Hat régulier
+                // Hi-Hat
                 this.triggerHiHat(now);
 
-                // Synth chord pad progression
+                // Accords
                 if (currentBeat % 8 === 0) {
                     const chords = [
-                        [220, 261.63, 329.63, 392], // Am7
+                        [220, 261.63, 329.63, 392],    // Am7
                         [174.61, 220, 261.63, 329.63], // Fmaj7
                         [196, 246.94, 293.66, 349.23], // G7
                         [164.81, 196, 246.94, 293.66], // Em7
@@ -161,13 +274,12 @@
             gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
 
             osc.connect(gain);
-            gain.connect(this.masterGain);
+            gain.connect(this.beatGain);
             osc.start(time);
             osc.stop(time + 0.2);
         },
 
         triggerSnare: function (time) {
-            // Noise buffer pour le clap/snare
             const bufferSize = this.audioCtx.sampleRate * 0.1;
             const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
@@ -188,7 +300,7 @@
 
             noise.connect(filter);
             filter.connect(gain);
-            gain.connect(this.masterGain);
+            gain.connect(this.beatGain);
             noise.start(time);
         },
 
@@ -202,7 +314,7 @@
             gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
 
             osc.connect(gain);
-            gain.connect(this.masterGain);
+            gain.connect(this.beatGain);
             osc.start(time);
             osc.stop(time + 0.05);
         },
@@ -219,28 +331,15 @@
                 gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
 
                 osc.connect(gain);
-                gain.connect(this.masterGain);
+                gain.connect(this.beatGain);
                 osc.start(time);
                 osc.stop(time + duration);
             });
         },
 
-        // --- SYNTHÈSE VOCALE (VOIX-OFF IA) ---
-        speakSceneText: function (text) {
-            if (!this.voiceoverEnabled || !('speechSynthesis' in window)) return;
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.lang = 'fr-FR';
-            utter.rate = 1.05;
-            utter.pitch = 1.05;
-            window.speechSynthesis.speak(utter);
-        },
-
         // --- INTERACTION & CONTRÔLES ---
         initEvents: function () {
             const playBtn = document.getElementById('ad-btn-play');
-            const playIcon = document.getElementById('ad-play-icon');
-            const pauseIcon = document.getElementById('ad-pause-icon');
             const seekBar = document.getElementById('ad-seek-bar');
             const muteBtn = document.getElementById('ad-btn-mute');
             const exportBtn = document.getElementById('ad-btn-export');
@@ -262,6 +361,7 @@
             if (seekBar) {
                 seekBar.addEventListener('input', (e) => {
                     this.currentTime = (parseFloat(e.target.value) / 100) * this.duration;
+                    this.resetVoicePlayedAtTime(this.currentTime);
                     this.render();
                 });
             }
@@ -270,7 +370,7 @@
                 muteBtn.addEventListener('click', () => {
                     this.soundEnabled = !this.soundEnabled;
                     if (this.masterGain) {
-                        this.masterGain.gain.value = this.soundEnabled ? 0.45 : 0;
+                        this.masterGain.gain.value = this.soundEnabled ? 0.55 : 0;
                     }
                     muteBtn.classList.toggle('active', this.soundEnabled);
                     const iconMute = document.getElementById('icon-sound-off');
@@ -288,9 +388,38 @@
                 });
             }
 
+            // Choix du format MP4 vs WebM
+            document.querySelectorAll('[data-format-choice]').forEach(el => {
+                el.addEventListener('click', () => {
+                    document.querySelectorAll('[data-format-choice]').forEach(b => b.classList.remove('selected'));
+                    el.classList.add('selected');
+                    this.selectedFormat = el.getAttribute('data-format-choice');
+
+                    // Mise à jour visuelle du bouton principal
+                    const titleEl = document.getElementById('ad-export-title');
+                    const subEl = document.getElementById('ad-export-subtitle');
+                    const tagEl = document.getElementById('ad-format-tag');
+                    if (this.selectedFormat === 'mp4') {
+                        if (titleEl) titleEl.textContent = 'Télécharger la Vidéo MP4';
+                        if (subEl) subEl.textContent = 'Format 9:16 vertical • Recommandé TikTok & WhatsApp';
+                        if (tagEl) {
+                            tagEl.textContent = 'Recommandé';
+                            tagEl.className = 'badge badge-ok';
+                        }
+                    } else {
+                        if (titleEl) titleEl.textContent = 'Télécharger la Vidéo WebM';
+                        if (subEl) subEl.textContent = 'Format 9:16 vertical • Fichier ultra-léger';
+                        if (tagEl) {
+                            tagEl.textContent = 'Optionnel';
+                            tagEl.className = 'badge badge-draft';
+                        }
+                    }
+                });
+            });
+
             // Sélecteurs de thèmes
             document.querySelectorAll('[data-theme-choice]').forEach(el => {
-                el.addEventListener('click', (e) => {
+                el.addEventListener('click', () => {
                     document.querySelectorAll('[data-theme-choice]').forEach(b => b.classList.remove('selected'));
                     el.classList.add('selected');
                     this.currentTheme = el.getAttribute('data-theme-choice');
@@ -314,17 +443,38 @@
                     el.classList.add('selected');
                     this.currentScriptIndex = parseInt(el.getAttribute('data-script-choice'), 10) || 0;
                     this.currentTime = 0;
+                    this.voicePlayed = { 0: false, 1: false, 2: false };
+                    this.loadVoiceoverAudio();
                     this.render();
                 });
             });
 
-            // Toggle Voix-Off
+            // Toggle Voix-Off IA
             const voiceToggle = document.getElementById('ad-toggle-voiceover');
             if (voiceToggle) {
+                voiceToggle.checked = true; // activé par défaut
                 voiceToggle.addEventListener('change', (e) => {
                     this.voiceoverEnabled = e.target.checked;
+                    if (this.voiceoverEnabled && (!this.voiceBuffers[0] || !this.voiceBuffers[1])) {
+                        this.loadVoiceoverAudio();
+                    }
+                    if (!this.voiceoverEnabled && this.activeVoiceSource) {
+                        try { this.activeVoiceSource.stop(); } catch (err) {}
+                    }
                 });
             }
+        },
+
+        resetVoicePlayedAtTime: function (t) {
+            if (this.activeVoiceSource) {
+                try { this.activeVoiceSource.stop(); } catch (e) {}
+                this.activeVoiceSource = null;
+            }
+            this.voicePlayed = {
+                0: t >= 0.5,
+                1: t >= 4.0,
+                2: t >= 9.8
+            };
         },
 
         togglePlay: function () {
@@ -338,6 +488,7 @@
         play: function () {
             if (this.currentTime >= this.duration) {
                 this.currentTime = 0;
+                this.voicePlayed = { 0: false, 1: false, 2: false };
             }
             this.isPlaying = true;
             this.lastFrameTime = performance.now();
@@ -351,8 +502,9 @@
                 cancelAnimationFrame(this.animationFrameId);
             }
             this.updatePlayStateUI(false);
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
+            if (this.activeVoiceSource) {
+                try { this.activeVoiceSource.stop(); } catch (e) {}
+                this.activeVoiceSource = null;
             }
         },
 
@@ -382,6 +534,22 @@
             // Audio beat synchronisé
             this.playSynthBeat(this.currentTime);
 
+            // Synchronisation de la voix-off IA
+            if (this.voiceoverEnabled) {
+                if (this.currentTime >= 0.4 && !this.voicePlayed[0]) {
+                    this.voicePlayed[0] = true;
+                    this.playVoiceSegment(0);
+                }
+                if (this.currentTime >= 3.8 && !this.voicePlayed[1]) {
+                    this.voicePlayed[1] = true;
+                    this.playVoiceSegment(1);
+                }
+                if (this.currentTime >= 9.6 && !this.voicePlayed[2]) {
+                    this.voicePlayed[2] = true;
+                    this.playVoiceSegment(2);
+                }
+            }
+
             // Gestion de la fin de vidéo
             if (this.currentTime >= this.duration) {
                 if (this.isRecording) {
@@ -391,6 +559,7 @@
                     return;
                 } else {
                     this.currentTime = 0; // Boucle de lecture
+                    this.voicePlayed = { 0: false, 1: false, 2: false };
                 }
             }
 
@@ -439,16 +608,10 @@
 
             ctx.clearRect(0, 0, w, h);
 
-            // 1. Fond dynamique dégradé selon le thème
             this.drawBackground(ctx, w, h, t);
-
-            // 2. Particules d'ambiance
             this.drawParticles(ctx, w, h, t);
-
-            // 3. En-tête de marque permanent
             this.drawBrandingHeader(ctx, w, h, t);
 
-            // 4. Scènes selon la timeline
             if (t < 3.5) {
                 this.drawScene1(ctx, w, h, t);
             } else if (t < 9.5) {
@@ -457,7 +620,6 @@
                 this.drawScene3(ctx, w, h, t);
             }
 
-            // 5. Visualiseur Audio en bas
             this.drawAudioVisualizer(ctx, w, h, t);
         },
 
@@ -479,7 +641,6 @@
                 grad.addColorStop(0.6, '#26060a');
                 grad.addColorStop(1, '#0e0204');
             } else {
-                // Thème Boutique Pulse
                 const brand = this.config.shopColor || '#6d3df2';
                 grad = ctx.createRadialGradient(w / 2, h * 0.4, 80, w / 2, h * 0.5, h * 0.8);
                 grad.addColorStop(0, brand + '55');
@@ -490,7 +651,6 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, w, h);
 
-            // Halo lumineux rotatif discret
             ctx.save();
             ctx.translate(w / 2, h * 0.42);
             ctx.rotate(t * 0.15);
@@ -523,13 +683,12 @@
 
         drawBrandingHeader: function (ctx, w, h, t) {
             ctx.save();
-            // Pill supérieure avec nom de la boutique
             const pillY = 55;
             ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
             ctx.lineWidth = 1.5;
 
-            const name = this.config.shopName.toUpperCase();
+            const name = (this.config.shopName || 'Boutique').toUpperCase();
             ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
             const metrics = ctx.measureText(name);
             const pillW = metrics.width + 90;
@@ -539,31 +698,26 @@
             ctx.fill();
             ctx.stroke();
 
-            // Point vert "Live / Dispo"
             ctx.fillStyle = '#10b981';
             ctx.beginPath();
             ctx.arc(pillX + 26, pillY + 23, 6, 0, Math.PI * 2);
             ctx.fill();
 
-            // Nom boutique
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
             ctx.fillText(name, pillX + 44, pillY + 23);
 
-            // Badge vérifié officiel
             this.drawCheckmark(ctx, pillX + pillW - 24, pillY + 23, 9, '#3b82f6');
-
             ctx.restore();
         },
 
         // SCÈNE 1 : ACCROCHE CHOC (0s - 3.5s)
         drawScene1: function (ctx, w, h, t) {
-            const p = t / 3.5; // progression 0 -> 1
+            const p = t / 3.5;
 
             ctx.save();
 
-            // 1. Badge d'urgence en haut
             const badgeY = 140 + Math.sin(t * 8) * 4;
             const badgeText = this.config.promoBadge || '⚡ ARRIVAGE EXCLUSIF';
             ctx.font = '900 26px system-ui, -apple-system, sans-serif';
@@ -581,39 +735,31 @@
             ctx.textBaseline = 'middle';
             ctx.fillText(badgeText, w / 2, badgeY + 26);
 
-            // 2. Carte produit centrale avec Ken Burns Zoom In & Shimmer
             const cardW = 520;
             const cardH = 520;
-            const cardX = (w - cardW) / 2;
             const cardY = 240;
 
-            // Zoom progressif
             const scale = 1.12 - 0.12 * Math.min(p * 1.5, 1);
             ctx.save();
             ctx.translate(w / 2, cardY + cardH / 2);
             ctx.scale(scale, scale);
 
-            // Ombre portée profonde
             ctx.shadowColor = 'rgba(0,0,0,0.6)';
             ctx.shadowBlur = 40;
             ctx.shadowOffsetY = 20;
 
-            // Cadre carte
             ctx.fillStyle = '#1e1a29';
             this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 32);
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Image produit
             this.drawProductImage(ctx, -cardW / 2 + 16, -cardH / 2 + 16, cardW - 32, cardH - 32, 24);
 
-            // Bordure brillante
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = 3;
             this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 32);
             ctx.stroke();
 
-            // Shimmer / Reflet lumineux qui balaie la carte
             if (t > 0.8 && t < 2.4) {
                 const shimProg = (t - 0.8) / 1.6;
                 const shimX = -cardW / 2 + shimProg * (cardW + 160) - 80;
@@ -630,10 +776,8 @@
             }
             ctx.restore();
 
-            // 3. Texte d'accroche puissant en bas
             const activeScript = this.config.scripts[this.currentScriptIndex];
             const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Attendez, ne scrollez pas ! Regardez cette merveille...';
-
             this.drawSpeechBubble(ctx, w / 2, 850, 600, hookText, '🔥');
 
             ctx.restore();
@@ -641,11 +785,8 @@
 
         // SCÈNE 2 : DÉMONSTRATION & PRIX MAGIQUE (3.5s - 9.5s)
         drawScene2: function (ctx, w, h, t) {
-            const p = (t - 3.5) / 6.0;
-
             ctx.save();
 
-            // Flottement doux du produit
             const floatY = Math.sin(t * 3) * 10;
             const cardW = 460;
             const cardH = 460;
@@ -667,7 +808,6 @@
             this.roundRect(ctx, cardX, cardY, cardW, cardH, 28);
             ctx.stroke();
 
-            // Badge promo en coin si réduction
             if (this.config.oldPrice) {
                 ctx.fillStyle = '#ef4444';
                 this.roundRect(ctx, cardX + cardW - 130, cardY + 20, 110, 42, 21);
@@ -678,7 +818,6 @@
                 ctx.fillText('PROMO', cardX + cardW - 75, cardY + 42);
             }
 
-            // Titre du produit
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
@@ -686,7 +825,6 @@
             const titleY = cardY + cardH + 50;
             this.drawTruncatedText(ctx, this.config.productTitle, w / 2, titleY, 620);
 
-            // ÉNORME PASTILLE DE PRIX CLIGNOTANTE / VIBRANTE
             const pricePulse = 1.0 + 0.05 * Math.sin(t * 6);
             ctx.save();
             ctx.translate(w / 2, titleY + 75);
@@ -697,7 +835,6 @@
             const pMetrics = ctx.measureText(priceText);
             const pillW = pMetrics.width + 70;
 
-            // Dégradé doré ou émeraude pour le prix
             const priceGrad = ctx.createLinearGradient(-pillW / 2, 0, pillW / 2, 0);
             priceGrad.addColorStop(0, '#f59e0b');
             priceGrad.addColorStop(1, '#d97706');
@@ -715,7 +852,6 @@
             ctx.fillText(priceText, 0, 2);
             ctx.restore();
 
-            // Ancien prix barré si existant
             if (this.config.oldPrice) {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
                 ctx.font = 'bold 24px system-ui';
@@ -732,11 +868,9 @@
                 ctx.stroke();
             }
 
-            // Puces de réassurance (Livraison, Qualité, Paiement)
             const chipsY = titleY + (this.config.oldPrice ? 185 : 160);
             this.drawFeatureChips(ctx, w, chipsY);
 
-            // Sous-titre narration
             const activeScript = this.config.scripts[this.currentScriptIndex];
             const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'Super qualité garantie, disponible immédiatement chez nous.';
             this.drawSpeechBubble(ctx, w / 2, 1100, 620, voiceover, '💎');
@@ -746,11 +880,8 @@
 
         // SCÈNE 3 : APPEL À L'ACTION WHATSAPP (9.5s - 14.0s)
         drawScene3: function (ctx, w, h, t) {
-            const p = (t - 9.5) / 4.5;
-
             ctx.save();
 
-            // Titre urgent
             ctx.fillStyle = '#ffffff';
             ctx.font = '900 38px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
@@ -761,7 +892,6 @@
             ctx.font = '500 24px system-ui';
             ctx.fillText('Commandez vite avant rupture définitive', w / 2, 215);
 
-            // Mini aperçu produit avec rotation
             const miniSize = 220;
             const miniY = 270;
             ctx.save();
@@ -775,19 +905,16 @@
             ctx.stroke();
             ctx.restore();
 
-            // GRAND BOUTON WHATSAPP PULSANT AVEC ONDES
             const btnY = 570;
             const btnW = 540;
             const btnH = 96;
 
-            // Ondes de pulsation concentriques
             const ripple1 = (t * 2) % 1;
             ctx.strokeStyle = `rgba(37, 211, 102, ${0.7 * (1 - ripple1)})`;
             ctx.lineWidth = 4;
             this.roundRect(ctx, (w - btnW) / 2 - ripple1 * 25, btnY - ripple1 * 15, btnW + ripple1 * 50, btnH + ripple1 * 30, 48);
             ctx.stroke();
 
-            // Bouton principal
             const pulse = 1.0 + 0.03 * Math.sin(t * 8);
             ctx.save();
             ctx.translate(w / 2, btnY + btnH / 2);
@@ -800,10 +927,8 @@
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Icône WhatsApp
             this.drawWhatsAppIcon(ctx, -btnW / 2 + 55, 0, 24);
 
-            // Texte bouton
             ctx.fillStyle = '#ffffff';
             ctx.font = '900 30px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'left';
@@ -811,13 +936,11 @@
             ctx.fillText('COMMANDER SUR WHATSAPP', -btnW / 2 + 105, 0);
             ctx.restore();
 
-            // Numéro WhatsApp en GRAND
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 36px monospace, system-ui';
             ctx.textAlign = 'center';
             ctx.fillText(this.config.shopPhone, w / 2, 730);
 
-            // Reassurance livraison & paiement
             ctx.fillStyle = '#fbbf24';
             ctx.font = 'bold 24px system-ui';
             ctx.fillText('🚚 Livraison rapide partout à Lomé & au Togo', w / 2, 790);
@@ -826,10 +949,8 @@
             ctx.font = '500 20px system-ui';
             ctx.fillText('Paiement : T-Money • Flooz • Cash à la livraison', w / 2, 830);
 
-            // Confettis scintillants pour l'énergie finale
             this.drawConfetti(ctx, w, h, t);
 
-            // Bulle d'action finale
             const activeScript = this.config.scripts[this.currentScriptIndex];
             const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-moi sur WhatsApp pour recevoir votre colis dès aujourd\'hui !';
             this.drawSpeechBubble(ctx, w / 2, 1050, 620, ctaVoice, '📲');
@@ -847,7 +968,6 @@
             const imgH = img ? (img.naturalHeight || img.height || 0) : 0;
 
             if (this.productImgLoaded && imgW > 0 && imgH > 0) {
-                // Object-fit: cover centré avec ratio d'aspect respecté
                 const imgRatio = imgW / imgH;
                 const targetRatio = w / h;
                 let sw, sh, sx, sy;
@@ -865,7 +985,6 @@
                 }
                 ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
             } else {
-                // Fond élégant et lumineux si aucune photo n'est disponible
                 const bg = ctx.createLinearGradient(x, y, x + w, y + h);
                 bg.addColorStop(0, '#312e81');
                 bg.addColorStop(0.5, '#4f46e5');
@@ -873,7 +992,6 @@
                 ctx.fillStyle = bg;
                 ctx.fillRect(x, y, w, h);
 
-                // Cercle d'icône centrale
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
                 ctx.beginPath();
                 ctx.arc(x + w / 2, y + h / 2 - 30, 75, 0, Math.PI * 2);
@@ -900,7 +1018,6 @@
             ctx.save();
             ctx.font = '600 22px system-ui, -apple-system, sans-serif';
 
-            // Découpage automatique du texte sur 2-3 lignes max
             const words = text.split(' ');
             const lines = [];
             let currentLine = '';
@@ -922,7 +1039,6 @@
             const bx = cx - bubbleW / 2;
             const by = cy - bubbleH / 2;
 
-            // Fond glassmorphism sombre ultra-lisible
             ctx.fillStyle = 'rgba(10, 8, 20, 0.88)';
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
             ctx.lineWidth = 1.5;
@@ -930,7 +1046,6 @@
             ctx.fill();
             ctx.stroke();
 
-            // Lignes de texte
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1013,13 +1128,11 @@
             ctx.arc(x, y, radius, 0, Math.PI * 2);
             ctx.fill();
 
-            // Bulle verte intérieure
             ctx.fillStyle = '#25D366';
             ctx.beginPath();
             ctx.arc(x, y, radius - 4, 0, Math.PI * 2);
             ctx.fill();
 
-            // Combiné téléphonique blanc simplifié
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(x - 2, y + 2, 7, -0.2, Math.PI * 0.8);
@@ -1072,7 +1185,7 @@
         },
 
         // --- ENREGISTREMENT & EXPORTATION VIDÉO DIRECTE MP4 / WEBM ---
-        startExport: function () {
+        startExport: async function () {
             if (this.isRecording) return;
             this.ensureAudioActive();
 
@@ -1087,10 +1200,36 @@
             }
             if (progressWrap) progressWrap.style.display = 'block';
 
+            // Si la voix-off est activée, s'assurer que les segments audio sont prêts
+            if (this.voiceoverEnabled && this.voiceLoadPromise && (!this.voiceBuffers[0] || !this.voiceBuffers[1])) {
+                if (progressBar) progressBar.style.width = '8%';
+                if (progressPercent) progressPercent.textContent = 'Préparation Voix-Off...';
+                try {
+                    await this.voiceLoadPromise;
+                } catch (e) {
+                    console.warn('Attente voix-off:', e);
+                }
+            }
+
+            // Maintien d'un signal audio continu pour empêcher MediaRecorder de couper le canal audio
+            if (this.audioCtx && this.masterGain) {
+                try {
+                    const silenceOsc = this.audioCtx.createOscillator();
+                    const silenceGain = this.audioCtx.createGain();
+                    silenceGain.gain.value = 0.0001; // Niveau inaudible mais garde l'émetteur actif
+                    silenceOsc.connect(silenceGain);
+                    silenceGain.connect(this.masterGain);
+                    silenceOsc.start();
+                    silenceOsc.stop(this.audioCtx.currentTime + this.duration + 2.0);
+                } catch (err) {
+                    console.warn('Keep-alive oscillator:', err);
+                }
+            }
+
             // Flux vidéo du canvas (30 FPS)
             const videoStream = this.canvas.captureStream(30);
 
-            // Fusion avec le flux audio synthétisé Web Audio
+            // Fusion avec le flux audio global (musique synthétisée + voix-off)
             let combinedStream = videoStream;
             if (this.audioDest && this.audioDest.stream && this.audioDest.stream.getAudioTracks().length > 0) {
                 const audioTrack = this.audioDest.stream.getAudioTracks()[0];
@@ -1100,23 +1239,49 @@
                 ]);
             }
 
-            // Détection du codec disponible (MP4 sur Safari / Chrome moderne ou WebM)
-            let mimeType = 'video/webm;codecs=vp9,opus';
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm;codecs=vp8,opus';
+            // Détection du codec selon le choix utilisateur (MP4 ou WebM)
+            let mimeType = '';
+            if (this.selectedFormat === 'mp4') {
+                const mp4Candidates = [
+                    'video/mp4;codecs=avc1,mp4a.40.2',
+                    'video/mp4;codecs=avc1',
+                    'video/mp4;codecs=h264,aac',
+                    'video/mp4;codecs=h264',
+                    'video/mp4'
+                ];
+                for (const cand of mp4Candidates) {
+                    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(cand)) {
+                        mimeType = cand;
+                        break;
+                    }
+                }
+                // Si le moteur navigateur ne supporte pas l'encapsulation MP4 en direct, enregistrer en WebM haute fidélité
+                if (!mimeType) {
+                    mimeType = 'video/webm;codecs=vp9,opus';
+                }
+            } else {
+                const webmCandidates = [
+                    'video/webm;codecs=vp9,opus',
+                    'video/webm;codecs=vp8,opus',
+                    'video/webm'
+                ];
+                for (const cand of webmCandidates) {
+                    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(cand)) {
+                        mimeType = cand;
+                        break;
+                    }
+                }
             }
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
+
+            if (!mimeType) {
                 mimeType = 'video/webm';
-            }
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/mp4';
             }
 
             try {
                 this.recordedChunks = [];
                 this.mediaRecorder = new MediaRecorder(combinedStream, {
                     mimeType: mimeType,
-                    videoBitsPerSecond: 4500000 // 4.5 Mbps pour haute qualité HD 9:16
+                    videoBitsPerSecond: 4500000 // 4.5 Mbps HD pour réseaux sociaux
                 });
             } catch (e) {
                 console.warn('Fallback standard MediaRecorder sans options:', e);
@@ -1135,6 +1300,7 @@
 
             // Démarrage de l'enregistrement depuis le début
             this.currentTime = 0;
+            this.voicePlayed = { 0: false, 1: false, 2: false };
             this.isRecording = true;
             this.isPlaying = true;
             this.mediaRecorder.start(100);
@@ -1162,13 +1328,14 @@
         },
 
         finishExport: function () {
-            const blob = new Blob(this.recordedChunks, { type: this.mediaRecorder.mimeType || 'video/webm' });
+            const rawType = (this.mediaRecorder && this.mediaRecorder.mimeType) ? this.mediaRecorder.mimeType : 'video/webm';
+            const blob = new Blob(this.recordedChunks, { type: rawType });
             const url = URL.createObjectURL(blob);
 
-            // Téléchargement direct
+            // Extension selon le format choisi par le commerçant
+            const ext = this.selectedFormat === 'mp4' ? 'mp4' : 'webm';
             const cleanTitle = (this.config.productTitle || 'produit').toLowerCase().replace(/[^a-z0-9]/g, '_');
             const cleanShop = (this.config.shopName || 'boutique').toLowerCase().replace(/[^a-z0-9]/g, '_');
-            const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
             const fileName = `pub_${cleanShop}_${cleanTitle}_9x16.${ext}`;
 
             const a = document.createElement('a');
@@ -1194,7 +1361,7 @@
             // Notification de succès
             this.showSuccessModal(fileName);
 
-            // Enregistrement asynchrone des statistiques dans la base de données
+            // Enregistrement asynchrone des statistiques
             if (this.config.exportUrl && this.config.csrfToken) {
                 fetch(this.config.exportUrl, {
                     method: 'POST',
@@ -1207,7 +1374,8 @@
                         theme: this.currentTheme,
                         script_index: this.currentScriptIndex,
                         duration_seconds: 14,
-                        format: '9:16_vertical'
+                        format: this.selectedFormat,
+                        voiceover: this.voiceoverEnabled
                     })
                 }).catch(err => console.warn('Log export async ignoré:', err));
             }
@@ -1220,7 +1388,7 @@
                 if (nameEl) nameEl.textContent = fileName;
                 modal.style.display = 'flex';
             } else {
-                alert(`🎉 Félicitations ! Votre vidéo publicitaire "${fileName}" a été générée avec succès et téléchargée sur votre appareil ! Vous pouvez maintenant la publier sur votre statut WhatsApp ou TikTok.`);
+                alert(`🎉 Félicitations ! Votre vidéo publicitaire "${fileName}" a été générée avec succès et téléchargée ! Vous pouvez maintenant la publier sur votre statut WhatsApp ou TikTok.`);
             }
         }
     };

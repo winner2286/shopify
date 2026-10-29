@@ -98,6 +98,21 @@ class AdvertisingController extends Controller
 
         $productImageUrl = $this->resolveProductImageForAd($ad, $shop);
 
+        // Pré-chauffage du cache audio TTS en arrière-plan pour zéro latence lors du rendu vidéo
+        try {
+            $scripts = $ad->generated_scripts ?? [];
+            if (! empty($scripts[0]['steps'])) {
+                $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+                foreach ($scripts[0]['steps'] as $st) {
+                    if (! empty($st['voiceover'])) {
+                        $mediaCtrl->warmTtsCache($st['voiceover']);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignorer silencieusement si hors connexion
+        }
+
         return view('advertising.show', compact('shop', 'ad', 'productImageUrl'));
     }
 

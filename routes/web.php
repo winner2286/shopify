@@ -171,4 +171,8 @@ Route::get('/storage/{path}', [\App\Http\Controllers\MediaController::class, 'se
 Route::get('/api/placeholder-image', [\App\Http\Controllers\MediaController::class, 'placeholder'])
     ->name('api.placeholder');
 
+// API Synthèse vocale IA (Voix-off pour le studio vidéo)
+Route::get('/api/tts', [\App\Http\Controllers\MediaController::class, 'tts'])
+    ->name('api.tts');
+
 

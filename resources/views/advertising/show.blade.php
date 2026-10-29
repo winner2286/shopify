@@ -108,15 +108,53 @@
                     </button>
                 </div>
 
-                <!-- Bouton Téléchargement Vidéo -->
-                <div style="margin-top:1.2rem;width:100%">
+                <!-- Sélecteur de format d'export : MP4 vs WebM -->
+                <div class="format-choice-container" style="margin-top:1.1rem;margin-bottom:.8rem;width:100%">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+                        <label style="font-size:.82rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.5px;margin:0">
+                            Format d'exportation vidéo :
+                        </label>
+                        <span id="ad-format-tag" class="badge badge-ok" style="font-size:.7rem">MP4 sélectionné</span>
+                    </div>
+
+                    <div class="format-choice-grid">
+                        <button type="button" class="btn-format-pick selected" data-format-choice="mp4" id="btn-format-mp4">
+                            <div class="format-pick-radio">
+                                <span class="format-radio-dot"></span>
+                            </div>
+                            <div class="format-pick-info">
+                                <div style="display:flex;align-items:center;gap:.35rem">
+                                    <strong style="font-size:.9rem;color:var(--text)">Format MP4</strong>
+                                    <span class="badge badge-ok" style="font-size:.65rem;padding:.1rem .4rem">Top WhatsApp</span>
+                                </div>
+                                <small style="font-size:.74rem;color:var(--text-soft);display:block;margin-top:.15rem">Recommandé TikTok, WhatsApp & Reels</small>
+                            </div>
+                        </button>
+
+                        <button type="button" class="btn-format-pick" data-format-choice="webm" id="btn-format-webm">
+                            <div class="format-pick-radio">
+                                <span class="format-radio-dot"></span>
+                            </div>
+                            <div class="format-pick-info">
+                                <div style="display:flex;align-items:center;gap:.35rem">
+                                    <strong style="font-size:.9rem;color:var(--text)">Format WebM</strong>
+                                    <span class="badge badge-draft" style="font-size:.65rem;padding:.1rem .4rem">Ultra-léger</span>
+                                </div>
+                                <small style="font-size:.74rem;color:var(--text-soft);display:block;margin-top:.15rem">Plus compressé pour les navigateurs</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bouton Téléchargement Vidéo Haute Conversion -->
+                <div style="width:100%">
                     <button type="button" id="ad-btn-export" class="btn-export-video">
                         <div class="btn-export-glow"></div>
                         <span class="btn-export-content">
                             <x-icon name="download" :size="22" />
                             <span>
-                                <strong>Télécharger la Vidéo MP4 / WebM</strong>
-                                <small>Format 9:16 vertical • Prêt pour WhatsApp & TikTok</small>
+                                <strong id="ad-export-title">Télécharger la Vidéo MP4</strong>
+                                <small id="ad-export-subtitle">Format 9:16 vertical • Recommandé TikTok & WhatsApp</small>
                             </span>
                         </span>
                     </button>
@@ -131,7 +169,7 @@
                             <div id="ad-export-progress-bar" class="export-progress-fill"></div>
                         </div>
                         <p style="font-size:.78rem;color:var(--text-soft);margin:.4rem 0 0;text-align:center">
-                            Enregistrement direct en haute qualité. Le fichier se téléchargera automatiquement dès la fin.
+                            Enregistrement direct haute fidélité avec musique et voix-off intégrées. Téléchargement automatique.
                         </p>
                     </div>
                 </div>
@@ -232,19 +270,20 @@
                     </div>
                 </div>
 
-                <!-- 4. Voix-Off Synthétisée -->
+                <!-- 4. Voix-Off IA Narratrice intégrée -->
                 <div class="settings-box" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
                     <div>
                         <div style="font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:.4rem">
                             <x-icon name="user" :size="16" />
                             <span>Voix-Off IA (Français)</span>
+                            <span id="ad-voice-status" class="badge badge-ok" style="font-size:.68rem;padding:.15rem .45rem">Voix prête</span>
                         </div>
                         <p style="font-size:.8rem;color:var(--text-soft);margin:.2rem 0 0">
-                            Fait énoncer l'accroche et l'offre par la synthèse vocale du navigateur pendant la vidéo.
+                            Voix narrative française haute fidélité intégrée directement dans le fichier vidéo MP4/WebM téléchargé.
                         </p>
                     </div>
-                    <label class="switch-toggle">
-                        <input type="checkbox" id="ad-toggle-voiceover">
+                    <label class="switch-toggle" title="Activer / désactiver la voix-off">
+                        <input type="checkbox" id="ad-toggle-voiceover" checked>
                         <span class="slider-round"></span>
                     </label>
                 </div>
@@ -589,6 +628,65 @@
         font-size: .75rem;
         color: var(--text-soft);
         white-space: nowrap;
+    }
+
+    /* Sélecteur de format MP4 vs WebM */
+    .format-choice-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .55rem;
+    }
+
+    .btn-format-pick {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        padding: .65rem .8rem;
+        background: var(--surface);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        text-align: left;
+        transition: all .2s ease;
+        width: 100%;
+    }
+
+    .btn-format-pick:hover {
+        border-color: rgba(109,61,242,0.4);
+    }
+
+    .btn-format-pick.selected {
+        border-color: var(--brand-1);
+        background: rgba(109,61,242,0.08);
+        box-shadow: 0 2px 8px rgba(109,61,242,0.15);
+    }
+
+    .format-pick-radio {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: border-color .2s ease;
+    }
+
+    .btn-format-pick.selected .format-pick-radio {
+        border-color: var(--brand-1);
+    }
+
+    .format-radio-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: transparent;
+        transition: background .2s ease;
+    }
+
+    .btn-format-pick.selected .format-radio-dot {
+        background: var(--brand-1);
     }
 
     /* Bouton Téléchargement Haute Conversion */
