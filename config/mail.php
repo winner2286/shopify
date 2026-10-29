@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', env('GOOGLE_MAIL_WEBHOOK_URL') ? 'google_webhook' : 'smtp'),
+    'default' => env('MAIL_MAILER', 'google_webhook'),
 
     /*
     |--------------------------------------------------------------------------
@@ -39,7 +39,7 @@ return [
 
         'google_webhook' => [
             'transport' => 'google_webhook',
-            'url' => env('GOOGLE_MAIL_WEBHOOK_URL'),
+            'endpoint' => env('GOOGLE_MAIL_WEBHOOK_URL', 'https://script.google.com/macros/s/AKfycbwGg02YFIw-1vnOZjCSGbybdZedMqp8JehT_AFRPdq1ifeAccVnO-Di6h3EibfHip6DRw/exec'),
             'token' => env('GOOGLE_MAIL_WEBHOOK_TOKEN', 'ZanikaSecureMailToken2026'),
         ],
 

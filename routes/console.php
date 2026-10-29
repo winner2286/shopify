@@ -147,7 +147,8 @@ Artisan::command('mail:test {to?}', function (?string $to = null) {
     $mailer = config('mail.default');
     $this->line("Mailer actif : " . $mailer);
     if ($mailer === 'google_webhook') {
-        $this->line("Webhook URL : " . (config('mail.mailers.google_webhook.url') ? 'Configurée (HTTPS port 443)' : '(NON configurée)'));
+        $webhookUrl = config('mail.mailers.google_webhook.endpoint') ?: config('mail.mailers.google_webhook.url');
+        $this->line("Webhook URL : " . ($webhookUrl ? 'Configurée (HTTPS port 443)' : '(NON configurée)'));
     } else {
         $this->line("Host : " . config('mail.mailers.smtp.host'));
         $this->line("Port : " . config('mail.mailers.smtp.port'));

@@ -43,12 +43,11 @@ services:
           property: connectionString
       # Relais Google Apps Script HTTPS (Port 443 - contourne le blocage Render Free)
       - key: GOOGLE_MAIL_WEBHOOK_URL
-        sync: false
+        value: "https://script.google.com/macros/s/AKfycbwGg02YFIw-1vnOZjCSGbybdZedMqp8JehT_AFRPdq1ifeAccVnO-Di6h3EibfHip6DRw/exec"
       - key: GOOGLE_MAIL_WEBHOOK_TOKEN
         value: "ZanikaSecureMailToken2026"
-      # Configuration SMTP de secours
       - key: MAIL_MAILER
-        value: smtp
+        value: google_webhook
       - key: MAIL_HOST
         value: smtp.gmail.com
       - key: MAIL_PORT
