@@ -19,6 +19,7 @@
                 oldPrice: null,
                 promoBadge: 'NOUVEAUTÉ',
                 imageUrl: '',
+                ugcAvatarUrl: '',
                 scripts: [],
                 exportUrl: '',
                 csrfToken: '',
@@ -34,6 +35,7 @@
             this.isRecording = false;
             this.currentScriptIndex = 0;
             this.currentTheme = 'boutique';
+            this.videoStyle = 'capcut'; // 'capcut' (TikTok Pro) | 'ugc' (Face Caméra) | 'lookbook' (Luxe)
             this.audioPreset = 'afrobeat';
             this.soundEnabled = true;
             this.voiceoverEnabled = true; // Activé par défaut pour un impact maximal
@@ -48,7 +50,7 @@
 
             // Système de particules ambiantes
             this.particles = [];
-            for (let i = 0; i < 35; i++) {
+            for (let i = 0; i < 40; i++) {
                 this.particles.push({
                     x: Math.random() * this.canvas.width,
                     y: Math.random() * this.canvas.height,
@@ -85,6 +87,31 @@
                     img.src = this.config.imageUrl;
                 };
                 loadImg(!isDataUri);
+            }
+
+            // Chargement de l'avatar présentateur UGC
+            this.ugcAvatar = new Image();
+            this.ugcAvatarLoaded = false;
+            if (this.config.ugcAvatarUrl) {
+                const isUgcData = this.config.ugcAvatarUrl.startsWith('data:');
+                const loadUgc = (allowCors) => {
+                    const img = new Image();
+                    if (allowCors && !isUgcData) img.crossOrigin = 'anonymous';
+                    img.onload = () => {
+                        this.ugcAvatar = img;
+                        this.ugcAvatarLoaded = true;
+                        this.render();
+                    };
+                    img.onerror = () => {
+                        if (allowCors && !isUgcData) {
+                            loadUgc(false);
+                        } else {
+                            this.ugcAvatarLoaded = false;
+                        }
+                    };
+                    img.src = this.config.ugcAvatarUrl;
+                };
+                loadUgc(!isUgcData);
             }
 
             this.initAudio();
@@ -417,6 +444,30 @@
                 });
             });
 
+            // Choix du style de réalisation vidéo (CapCut, UGC, Lookbook)
+            document.querySelectorAll('[data-video-style]').forEach(el => {
+                el.addEventListener('click', () => {
+                    document.querySelectorAll('[data-video-style]').forEach(b => b.classList.remove('selected'));
+                    el.classList.add('selected');
+                    this.videoStyle = el.getAttribute('data-video-style');
+
+                    const badge = document.getElementById('ad-style-badge');
+                    if (badge) {
+                        if (this.videoStyle === 'capcut') {
+                            badge.textContent = 'TikTok CapCut Pro';
+                            badge.className = 'badge badge-ok';
+                        } else if (this.videoStyle === 'ugc') {
+                            badge.textContent = 'Présentateur UGC IA';
+                            badge.className = 'badge badge-primary';
+                        } else {
+                            badge.textContent = 'Showcase Lookbook Luxe';
+                            badge.className = 'badge badge-draft';
+                        }
+                    }
+                    this.render();
+                });
+            });
+
             // Sélecteurs de thèmes
             document.querySelectorAll('[data-theme-choice]').forEach(el => {
                 el.addEventListener('click', () => {
@@ -599,7 +650,7 @@
             }
         },
 
-        // --- RENDU GRAPHIQUE MOTION DESIGN CANVAS (720 x 1280 HD) ---
+        // --- MOTEUR DE RENDU MULTI-STYLES MOTION CANVAS (720 x 1280 HD) ---
         render: function () {
             const ctx = this.ctx;
             const w = this.canvas.width;
@@ -608,21 +659,648 @@
 
             ctx.clearRect(0, 0, w, h);
 
-            this.drawBackground(ctx, w, h, t);
-            this.drawParticles(ctx, w, h, t);
-            this.drawBrandingHeader(ctx, w, h, t);
-
-            if (t < 3.5) {
-                this.drawScene1(ctx, w, h, t);
-            } else if (t < 9.5) {
-                this.drawScene2(ctx, w, h, t);
+            if (this.videoStyle === 'ugc') {
+                this.renderUgcStyle(ctx, w, h, t);
+            } else if (this.videoStyle === 'lookbook') {
+                this.renderLookbookStyle(ctx, w, h, t);
             } else {
-                this.drawScene3(ctx, w, h, t);
+                this.renderCapCutStyle(ctx, w, h, t);
             }
 
             this.drawAudioVisualizer(ctx, w, h, t);
         },
 
+        // =========================================================================
+        // STYLE 1 : TIKTOK / CAPCUT PRO (Plein Écran Immersif, Zooms & Kinetic Text)
+        // =========================================================================
+        renderCapCutStyle: function (ctx, w, h, t) {
+            // Fond Ken Burns immersif avec la photo du produit
+            this.drawKenBurnsBackground(ctx, w, h, t);
+
+            // Particules d'énergie flottantes
+            this.drawParticles(ctx, w, h, t);
+
+            // Header de boutique moderne
+            this.drawBrandingHeader(ctx, w, h, t);
+
+            if (t < 3.5) {
+                this.drawCapCutScene1(ctx, w, h, t);
+            } else if (t < 9.5) {
+                this.drawCapCutScene2(ctx, w, h, t);
+            } else {
+                this.drawCapCutScene3(ctx, w, h, t);
+            }
+        },
+
+        drawCapCutScene1: function (ctx, w, h, t) {
+            const p = t / 3.5;
+            ctx.save();
+
+            // Flash d'impact au démarrage
+            if (t < 0.25) {
+                const flashAlpha = (1 - t / 0.25) * 0.7;
+                ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            // Sticker d'accroche virale qui pulse
+            const badgeY = 135 + Math.sin(t * 8) * 4;
+            const badgeText = this.config.promoBadge || '⚡ ATTENTION TOUT LOMÉ !';
+            ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+            const bWidth = ctx.measureText(badgeText).width + 60;
+
+            ctx.fillStyle = '#ef4444';
+            ctx.shadowColor = '#ef4444';
+            ctx.shadowBlur = 30;
+            this.roundRect(ctx, (w - bWidth) / 2, badgeY, bWidth, 54, 27);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(badgeText, w / 2, badgeY + 27);
+
+            // Carte produit grand format 3D qui grossit
+            const cardW = 540;
+            const cardH = 540;
+            const cardY = 225;
+            const scale = 1.08 - 0.08 * Math.min(p * 1.4, 1) + 0.03 * Math.sin(t * 4);
+
+            ctx.save();
+            ctx.translate(w / 2, cardY + cardH / 2);
+            ctx.scale(scale, scale);
+
+            // Halo néon rotatif
+            ctx.save();
+            ctx.rotate(t * 0.4);
+            const ringGrad = ctx.createLinearGradient(-cardW / 2, -cardH / 2, cardW / 2, cardH / 2);
+            ringGrad.addColorStop(0, '#ec4899');
+            ringGrad.addColorStop(0.5, '#8b5cf6');
+            ringGrad.addColorStop(1, '#3b82f6');
+            ctx.strokeStyle = ringGrad;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(-cardW / 2 - 8, -cardH / 2 - 8, cardW + 16, cardH + 16);
+            ctx.restore();
+
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = 45;
+            ctx.shadowOffsetY = 20;
+            ctx.fillStyle = '#14111f';
+            this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 32);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            this.drawProductImage(ctx, -cardW / 2 + 14, -cardH / 2 + 14, cardW - 28, cardH - 28, 22);
+
+            // Rayon lumineux brillant (Shimmer)
+            if (t > 0.6 && t < 2.2) {
+                const sProg = (t - 0.6) / 1.6;
+                const sx = -cardW / 2 + sProg * (cardW + 200) - 100;
+                ctx.save();
+                this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 32);
+                ctx.clip();
+                const grad = ctx.createLinearGradient(sx - 70, -cardH / 2, sx + 70, cardH / 2);
+                grad.addColorStop(0, 'transparent');
+                grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.fillRect(-cardW / 2, -cardH / 2, cardW, cardH);
+                ctx.restore();
+            }
+
+            // Badges sur les coins de la carte
+            this.drawCornerBadge(ctx, -cardW / 2 + 20, -cardH / 2 + 20, '🔥 EXCLUSIF', '#f59e0b');
+            this.drawCornerBadge(ctx, cardW / 2 - 140, -cardH / 2 + 20, '⭐ TOP VENTE', '#10b981');
+
+            ctx.restore();
+
+            // Sous-titres cinétiques Alex Hormozi / TikTok
+            const activeScript = this.config.scripts[this.currentScriptIndex];
+            const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Attendez, ne scrollez pas ! Regardez cette offre incroyable...';
+            this.drawKineticSubtitles(ctx, w / 2, 880, 620, hookText, t);
+
+            ctx.restore();
+        },
+
+        drawCapCutScene2: function (ctx, w, h, t) {
+            ctx.save();
+
+            const floatY = Math.sin(t * 3.5) * 8;
+            const cardW = 490;
+            const cardH = 490;
+            const cardX = (w - cardW) / 2;
+            const cardY = 150 + floatY;
+
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+            ctx.shadowBlur = 40;
+            ctx.shadowOffsetY = 18;
+            ctx.fillStyle = '#171322';
+            this.roundRect(ctx, cardX, cardY, cardW, cardH, 30);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            this.drawProductImage(ctx, cardX + 14, cardY + 14, cardW - 28, cardH - 28, 22);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+            ctx.lineWidth = 3;
+            this.roundRect(ctx, cardX, cardY, cardW, cardH, 30);
+            ctx.stroke();
+
+            // Titre du produit
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const titleY = cardY + cardH + 45;
+            this.drawTruncatedText(ctx, this.config.productTitle, w / 2, titleY, 640);
+
+            // Prix avec pulsation intense
+            const pricePulse = 1.0 + 0.06 * Math.sin(t * 7);
+            ctx.save();
+            ctx.translate(w / 2, titleY + 75);
+            ctx.scale(pricePulse, pricePulse);
+
+            const priceText = this.config.price || '15 000 FCFA';
+            ctx.font = '900 50px system-ui, -apple-system, sans-serif';
+            const pWidth = ctx.measureText(priceText).width + 80;
+
+            const pGrad = ctx.createLinearGradient(-pWidth / 2, 0, pWidth / 2, 0);
+            pGrad.addColorStop(0, '#f59e0b');
+            pGrad.addColorStop(1, '#10b981');
+            ctx.fillStyle = pGrad;
+            ctx.shadowColor = '#f59e0b';
+            ctx.shadowBlur = 35;
+            this.roundRect(ctx, -pWidth / 2, -42, pWidth, 84, 42);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#0f172a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(priceText, 0, 2);
+            ctx.restore();
+
+            // Ancien prix barré
+            if (this.config.oldPrice) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.font = 'bold 24px system-ui';
+                ctx.textAlign = 'center';
+                const oldText = this.config.oldPrice;
+                const oldW = ctx.measureText(oldText).width;
+                const oldY = titleY + 145;
+                ctx.fillText(oldText, w / 2, oldY);
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 3.5;
+                ctx.beginPath();
+                ctx.moveTo(w / 2 - oldW / 2 - 8, oldY);
+                ctx.lineTo(w / 2 + oldW / 2 + 8, oldY);
+                ctx.stroke();
+            }
+
+            const chipsY = titleY + (this.config.oldPrice ? 190 : 165);
+            this.drawFeatureChips(ctx, w, chipsY);
+
+            // Sous-titre scène 2
+            const activeScript = this.config.scripts[this.currentScriptIndex];
+            const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'Super qualité garantie, disponible immédiatement chez nous.';
+            this.drawKineticSubtitles(ctx, w / 2, 1100, 620, voiceover, t);
+
+            ctx.restore();
+        },
+
+        drawCapCutScene3: function (ctx, w, h, t) {
+            ctx.save();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 40px system-ui, -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('STOCK LIMITÉ !', w / 2, 160);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.font = '600 24px system-ui';
+            ctx.fillText('Commandez vite avant rupture définitive', w / 2, 205);
+
+            const miniSize = 250;
+            const miniY = 255;
+            ctx.save();
+            ctx.translate(w / 2, miniY + miniSize / 2);
+            ctx.shadowColor = 'rgba(0,0,0,0.65)';
+            ctx.shadowBlur = 35;
+            this.drawProductImage(ctx, -miniSize / 2, -miniSize / 2, miniSize, miniSize, 26);
+            ctx.strokeStyle = '#25D366';
+            ctx.lineWidth = 4.5;
+            this.roundRect(ctx, -miniSize / 2, -miniSize / 2, miniSize, miniSize, 26);
+            ctx.stroke();
+            ctx.restore();
+
+            const btnY = 570;
+            const btnW = 560;
+            const btnH = 98;
+
+            const ripple = (t * 2.2) % 1;
+            ctx.strokeStyle = `rgba(37, 211, 102, ${0.75 * (1 - ripple)})`;
+            ctx.lineWidth = 4;
+            this.roundRect(ctx, (w - btnW) / 2 - ripple * 25, btnY - ripple * 15, btnW + ripple * 50, btnH + ripple * 30, 49);
+            ctx.stroke();
+
+            const pulse = 1.0 + 0.04 * Math.sin(t * 8);
+            ctx.save();
+            ctx.translate(w / 2, btnY + btnH / 2);
+            ctx.scale(pulse, pulse);
+
+            ctx.fillStyle = '#25D366';
+            ctx.shadowColor = '#25D366';
+            ctx.shadowBlur = 40;
+            this.roundRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 49);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            this.drawWhatsAppIcon(ctx, -btnW / 2 + 55, 0, 26);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 30px system-ui, -apple-system, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('COMMANDER SUR WHATSAPP', -btnW / 2 + 105, 0);
+            ctx.restore();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 36px monospace, system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.config.shopPhone, w / 2, 735);
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 24px system-ui';
+            ctx.fillText('🚚 Livraison express partout à Lomé & au Togo', w / 2, 795);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            ctx.font = '500 21px system-ui';
+            ctx.fillText('Paiement : T-Money • Flooz • Cash à la livraison', w / 2, 840);
+
+            this.drawConfetti(ctx, w, h, t);
+
+            const activeScript = this.config.scripts[this.currentScriptIndex];
+            const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-moi sur WhatsApp pour recevoir votre colis dès aujourd\'hui !';
+            this.drawKineticSubtitles(ctx, w / 2, 1050, 620, ctaVoice, t);
+
+            ctx.restore();
+        },
+
+        // =========================================================================
+        // STYLE 2 : PRÉSENTATEUR UGC IA FACE CAMÉRA (Créateur TikTok + Onde Vocale)
+        // =========================================================================
+        renderUgcStyle: function (ctx, w, h, t) {
+            // Fond studio créateur sombre avec bokeh chaud
+            const grad = ctx.createRadialGradient(w / 2, h * 0.35, 100, w / 2, h * 0.5, h * 0.85);
+            grad.addColorStop(0, '#1e1b2e');
+            grad.addColorStop(0.5, '#110e1b');
+            grad.addColorStop(1, '#07050a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            this.drawParticles(ctx, w, h, t);
+
+            // 1. Cadre du Présentateur IA avec onde vocale en temps réel
+            const avatarSize = 460;
+            const avatarX = (w - avatarSize) / 2;
+            const avatarY = 90;
+
+            // Anneau d'onde vocale dynamique autour du présentateur
+            this.drawWaveformRing(ctx, w / 2, avatarY + avatarSize / 2, avatarSize / 2 + 10, t);
+
+            // Photo du présentateur
+            ctx.save();
+            this.roundRect(ctx, avatarX, avatarY, avatarSize, avatarSize, 36);
+            ctx.clip();
+            if (this.ugcAvatarLoaded) {
+                ctx.drawImage(this.ugcAvatar, avatarX, avatarY, avatarSize, avatarSize);
+            } else {
+                ctx.fillStyle = '#2d2542';
+                ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 80px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('👤', w / 2, avatarY + avatarSize / 2);
+            }
+            ctx.restore();
+
+            // Bordure stylisée présentateur
+            ctx.save();
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 4;
+            this.roundRect(ctx, avatarX, avatarY, avatarSize, avatarSize, 36);
+            ctx.stroke();
+            ctx.restore();
+
+            // Badge du créateur vérifié
+            const creatorBadgeY = avatarY + avatarSize - 22;
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 1.5;
+            this.roundRect(ctx, w / 2 - 160, creatorBadgeY, 320, 44, 22);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 19px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Aïcha • Avis Vérifié Togo', w / 2 - 10, creatorBadgeY + 22);
+            this.drawCheckmark(ctx, w / 2 + 125, creatorBadgeY + 22, 9, '#3b82f6');
+            ctx.restore();
+
+            // 2. Incrustation Carte Produit (flottante au centre)
+            const prodW = 540;
+            const prodH = 260;
+            const prodY = 600;
+            const prodX = (w - prodW) / 2;
+
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 30;
+            ctx.shadowOffsetY = 12;
+            ctx.fillStyle = 'rgba(24, 20, 36, 0.95)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 2;
+            this.roundRect(ctx, prodX, prodY, prodW, prodH, 24);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Miniature produit dans la carte
+            const thumbSize = 210;
+            this.drawProductImage(ctx, prodX + 25, prodY + 25, thumbSize, thumbSize, 18);
+
+            // Détails texte de la carte
+            const textLeft = prodX + thumbSize + 45;
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 15px system-ui';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('LE PRODUIT TESTÉ 📦', textLeft, prodY + 30);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px system-ui';
+            this.drawTruncatedText(ctx, this.config.productTitle, textLeft, prodY + 65, prodW - thumbSize - 65);
+
+            // Prix dans la carte
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '900 32px system-ui';
+            ctx.fillText(this.config.price || '15 000 FCFA', textLeft, prodY + 115);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.font = '600 16px system-ui';
+            ctx.fillText('Boutique : ' + this.config.shopName, textLeft, prodY + 165);
+            ctx.fillText('Livraison à Lomé : Disponible', textLeft, prodY + 195);
+            ctx.restore();
+
+            // 3. Icônes d'interface TikTok sur le côté droit
+            this.drawTikTokSocialIcons(ctx, w - 55, 620, t);
+
+            // 4. Scène d'Appel à l'action ou sous-titres
+            if (t >= 9.5) {
+                // Bouton WhatsApp géant
+                const btnY = 910;
+                const btnW = 560;
+                const btnH = 96;
+
+                const pulse = 1.0 + 0.03 * Math.sin(t * 8);
+                ctx.save();
+                ctx.translate(w / 2, btnY + btnH / 2);
+                ctx.scale(pulse, pulse);
+
+                ctx.fillStyle = '#25D366';
+                ctx.shadowColor = '#25D366';
+                ctx.shadowBlur = 35;
+                this.roundRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 48);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                this.drawWhatsAppIcon(ctx, -btnW / 2 + 55, 0, 24);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 28px system-ui';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('COMMANDER SUR WHATSAPP', -btnW / 2 + 105, 0);
+                ctx.restore();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 30px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.config.shopPhone, w / 2, 1060);
+
+                const activeScript = this.config.scripts[this.currentScriptIndex];
+                const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Cliquez sur WhatsApp pour commander directement !';
+                this.drawKineticSubtitles(ctx, w / 2, 1140, 620, ctaVoice, t);
+            } else {
+                const activeScript = this.config.scripts[this.currentScriptIndex];
+                const currentText = (t < 3.5)
+                    ? (activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Regardez ce que j\'ai trouvé pour vous...')
+                    : (activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'La qualité est juste incroyable et le prix est top.');
+                this.drawKineticSubtitles(ctx, w / 2, 980, 640, currentText, t);
+            }
+        },
+
+        // =========================================================================
+        // STYLE 3 : SHOWCASE LOOKBOOK LUXE (Haute Couture, Reflets Or & Élégance)
+        // =========================================================================
+        renderLookbookStyle: function (ctx, w, h, t) {
+            // Fond noir obsidienne avec poussière dorée
+            const grad = ctx.createRadialGradient(w / 2, h * 0.4, 60, w / 2, h * 0.5, h * 0.9);
+            grad.addColorStop(0, '#1c160c');
+            grad.addColorStop(0.5, '#0e0b06');
+            grad.addColorStop(1, '#050402');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            this.drawGoldParticles(ctx, w, h, t);
+
+            // Header Luxe Signature
+            ctx.save();
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", serif';
+            ctx.letterSpacing = '3px';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText((this.config.shopName || 'BOUTIQUE').toUpperCase() + ' • SÉLECTION PRIVÉE', w / 2, 70);
+
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(w / 2 - 180, 95);
+            ctx.lineTo(w / 2 + 180, 95);
+            ctx.stroke();
+            ctx.restore();
+
+            if (t < 3.5) {
+                // Scène 1 Lookbook : Entrée majestueuse avec cadre doré
+                const cardW = 510;
+                const cardH = 510;
+                const cardY = 160;
+                const p = t / 3.5;
+                const tilt = Math.sin(t * 1.5) * 0.02;
+
+                ctx.save();
+                ctx.translate(w / 2, cardY + cardH / 2);
+                ctx.rotate(tilt);
+
+                ctx.shadowColor = 'rgba(212, 175, 55, 0.25)';
+                ctx.shadowBlur = 35;
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 3;
+                this.roundRect(ctx, -cardW / 2 - 8, -cardH / 2 - 8, cardW + 16, cardH + 16, 26);
+                ctx.stroke();
+
+                ctx.fillStyle = '#100e0b';
+                this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 22);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                this.drawProductImage(ctx, -cardW / 2 + 10, -cardH / 2 + 10, cardW - 20, cardH - 20, 18);
+                ctx.restore();
+
+                // Ruban "COLLECTION PRESTIGE"
+                ctx.fillStyle = '#d4af37';
+                ctx.font = 'bold 26px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.config.promoBadge || 'COLLECTION PRIVÉE', w / 2, 740);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 36px system-ui';
+                this.drawTruncatedText(ctx, this.config.productTitle, w / 2, 795, 620);
+
+                const activeScript = this.config.scripts[this.currentScriptIndex];
+                const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Une pièce rare et élégante sélectionnée pour vous.';
+                this.drawKineticSubtitles(ctx, w / 2, 920, 620, hookText, t);
+
+            } else if (t < 9.5) {
+                // Scène 2 Lookbook : Macro détails & Ruban de prix doré satiné
+                const cardW = 460;
+                const cardH = 460;
+                const cardY = 150 + Math.sin(t * 2) * 6;
+
+                ctx.save();
+                ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                ctx.shadowBlur = 40;
+                ctx.fillStyle = '#120f0a';
+                this.roundRect(ctx, (w - cardW) / 2, cardY, cardW, cardH, 24);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                this.drawProductImage(ctx, (w - cardW) / 2 + 12, cardY + 12, cardW - 24, cardH - 24, 18);
+
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 2.5;
+                this.roundRect(ctx, (w - cardW) / 2, cardY, cardW, cardH, 24);
+                ctx.stroke();
+                ctx.restore();
+
+                // Prix or satiné
+                const priceY = cardY + cardH + 70;
+                ctx.save();
+                const pText = 'PRIX PRIVILÈGE : ' + (this.config.price || '15 000 FCFA');
+                ctx.font = '900 34px serif';
+                const pW = ctx.measureText(pText).width + 70;
+
+                const goldGrad = ctx.createLinearGradient((w - pW) / 2, 0, (w + pW) / 2, 0);
+                goldGrad.addColorStop(0, '#f59e0b');
+                goldGrad.addColorStop(0.5, '#fbbf24');
+                goldGrad.addColorStop(1, '#d97706');
+
+                ctx.fillStyle = goldGrad;
+                ctx.shadowColor = '#f59e0b';
+                ctx.shadowBlur = 25;
+                this.roundRect(ctx, (w - pW) / 2, priceY - 32, pW, 64, 32);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = '#0a0805';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(pText, w / 2, priceY);
+                ctx.restore();
+
+                // 3 spécifications de prestige
+                const specs = ['01 / FINITION SUPÉRIEURE', '02 / ÉDITION LIMITÉE', '03 / LIVRAISON VIP'];
+                ctx.fillStyle = '#d4af37';
+                ctx.font = 'bold 17px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(specs.join('   •   '), w / 2, priceY + 65);
+
+                const activeScript = this.config.scripts[this.currentScriptIndex];
+                const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'Finition irréprochable et matière noble pour les plus exigeants.';
+                this.drawKineticSubtitles(ctx, w / 2, 1100, 620, voiceover, t);
+
+            } else {
+                // Scène 3 Lookbook : Carte Conciergerie WhatsApp VIP
+                ctx.save();
+                ctx.fillStyle = '#d4af37';
+                ctx.font = '900 32px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('SERVICE COMMANDES VIP', w / 2, 190);
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                ctx.font = '500 22px system-ui';
+                ctx.fillText('Réservation immédiate et livraison discrète', w / 2, 235);
+
+                const miniSize = 240;
+                ctx.save();
+                ctx.translate(w / 2, 290 + miniSize / 2);
+                this.drawProductImage(ctx, -miniSize / 2, -miniSize / 2, miniSize, miniSize, 20);
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 3;
+                this.roundRect(ctx, -miniSize / 2, -miniSize / 2, miniSize, miniSize, 20);
+                ctx.stroke();
+                ctx.restore();
+
+                // Bouton WhatsApp doré / noir
+                const btnY = 610;
+                const btnW = 540;
+                const btnH = 92;
+
+                const pulse = 1.0 + 0.03 * Math.sin(t * 7);
+                ctx.save();
+                ctx.translate(w / 2, btnY + btnH / 2);
+                ctx.scale(pulse, pulse);
+
+                ctx.fillStyle = '#25D366';
+                ctx.shadowColor = '#25D366';
+                ctx.shadowBlur = 30;
+                this.roundRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 46);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                this.drawWhatsAppIcon(ctx, -btnW / 2 + 50, 0, 24);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 28px system-ui';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('COMMANDER SUR WHATSAPP', -btnW / 2 + 95, 0);
+                ctx.restore();
+
+                ctx.fillStyle = '#d4af37';
+                ctx.font = 'bold 34px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.config.shopPhone, w / 2, 765);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '600 21px system-ui';
+                ctx.fillText('Expédition express à Lomé & partout au Togo', w / 2, 820);
+
+                const activeScript = this.config.scripts[this.currentScriptIndex];
+                const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-nous sur WhatsApp pour réserver votre pièce.';
+                this.drawKineticSubtitles(ctx, w / 2, 1050, 620, ctaVoice, t);
+                ctx.restore();
+            }
+        },
+
+        // --- NOUVEAUX MODULES VISUELS HAUTE FIDÉLITÉ ---
+
+        // Fond par défaut selon le thème sélectionné
         drawBackground: function (ctx, w, h, t) {
             let grad;
             if (this.currentTheme === 'gold') {
@@ -712,249 +1390,230 @@
             ctx.restore();
         },
 
-        // SCÈNE 1 : ACCROCHE CHOC (0s - 3.5s)
-        drawScene1: function (ctx, w, h, t) {
-            const p = t / 3.5;
+        // Fond immersif Ken Burns (zoom doux sur la photo du produit)
+        drawKenBurnsBackground: function (ctx, w, h, t) {
+            const img = this.productImg;
+            if (this.productImgLoaded && img && img.naturalWidth > 0) {
+                ctx.save();
+                // Zoom progressif et léger pan
+                const zoom = 1.25 + 0.08 * Math.sin(t * 0.4);
+                const panX = Math.sin(t * 0.3) * 25;
+                const panY = Math.cos(t * 0.25) * 20;
 
+                ctx.translate(w / 2 + panX, h / 2 + panY);
+                ctx.scale(zoom, zoom);
+
+                // Dessin en plein écran
+                const imgW = img.naturalWidth;
+                const imgH = img.naturalHeight;
+                const scale = Math.max(w / imgW, h / imgH);
+                const dw = imgW * scale;
+                const dh = imgH * scale;
+                ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+                ctx.restore();
+
+                // Voile sombre et dégradé cinématique
+                const vignette = ctx.createRadialGradient(w / 2, h / 2, w * 0.3, w / 2, h / 2, h * 0.75);
+                vignette.addColorStop(0, 'rgba(8, 6, 15, 0.72)');
+                vignette.addColorStop(1, 'rgba(4, 3, 8, 0.94)');
+                ctx.fillStyle = vignette;
+                ctx.fillRect(0, 0, w, h);
+            } else {
+                this.drawBackground(ctx, w, h, t);
+            }
+        },
+
+        // Sous-titres cinétiques style Alex Hormozi / TikTok
+        drawKineticSubtitles: function (ctx, cx, cy, maxW, text, t) {
             ctx.save();
+            const words = text.split(' ');
+            if (words.length === 0) {
+                ctx.restore();
+                return;
+            }
 
-            const badgeY = 140 + Math.sin(t * 8) * 4;
-            const badgeText = this.config.promoBadge || '⚡ ARRIVAGE EXCLUSIF';
-            ctx.font = '900 26px system-ui, -apple-system, sans-serif';
-            const bWidth = ctx.measureText(badgeText).width + 50;
+            // Calcul du mot actif selon le temps dans la scène
+            const wordsPerSec = 2.8;
+            const activeWordIdx = Math.floor((t * wordsPerSec)) % words.length;
 
-            ctx.fillStyle = '#ef4444';
-            ctx.shadowColor = '#ef4444';
-            ctx.shadowBlur = 25;
-            this.roundRect(ctx, (w - bWidth) / 2, badgeY, bWidth, 52, 26);
+            ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+            const lines = [];
+            let currentLine = [];
+            let currentW = 0;
+
+            words.forEach((wrd, idx) => {
+                const wWidth = ctx.measureText(wrd + ' ').width;
+                if (currentW + wWidth > maxW - 50 && currentLine.length > 0) {
+                    lines.push(currentLine);
+                    currentLine = [{ word: wrd, idx: idx }];
+                    currentW = wWidth;
+                } else {
+                    currentLine.push({ word: wrd, idx: idx });
+                    currentW += wWidth;
+                }
+            });
+            if (currentLine.length > 0) lines.push(currentLine);
+
+            const lineH = 46;
+            const totalH = lines.length * lineH + 34;
+            const bubbleW = maxW;
+            const bx = cx - bubbleW / 2;
+            const by = cy - totalH / 2;
+
+            // Fond noir transparent arrondi avec bordure lumineuse
+            ctx.fillStyle = 'rgba(6, 4, 12, 0.88)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+            ctx.lineWidth = 1.5;
+            this.roundRect(ctx, bx, by, bubbleW, totalH, 22);
             ctx.fill();
-            ctx.shadowBlur = 0;
-
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(badgeText, w / 2, badgeY + 26);
-
-            const cardW = 520;
-            const cardH = 520;
-            const cardY = 240;
-
-            const scale = 1.12 - 0.12 * Math.min(p * 1.5, 1);
-            ctx.save();
-            ctx.translate(w / 2, cardY + cardH / 2);
-            ctx.scale(scale, scale);
-
-            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-            ctx.shadowBlur = 40;
-            ctx.shadowOffsetY = 20;
-
-            ctx.fillStyle = '#1e1a29';
-            this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 32);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            this.drawProductImage(ctx, -cardW / 2 + 16, -cardH / 2 + 16, cardW - 32, cardH - 32, 24);
-
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.lineWidth = 3;
-            this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 32);
             ctx.stroke();
 
-            if (t > 0.8 && t < 2.4) {
-                const shimProg = (t - 0.8) / 1.6;
-                const shimX = -cardW / 2 + shimProg * (cardW + 160) - 80;
-                ctx.save();
-                this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 32);
-                ctx.clip();
-                const shimGrad = ctx.createLinearGradient(shimX - 60, -cardH / 2, shimX + 60, cardH / 2);
-                shimGrad.addColorStop(0, 'transparent');
-                shimGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.45)');
-                shimGrad.addColorStop(1, 'transparent');
-                ctx.fillStyle = shimGrad;
-                ctx.fillRect(-cardW / 2, -cardH / 2, cardW, cardH);
-                ctx.restore();
-            }
-            ctx.restore();
+            // Rendu mot par mot
+            lines.forEach((line, lineIdx) => {
+                const ly = by + 28 + lineIdx * lineH;
+                const totalLineW = line.reduce((acc, item) => acc + ctx.measureText(item.word + ' ').width, 0);
+                let curX = cx - totalLineW / 2;
 
-            const activeScript = this.config.scripts[this.currentScriptIndex];
-            const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Attendez, ne scrollez pas ! Regardez cette merveille...';
-            this.drawSpeechBubble(ctx, w / 2, 850, 600, hookText, '🔥');
+                line.forEach(item => {
+                    const isHighlighted = (item.idx === activeWordIdx);
+                    const wordStr = item.word;
+                    const wordW = ctx.measureText(wordStr + ' ').width;
+
+                    ctx.save();
+                    if (isHighlighted) {
+                        ctx.fillStyle = '#facc15'; // Jaune fluo TikTok
+                        ctx.strokeStyle = '#000000';
+                        ctx.lineWidth = 6;
+                        ctx.strokeText(wordStr, curX, ly);
+                        ctx.fillText(wordStr, curX, ly);
+                    } else {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.lineWidth = 4;
+                        ctx.strokeText(wordStr, curX, ly);
+                        ctx.fillText(wordStr, curX, ly);
+                    }
+                    ctx.restore();
+
+                    curX += wordW;
+                });
+            });
 
             ctx.restore();
         },
 
-        // SCÈNE 2 : DÉMONSTRATION & PRIX MAGIQUE (3.5s - 9.5s)
-        drawScene2: function (ctx, w, h, t) {
+        // Anneau d'ondes vocales pour le présentateur UGC
+        drawWaveformRing: function (ctx, cx, cy, radius, t) {
             ctx.save();
+            const bars = 36;
+            const isSpeaking = this.voiceoverEnabled && (
+                (t >= 0.4 && t < 3.2) ||
+                (t >= 3.8 && t < 9.0) ||
+                (t >= 9.6 && t < 13.5)
+            );
 
-            const floatY = Math.sin(t * 3) * 10;
-            const cardW = 460;
-            const cardH = 460;
-            const cardX = (w - cardW) / 2;
-            const cardY = 160 + floatY;
+            for (let i = 0; i < bars; i++) {
+                const angle = (i / bars) * Math.PI * 2;
+                const intensity = isSpeaking ? (Math.sin(t * 18 + i * 1.2) * 0.5 + 0.5) * 18 + 4 : 4;
+                const r1 = radius;
+                const r2 = radius + intensity;
 
-            ctx.shadowColor = 'rgba(0,0,0,0.55)';
-            ctx.shadowBlur = 35;
-            ctx.shadowOffsetY = 15;
-            ctx.fillStyle = '#181524';
-            this.roundRect(ctx, cardX, cardY, cardW, cardH, 28);
-            ctx.fill();
-            ctx.shadowBlur = 0;
+                const x1 = cx + Math.cos(angle) * r1;
+                const y1 = cy + Math.sin(angle) * r1;
+                const x2 = cx + Math.cos(angle) * r2;
+                const y2 = cy + Math.sin(angle) * r2;
 
-            this.drawProductImage(ctx, cardX + 12, cardY + 12, cardW - 24, cardH - 24, 20);
-
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-            ctx.lineWidth = 2.5;
-            this.roundRect(ctx, cardX, cardY, cardW, cardH, 28);
-            ctx.stroke();
-
-            if (this.config.oldPrice) {
-                ctx.fillStyle = '#ef4444';
-                this.roundRect(ctx, cardX + cardW - 130, cardY + 20, 110, 42, 21);
-                ctx.fill();
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 20px system-ui';
-                ctx.textAlign = 'center';
-                ctx.fillText('PROMO', cardX + cardW - 75, cardY + 42);
-            }
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const titleY = cardY + cardH + 50;
-            this.drawTruncatedText(ctx, this.config.productTitle, w / 2, titleY, 620);
-
-            const pricePulse = 1.0 + 0.05 * Math.sin(t * 6);
-            ctx.save();
-            ctx.translate(w / 2, titleY + 75);
-            ctx.scale(pricePulse, pricePulse);
-
-            const priceText = this.config.price || '15 000 FCFA';
-            ctx.font = '900 48px system-ui, -apple-system, sans-serif';
-            const pMetrics = ctx.measureText(priceText);
-            const pillW = pMetrics.width + 70;
-
-            const priceGrad = ctx.createLinearGradient(-pillW / 2, 0, pillW / 2, 0);
-            priceGrad.addColorStop(0, '#f59e0b');
-            priceGrad.addColorStop(1, '#d97706');
-
-            ctx.fillStyle = priceGrad;
-            ctx.shadowColor = '#f59e0b';
-            ctx.shadowBlur = 30;
-            this.roundRect(ctx, -pillW / 2, -40, pillW, 80, 40);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            ctx.fillStyle = '#0f172a';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(priceText, 0, 2);
-            ctx.restore();
-
-            if (this.config.oldPrice) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-                ctx.font = 'bold 24px system-ui';
-                ctx.textAlign = 'center';
-                const oldText = this.config.oldPrice;
-                const oldW = ctx.measureText(oldText).width;
-                const oldY = titleY + 140;
-                ctx.fillText(oldText, w / 2, oldY);
-                ctx.strokeStyle = '#ef4444';
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = isSpeaking ? '#10b981' : 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 3.5;
+                ctx.lineCap = 'round';
                 ctx.beginPath();
-                ctx.moveTo(w / 2 - oldW / 2 - 8, oldY);
-                ctx.lineTo(w / 2 + oldW / 2 + 8, oldY);
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
                 ctx.stroke();
             }
+            ctx.restore();
+        },
 
-            const chipsY = titleY + (this.config.oldPrice ? 185 : 160);
-            this.drawFeatureChips(ctx, w, chipsY);
+        // Icônes sociales TikTok (Like, Commentaires, Partage, Vinyle)
+        drawTikTokSocialIcons: function (ctx, x, startY, t) {
+            ctx.save();
+            const items = [
+                { icon: '❤️', count: '48.2K', pulse: 1.0 + 0.08 * Math.sin(t * 4) },
+                { icon: '💬', count: '1.4K', pulse: 1.0 },
+                { icon: '↗️', count: '9.8K', pulse: 1.0 },
+            ];
 
-            const activeScript = this.config.scripts[this.currentScriptIndex];
-            const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'Super qualité garantie, disponible immédiatement chez nous.';
-            this.drawSpeechBubble(ctx, w / 2, 1100, 620, voiceover, '💎');
+            items.forEach((it, i) => {
+                const cy = startY + i * 72;
+                ctx.save();
+                ctx.translate(x, cy);
+                ctx.scale(it.pulse, it.pulse);
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 22, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.font = '22px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(it.icon, 0, 0);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px system-ui';
+                ctx.fillText(it.count, 0, 30);
+                ctx.restore();
+            });
+
+            // Disque vinyle de musique qui tourne en bas à droite
+            const vinylY = startY + 230;
+            ctx.save();
+            ctx.translate(x, vinylY);
+            ctx.rotate(t * 2.5);
+            ctx.fillStyle = '#111827';
+            ctx.beginPath();
+            ctx.arc(0, 0, 24, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#4b5563';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(0, 0, 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
 
             ctx.restore();
         },
 
-        // SCÈNE 3 : APPEL À L'ACTION WHATSAPP (9.5s - 14.0s)
-        drawScene3: function (ctx, w, h, t) {
+        drawCornerBadge: function (ctx, x, y, text, color) {
             ctx.save();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '900 38px system-ui, -apple-system, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('STOCK LIMITÉ !', w / 2, 170);
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-            ctx.font = '500 24px system-ui';
-            ctx.fillText('Commandez vite avant rupture définitive', w / 2, 215);
-
-            const miniSize = 220;
-            const miniY = 270;
-            ctx.save();
-            ctx.translate(w / 2, miniY + miniSize / 2);
-            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-            ctx.shadowBlur = 30;
-            this.drawProductImage(ctx, -miniSize / 2, -miniSize / 2, miniSize, miniSize, 24);
-            ctx.strokeStyle = '#25D366';
-            ctx.lineWidth = 4;
-            this.roundRect(ctx, -miniSize / 2, -miniSize / 2, miniSize, miniSize, 24);
-            ctx.stroke();
-            ctx.restore();
-
-            const btnY = 570;
-            const btnW = 540;
-            const btnH = 96;
-
-            const ripple1 = (t * 2) % 1;
-            ctx.strokeStyle = `rgba(37, 211, 102, ${0.7 * (1 - ripple1)})`;
-            ctx.lineWidth = 4;
-            this.roundRect(ctx, (w - btnW) / 2 - ripple1 * 25, btnY - ripple1 * 15, btnW + ripple1 * 50, btnH + ripple1 * 30, 48);
-            ctx.stroke();
-
-            const pulse = 1.0 + 0.03 * Math.sin(t * 8);
-            ctx.save();
-            ctx.translate(w / 2, btnY + btnH / 2);
-            ctx.scale(pulse, pulse);
-
-            ctx.fillStyle = '#25D366';
-            ctx.shadowColor = '#25D366';
-            ctx.shadowBlur = 35;
-            this.roundRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 48);
+            ctx.font = 'bold 16px system-ui';
+            const w = ctx.measureText(text).width + 24;
+            ctx.fillStyle = color;
+            this.roundRect(ctx, x, y, w, 32, 16);
             ctx.fill();
-            ctx.shadowBlur = 0;
-
-            this.drawWhatsAppIcon(ctx, -btnW / 2 + 55, 0, 24);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = '900 30px system-ui, -apple-system, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('COMMANDER SUR WHATSAPP', -btnW / 2 + 105, 0);
-            ctx.restore();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 36px monospace, system-ui';
             ctx.textAlign = 'center';
-            ctx.fillText(this.config.shopPhone, w / 2, 730);
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x + w / 2, y + 16);
+            ctx.restore();
+        },
 
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 24px system-ui';
-            ctx.fillText('🚚 Livraison rapide partout à Lomé & au Togo', w / 2, 790);
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.font = '500 20px system-ui';
-            ctx.fillText('Paiement : T-Money • Flooz • Cash à la livraison', w / 2, 830);
-
-            this.drawConfetti(ctx, w, h, t);
-
-            const activeScript = this.config.scripts[this.currentScriptIndex];
-            const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-moi sur WhatsApp pour recevoir votre colis dès aujourd\'hui !';
-            this.drawSpeechBubble(ctx, w / 2, 1050, 620, ctaVoice, '📲');
-
+        drawGoldParticles: function (ctx, w, h, t) {
+            ctx.save();
+            ctx.fillStyle = '#d4af37';
+            for (let i = 0; i < 30; i++) {
+                const x = ((i * 47 + t * 25) % w);
+                const y = ((h - (i * 59 + t * 40)) % h);
+                const size = (Math.sin(t * 3 + i) * 0.5 + 0.5) * 2.5 + 1;
+                ctx.globalAlpha = Math.sin(t * 2 + i) * 0.4 + 0.5;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
             ctx.restore();
         },
 
@@ -1372,6 +2031,7 @@
                     },
                     body: JSON.stringify({
                         theme: this.currentTheme,
+                        video_style: this.videoStyle,
                         script_index: this.currentScriptIndex,
                         duration_seconds: 14,
                         format: this.selectedFormat,

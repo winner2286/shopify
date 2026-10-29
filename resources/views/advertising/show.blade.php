@@ -200,11 +200,64 @@
                     </div>
                 </div>
 
-                <!-- 2. Thème Visuel & Palette -->
+                <!-- 2. Style de Réalisation Vidéo (CapCut, Présentateur UGC, Lookbook Luxe) -->
+                <div class="settings-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+                        <h3 class="settings-title" style="margin:0">
+                            <x-icon name="video" :size="16" style="color:var(--brand-1)" />
+                            <span>2. Style de Réalisation Vidéo</span>
+                        </h3>
+                        <span id="ad-style-badge" class="badge badge-ok" style="font-size:.7rem">TikTok CapCut Pro</span>
+                    </div>
+                    <p class="settings-desc">Choisissez l'univers visuel et le rythme de mise en avant du produit :</p>
+
+                    <div class="video-styles-grid">
+                        <button type="button" class="video-style-card selected" data-video-style="capcut" id="style-btn-capcut">
+                            <div class="video-style-icon-wrap" style="background:linear-gradient(135deg, #ec4899, #8b5cf6)">
+                                <x-icon name="sparkles" :size="20" style="color:#fff" />
+                            </div>
+                            <div class="video-style-content">
+                                <div style="display:flex;align-items:center;justify-content:space-between">
+                                    <strong style="font-size:.92rem;color:var(--text)">TikTok / CapCut Pro</strong>
+                                    <span class="badge badge-ok" style="font-size:.65rem">Recommandé</span>
+                                </div>
+                                <small style="font-size:.76rem;color:var(--text-soft);display:block;margin-top:.2rem">Plein écran immersif, zooms cinématiques 3D & textes géants animés</small>
+                            </div>
+                        </button>
+
+                        <button type="button" class="video-style-card" data-video-style="ugc" id="style-btn-ugc">
+                            <div class="video-style-icon-wrap" style="background:linear-gradient(135deg, #10b981, #06b6d4)">
+                                <x-icon name="user" :size="20" style="color:#fff" />
+                            </div>
+                            <div class="video-style-content">
+                                <div style="display:flex;align-items:center;justify-content:space-between">
+                                    <strong style="font-size:.92rem;color:var(--text)">Présentateur UGC IA</strong>
+                                    <span class="badge badge-primary" style="font-size:.65rem">Tendance</span>
+                                </div>
+                                <small style="font-size:.76rem;color:var(--text-soft);display:block;margin-top:.2rem">Avis créateur face caméra avec onde vocale, avatar & sous-titres</small>
+                            </div>
+                        </button>
+
+                        <button type="button" class="video-style-card" data-video-style="lookbook" id="style-btn-lookbook">
+                            <div class="video-style-icon-wrap" style="background:linear-gradient(135deg, #f59e0b, #b45309)">
+                                <x-icon name="layers" :size="20" style="color:#fff" />
+                            </div>
+                            <div class="video-style-content">
+                                <div style="display:flex;align-items:center;justify-content:space-between">
+                                    <strong style="font-size:.92rem;color:var(--text)">Showcase Lookbook Luxe</strong>
+                                    <span class="badge badge-draft" style="font-size:.65rem">Prestige</span>
+                                </div>
+                                <small style="font-size:.76rem;color:var(--text-soft);display:block;margin-top:.2rem">Esthétique épurée, reflets dorés, zoom matière & finitions VIP</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Thème Visuel & Palette -->
                 <div class="settings-box">
                     <h3 class="settings-title">
                         <x-icon name="palette" :size="16" style="color:var(--brand-1)" />
-                        <span>2. Thème Graphique & Ambiance</span>
+                        <span>3. Thème Graphique & Ambiance</span>
                     </h3>
                     <div class="theme-chips-grid">
                         <button type="button" class="theme-chip selected" data-theme-choice="boutique">
@@ -241,11 +294,11 @@
                     </div>
                 </div>
 
-                <!-- 3. Musique de fond & Rythme -->
+                <!-- 4. Musique de fond & Rythme -->
                 <div class="settings-box">
                     <h3 class="settings-title">
                         <x-icon name="volume-2" :size="16" style="color:#25D366" />
-                        <span>3. Rythme & Bande Son</span>
+                        <span>4. Rythme & Bande Son</span>
                     </h3>
                     <div class="audio-chips-grid">
                         <button type="button" class="audio-chip selected" data-audio-choice="afrobeat">
@@ -270,12 +323,12 @@
                     </div>
                 </div>
 
-                <!-- 4. Voix-Off IA Narratrice intégrée -->
+                <!-- 5. Voix-Off IA Narratrice intégrée -->
                 <div class="settings-box" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
                     <div>
                         <div style="font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:.4rem">
                             <x-icon name="user" :size="16" />
-                            <span>Voix-Off IA (Français)</span>
+                            <span>5. Voix-Off IA (Français)</span>
                             <span id="ad-voice-status" class="badge badge-ok" style="font-size:.68rem;padding:.15rem .45rem">Voix prête</span>
                         </div>
                         <p style="font-size:.8rem;color:var(--text-soft);margin:.2rem 0 0">
@@ -811,6 +864,54 @@
         background: rgba(109,61,242,0.06);
     }
 
+    /* Styles de Réalisation Vidéo (CapCut, UGC, Lookbook) */
+    .video-styles-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: .65rem;
+    }
+
+    .video-style-card {
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        padding: .8rem .95rem;
+        background: var(--bg-soft);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        text-align: left;
+        width: 100%;
+        transition: all .2s ease;
+    }
+
+    .video-style-card:hover {
+        border-color: rgba(109,61,242,0.4);
+        transform: translateY(-1px);
+    }
+
+    .video-style-card.selected {
+        border-color: var(--brand-1);
+        background: rgba(109,61,242,0.08);
+        box-shadow: 0 4px 14px rgba(109,61,242,0.15);
+    }
+
+    .video-style-icon-wrap {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    }
+
+    .video-style-content {
+        flex: 1;
+        min-width: 0;
+    }
+
     /* Thèmes Visuels */
     .theme-chips-grid {
         display: grid;
@@ -984,6 +1085,7 @@
                 oldPrice: @json($oldPriceDisplay),
                 promoBadge: @json($promoBadge),
                 imageUrl: @json($productImageUrl ?: ''),
+                ugcAvatarUrl: @json($ugcAvatarUrl),
                 scripts: @json($ad->generated_scripts ?: []),
                 exportUrl: @json(route('ads.log_video_export', $ad)),
                 csrfToken: @json(csrf_token()),

@@ -113,7 +113,13 @@ class AdvertisingController extends Controller
             // Ignorer silencieusement si hors connexion
         }
 
-        return view('advertising.show', compact('shop', 'ad', 'productImageUrl'));
+        // Résolution de l'avatar UGC pour le studio vidéo (Base64 zéro latence)
+        $ugcPath = public_path('images/brand/ugc_presenter.jpg');
+        $ugcAvatarUrl = file_exists($ugcPath) && filesize($ugcPath) > 0
+            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($ugcPath))
+            : asset('images/brand/ugc_presenter.jpg');
+
+        return view('advertising.show', compact('shop', 'ad', 'productImageUrl', 'ugcAvatarUrl'));
     }
 
     /**
@@ -223,6 +229,7 @@ class AdvertisingController extends Controller
                 'ad_id' => $ad->id,
                 'channel' => $ad->channel,
                 'theme' => $request->input('theme', 'boutique'),
+                'video_style' => $request->input('video_style', 'capcut'),
                 'script_index' => $request->input('script_index', 0),
                 'format' => '9:16_vertical_hd',
             ],
