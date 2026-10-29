@@ -29,6 +29,7 @@ class GoogleWebhookTransport extends AbstractTransport
         $to = implode(', ', $toAddresses);
         $subject = $email->getSubject() ?? 'Message de Zanika';
         $html = $email->getHtmlBody() ?: nl2br(htmlspecialchars($email->getTextBody() ?? ''));
+        $text = $email->getTextBody() ?: trim(strip_tags(str_replace(['<br>', '<br/>', '</p>', '</div>'], "\n", $html)));
         $fromName = config('mail.from.name', 'Zanika');
 
         Log::info("Envoi email via Google Webhook vers: {$to} | Sujet: {$subject}");
@@ -37,6 +38,7 @@ class GoogleWebhookTransport extends AbstractTransport
             'token' => $this->token,
             'to' => $to,
             'subject' => $subject,
+            'text' => $text,
             'html' => $html,
             'from_name' => $fromName,
         ]);

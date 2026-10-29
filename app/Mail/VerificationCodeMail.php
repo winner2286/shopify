@@ -15,7 +15,7 @@ class VerificationCodeMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: '🔐 '.$this->code.' est votre code de confirmation Zanika');
+        return new Envelope(subject: 'Votre code de verification Zanika : '.$this->code);
     }
 
     public function content(): Content
