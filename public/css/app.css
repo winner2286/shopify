@@ -636,8 +636,8 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   display: flex;
   gap: 1.2rem;
   padding: 1rem 0;
-  background: #0b0b0e;
-  border-block: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-soft);
+  border-block: 1px solid var(--border);
   position: relative;
 }
 .marquee-container::before, .marquee-container::after {
@@ -649,11 +649,11 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 }
 .marquee-container::before {
   left: 0;
-  background: linear-gradient(90deg, #09090b 20%, transparent);
+  background: linear-gradient(90deg, var(--bg-soft) 20%, transparent);
 }
 .marquee-container::after {
   right: 0;
-  background: linear-gradient(270deg, #09090b 20%, transparent);
+  background: linear-gradient(270deg, var(--bg-soft) 20%, transparent);
 }
 .marquee-track {
   display: flex;
@@ -2873,24 +2873,27 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   text-shadow: none;
 }
 
-/* Marquee & Social proof */
+/* Marquee & Social proof en mode clair */
 [data-theme='light'] .marquee-container {
-  border-color: rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
+  border-block-color: rgba(15, 23, 42, 0.08);
 }
 [data-theme='light'] .marquee-container::before {
-  background: linear-gradient(90deg, #ffffff 20%, transparent);
+  background: linear-gradient(90deg, #f8fafc 25%, rgba(248, 250, 252, 0) 100%);
 }
 [data-theme='light'] .marquee-container::after {
-  background: linear-gradient(270deg, #ffffff 20%, transparent);
+  background: linear-gradient(270deg, #f8fafc 25%, rgba(248, 250, 252, 0) 100%);
 }
 [data-theme='light'] .marquee-item {
-  background: #f8fafc;
-  border-color: rgba(15, 23, 42, 0.09);
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
   color: #0b0d12;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 [data-theme='light'] .marquee-item:hover {
   background: #ffffff;
   border-color: var(--brand-1);
+  box-shadow: 0 4px 12px rgba(158, 27, 50, 0.1);
 }
 [data-theme='light'] .social-proof-band {
   background: #f8fafc;
