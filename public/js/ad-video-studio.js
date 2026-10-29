@@ -53,14 +53,33 @@
                 });
             }
 
-            // Chargement de l'image produit
+            // Chargement de l'image produit ultra-résilient (Base64 data URI ou URL avec retry CORS)
             this.productImg = new Image();
-            this.productImg.crossOrigin = 'anonymous';
             this.productImgLoaded = false;
             if (this.config.imageUrl) {
-                this.productImg.src = this.config.imageUrl;
-                this.productImg.onload = () => { this.productImgLoaded = true; this.render(); };
-                this.productImg.onerror = () => { this.productImgLoaded = false; };
+                const isDataUri = this.config.imageUrl.startsWith('data:');
+                const loadImg = (allowCors) => {
+                    const img = new Image();
+                    if (allowCors && !isDataUri) {
+                        img.crossOrigin = 'anonymous';
+                    }
+                    img.onload = () => {
+                        this.productImg = img;
+                        this.productImgLoaded = true;
+                        this.render();
+                    };
+                    img.onerror = () => {
+                        if (allowCors && !isDataUri) {
+                            // En cas de restriction CORS par le navigateur, réessayer sans crossOrigin
+                            loadImg(false);
+                        } else {
+                            this.productImgLoaded = false;
+                            this.render();
+                        }
+                    };
+                    img.src = this.config.imageUrl;
+                };
+                loadImg(!isDataUri);
             }
 
             this.initAudio();
@@ -823,38 +842,56 @@
             this.roundRect(ctx, x, y, w, h, radius);
             ctx.clip();
 
-            if (this.productImgLoaded && this.productImg.width > 0) {
-                // Object-fit: cover centré
-                const img = this.productImg;
-                const imgRatio = img.width / img.height;
+            const img = this.productImg;
+            const imgW = img ? (img.naturalWidth || img.width || 0) : 0;
+            const imgH = img ? (img.naturalHeight || img.height || 0) : 0;
+
+            if (this.productImgLoaded && imgW > 0 && imgH > 0) {
+                // Object-fit: cover centré avec ratio d'aspect respecté
+                const imgRatio = imgW / imgH;
                 const targetRatio = w / h;
                 let sw, sh, sx, sy;
 
                 if (imgRatio > targetRatio) {
-                    sh = img.height;
-                    sw = img.height * targetRatio;
-                    sx = (img.width - sw) / 2;
+                    sh = imgH;
+                    sw = imgH * targetRatio;
+                    sx = (imgW - sw) / 2;
                     sy = 0;
                 } else {
-                    sw = img.width;
-                    sh = img.width / targetRatio;
+                    sw = imgW;
+                    sh = imgW / targetRatio;
                     sx = 0;
-                    sy = (img.height - sh) / 2;
+                    sy = (imgH - sh) / 2;
                 }
                 ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
             } else {
-                // Placeholder élégant si pas d'image
+                // Fond élégant et lumineux si aucune photo n'est disponible
                 const bg = ctx.createLinearGradient(x, y, x + w, y + h);
                 bg.addColorStop(0, '#312e81');
-                bg.addColorStop(1, '#1e1b4b');
+                bg.addColorStop(0.5, '#4f46e5');
+                bg.addColorStop(1, '#7c3aed');
                 ctx.fillStyle = bg;
                 ctx.fillRect(x, y, w, h);
 
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                // Cercle d'icône centrale
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.arc(x + w / 2, y + h / 2 - 30, 75, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 54px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.font = 'bold 32px system-ui';
-                ctx.fillText('🛍️ ' + this.config.shopName, x + w / 2, y + h / 2);
+                ctx.fillText('🛍️', x + w / 2, y + h / 2 - 30);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 26px sans-serif';
+                this.drawTruncatedText(ctx, this.config.productTitle || this.config.shopName, x + w / 2, y + h / 2 + 55, w - 40);
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.font = '600 18px sans-serif';
+                ctx.fillText(this.config.price || ('Collection ' + this.config.shopName), x + w / 2, y + h / 2 + 95);
             }
             ctx.restore();
         },

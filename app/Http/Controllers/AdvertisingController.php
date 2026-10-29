@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Advertisement;
 use App\Models\Product;
+use App\Models\Shop;
 use App\Services\AiAdvertisingService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdvertisingController extends Controller
 {
@@ -94,27 +96,87 @@ class AdvertisingController extends Controller
 
         $ad->load(['product.images', 'product.primaryImage']);
 
-        $product = $ad->product;
-        $productImageUrl = null;
-        if ($product) {
-            $primary = $product->primaryImage;
-            if ($primary && ! empty($primary->image_data)) {
-                $productImageUrl = $primary->image_data;
-            } elseif ($primary && ! empty($primary->url)) {
-                $productImageUrl = $primary->url;
-            } elseif ($product->images->isNotEmpty()) {
-                $first = $product->images->first();
-                $productImageUrl = $first->thumbnail_url ?: $first->url;
-            } else {
-                $productImageUrl = '/api/placeholder-image?id=' . $product->id . '&color=' . urlencode($shop->brand_color ?: '#6d3df2');
-            }
-        } elseif ($shop->logo_path) {
-            $productImageUrl = '/storage/' . ltrim($shop->logo_path, '/');
-        } else {
-            $productImageUrl = '/api/placeholder-image?title=' . urlencode($shop->name) . '&color=' . urlencode($shop->brand_color ?: '#6d3df2');
-        }
+        $productImageUrl = $this->resolveProductImageForAd($ad, $shop);
 
         return view('advertising.show', compact('shop', 'ad', 'productImageUrl'));
+    }
+
+    /**
+     * Résout l'URL ou le Data URI Base64 ultra-robuste de l'image du produit pour le Studio Vidéo
+     */
+    private function resolveProductImageForAd(Advertisement $ad, Shop $shop): string
+    {
+        // 1. Produit explicite de la publicité
+        $product = $ad->product;
+
+        // 2. Si la publicité a été générée pour toute la boutique, chercher le produit phare avec photo
+        if (! $product) {
+            $product = $shop->products()
+                ->whereHas('images')
+                ->with(['images', 'primaryImage'])
+                ->first()
+                ?? $shop->products()->with(['images', 'primaryImage'])->first();
+        }
+
+        // 3. Extraction de la photo du produit (priorité aux données Base64 zéro-latence)
+        if ($product) {
+            $primary = $product->primaryImage ?? $product->images->first();
+
+            // A. Données Base64 déjà stockées en base de données (100% zéro latence, zéro CORS)
+            if ($primary && ! empty($primary->image_data)) {
+                $data = $primary->image_data;
+                if (str_starts_with($data, 'data:image')) {
+                    return $data;
+                }
+                return 'data:image/webp;base64,' . $data;
+            }
+
+            // B. Fichier physique sur le disque public -> conversion en Base64 pour le canvas
+            if ($primary && ! empty($primary->path)) {
+                $diskPath = Storage::disk('public')->path($primary->path);
+                if (file_exists($diskPath) && filesize($diskPath) > 0) {
+                    $mime = @mime_content_type($diskPath) ?: 'image/webp';
+                    return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
+                }
+
+                if (! empty($primary->thumbnail_path)) {
+                    $thumbPath = Storage::disk('public')->path($primary->thumbnail_path);
+                    if (file_exists($thumbPath) && filesize($thumbPath) > 0) {
+                        $mime = @mime_content_type($thumbPath) ?: 'image/webp';
+                        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($thumbPath));
+                    }
+                }
+
+                return $primary->url;
+            }
+        }
+
+        // 4. Logo de la boutique
+        if ($shop->logo_path) {
+            $diskPath = Storage::disk('public')->path($shop->logo_path);
+            if (file_exists($diskPath) && filesize($diskPath) > 0) {
+                $mime = @mime_content_type($diskPath) ?: 'image/png';
+                return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
+            }
+            return '/storage/' . ltrim($shop->logo_path, '/');
+        }
+
+        // 5. Photo de catalogue de secours selon la catégorie
+        $catHint = mb_strtolower($shop->business_category . ' ' . $shop->name);
+        $catalogPath = null;
+        if (str_contains($catHint, 'resto') || str_contains($catHint, 'food') || str_contains($catHint, 'burger')) {
+            $catalogPath = public_path('images/catalog/burger.webp');
+        } elseif (str_contains($catHint, 'poisson') || str_contains($catHint, 'fish')) {
+            $catalogPath = public_path('images/catalog/poisson.webp');
+        } elseif (str_contains($catHint, 'frite') || str_contains($catHint, 'snack')) {
+            $catalogPath = public_path('images/catalog/frites.webp');
+        }
+
+        if ($catalogPath && file_exists($catalogPath)) {
+            return 'data:image/webp;base64,' . base64_encode(file_get_contents($catalogPath));
+        }
+
+        return '/api/placeholder-image?id=' . ($product?->id ?? '') . '&title=' . urlencode($product?->title ?? $shop->name) . '&color=' . urlencode($shop->brand_color ?: '#6d3df2');
     }
 
     /**

@@ -12,6 +12,24 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class MediaController extends Controller
 {
     /**
+    /**
+     * Entêtes HTTP avec support complet de CORS pour le Studio Vidéo et les Canvas
+     */
+    private function imageHeaders(int $maxAge = 2592000, ?string $contentType = null): array
+    {
+        $headers = [
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+            'Access-Control-Allow-Headers' => '*',
+            'Cache-Control' => "public, max-age={$maxAge}",
+        ];
+        if ($contentType) {
+            $headers['Content-Type'] = $contentType;
+        }
+        return $headers;
+    }
+
+    /**
      * Sert un fichier média du stockage public ou le régénère dynamiquement
      */
     public function serve(Request $request, string $path): BinaryFileResponse|Response
@@ -22,9 +40,7 @@ class MediaController extends Controller
 
         // 1. Si le fichier existe déjà physiquement sur disque, le servir immédiatement
         if (file_exists($diskPath) && filesize($diskPath) > 0) {
-            return response()->file($diskPath, [
-                'Cache-Control' => 'public, max-age=2592000',
-            ]);
+            return response()->file($diskPath, $this->imageHeaders());
         }
 
         // 2. Recherche en base de données pour restauration persistante
@@ -43,17 +59,12 @@ class MediaController extends Controller
                 @mkdir(dirname($diskPath), 0755, true);
                 @file_put_contents($diskPath, $binary);
                 if (file_exists($diskPath) && filesize($diskPath) > 0) {
-                    return response()->file($diskPath, [
-                        'Cache-Control' => 'public, max-age=2592000',
-                    ]);
+                    return response()->file($diskPath, $this->imageHeaders());
                 }
                 // Si l'écriture sur disque est restreinte, servir directement depuis la mémoire
                 $finfo = new \finfo(FILEINFO_MIME_TYPE);
                 $mimeType = $finfo->buffer($binary) ?: 'image/webp';
-                return response($binary, 200, [
-                    'Content-Type' => $mimeType,
-                    'Cache-Control' => 'public, max-age=2592000',
-                ]);
+                return response($binary, 200, $this->imageHeaders(2592000, $mimeType));
             }
         }
 
@@ -76,9 +87,7 @@ class MediaController extends Controller
                 $productImage->update(['image_data' => base64_encode($content)]);
             }
 
-            return response()->file($diskPath, [
-                'Cache-Control' => 'public, max-age=2592000',
-            ]);
+            return response()->file($diskPath, $this->imageHeaders());
         }
 
         // 4. Génération dynamique WebP avec GD
@@ -86,17 +95,12 @@ class MediaController extends Controller
             if ($productImage && empty($productImage->image_data) && file_exists($diskPath)) {
                 $productImage->update(['image_data' => base64_encode(file_get_contents($diskPath))]);
             }
-            return response()->file($diskPath, [
-                'Cache-Control' => 'public, max-age=86400',
-            ]);
+            return response()->file($diskPath, $this->imageHeaders(86400));
         }
 
         // 5. Fallback vectoriel SVG pur
         $svg = $this->generateSvgPlaceholder($product);
-        return response($svg, 200, [
-            'Content-Type' => 'image/svg+xml',
-            'Cache-Control' => 'public, max-age=86400',
-        ]);
+        return response($svg, 200, $this->imageHeaders(86400, 'image/svg+xml'));
     }
 
     /**
@@ -134,16 +138,11 @@ class MediaController extends Controller
                 }
             }
 
-            return response()->file($catalogPhoto, [
-                'Cache-Control' => 'public, max-age=86400',
-            ]);
+            return response()->file($catalogPhoto, $this->imageHeaders(86400));
         }
 
         $svg = $this->buildSvgContent($title, $cat, $color);
-        return response($svg, 200, [
-            'Content-Type' => 'image/svg+xml',
-            'Cache-Control' => 'public, max-age=86400',
-        ]);
+        return response($svg, 200, $this->imageHeaders(86400, 'image/svg+xml'));
     }
 
     /**
@@ -282,7 +281,7 @@ class MediaController extends Controller
         $initial = htmlspecialchars(mb_strtoupper(mb_substr($safeTitle, 0, 1)), ENT_QUOTES, 'UTF-8') ?: 'B';
 
         return <<<SVG
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
     <defs>
         <radialGradient id="halo" cx="50%" cy="40%" r="50%">
             <stop offset="0%" stop-color="{$color}" stop-opacity="0.35"/>
