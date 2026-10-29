@@ -81,7 +81,7 @@ class AdvertisingController extends Controller
     }
 
     /**
-     * H-02, H-03, H-04 : Affichage des textes, scripts et visuels publicitaires
+     * H-02, H-03, H-04 : Affichage des textes, scripts et visuels publicitaires & Studio Vidéo IA
      */
     public function show(Request $request, Advertisement $ad)
     {
@@ -92,8 +92,69 @@ class AdvertisingController extends Controller
             abort(403);
         }
 
-        $ad->load('product');
+        $ad->load(['product.images', 'product.primaryImage']);
 
-        return view('advertising.show', compact('shop', 'ad'));
+        $product = $ad->product;
+        $productImageUrl = null;
+        if ($product) {
+            $primary = $product->primaryImage;
+            if ($primary && ! empty($primary->image_data)) {
+                $productImageUrl = $primary->image_data;
+            } elseif ($primary && ! empty($primary->url)) {
+                $productImageUrl = $primary->url;
+            } elseif ($product->images->isNotEmpty()) {
+                $first = $product->images->first();
+                $productImageUrl = $first->thumbnail_url ?: $first->url;
+            } else {
+                $productImageUrl = '/api/placeholder-image?id=' . $product->id . '&color=' . urlencode($shop->brand_color ?: '#6d3df2');
+            }
+        } elseif ($shop->logo_path) {
+            $productImageUrl = '/storage/' . ltrim($shop->logo_path, '/');
+        } else {
+            $productImageUrl = '/api/placeholder-image?title=' . urlencode($shop->name) . '&color=' . urlencode($shop->brand_color ?: '#6d3df2');
+        }
+
+        return view('advertising.show', compact('shop', 'ad', 'productImageUrl'));
+    }
+
+    /**
+     * Enregistre l'exportation d'une vidéo publicitaire (statistiques & historique IA)
+     */
+    public function logVideoExport(Request $request, Advertisement $ad)
+    {
+        $shop = $request->user()->shop;
+
+        if ($ad->shop_id !== $shop->id) {
+            return response()->json(['error' => 'Non autorisé'], 403);
+        }
+
+        $ad->increment('shares_count');
+
+        // Log de consommation IA (CDC Section 6.1 et J-04)
+        \App\Models\AiGeneration::withoutGlobalScopes()->create([
+            'shop_id' => $shop->id,
+            'type' => 'ad_video_export',
+            'step' => 'video_rendering',
+            'model_used' => 'motion_canvas_9_16',
+            'prompt_tokens' => 0,
+            'completion_tokens' => 0,
+            'cost_estimated_fcfa' => 0,
+            'duration_ms' => 14000,
+            'status' => 'success',
+            'input_summary' => "Export vidéo 9:16 pour ad #{$ad->id} (" . ($ad->product?->title ?: $shop->name) . ")",
+            'output_data' => [
+                'ad_id' => $ad->id,
+                'channel' => $ad->channel,
+                'theme' => $request->input('theme', 'boutique'),
+                'script_index' => $request->input('script_index', 0),
+                'format' => '9:16_vertical_hd',
+            ],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'shares_count' => $ad->shares_count,
+            'message' => 'Export vidéo enregistré avec succès !',
+        ]);
     }
 }

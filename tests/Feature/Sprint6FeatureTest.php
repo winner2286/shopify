@@ -133,11 +133,27 @@ class Sprint6FeatureTest extends TestCase
             'status' => 'success',
         ]);
 
-        // Detail view display
+        // Detail view display & Studio Vidéo IA verification
         $showResponse = $this->actingAs($merchant)->get(route('ads.show', $ad));
         $showResponse->assertStatus(200);
+        $showResponse->assertSee('Studio Vidéo & Publicité IA');
+        $showResponse->assertSee('ad-video-canvas');
         $showResponse->assertSee('Idées & Scripts de Vidéos TikTok', false);
         $showResponse->assertSee('45 000 FCFA');
+
+        // Test logging video export
+        $exportResponse = $this->actingAs($merchant)->postJson(route('ads.log_video_export', $ad), [
+            'theme' => 'boutique',
+            'script_index' => 0,
+            'duration_seconds' => 14,
+        ]);
+        $exportResponse->assertStatus(200);
+        $exportResponse->assertJson(['success' => true]);
+        $this->assertDatabaseHas('ai_generations', [
+            'shop_id' => $shop->id,
+            'type' => 'ad_video_export',
+            'step' => 'video_rendering',
+        ]);
     }
 
     public function test_merchant_cannot_generate_ad_for_other_shop_product(): void

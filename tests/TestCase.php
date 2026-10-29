@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
@@ -10,6 +11,11 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->withoutMiddleware(ValidateCsrfToken::class);
+        if (class_exists(PreventRequestForgery::class)) {
+            $this->withoutMiddleware(PreventRequestForgery::class);
+        }
+        if (class_exists(ValidateCsrfToken::class)) {
+            $this->withoutMiddleware(ValidateCsrfToken::class);
+        }
     }
 }

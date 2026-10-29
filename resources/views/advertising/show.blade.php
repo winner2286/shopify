@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'Campagne Publicitaire : ' . $ad->channel_label . ' - ' . config('platform.name'))
+@section('title', 'Studio Vidéo & Publicité IA : ' . $ad->channel_label . ' - ' . config('platform.name'))
 
 @section('content')
-<div class="container" style="max-width:960px;padding:2rem 1rem">
+<div class="container" style="max-width:1080px;padding:2rem 1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
         <div>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
-                <span class="svg-icon" style="color:var(--brand-2)"><x-icon name="sparkles" :size="20" /></span>
-                <h1 style="font-size:1.8rem;margin:0">Publicité & Scripts Générés par l'IA</h1>
+                <span class="svg-icon" style="color:var(--brand-2)"><x-icon name="sparkles" :size="24" /></span>
+                <h1 style="font-size:1.85rem;margin:0;font-weight:800">Studio Vidéo & Publicité IA</h1>
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap">
                 <span class="badge badge-ok">{{ $ad->channel_label }}</span>
@@ -20,7 +20,7 @@
             </div>
         </div>
 
-        <div class="header-actions">
+        <div class="header-actions" style="display:flex;gap:.6rem;flex-wrap:wrap">
             <a href="{{ route('ads.create') }}" class="btn btn-primary btn-sm">+ Nouvelle publicité</a>
             <a href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
                 <x-icon name="folder" :size="15" />
@@ -35,7 +35,237 @@
         </div>
     @endif
 
-    <!-- Bloc 1 : Variantes de textes publicitaires (CDC H-02) -->
+    @php
+        $vc = $ad->visual_config ?? [];
+        $productTitle = $vc['product_title'] ?? ($ad->product?->title ?: $shop->name);
+        $priceDisplay = $vc['price'] ?? ($ad->product ? number_format($ad->product->price, 0, ',', ' ') . ' FCFA' : '');
+        $oldPriceDisplay = $vc['old_price'] ?? null;
+        $promoBadge = $vc['headline'] ?? '⚡ NOUVEAUTÉ';
+        $shopPhone = $shop->phone ?: ($shop->whatsapp ?: '+228 90 00 00 00');
+    @endphp
+
+    <!-- ========================================================================= -->
+    <!-- SECTION VEDETTE : STUDIO VIDÉO PUBLICITAIRE IA 9:16 (TIKTOK / REELS / WA)  -->
+    <!-- ========================================================================= -->
+    <section class="card studio-card" style="padding:1.8rem;margin-bottom:3rem;background:linear-gradient(180deg, var(--surface) 0%, var(--bg-soft) 100%);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 12px 35px rgba(0,0,0,0.06);position:relative;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
+            <div>
+                <div style="display:inline-flex;align-items:center;gap:.4rem;background:linear-gradient(135deg, rgba(109,61,242,0.15), rgba(236,72,153,0.15));color:var(--brand-1);padding:.35rem .85rem;border-radius:20px;font-size:.82rem;font-weight:700;margin-bottom:.6rem;border:1px solid rgba(109,61,242,0.25)">
+                    <x-icon name="video" :size="15" />
+                    <span>Format 9:16 Vertical (TikTok • Instagram Reels • Statuts WhatsApp)</span>
+                </div>
+                <h2 style="font-size:1.5rem;margin:0 0 .4rem;font-weight:800">
+                    Générez votre Vidéo Publicitaire Animée en 1 Clic
+                </h2>
+                <p style="color:var(--text-soft);margin:0;font-size:.95rem">
+                    L'IA a composé le rythme, le zoom dynamique sur votre produit et le bouton de commande WhatsApp. Prévisualisez et téléchargez votre vidéo gratuitement.
+                </p>
+            </div>
+
+            <div style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.25);padding:.4rem .9rem;border-radius:20px;font-size:.82rem;font-weight:700">
+                <span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;box-shadow:0 0 8px #10b981"></span>
+                <span>Rendu Navigateur Illimité • 0 FCFA</span>
+            </div>
+        </div>
+
+        <div class="studio-grid">
+            <!-- COLONNE GAUCHE : LECTEUR SIMULATEUR SMARTPHONE 9:16 -->
+            <div class="studio-player-col">
+                <div class="phone-frame">
+                    <!-- Dynamic Island / Caméra encoche -->
+                    <div class="phone-notch"></div>
+
+                    <!-- Badge de scène en haut à gauche -->
+                    <div class="phone-scene-badge" id="ad-scene-indicator">
+                        Scène 1 : Accroche Flash ⚡
+                    </div>
+
+                    <!-- Canvas HD 9:16 (720 x 1280) -->
+                    <canvas id="ad-video-canvas" width="720" height="1280" class="ad-canvas"></canvas>
+
+                    <!-- Overlay Play/Pause central -->
+                    <div id="ad-center-play-overlay" class="center-play-overlay">
+                        <div class="center-play-icon">
+                            <x-icon name="play" :size="38" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barre de contrôle du lecteur -->
+                <div class="player-controls-bar">
+                    <button type="button" id="ad-btn-play" class="btn-ctrl-play" aria-label="Lecture / Pause">
+                        <span id="ad-play-icon"><x-icon name="play" :size="18" /></span>
+                        <span id="ad-pause-icon" style="display:none"><x-icon name="pause" :size="18" /></span>
+                    </button>
+
+                    <input type="range" id="ad-seek-bar" class="timeline-slider" min="0" max="100" value="0" step="0.1" aria-label="Progression de la vidéo">
+
+                    <span id="ad-time-display" class="time-readout">00:00.0 / 00:14.0</span>
+
+                    <button type="button" id="ad-btn-mute" class="btn-ctrl-mute active" title="Son activé / désactivé" aria-label="Activer ou couper le son">
+                        <span id="icon-sound-on"><x-icon name="volume-2" :size="18" /></span>
+                        <span id="icon-sound-off" style="display:none"><x-icon name="volume-x" :size="18" /></span>
+                    </button>
+                </div>
+
+                <!-- Bouton Téléchargement Vidéo -->
+                <div style="margin-top:1.2rem;width:100%">
+                    <button type="button" id="ad-btn-export" class="btn-export-video">
+                        <div class="btn-export-glow"></div>
+                        <span class="btn-export-content">
+                            <x-icon name="download" :size="22" />
+                            <span>
+                                <strong>Télécharger la Vidéo MP4 / WebM</strong>
+                                <small>Format 9:16 vertical • Prêt pour WhatsApp & TikTok</small>
+                            </span>
+                        </span>
+                    </button>
+
+                    <!-- Jauge de progression d'enregistrement -->
+                    <div id="ad-export-progress-wrap" class="export-progress-container" style="display:none">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;font-size:.85rem;font-weight:600">
+                            <span>Génération de votre vidéo HD en cours...</span>
+                            <span id="ad-export-progress-percent">0%</span>
+                        </div>
+                        <div class="export-progress-track">
+                            <div id="ad-export-progress-bar" class="export-progress-fill"></div>
+                        </div>
+                        <p style="font-size:.78rem;color:var(--text-soft);margin:.4rem 0 0;text-align:center">
+                            Enregistrement direct en haute qualité. Le fichier se téléchargera automatiquement dès la fin.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLONNE DROITE : PERSONNALISATION & RÉGLAGES STUDIO -->
+            <div class="studio-settings-col">
+                <!-- 1. Choix du Script IA -->
+                <div class="settings-box">
+                    <h3 class="settings-title">
+                        <x-icon name="sparkles" :size="16" style="color:var(--brand-2)" />
+                        <span>1. Script & Déroulé Vidéo</span>
+                    </h3>
+                    <p class="settings-desc">Sélectionnez le scénario qui correspond le mieux à votre objectif du jour :</p>
+
+                    <div class="script-cards-grid">
+                        @foreach ($ad->generated_scripts as $idx => $script)
+                            <div class="script-pick-card {{ $idx === 0 ? 'selected' : '' }}" data-script-choice="{{ $idx }}">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">
+                                    <strong style="font-size:.92rem">{{ $script['title'] }}</strong>
+                                    <span class="badge badge-ok" style="font-size:.75rem">14 sec</span>
+                                </div>
+                                <div style="font-size:.82rem;color:var(--text-soft);line-height:1.4">
+                                    {{ $script['concept'] }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <!-- 2. Thème Visuel & Palette -->
+                <div class="settings-box">
+                    <h3 class="settings-title">
+                        <x-icon name="palette" :size="16" style="color:var(--brand-1)" />
+                        <span>2. Thème Graphique & Ambiance</span>
+                    </h3>
+                    <div class="theme-chips-grid">
+                        <button type="button" class="theme-chip selected" data-theme-choice="boutique">
+                            <span class="theme-dot" style="background:{{ $shop->brand_color ?: '#6d3df2' }}"></span>
+                            <div>
+                                <div style="font-weight:700;font-size:.85rem">Boutique Pulse</div>
+                                <div style="font-size:.75rem;color:var(--text-soft)">Aux couleurs de votre boutique</div>
+                            </div>
+                        </button>
+
+                        <button type="button" class="theme-chip" data-theme-choice="gold">
+                            <span class="theme-dot" style="background:linear-gradient(135deg, #f59e0b, #d97706)"></span>
+                            <div>
+                                <div style="font-weight:700;font-size:.85rem">Luxe & Or</div>
+                                <div style="font-size:.75rem;color:var(--text-soft)">Obsidienne et doré prestige</div>
+                            </div>
+                        </button>
+
+                        <button type="button" class="theme-chip" data-theme-choice="flash">
+                            <span class="theme-dot" style="background:#10b981"></span>
+                            <div>
+                                <div style="font-weight:700;font-size:.85rem">Vente Flash</div>
+                                <div style="font-size:.75rem;color:var(--text-soft)">Vert WhatsApp électrique</div>
+                            </div>
+                        </button>
+
+                        <button type="button" class="theme-chip" data-theme-choice="urgent">
+                            <span class="theme-dot" style="background:#ef4444"></span>
+                            <div>
+                                <div style="font-weight:700;font-size:.85rem">Promo Urgente</div>
+                                <div style="font-size:.75rem;color:var(--text-soft)">Rouge feu et déstockage</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Musique de fond & Rythme -->
+                <div class="settings-box">
+                    <h3 class="settings-title">
+                        <x-icon name="volume-2" :size="16" style="color:#25D366" />
+                        <span>3. Rythme & Bande Son</span>
+                    </h3>
+                    <div class="audio-chips-grid">
+                        <button type="button" class="audio-chip selected" data-audio-choice="afrobeat">
+                            <span>🎵 Afrobeat Pop</span>
+                            <small>Entraînant & Chaleureux</small>
+                        </button>
+
+                        <button type="button" class="audio-chip" data-audio-choice="amapiano">
+                            <span>🥁 Amapiano Dance</span>
+                            <small>Basses modernes & Tendance</small>
+                        </button>
+
+                        <button type="button" class="audio-chip" data-audio-choice="electro">
+                            <span>⚡ Electro Flash</span>
+                            <small>Punchy & Vendeur</small>
+                        </button>
+
+                        <button type="button" class="audio-chip" data-audio-choice="none">
+                            <span>🔇 Sans musique</span>
+                            <small>Silencieux</small>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Voix-Off Synthétisée -->
+                <div class="settings-box" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+                    <div>
+                        <div style="font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:.4rem">
+                            <x-icon name="user" :size="16" />
+                            <span>Voix-Off IA (Français)</span>
+                        </div>
+                        <p style="font-size:.8rem;color:var(--text-soft);margin:.2rem 0 0">
+                            Fait énoncer l'accroche et l'offre par la synthèse vocale du navigateur pendant la vidéo.
+                        </p>
+                    </div>
+                    <label class="switch-toggle">
+                        <input type="checkbox" id="ad-toggle-voiceover">
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+
+                <!-- Conseils pour vendre sur WhatsApp -->
+                <div style="background:rgba(37,211,102,0.08);border:1px dashed rgba(37,211,102,0.35);padding:1rem 1.2rem;border-radius:var(--radius-sm)">
+                    <div style="font-weight:700;font-size:.9rem;color:#128C7E;display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem">
+                        <x-icon name="whatsapp" :size="16" />
+                        <span>Astuce de vente Statut WhatsApp Togo :</span>
+                    </div>
+                    <p style="font-size:.82rem;color:var(--text-soft);margin:0;line-height:1.5">
+                        Postez cette vidéo directement en statut le matin entre <strong>7h et 9h</strong> ou le soir entre <strong>18h et 21h</strong> pour toucher le maximum de vos contacts connectés.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- BLOC 1 : VARIANTES DE TEXTES PUBLICITAIRES PRÊTS À PUBLIER (CDC H-02)       -->
+    <!-- ========================================================================= -->
     <div style="margin-bottom:3rem">
         <h2 style="font-size:1.35rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem">
             <span class="svg-icon" style="color:var(--brand-1)"><x-icon name="edit" :size="18" /></span>
@@ -73,7 +303,9 @@
         </div>
     </div>
 
-    <!-- Bloc 2 : Scripts de vidéos courtes TikTok / Reels (CDC H-04) -->
+    <!-- ========================================================================= -->
+    <!-- BLOC 2 : SCRIPTS DÉTAILLÉS DE TOURNAGE TIKTOK / REELS (CDC H-04)           -->
+    <!-- ========================================================================= -->
     @if (! empty($ad->generated_scripts))
         <div style="margin-bottom:3rem">
             <h2 style="font-size:1.35rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem">
@@ -81,7 +313,7 @@
                 <span>Idées & Scripts de Vidéos TikTok / Reels (H-04)</span>
             </h2>
             <p style="color:var(--text-soft);margin-top:0;margin-bottom:1.5rem">
-                Tournez facilement une vidéo vendeuse de 15 à 25 secondes avec votre téléphone pour faire exploser votre visibilité.
+                Si vous préférez filmer vous-même le produit en main ou face caméra, suivez ces étapes minutées.
             </p>
 
             <div style="display:grid;grid-template-columns:1fr;gap:1.5rem">
@@ -118,43 +350,48 @@
         </div>
     @endif
 
-    <!-- Bloc 3 : Carte Visuelle Réseaux Sociaux (CDC H-03) -->
+    <!-- ========================================================================= -->
+    <!-- BLOC 3 : CARTE VISUELLE RÉSEAUX SOCIAUX (CDC H-03)                        -->
+    <!-- ========================================================================= -->
     @if (! empty($ad->visual_config))
-        @php $vc = $ad->visual_config; @endphp
         <div>
             <h2 style="font-size:1.35rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem">
                 <span class="svg-icon" style="color:var(--brand-1)"><x-icon name="palette" :size="20" /></span>
-                <span>Visuel Promotionnel pour Réseaux Sociaux (H-03)</span>
+                <span>Visuel Promotionnel Statique (H-03)</span>
             </h2>
             <p style="color:var(--text-soft);margin-top:0;margin-bottom:1.5rem">
-                Gabarit d'affiche promotionnelle aux couleurs de votre boutique, optimisé pour les stories et statuts.
+                Affiche prête pour vos publications statiques et stories Instagram.
             </p>
 
             <div style="display:flex;justify-content:center">
-                <div style="width:340px;background:linear-gradient(135deg, {{ $vc['brand_color'] }}, #0d0d1a);border-radius:24px;padding:2rem 1.5rem;color:#fff;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.3);position:relative;overflow:hidden">
+                <div style="width:340px;background:linear-gradient(135deg, {{ $vc['brand_color'] ?? '#6d3df2' }}, #0d0d1a);border-radius:24px;padding:2rem 1.5rem;color:#fff;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.3);position:relative;overflow:hidden">
                     <div style="position:absolute;top:-40px;right:-40px;width:120px;height:120px;background:rgba(255,255,255,0.1);border-radius:50%"></div>
 
                     <div style="font-size:.85rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;opacity:.8;margin-bottom:.5rem">
-                        {{ $vc['shop_name'] }}
+                        {{ $vc['shop_name'] ?? $shop->name }}
                     </div>
 
                     <div style="display:inline-block;background:var(--danger);color:#fff;font-size:.8rem;font-weight:700;padding:.3rem .8rem;border-radius:20px;margin-bottom:1.5rem">
-                        {{ $vc['headline'] }}
+                        {{ $vc['headline'] ?? 'NOUVEAUTÉ' }}
                     </div>
 
-                    <div style="width:160px;height:160px;background:rgba(255,255,255,0.15);border-radius:18px;margin:0 auto 1.5rem;display:flex;align-items:center;justify-content:center;border:2px dashed rgba(255,255,255,0.3)">
-                        <x-icon name="shopping-bag" :size="54" />
+                    <div style="width:160px;height:160px;background:rgba(255,255,255,0.15);border-radius:18px;margin:0 auto 1.5rem;display:flex;align-items:center;justify-content:center;border:2px dashed rgba(255,255,255,0.3);overflow:hidden">
+                        @if (! empty($productImageUrl))
+                            <img src="{{ $productImageUrl }}" alt="{{ $vc['product_title'] ?? '' }}" style="width:100%;height:100%;object-fit:cover">
+                        @else
+                            <x-icon name="shopping-bag" :size="54" />
+                        @endif
                     </div>
 
                     <h3 style="font-size:1.25rem;margin:0 0 .8rem;line-height:1.3">
-                        {{ $vc['product_title'] }}
+                        {{ $vc['product_title'] ?? $productTitle }}
                     </h3>
 
                     <div style="background:rgba(0,0,0,0.3);padding:.8rem 1rem;border-radius:12px;display:inline-block;margin-bottom:1.5rem">
                         <span style="font-size:1.5rem;font-weight:700;font-family:var(--font-display)">
-                            {{ $vc['price'] }}
+                            {{ $vc['price'] ?? $priceDisplay }}
                         </span>
-                        @if ($vc['old_price'])
+                        @if (! empty($vc['old_price']))
                             <span style="font-size:.9rem;opacity:.7;text-decoration:line-through;margin-left:.5rem">
                                 {{ $vc['old_price'] }}
                             </span>
@@ -170,4 +407,490 @@
         </div>
     @endif
 </div>
+
+<!-- ========================================================================= -->
+<!-- MODAL DE SUCCÈS D'EXPORTATION VIDÉO                                        -->
+<!-- ========================================================================= -->
+<div id="ad-export-success-modal" class="custom-modal-backdrop" style="display:none">
+    <div class="custom-modal-card">
+        <div style="width:64px;height:64px;background:rgba(37,211,102,0.15);color:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+            <x-icon name="check" :size="34" />
+        </div>
+        <h3 style="font-size:1.4rem;font-weight:800;margin:0 0 .5rem;text-align:center">
+            Vidéo Générée & Téléchargée !
+        </h3>
+        <p style="font-size:.92rem;color:var(--text-soft);text-align:center;margin:0 0 1.2rem">
+            Le fichier <strong id="ad-modal-filename" style="color:var(--text)">pub_video.webm</strong> a été enregistré sur votre appareil.
+        </p>
+
+        <div style="background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.5rem">
+            <strong style="font-size:.85rem;color:var(--brand-2);display:block;margin-bottom:.5rem">Comment la publier maintenant :</strong>
+            <ol style="margin:0;padding-left:1.2rem;font-size:.85rem;color:var(--text);line-height:1.6">
+                <li>Ouvrez <strong>WhatsApp</strong> > onglet <strong>Actus / Statut</strong>.</li>
+                <li>Appuyez sur la caméra pour ajouter un statut et sélectionnez la vidéo téléchargée.</li>
+                <li>Copiez l'un des textes publicitaires ci-dessus en légende et validez !</li>
+            </ol>
+        </div>
+
+        <div style="display:flex;gap:.8rem;justify-content:center">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('ad-export-success-modal').style.display='none'">
+                Fermer
+            </button>
+            <a href="https://web.whatsapp.com" target="_blank" class="btn btn-primary" style="background:#25D366;border-color:#25D366;display:inline-flex;align-items:center;gap:.4rem">
+                <x-icon name="whatsapp" :size="16" />
+                <span>Ouvrir WhatsApp</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* STYLES DU STUDIO VIDÉO */
+    .studio-grid {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 2.2rem;
+        align-items: start;
+        margin-top: 1rem;
+    }
+
+    .studio-player-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 360px;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    /* Cadre Smartphone 9:16 réaliste */
+    .phone-frame {
+        width: 100%;
+        max-width: 340px;
+        aspect-ratio: 9 / 16;
+        border-radius: 42px;
+        background: #090610;
+        border: 9px solid #1f1b2e;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.08);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .phone-notch {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 86px;
+        height: 18px;
+        background: #000;
+        border-radius: 12px;
+        z-index: 10;
+    }
+
+    .phone-scene-badge {
+        position: absolute;
+        top: 42px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        font-size: .72rem;
+        font-weight: 700;
+        padding: .25rem .75rem;
+        border-radius: 14px;
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        backdrop-filter: blur(8px);
+        white-space: nowrap;
+        pointer-events: none;
+        transition: all .3s ease;
+    }
+
+    .ad-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        cursor: pointer;
+    }
+
+    .center-play-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.35);
+        cursor: pointer;
+        transition: opacity .25s ease;
+        z-index: 5;
+    }
+
+    .center-play-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.9);
+        color: var(--brand-1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        padding-left: 4px;
+        transition: transform .2s ease;
+    }
+
+    .center-play-icon:hover {
+        transform: scale(1.08);
+    }
+
+    /* Barre de contrôle */
+    .player-controls-bar {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        width: 100%;
+        margin-top: .9rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: .5rem .8rem;
+        border-radius: 16px;
+    }
+
+    .btn-ctrl-play, .btn-ctrl-mute {
+        background: none;
+        border: none;
+        color: var(--text);
+        cursor: pointer;
+        padding: .35rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: background .2s ease;
+    }
+
+    .btn-ctrl-play:hover, .btn-ctrl-mute:hover {
+        background: var(--bg-soft);
+    }
+
+    .timeline-slider {
+        flex: 1;
+        accent-color: var(--brand-1);
+        cursor: pointer;
+        height: 5px;
+    }
+
+    .time-readout {
+        font-family: monospace;
+        font-size: .75rem;
+        color: var(--text-soft);
+        white-space: nowrap;
+    }
+
+    /* Bouton Téléchargement Haute Conversion */
+    .btn-export-video {
+        position: relative;
+        width: 100%;
+        border: none;
+        border-radius: 18px;
+        padding: 1rem 1.4rem;
+        background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 100%);
+        color: #fff;
+        cursor: pointer;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(109,61,242,0.35);
+        transition: all .25s ease;
+    }
+
+    .btn-export-video:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 32px rgba(109,61,242,0.45);
+    }
+
+    .btn-export-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .8rem;
+        text-align: left;
+    }
+
+    .btn-export-content strong {
+        display: block;
+        font-size: 1.02rem;
+        letter-spacing: -.01em;
+    }
+
+    .btn-export-content small {
+        display: block;
+        font-size: .78rem;
+        opacity: .9;
+        margin-top: .15rem;
+    }
+
+    /* Barre de progression d'enregistrement */
+    .export-progress-container {
+        margin-top: .8rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: .8rem;
+    }
+
+    .export-progress-track {
+        width: 100%;
+        height: 8px;
+        background: var(--bg-soft);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .export-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #10b981, #25D366);
+        border-radius: 4px;
+        transition: width .15s ease;
+    }
+
+    /* COLONNE RÉGLAGES STUDIO */
+    .studio-settings-col {
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+    }
+
+    .settings-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1.2rem;
+    }
+
+    .settings-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0 0 .4rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .settings-desc {
+        font-size: .85rem;
+        color: var(--text-soft);
+        margin: 0 0 1rem;
+    }
+
+    /* Cartes Scripts */
+    .script-cards-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: .8rem;
+    }
+
+    .script-pick-card {
+        padding: .9rem 1rem;
+        background: var(--bg-soft);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all .2s ease;
+    }
+
+    .script-pick-card:hover {
+        border-color: rgba(109,61,242,0.4);
+    }
+
+    .script-pick-card.selected {
+        border-color: var(--brand-1);
+        background: rgba(109,61,242,0.06);
+    }
+
+    /* Thèmes Visuels */
+    .theme-chips-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: .7rem;
+    }
+
+    .theme-chip {
+        display: flex;
+        align-items: center;
+        gap: .7rem;
+        padding: .75rem .9rem;
+        background: var(--bg-soft);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        text-align: left;
+        color: var(--text);
+        transition: all .2s ease;
+    }
+
+    .theme-chip:hover {
+        border-color: rgba(109,61,242,0.4);
+    }
+
+    .theme-chip.selected {
+        border-color: var(--brand-1);
+        background: rgba(109,61,242,0.08);
+    }
+
+    .theme-dot {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    /* Puces Audio */
+    .audio-chips-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: .7rem;
+    }
+
+    .audio-chip {
+        padding: .75rem .9rem;
+        background: var(--bg-soft);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        text-align: left;
+        color: var(--text);
+        transition: all .2s ease;
+    }
+
+    .audio-chip:hover {
+        border-color: rgba(37,211,102,0.4);
+    }
+
+    .audio-chip.selected {
+        border-color: #25D366;
+        background: rgba(37,211,102,0.08);
+    }
+
+    .audio-chip span {
+        display: block;
+        font-weight: 700;
+        font-size: .85rem;
+    }
+
+    .audio-chip small {
+        display: block;
+        font-size: .75rem;
+        color: var(--text-soft);
+        margin-top: .15rem;
+    }
+
+    /* Switch toggle */
+    .switch-toggle {
+        position: relative;
+        display: inline-block;
+        width: 46px;
+        height: 24px;
+        flex-shrink: 0;
+    }
+
+    .switch-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider-round {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background-color: var(--border);
+        transition: .3s;
+        border-radius: 24px;
+    }
+
+    .slider-round:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+    }
+
+    .switch-toggle input:checked + .slider-round {
+        background-color: var(--brand-1);
+    }
+
+    .switch-toggle input:checked + .slider-round:before {
+        transform: translateX(22px);
+    }
+
+    /* Modal de succès */
+    .custom-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.65);
+        backdrop-filter: blur(5px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .custom-modal-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        max-width: 480px;
+        width: 100%;
+        padding: 2rem 1.8rem;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+    }
+
+    @media (max-width: 860px) {
+        .studio-grid {
+            grid-template-columns: 1fr;
+        }
+        .studio-player-col {
+            max-width: 320px;
+        }
+        .theme-chips-grid, .audio-chips-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<!-- Initialisation du Studio Vidéo Publicitaire IA -->
+<script src="{{ asset('js/ad-video-studio.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.AdVideoStudio !== 'undefined') {
+            window.AdVideoStudio.init({
+                canvasId: 'ad-video-canvas',
+                shopName: @json($shop->name),
+                shopPhone: @json($shopPhone),
+                shopColor: @json($shop->brand_color ?: '#6d3df2'),
+                productTitle: @json($productTitle),
+                price: @json($priceDisplay),
+                oldPrice: @json($oldPriceDisplay),
+                promoBadge: @json($promoBadge),
+                imageUrl: @json($productImageUrl ?: ''),
+                scripts: @json($ad->generated_scripts ?: []),
+                exportUrl: @json(route('ads.log_video_export', $ad)),
+                csrfToken: @json(csrf_token()),
+            });
+        }
+    });
+</script>
 @endsection
