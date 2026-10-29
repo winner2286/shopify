@@ -293,9 +293,12 @@ RÈGLES CAPITALES :
 2. Pour la nourriture/restauration : parle de faim, saveur, croustillant, servi bien chaud, livraison express à domicile ou au bureau.
 3. Pour la beauté : parle de teint éclatant, douceur, formule saine, soins.
 4. Pour la tech : parle de puissance, batterie, fiabilité, musique, son.
-5. Inclus le prix exact "{$effectivePrice}" et le nom de la boutique "{$shop->name}".
+5. Inclus expressément le nom exact du produit "{$title}" (écrit en toutes lettres avec ses espaces, pas seulement en hashtag), le prix exact "{$effectivePrice}" et le nom de la boutique "{$shop->name}".
 6. Mentionne le paiement Mobile Money (T-Money, Flooz) ou cash à la livraison à Lomé et la commande directe via WhatsApp.
-7. Chaque étape de script doit contenir une voix-off percutante de 1 à 2 phrases courtes idéales pour une lecture vidéo fluide.
+7. Le format vidéo optimal est de 20 à 25 secondes pour donner TOUTES les informations nécessaires sans couper la parole :
+   - Étape 1 (Accroche Flash ⚡, 0s - 5s) : 1 phrase percutante qui capte immédiatement l'attention et nomme le produit.
+   - Étape 2 (Découverte & Prix 💎, 5s - 15s) : 1 à 2 phrases claires détaillant la qualité, le nom de la boutique "{$shop->name}" et le prix exact "{$effectivePrice}".
+   - Étape 3 (Appel à l'action WhatsApp 📱, 15s - 24s) : 1 phrase complète mentionnant la livraison partout à Lomé/Togo, le paiement sécurisé (T-Money, Flooz ou Cash à la livraison) et invitant à commander immédiatement sur WhatsApp.
 
 Réponds STRICTEMENT avec un objet JSON valide ayant cette structure :
 {
@@ -306,21 +309,21 @@ Réponds STRICTEMENT avec un objet JSON valide ayant cette structure :
   ],
   "scripts": [
     {
-      "title": "Script 1 : L'accroche choc (15-20 secondes)",
+      "title": "Script 1 : L'accroche choc (20-25 secondes)",
       "concept": "Accroche immédiate et présentation captivante du produit",
       "steps": [
-        {"time": "0s - 3s", "visual": "Plan dynamique...", "voiceover": "Phrase d'accroche courte..."},
-        {"time": "3s - 12s", "visual": "Présentation des qualités...", "voiceover": "Détails et prix..."},
-        {"time": "12s - 18s", "visual": "Appel à l'action WhatsApp...", "voiceover": "Paiement et commande WhatsApp..."}
+        {"time": "0s - 5s", "visual": "Plan dynamique...", "voiceover": "Phrase d'accroche captivante..."},
+        {"time": "5s - 15s", "visual": "Présentation des qualités et prix...", "voiceover": "Détails complets, qualité et prix..."},
+        {"time": "15s - 24s", "visual": "Appel à l'action WhatsApp...", "voiceover": "Livraison Lomé, paiement T-Money/Flooz et commande WhatsApp..."}
       ]
     },
     {
       "title": "Script 2 : Problème / Solution (20-25 secondes)",
       "concept": "Identifie un problème concret que ce produit résout",
       "steps": [
-        {"time": "0s - 4s", "visual": "Situation du quotidien...", "voiceover": "Problème concret lié au produit..."},
-        {"time": "4s - 15s", "visual": "Présentation de la solution...", "voiceover": "Solution apportée par le produit et prix..."},
-        {"time": "15s - 22s", "visual": "Colis et commande...", "voiceover": "Livraison rapide et commande WhatsApp..."}
+        {"time": "0s - 5s", "visual": "Situation du quotidien...", "voiceover": "Problème concret lié au produit..."},
+        {"time": "5s - 15s", "visual": "Présentation de la solution...", "voiceover": "Solution apportée par le produit et prix..."},
+        {"time": "15s - 24s", "visual": "Colis et commande...", "voiceover": "Livraison rapide et commande WhatsApp..."}
       ]
     }
   ]
@@ -351,6 +354,13 @@ PROMPT;
                     $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($raw));
                     $decoded = json_decode($cleanJson, true);
                     if (is_array($decoded) && !empty($decoded['texts']) && !empty($decoded['scripts'])) {
+                        $titleSlugHash = '#' . preg_replace('/\s+/', '', $title);
+                        foreach ($decoded['texts'] as &$txt) {
+                            if (str_contains($txt, $titleSlugHash) && !str_contains($txt, $title)) {
+                                $txt = str_replace($titleSlugHash, $title, $txt);
+                            }
+                        }
+                        unset($txt);
                         return $decoded;
                     }
                 } else {
@@ -371,13 +381,20 @@ PROMPT;
                     'generationConfig' => [
                         'responseMimeType' => 'application/json',
                         'temperature' => 0.7,
-                    ],
+                    ]
                 ]);
 
                 if ($response->successful()) {
                     $text = $response->json('candidates.0.content.parts.0.text');
                     $decoded = json_decode($text, true);
                     if (is_array($decoded) && !empty($decoded['texts']) && !empty($decoded['scripts'])) {
+                        $titleSlugHash = '#' . preg_replace('/\s+/', '', $title);
+                        foreach ($decoded['texts'] as &$txt) {
+                            if (str_contains($txt, $titleSlugHash) && !str_contains($txt, $title)) {
+                                $txt = str_replace($titleSlugHash, $title, $txt);
+                            }
+                        }
+                        unset($txt);
                         return $decoded;
                     }
                 }
@@ -502,7 +519,7 @@ PROMPT;
         if ($domain === 'food') {
             return [
                 [
-                    'title' => "Script 1 : L'accroche gourmande (15-20 secondes)",
+                    'title' => "Script 1 : L'accroche gourmande (20-25 secondes)",
                     'concept' => 'Idéal pour déclencher l’envie immédiate et les commandes du midi ou du soir.',
                     'steps' => [
                         [
@@ -549,7 +566,7 @@ PROMPT;
         if ($domain === 'beauty') {
             return [
                 [
-                    'title' => "Script 1 : L'accroche choc éclat (15-20 secondes)",
+                    'title' => "Script 1 : L'accroche choc éclat (20-25 secondes)",
                     'concept' => 'Cible le désir d’un teint lumineux et de soins naturels.',
                     'steps' => [
                         [
@@ -596,7 +613,7 @@ PROMPT;
         if ($domain === 'tech') {
             return [
                 [
-                    'title' => "Script 1 : L'accroche choc high-tech (15-20 secondes)",
+                    'title' => "Script 1 : L'accroche choc high-tech (20-25 secondes)",
                     'concept' => 'Idéal pour les amateurs de nouvelles technologies et gadgets performants.',
                     'steps' => [
                         [
@@ -643,7 +660,7 @@ PROMPT;
         // Mode, Chaussures, Bijoux ou Généraliste
         return [
             [
-                'title' => "Script 1 : L'accroche choc (15-20 secondes)",
+                'title' => "Script 1 : L'accroche choc (20-25 secondes)",
                 'concept' => 'Idéal pour capter l’attention dès les 3 premières secondes sur TikTok ou statut WhatsApp.',
                 'steps' => [
                     [

@@ -100,7 +100,7 @@
 
                     <input type="range" id="ad-seek-bar" class="timeline-slider" min="0" max="100" value="0" step="0.1" aria-label="Progression de la vidéo">
 
-                    <span id="ad-time-display" class="time-readout">00:00.0 / 00:14.0</span>
+                    <span id="ad-time-display" class="time-readout">00:00.0 / 00:24.0</span>
 
                     <button type="button" id="ad-btn-mute" class="btn-ctrl-mute active" title="Son activé / désactivé" aria-label="Activer ou couper le son">
                         <span id="icon-sound-on"><x-icon name="volume-2" :size="18" /></span>
@@ -199,7 +199,7 @@
                             <div class="script-pick-card {{ $idx === 0 ? 'selected' : '' }}" data-script-choice="{{ $idx }}">
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">
                                     <strong style="font-size:.92rem">{{ $script['title'] }}</strong>
-                                    <span class="badge badge-ok" style="font-size:.75rem">14 sec</span>
+                                    <span class="badge badge-ok" style="font-size:.75rem">20-25 sec</span>
                                 </div>
                                 <div style="font-size:.82rem;color:var(--text-soft);line-height:1.4">
                                     {{ $script['concept'] }}

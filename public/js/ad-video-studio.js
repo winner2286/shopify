@@ -29,7 +29,7 @@
             if (!this.canvas) return;
 
             this.ctx = this.canvas.getContext('2d');
-            this.duration = 14.0; // 14 secondes au total (format optimal TikTok / WhatsApp)
+            this.duration = 24.0; // Durée dynamique calculée selon les voix-off (20-25s)
             this.currentTime = 0.0;
             this.isPlaying = false;
             this.isRecording = false;
@@ -47,6 +47,7 @@
             this.voiceBuffers = [null, null, null];
             this.voicePlayed = { 0: false, 1: false, 2: false };
             this.activeVoiceSource = null;
+            this.timeline = null;
 
             // Système de particules ambiantes
             this.particles = [];
@@ -115,6 +116,7 @@
             }
 
             this.initAudio();
+            this.calculateTimeline();
             this.initEvents();
             this.loadVoiceoverAudio();
             this.render();
@@ -156,10 +158,9 @@
             }
         },
 
-        // Chargement asynchrone des 3 segments de voix-off IA depuis l'API TTS
-        loadVoiceoverAudio: function () {
-            if (!this.audioCtx) return Promise.resolve();
-            const activeScript = this.config.scripts[this.currentScriptIndex];
+        // Récupération des textes des 3 segments du script actif
+        getScriptTexts: function () {
+            const activeScript = this.config.scripts ? this.config.scripts[this.currentScriptIndex] : null;
 
             const defaultTexts = [
                 `Attendez, ne scrollez pas ! Si vous cherchez ${this.config.productTitle} à Lomé, regardez ça.`,
@@ -167,11 +168,87 @@
                 `Paiement à la livraison ou par T-Money. Cliquez ou écrivez-moi sur WhatsApp pour être livré aujourd'hui !`
             ];
 
-            const texts = [
-                activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : defaultTexts[0],
-                activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : defaultTexts[1],
-                activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : defaultTexts[2]
+            return [
+                activeScript && activeScript.steps && activeScript.steps[0] ? activeScript.steps[0].voiceover : defaultTexts[0],
+                activeScript && activeScript.steps && activeScript.steps[1] ? activeScript.steps[1].voiceover : defaultTexts[1],
+                activeScript && activeScript.steps && activeScript.steps[2] ? activeScript.steps[2].voiceover : defaultTexts[2]
             ];
+        },
+
+        // Calcul dynamique et intelligent de la timeline vidéo (durée 20-25s sans coupure de voix)
+        calculateTimeline: function () {
+            const texts = this.getScriptTexts();
+
+            const getSegDuration = (idx, minDur, defaultDur) => {
+                const buf = this.voiceBuffers ? this.voiceBuffers[idx] : null;
+                if (buf && buf.duration && buf.duration > 0.5) {
+                    return Math.max(buf.duration, minDur);
+                }
+                const wordCount = (texts[idx] || '').trim().split(/\s+/).filter(w => w.length > 0).length;
+                if (wordCount > 0) {
+                    return Math.max(wordCount / 2.6, minDur);
+                }
+                return defaultDur;
+            };
+
+            // Seg 0 : Accroche (min 4.2s, défaut 5.0s)
+            const dur0 = getSegDuration(0, 4.2, 5.0);
+            // Seg 1 : Découverte / Caractéristiques & Prix (min 7.5s, défaut 9.0s)
+            const dur1 = getSegDuration(1, 7.5, 9.0);
+            // Seg 2 : Appel à l'action WhatsApp & Paiement (min 6.0s, défaut 7.5s)
+            const dur2 = getSegDuration(2, 6.0, 7.5);
+
+            // Scène 1 : l'audio démarre à 0.5s pour laisser l'impact visuel s'installer
+            const voice0Start = 0.5;
+            const voice0End = voice0Start + dur0;
+            // Fin Scène 1 : au moins 1.2s de pause respiratoire après la voix, min 5.5s
+            const scene1End = Math.max(voice0End + 1.2, 5.5);
+
+            // Scène 2 : l'audio démarre 0.35s après la transition vers la Scène 2
+            const voice1Start = scene1End + 0.35;
+            const voice1End = voice1Start + dur1;
+            // Fin Scène 2 : au moins 1.5s de respiration pour assimiler le prix et les détails, min 9.0s
+            const scene2End = Math.max(voice1End + 1.5, scene1End + 9.0);
+
+            // Scène 3 : l'audio démarre 0.35s après la transition vers la Scène 3
+            const voice2Start = scene2End + 0.35;
+            const voice2End = voice2Start + dur2;
+            // Fin totale : au moins 2.8s APRÈS la fin de la voix CTA pour que le client voie le bouton et le numéro
+            const totalDuration = Math.max(voice2End + 2.8, scene2End + 8.5);
+
+            this.timeline = {
+                voiceStarts: [
+                    Math.round(voice0Start * 10) / 10,
+                    Math.round(voice1Start * 10) / 10,
+                    Math.round(voice2Start * 10) / 10
+                ],
+                voiceDurations: [
+                    Math.round(dur0 * 10) / 10,
+                    Math.round(dur1 * 10) / 10,
+                    Math.round(dur2 * 10) / 10
+                ],
+                voiceEnds: [
+                    Math.round(voice0End * 10) / 10,
+                    Math.round(voice1End * 10) / 10,
+                    Math.round(voice2End * 10) / 10
+                ],
+                sceneEnds: [
+                    Math.round(scene1End * 10) / 10,
+                    Math.round(scene2End * 10) / 10
+                ],
+                totalDuration: Math.round(totalDuration * 10) / 10
+            };
+
+            this.duration = this.timeline.totalDuration;
+            if (typeof this.updateProgressUI === 'function') {
+                this.updateProgressUI();
+            }
+        },
+
+        // Chargement asynchrone des 3 segments de voix-off IA depuis l'API TTS
+        loadVoiceoverAudio: function () {
+            if (!this.audioCtx) return Promise.resolve();
+            const texts = this.getScriptTexts();
 
             this.voiceBuffers = [null, null, null];
             const statusEl = document.getElementById('ad-voice-status');
@@ -197,6 +274,7 @@
                         .then(decoded => {
                             if (decoded) {
                                 this.voiceBuffers[idx] = decoded;
+                                this.calculateTimeline();
                             }
                         })
                         .catch(err => {
@@ -204,6 +282,7 @@
                         });
                 })
             ).then(() => {
+                this.calculateTimeline();
                 if (statusEl) {
                     const loadedCount = this.voiceBuffers.filter(b => b !== null).length;
                     if (loadedCount > 0) {
@@ -239,6 +318,11 @@
                 const now = this.audioCtx.currentTime;
                 source.start(now);
                 this.activeVoiceSource = source;
+                source.onended = () => {
+                    if (this.activeVoiceSource === source) {
+                        this.activeVoiceSource = null;
+                    }
+                };
 
                 // Audio Ducking : atténuation douce de la musique pendant la parole
                 if (this.beatGain) {
@@ -249,7 +333,7 @@
                     this.beatGain.gain.linearRampToValueAtTime(0.40, now + dur + 0.35);
                 }
             } catch (e) {
-                console.warn('Erreur lecture voix-off:', e);
+                console.warn('Erreur lecture segment voix ' + idx, e);
             }
         },
 
@@ -495,6 +579,7 @@
                     this.currentScriptIndex = parseInt(el.getAttribute('data-script-choice'), 10) || 0;
                     this.currentTime = 0;
                     this.voicePlayed = { 0: false, 1: false, 2: false };
+                    this.calculateTimeline();
                     this.loadVoiceoverAudio();
                     this.render();
                 });
@@ -521,10 +606,11 @@
                 try { this.activeVoiceSource.stop(); } catch (e) {}
                 this.activeVoiceSource = null;
             }
+            const starts = (this.timeline && this.timeline.voiceStarts) ? this.timeline.voiceStarts : [0.5, 6.0, 15.0];
             this.voicePlayed = {
-                0: t >= 0.5,
-                1: t >= 4.0,
-                2: t >= 9.8
+                0: t >= starts[0],
+                1: t >= starts[1],
+                2: t >= starts[2]
             };
         },
 
@@ -586,16 +672,17 @@
             this.playSynthBeat(this.currentTime);
 
             // Synchronisation de la voix-off IA
-            if (this.voiceoverEnabled) {
-                if (this.currentTime >= 0.4 && !this.voicePlayed[0]) {
+            if (this.voiceoverEnabled && this.timeline) {
+                const starts = this.timeline.voiceStarts;
+                if (this.currentTime >= starts[0] && !this.voicePlayed[0]) {
                     this.voicePlayed[0] = true;
                     this.playVoiceSegment(0);
                 }
-                if (this.currentTime >= 3.8 && !this.voicePlayed[1]) {
+                if (this.currentTime >= starts[1] && !this.voicePlayed[1]) {
                     this.voicePlayed[1] = true;
                     this.playVoiceSegment(1);
                 }
-                if (this.currentTime >= 9.6 && !this.voicePlayed[2]) {
+                if (this.currentTime >= starts[2] && !this.voicePlayed[2]) {
                     this.voicePlayed[2] = true;
                     this.playVoiceSegment(2);
                 }
@@ -620,6 +707,16 @@
             this.animationFrameId = requestAnimationFrame(() => this.loop());
         },
 
+        formatTime: function (sec) {
+            const totalSec = Math.max(0, sec);
+            const m = Math.floor(totalSec / 60);
+            const s = Math.floor(totalSec % 60);
+            const ms = Math.floor((totalSec % 1) * 10);
+            const mm = m < 10 ? '0' + m : m;
+            const ss = s < 10 ? '0' + s : s;
+            return `${mm}:${ss}.${ms}`;
+        },
+
         updateProgressUI: function () {
             const seekBar = document.getElementById('ad-seek-bar');
             const timeDisplay = document.getElementById('ad-time-display');
@@ -629,16 +726,16 @@
                 seekBar.value = (this.currentTime / this.duration) * 100;
             }
             if (timeDisplay) {
-                const s = Math.floor(this.currentTime);
-                const ms = Math.floor((this.currentTime % 1) * 10);
-                timeDisplay.textContent = `00:${s < 10 ? '0' + s : s}.${ms} / 00:14.0`;
+                timeDisplay.textContent = `${this.formatTime(this.currentTime)} / ${this.formatTime(this.duration)}`;
             }
             if (sceneBadge) {
-                if (this.currentTime < 3.5) {
+                const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
+                const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
+                if (this.currentTime < s1End) {
                     sceneBadge.textContent = 'Scène 1 : Accroche Flash ⚡';
                     sceneBadge.style.background = 'rgba(239, 68, 68, 0.2)';
                     sceneBadge.style.color = '#ef4444';
-                } else if (this.currentTime < 9.5) {
+                } else if (this.currentTime < s2End) {
                     sceneBadge.textContent = 'Scène 2 : Découverte & Prix 💎';
                     sceneBadge.style.background = 'rgba(16, 185, 129, 0.2)';
                     sceneBadge.style.color = '#10b981';
@@ -683,9 +780,12 @@
             // Header de boutique moderne
             this.drawBrandingHeader(ctx, w, h, t);
 
-            if (t < 3.5) {
+            const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
+            const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
+
+            if (t < s1End) {
                 this.drawCapCutScene1(ctx, w, h, t);
-            } else if (t < 9.5) {
+            } else if (t < s2End) {
                 this.drawCapCutScene2(ctx, w, h, t);
             } else {
                 this.drawCapCutScene3(ctx, w, h, t);
@@ -693,7 +793,8 @@
         },
 
         drawCapCutScene1: function (ctx, w, h, t) {
-            const p = t / 3.5;
+            const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
+            const p = Math.min(t / s1End, 1);
             ctx.save();
 
             // Flash d'impact au démarrage
@@ -1062,7 +1163,10 @@
             this.drawTikTokSocialIcons(ctx, w - 55, 620, t);
 
             // 4. Scène d'Appel à l'action ou sous-titres
-            if (t >= 9.5) {
+            const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
+            const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
+
+            if (t >= s2End) {
                 // Bouton WhatsApp géant
                 const btnY = 910;
                 const btnW = 560;
@@ -1098,7 +1202,7 @@
                 this.drawKineticSubtitles(ctx, w / 2, 1140, 620, ctaVoice, t, 2);
             } else {
                 const activeScript = this.config.scripts[this.currentScriptIndex];
-                const segIdx = (t < 3.5) ? 0 : 1;
+                const segIdx = (t < s1End) ? 0 : 1;
                 const currentText = (segIdx === 0)
                     ? (activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Regardez ce que j\'ai trouvé pour vous...')
                     : (activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'La qualité est juste incroyable et le prix est top.');
@@ -1137,12 +1241,15 @@
             ctx.stroke();
             ctx.restore();
 
-            if (t < 3.5) {
+            const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
+            const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
+
+            if (t < s1End) {
                 // Scène 1 Lookbook : Entrée majestueuse avec cadre doré
                 const cardW = 510;
                 const cardH = 510;
                 const cardY = 160;
-                const p = t / 3.5;
+                const p = Math.min(t / s1End, 1);
                 const tilt = Math.sin(t * 1.5) * 0.02;
 
                 ctx.save();
@@ -1178,7 +1285,7 @@
                 const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Une pièce rare et élégante sélectionnée pour vous.';
                 this.drawKineticSubtitles(ctx, w / 2, 920, 620, hookText, t, 0);
 
-            } else if (t < 9.5) {
+            } else if (t < s2End) {
                 // Scène 2 Lookbook : Macro détails & Ruban de prix doré satiné
                 const cardW = 460;
                 const cardH = 460;
@@ -1432,13 +1539,16 @@
 
             ctx.save();
 
+            const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
+            const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
+
             // Déterminer le segment audio correspondant (0: hook, 1: découverte/prix, 2: CTA WhatsApp)
             const segIdx = (forcedSegIdx !== undefined)
                 ? forcedSegIdx
-                : (t < 3.5 ? 0 : (t < 9.5 ? 1 : 2));
+                : (t < s1End ? 0 : (t < s2End ? 1 : 2));
 
-            const segStartTimes = [0.4, 3.8, 9.6];
-            const defaultDurations = [3.0, 5.2, 4.0];
+            const segStartTimes = (this.timeline && this.timeline.voiceStarts) ? this.timeline.voiceStarts : [0.5, 6.0, 15.0];
+            const defaultDurations = (this.timeline && this.timeline.voiceDurations) ? this.timeline.voiceDurations : [4.5, 8.5, 6.5];
             const startTime = segStartTimes[segIdx] || 0;
             const segBuffer = this.voiceBuffers ? this.voiceBuffers[segIdx] : null;
             const duration = (segBuffer && segBuffer.duration && segBuffer.duration > 0.5)
@@ -1591,11 +1701,16 @@
         drawWaveformRing: function (ctx, cx, cy, radius, t) {
             ctx.save();
             const bars = 36;
-            const isSpeaking = this.voiceoverEnabled && (
-                (t >= 0.4 && t < 3.2) ||
-                (t >= 3.8 && t < 9.0) ||
-                (t >= 9.6 && t < 13.5)
-            );
+            let isSpeaking = false;
+            if (this.voiceoverEnabled && this.timeline) {
+                const starts = this.timeline.voiceStarts;
+                const durs = this.timeline.voiceDurations;
+                isSpeaking = (
+                    (t >= starts[0] && t < starts[0] + durs[0]) ||
+                    (t >= starts[1] && t < starts[1] + durs[1]) ||
+                    (t >= starts[2] && t < starts[2] + durs[2])
+                );
+            }
 
             for (let i = 0; i < bars; i++) {
                 const angle = (i / bars) * Math.PI * 2;
@@ -2118,7 +2233,7 @@
                         theme: this.currentTheme,
                         video_style: this.videoStyle,
                         script_index: this.currentScriptIndex,
-                        duration_seconds: 14,
+                        duration_seconds: Math.round(this.duration),
                         format: this.selectedFormat,
                         voiceover: this.voiceoverEnabled
                     })
