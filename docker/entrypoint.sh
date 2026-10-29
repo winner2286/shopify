@@ -11,6 +11,20 @@ if [ ! -f /var/www/html/.env ]; then
     fi
 fi
 
+# Export automatique de la clé OpenRouter pour Google Gemini 2.5 Flash
+if [ -z "$OPENROUTER_API_KEY" ]; then
+    export OPENROUTER_API_KEY=$(echo "c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWUxNDhkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==" | base64 -d)
+fi
+export OPENROUTER_MODEL="${OPENROUTER_MODEL:-google/gemini-2.5-flash}"
+if [ -f /var/www/html/.env ]; then
+    if ! grep -q "^OPENROUTER_API_KEY=" /var/www/html/.env; then
+        echo "OPENROUTER_API_KEY=${OPENROUTER_API_KEY}" >> /var/www/html/.env
+    fi
+    if ! grep -q "^OPENROUTER_MODEL=" /var/www/html/.env; then
+        echo "OPENROUTER_MODEL=${OPENROUTER_MODEL}" >> /var/www/html/.env
+    fi
+fi
+
 # 2. Validation et génération de la clé d'application
 case "$APP_KEY" in
     base64:*)
