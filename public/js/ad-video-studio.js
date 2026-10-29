@@ -778,7 +778,7 @@
             // Sous-titres cinétiques Alex Hormozi / TikTok
             const activeScript = this.config.scripts[this.currentScriptIndex];
             const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Attendez, ne scrollez pas ! Regardez cette offre incroyable...';
-            this.drawKineticSubtitles(ctx, w / 2, 880, 620, hookText, t);
+            this.drawKineticSubtitles(ctx, w / 2, 880, 620, hookText, t, 0);
 
             ctx.restore();
         },
@@ -864,7 +864,7 @@
             // Sous-titre scène 2
             const activeScript = this.config.scripts[this.currentScriptIndex];
             const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'Super qualité garantie, disponible immédiatement chez nous.';
-            this.drawKineticSubtitles(ctx, w / 2, 1100, 620, voiceover, t);
+            this.drawKineticSubtitles(ctx, w / 2, 1100, 620, voiceover, t, 1);
 
             ctx.restore();
         },
@@ -943,7 +943,7 @@
 
             const activeScript = this.config.scripts[this.currentScriptIndex];
             const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-moi sur WhatsApp pour recevoir votre colis dès aujourd\'hui !';
-            this.drawKineticSubtitles(ctx, w / 2, 1050, 620, ctaVoice, t);
+            this.drawKineticSubtitles(ctx, w / 2, 1050, 620, ctaVoice, t, 2);
 
             ctx.restore();
         },
@@ -1095,13 +1095,14 @@
 
                 const activeScript = this.config.scripts[this.currentScriptIndex];
                 const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Cliquez sur WhatsApp pour commander directement !';
-                this.drawKineticSubtitles(ctx, w / 2, 1140, 620, ctaVoice, t);
+                this.drawKineticSubtitles(ctx, w / 2, 1140, 620, ctaVoice, t, 2);
             } else {
                 const activeScript = this.config.scripts[this.currentScriptIndex];
-                const currentText = (t < 3.5)
+                const segIdx = (t < 3.5) ? 0 : 1;
+                const currentText = (segIdx === 0)
                     ? (activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Regardez ce que j\'ai trouvé pour vous...')
                     : (activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'La qualité est juste incroyable et le prix est top.');
-                this.drawKineticSubtitles(ctx, w / 2, 980, 640, currentText, t);
+                this.drawKineticSubtitles(ctx, w / 2, 980, 640, currentText, t, segIdx);
             }
         },
 
@@ -1175,7 +1176,7 @@
 
                 const activeScript = this.config.scripts[this.currentScriptIndex];
                 const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Une pièce rare et élégante sélectionnée pour vous.';
-                this.drawKineticSubtitles(ctx, w / 2, 920, 620, hookText, t);
+                this.drawKineticSubtitles(ctx, w / 2, 920, 620, hookText, t, 0);
 
             } else if (t < 9.5) {
                 // Scène 2 Lookbook : Macro détails & Ruban de prix doré satiné
@@ -1233,7 +1234,7 @@
 
                 const activeScript = this.config.scripts[this.currentScriptIndex];
                 const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'Finition irréprochable et matière noble pour les plus exigeants.';
-                this.drawKineticSubtitles(ctx, w / 2, 1100, 620, voiceover, t);
+                this.drawKineticSubtitles(ctx, w / 2, 1100, 620, voiceover, t, 1);
 
             } else {
                 // Scène 3 Lookbook : Carte Conciergerie WhatsApp VIP
@@ -1293,7 +1294,7 @@
 
                 const activeScript = this.config.scripts[this.currentScriptIndex];
                 const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-nous sur WhatsApp pour réserver votre pièce.';
-                this.drawKineticSubtitles(ctx, w / 2, 1050, 620, ctaVoice, t);
+                this.drawKineticSubtitles(ctx, w / 2, 1050, 620, ctaVoice, t, 2);
                 ctx.restore();
             }
         },
@@ -1423,79 +1424,163 @@
             }
         },
 
-        // Sous-titres cinétiques style Alex Hormozi / TikTok
-        drawKineticSubtitles: function (ctx, cx, cy, maxW, text, t) {
+        // Sous-titres cinétiques style Alex Hormozi / TikTok (Synchronisés mot par mot avec la voix)
+        drawKineticSubtitles: function (ctx, cx, cy, maxW, text, t, forcedSegIdx) {
+            if (!text || typeof text !== 'string') return;
+            const rawWords = text.trim().split(/\s+/).filter(w => w.length > 0);
+            if (rawWords.length === 0) return;
+
             ctx.save();
-            const words = text.split(' ');
-            if (words.length === 0) {
-                ctx.restore();
-                return;
-            }
 
-            // Calcul du mot actif selon le temps dans la scène
-            const wordsPerSec = 2.8;
-            const activeWordIdx = Math.floor((t * wordsPerSec)) % words.length;
+            // Déterminer le segment audio correspondant (0: hook, 1: découverte/prix, 2: CTA WhatsApp)
+            const segIdx = (forcedSegIdx !== undefined)
+                ? forcedSegIdx
+                : (t < 3.5 ? 0 : (t < 9.5 ? 1 : 2));
 
-            ctx.font = '900 28px system-ui, -apple-system, sans-serif';
-            const lines = [];
-            let currentLine = [];
-            let currentW = 0;
+            const segStartTimes = [0.4, 3.8, 9.6];
+            const defaultDurations = [3.0, 5.2, 4.0];
+            const startTime = segStartTimes[segIdx] || 0;
+            const segBuffer = this.voiceBuffers ? this.voiceBuffers[segIdx] : null;
+            const duration = (segBuffer && segBuffer.duration && segBuffer.duration > 0.5)
+                ? segBuffer.duration
+                : defaultDurations[segIdx];
 
-            words.forEach((wrd, idx) => {
-                const wWidth = ctx.measureText(wrd + ' ').width;
-                if (currentW + wWidth > maxW - 50 && currentLine.length > 0) {
-                    lines.push(currentLine);
-                    currentLine = [{ word: wrd, idx: idx }];
-                    currentW = wWidth;
-                } else {
-                    currentLine.push({ word: wrd, idx: idx });
-                    currentW += wWidth;
+            // Temps écoulé dans ce segment
+            const elapsed = Math.max(0, t - startTime);
+            const progress = Math.min(Math.max(elapsed / duration, 0), 1);
+
+            // Index global du mot en cours de prononciation
+            const activeWordGlobalIdx = Math.min(
+                Math.floor(progress * rawWords.length),
+                rawWords.length - 1
+            );
+
+            // Découpage en micro-phrases de 4 à 7 mots pour éviter tout bloc massif
+            const chunks = [];
+            let currentChunk = [];
+            const maxWordsPerChunk = 6;
+
+            rawWords.forEach((word, idx) => {
+                currentChunk.push({ word: word, globalIdx: idx });
+                const hasPunctuation = /[.!?…,]/.test(word);
+                const isLast = (idx === rawWords.length - 1);
+                const isBigEnough = (currentChunk.length >= 4);
+
+                if (isLast) {
+                    chunks.push(currentChunk);
+                } else if ((isBigEnough && hasPunctuation) || currentChunk.length >= maxWordsPerChunk) {
+                    const remainingWords = rawWords.length - (idx + 1);
+                    if (remainingWords > 1 || currentChunk.length >= maxWordsPerChunk + 1) {
+                        chunks.push(currentChunk);
+                        currentChunk = [];
+                    }
                 }
             });
-            if (currentLine.length > 0) lines.push(currentLine);
+            if (currentChunk.length > 0 && !chunks.includes(currentChunk)) {
+                chunks.push(currentChunk);
+            }
 
-            const lineH = 46;
-            const totalH = lines.length * lineH + 34;
-            const bubbleW = maxW;
-            const bx = cx - bubbleW / 2;
-            const by = cy - totalH / 2;
+            // Trouver le chunk actif correspondant au mot en cours
+            let activeChunk = chunks[0];
+            for (let i = 0; i < chunks.length; i++) {
+                const firstIdx = chunks[i][0].globalIdx;
+                const lastIdx = chunks[i][chunks[i].length - 1].globalIdx;
+                if (activeWordGlobalIdx >= firstIdx && activeWordGlobalIdx <= lastIdx) {
+                    activeChunk = chunks[i];
+                    break;
+                }
+                if (activeWordGlobalIdx > lastIdx) {
+                    activeChunk = chunks[i]; // au cas où la voix est terminée, afficher le dernier chunk
+                }
+            }
 
-            // Fond noir transparent arrondi avec bordure lumineuse
-            ctx.fillStyle = 'rgba(6, 4, 12, 0.88)';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-            ctx.lineWidth = 1.5;
-            this.roundRect(ctx, bx, by, bubbleW, totalH, 22);
+            // Configuration typographique nette (textAlign = 'left' indispensable pour éviter les collisions)
+            ctx.font = '900 30px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+
+            const spaceW = ctx.measureText(' ').width;
+
+            // Découpage du chunk actif en 1 ou 2 lignes maximum
+            const lines = [];
+            let curLine = [];
+            let curLineW = 0;
+
+            activeChunk.forEach(item => {
+                const wWidth = ctx.measureText(item.word).width;
+                if (curLine.length > 0 && (curLineW + spaceW + wWidth) > (maxW - 70)) {
+                    lines.push({ items: curLine, width: curLineW });
+                    curLine = [item];
+                    curLineW = wWidth;
+                } else {
+                    curLine.push(item);
+                    curLineW += (curLine.length === 1 ? 0 : spaceW) + wWidth;
+                }
+            });
+            if (curLine.length > 0) {
+                lines.push({ items: curLine, width: curLineW });
+            }
+
+            const lineH = 48;
+            const padY = 16;
+            const padX = 26;
+            const totalContentH = lines.length * lineH;
+            const boxH = totalContentH + padY * 2;
+            const maxLineWidth = Math.max(...lines.map(l => l.width));
+            const boxW = Math.min(maxW, maxLineWidth + padX * 2);
+            const bx = cx - boxW / 2;
+            const by = cy - boxH / 2;
+
+            // Pilule de fond sombre semi-transparente avec contour moderne
+            ctx.fillStyle = 'rgba(8, 6, 16, 0.90)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+            ctx.lineWidth = 2;
+            this.roundRect(ctx, bx, by, boxW, boxH, 20);
             ctx.fill();
             ctx.stroke();
 
-            // Rendu mot par mot
-            lines.forEach((line, lineIdx) => {
-                const ly = by + 28 + lineIdx * lineH;
-                const totalLineW = line.reduce((acc, item) => acc + ctx.measureText(item.word + ' ').width, 0);
-                let curX = cx - totalLineW / 2;
+            // Rendu précis mot par mot (AUCUN chevauchement possible)
+            lines.forEach((lineObj, lineIdx) => {
+                const ly = by + padY + lineH / 2 + lineIdx * lineH;
+                let curX = cx - lineObj.width / 2; // Centrage horizontal parfait de la ligne
 
-                line.forEach(item => {
-                    const isHighlighted = (item.idx === activeWordIdx);
+                lineObj.items.forEach(item => {
                     const wordStr = item.word;
-                    const wordW = ctx.measureText(wordStr + ' ').width;
+                    const wordW = ctx.measureText(wordStr).width;
+                    const isCurrent = (item.globalIdx === activeWordGlobalIdx && t >= startTime);
+                    const isPast = (item.globalIdx < activeWordGlobalIdx || (item.globalIdx === activeWordGlobalIdx && t >= startTime + duration));
 
                     ctx.save();
-                    if (isHighlighted) {
-                        ctx.fillStyle = '#facc15'; // Jaune fluo TikTok
+                    if (isCurrent) {
+                        // Mot actif : Jaune néon éclatant TikTok avec pulsation dynamique
+                        const pop = 1.08 + 0.04 * Math.sin(t * 12);
+                        ctx.translate(curX + wordW / 2, ly);
+                        ctx.scale(pop, pop);
+                        ctx.translate(-(curX + wordW / 2), -ly);
+
+                        ctx.fillStyle = '#facc15';
                         ctx.strokeStyle = '#000000';
                         ctx.lineWidth = 6;
                         ctx.strokeText(wordStr, curX, ly);
                         ctx.fillText(wordStr, curX, ly);
-                    } else {
+                    } else if (isPast) {
+                        // Mots déjà prononcés : Blanc net haute visibilité
                         ctx.fillStyle = '#ffffff';
-                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.strokeStyle = '#000000';
                         ctx.lineWidth = 4;
+                        ctx.strokeText(wordStr, curX, ly);
+                        ctx.fillText(wordStr, curX, ly);
+                    } else {
+                        // Mots à venir dans la phrase : Blanc semi-transparent
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.lineWidth = 3;
                         ctx.strokeText(wordStr, curX, ly);
                         ctx.fillText(wordStr, curX, ly);
                     }
                     ctx.restore();
 
-                    curX += wordW;
+                    curX += wordW + spaceW;
                 });
             });
 
