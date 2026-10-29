@@ -83,6 +83,26 @@ class AdvertisingController extends Controller
     }
 
     /**
+     * Régénère les textes et scripts de l'annonce avec l'IA adaptée au produit et à la boutique
+     */
+    public function regenerate(Request $request, Advertisement $ad): RedirectResponse
+    {
+        $shop = $request->user()->shop;
+
+        if ($ad->shop_id !== $shop->id) {
+            abort(403);
+        }
+
+        try {
+            $this->aiAdvertisingService->regenerateAd($ad, $shop);
+
+            return redirect()->route('ads.show', $ad)->with('status', 'Vos scripts et textes publicitaires ont été régénérés et adaptés avec succès à votre produit et boutique !');
+        } catch (Exception $e) {
+            return back()->with('error', 'Erreur lors de la régénération : ' . $e->getMessage());
+        }
+    }
+
+    /**
      * H-02, H-03, H-04 : Affichage des textes, scripts et visuels publicitaires & Studio Vidéo IA
      */
     public function show(Request $request, Advertisement $ad)

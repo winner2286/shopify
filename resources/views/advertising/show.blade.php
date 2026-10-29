@@ -179,10 +179,19 @@
             <div class="studio-settings-col">
                 <!-- 1. Choix du Script IA -->
                 <div class="settings-box">
-                    <h3 class="settings-title">
-                        <x-icon name="sparkles" :size="16" style="color:var(--brand-2)" />
-                        <span>1. Script & Déroulé Vidéo</span>
-                    </h3>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;flex-wrap:wrap;gap:.5rem">
+                        <h3 class="settings-title" style="margin:0">
+                            <x-icon name="sparkles" :size="16" style="color:var(--brand-2)" />
+                            <span>1. Script & Déroulé Vidéo</span>
+                        </h3>
+                        <form method="POST" action="{{ route('ads.regenerate', $ad) }}" style="margin:0">
+                            @csrf
+                            <button type="submit" class="btn btn-secondary" style="font-size:.76rem;padding:.3rem .7rem;display:inline-flex;align-items:center;gap:.4rem;cursor:pointer" title="Ré-analyser le produit et générer de nouveaux scripts sur-mesure">
+                                <x-icon name="sparkles" :size="13" style="color:var(--brand-1)" />
+                                <span>Régénérer avec l'IA</span>
+                            </button>
+                        </form>
+                    </div>
                     <p class="settings-desc">Sélectionnez le scénario qui correspond le mieux à votre objectif du jour :</p>
 
                     <div class="script-cards-grid">
