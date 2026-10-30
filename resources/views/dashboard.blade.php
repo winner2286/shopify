@@ -5,6 +5,20 @@
 @section('content')
 @php $done = collect($checklist)->where('done', true)->count(); $pct = (int) round($done / count($checklist) * 100); @endphp
 <div class="container dash">
+    @if ($user->isAdmin())
+        <div class="card" style="margin-bottom:1.5rem;padding:1rem 1.25rem;background:linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.05));border:1px solid rgba(239, 68, 68, 0.35);border-radius:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+            <div style="display:flex;align-items:center;gap:.75rem">
+                <span style="font-size:1.6rem">🛡️</span>
+                <div>
+                    <div style="font-weight:700;color:#f87171;font-size:1rem">Vous êtes connecté en tant que Super-Administrateur (Fondateur)</div>
+                    <div style="font-size:.85rem;color:var(--text-soft)">Vous êtes actuellement sur la vue marchande. Pour superviser l'ensemble des boutiques, abonnements et alertes, accédez à votre espace dédié.</div>
+                </div>
+            </div>
+            <a href="{{ route('admin.dashboard') }}" class="btn btn-sm" style="background:#ef4444;color:#ffffff;font-weight:700;border:none;display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:8px;text-decoration:none">
+                Ouvrir le Cockpit Super-Admin →
+            </a>
+        </div>
+    @endif
     <div class="dash-head">
         <div>
             <p style="margin:0">Bonjour,</p>

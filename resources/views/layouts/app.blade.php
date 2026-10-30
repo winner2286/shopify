@@ -92,6 +92,12 @@
 
             <nav class="nav-actions" aria-label="Navigation principale">
                 @auth
+                    @if (auth()->user()->isAdmin())
+                        <a id="nav-admin" href="{{ route('admin.dashboard') }}" class="btn btn-sm" style="background:linear-gradient(135deg, #ef4444, #dc2626);color:#ffffff;font-weight:700;display:inline-flex;align-items:center;gap:.35rem;border:none;box-shadow:0 2px 8px rgba(239, 68, 68, 0.4);margin-right:.25rem">
+                            <x-icon name="shield" :size="15" />
+                            <span>⭐ Cockpit Super-Admin</span>
+                        </a>
+                    @endif
                     @if (auth()->user()->shop && auth()->user()->shop->subdomain)
                         <a id="nav-preview-store" href="{{ url('/b/' . auth()->user()->shop->subdomain) }}" target="_blank" class="btn btn-ghost btn-sm" style="color:var(--brand-1);display:inline-flex;align-items:center;gap:.35rem" title="Voir ma boutique en direct">
                             <x-icon name="eye" :size="15" />
@@ -99,19 +105,13 @@
                             <x-icon name="external-link" :size="12" />
                         </a>
                     @endif
-                    <a id="nav-dashboard" href="{{ route('dashboard') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('dashboard') ? 'btn-primary' : '' }}">Accueil</a>
+                    <a id="nav-dashboard" href="{{ route('dashboard') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('dashboard') ? 'btn-primary' : '' }}">Boutique (Accueil)</a>
                     <a id="nav-orders" href="{{ route('orders.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('orders.*') ? 'btn-primary' : '' }}">Commandes</a>
                     <a id="nav-products" href="{{ route('products.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('products.*') ? 'btn-primary' : '' }}">Produits</a>
                     <a id="nav-categories" href="{{ route('categories.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('categories.*') ? 'btn-primary' : '' }}">Catégories</a>
                     <a id="nav-ads" href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ads.*') ? 'btn-primary' : '' }}">Publicité</a>
                     <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
-                    <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Boutique</a>
-                    @if (auth()->user()->isAdmin())
-                        <a id="nav-admin" href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('admin.*') ? 'btn-primary' : '' }}" style="color:var(--brand-1);font-weight:600;display:inline-flex;align-items:center;gap:.35rem">
-                            <x-icon name="shield" :size="15" />
-                            <span>Admin</span>
-                        </a>
-                    @endif
+                    <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Paramètres</a>
                     <form method="POST" action="{{ route('logout') }}" style="display:inline">@csrf
                         <button id="nav-logout" class="btn btn-ghost btn-sm" type="submit">Déconnexion</button>
                     </form>
@@ -139,6 +139,12 @@
         <!-- Navigation mobile inférieure (Section 9 du CDC : Accueil, Commandes, Produits, Publicité, Plus) -->
         <nav class="bottom-nav" aria-label="Navigation mobile">
             <div class="bottom-nav-inner">
+                @if (auth()->user()->isAdmin())
+                    <a href="{{ route('admin.dashboard') }}" class="bottom-nav-item {{ request()->routeIs('admin.*') ? 'active' : '' }}" style="color:#ef4444">
+                        <span class="icon" aria-hidden="true"><x-icon name="shield" :size="20" /></span>
+                        <span>Cockpit</span>
+                    </a>
+                @endif
                 <a href="{{ route('dashboard') }}" class="bottom-nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <span class="icon" aria-hidden="true"><x-icon name="home" :size="20" /></span>
                     <span>Accueil</span>
