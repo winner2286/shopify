@@ -188,8 +188,8 @@
                         </h3>
                         <form method="POST" action="{{ route('ads.regenerate', $ad) }}" style="margin:0">
                             @csrf
-                            <button type="submit" class="btn btn-secondary" style="font-size:.76rem;padding:.3rem .7rem;display:inline-flex;align-items:center;gap:.4rem;cursor:pointer" title="Ré-analyser le produit et générer de nouveaux scripts sur-mesure">
-                                <x-icon name="sparkles" :size="13" style="color:var(--brand-1)" />
+                            <button type="submit" class="btn-regenerate-ai" title="Ré-analyser le produit et générer de nouveaux scripts sur-mesure">
+                                <x-icon name="sparkles" :size="13" class="regenerate-icon" />
                                 <span>Régénérer avec l'IA</span>
                             </button>
                         </form>
@@ -968,6 +968,54 @@
         font-size: .85rem;
         color: var(--text-soft);
         margin: 0 0 1rem;
+    }
+
+    /* Bouton Régénérer avec l'IA (Thème Sombre & Clair) */
+    .btn-regenerate-ai {
+        display: inline-flex;
+        align-items: center;
+        gap: .42rem;
+        font-size: .76rem;
+        font-weight: 700;
+        padding: .35rem .75rem;
+        border-radius: 9999px;
+        background: var(--bg-soft, #121216);
+        color: var(--text, #ffffff);
+        border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
+        cursor: pointer;
+        transition: all .2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+
+    .btn-regenerate-ai:hover {
+        background: var(--surface, #181820);
+        border-color: var(--brand-1, #ec4899);
+        color: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(236, 72, 153, 0.25);
+    }
+
+    .btn-regenerate-ai .regenerate-icon {
+        color: var(--brand-1, #ec4899);
+        transition: transform .3s ease;
+    }
+
+    .btn-regenerate-ai:hover .regenerate-icon {
+        transform: rotate(18deg) scale(1.15);
+    }
+
+    /* Mode Clair pour le bouton */
+    [data-theme='light'] .btn-regenerate-ai {
+        background: #f1f5f9;
+        color: #0b0d12;
+        border-color: rgba(15, 23, 42, 0.12);
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    }
+
+    [data-theme='light'] .btn-regenerate-ai:hover {
+        background: #e2e8f0;
+        border-color: var(--brand-1);
+        color: var(--brand-1);
     }
 
     /* Cartes Scripts */

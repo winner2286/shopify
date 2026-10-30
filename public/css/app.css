@@ -273,6 +273,17 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   transform: translateY(-2px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
+.btn-secondary {
+  background: var(--surface-solid, #181820);
+  color: var(--text, #ffffff);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
+}
+.btn-secondary:hover {
+  background: var(--bg-subtle, #22222c);
+  color: #ffffff;
+  border-color: var(--brand-1);
+  transform: translateY(-1px);
+}
 
 .btn-ghost {
   background: transparent; border-color: rgba(255, 255, 255, 0.14); color: var(--text);
@@ -3118,6 +3129,17 @@ button.bottom-nav-item {
 [data-theme='light'] .btn-dark:hover {
   background: #e2e8f0;
   color: #0b0d12;
+  border-color: var(--brand-1);
+}
+
+[data-theme='light'] .btn-secondary {
+  background: #f1f5f9;
+  color: #0b0d12;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+[data-theme='light'] .btn-secondary:hover {
+  background: #e2e8f0;
+  color: var(--brand-1);
   border-color: var(--brand-1);
 }
 
