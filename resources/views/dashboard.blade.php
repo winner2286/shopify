@@ -80,16 +80,21 @@
                     </strong>
                     <span style="font-size:.85rem;color:var(--text-soft)">En attente</span>
                 </div>
-                <div style="background:var(--bg-soft);padding:1rem;border-radius:12px;text-align:center">
+                <a href="{{ route('analytics.index') }}" style="background:var(--bg-soft);padding:1rem;border-radius:12px;text-align:center;text-decoration:none;display:block;border:1px solid transparent;transition:transform .15s, border-color .15s" title="Voir les statistiques détaillées">
                     <strong style="font-size:1.5rem;display:block" class="gradient-text">
                         {{ number_format($totalRevenue, 0, ',', ' ') }}
                     </strong>
-                    <span style="font-size:.85rem;color:var(--text-soft)">FCFA encaissés</span>
-                </div>
+                    <span style="font-size:.85rem;color:var(--text-soft);display:block">FCFA encaissés</span>
+                    <span style="font-size:.72rem;color:var(--brand-1);font-weight:600;display:inline-flex;align-items:center;gap:2px;margin-top:.25rem">
+                        Voir stats <x-icon name="arrow-right" :size="11" />
+                    </span>
+                </a>
             </div>
-            <div style="display:flex;gap:.5rem;margin-top:1rem">
-                <a href="{{ route('orders.index') }}" class="btn btn-primary btn-sm btn-block">Gérer les commandes</a>
-                <a href="{{ route('customers.index') }}" class="btn btn-ghost btn-sm btn-block">Fichier clients</a>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:1rem">
+                <a href="{{ route('orders.index') }}" class="btn btn-primary btn-sm" style="justify-content:center;text-align:center">Gérer commandes</a>
+                <a href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm" style="justify-content:center;text-align:center;color:var(--brand-1);font-weight:600">
+                    <x-icon name="analytics" :size="15" /> Statistiques
+                </a>
             </div>
         </section>
 

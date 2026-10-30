@@ -65,7 +65,7 @@
     <div class="card" style="margin-bottom:2rem;padding:1.8rem">
         <h3 style="margin-top:0;font-size:1.2rem;margin-bottom:1.5rem">Évolution des Ventes sur 7 Jours (FCFA)</h3>
 
-        <div style="display:flex;align-items:flex-end;gap:1.2rem;height:180px;border-bottom:1px solid var(--border);padding-bottom:.5rem">
+        <div class="analytics-chart-row" style="display:flex;align-items:flex-end;gap:1.2rem;height:180px;border-bottom:1px solid var(--border);padding-bottom:.5rem">
             @foreach ($dailySales as $ds)
                 @php $heightPct = max(8, round(($ds['amount'] / $maxDaily) * 100)); @endphp
                 <div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end">

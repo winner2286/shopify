@@ -164,12 +164,95 @@
                     <span class="icon" aria-hidden="true"><x-icon name="ads" :size="20" /></span>
                     <span>Publicité</span>
                 </a>
-                <a href="{{ route('categories.index') }}" class="bottom-nav-item {{ request()->routeIs('categories.*') ? 'active' : '' }}">
-                    <span class="icon" aria-hidden="true"><x-icon name="categories" :size="20" /></span>
+                <button type="button" class="bottom-nav-item bottom-nav-plus-btn {{ request()->routeIs(['analytics.*', 'shop.*', 'customers.*', 'shipping.*', 'categories.*']) ? 'active' : '' }}" onclick="toggleMobilePlusMenu(event)" aria-label="Menu Plus d'options">
+                    <span class="icon" aria-hidden="true"><x-icon name="grid" :size="20" /></span>
                     <span>Plus</span>
-                </a>
+                </button>
             </div>
         </nav>
+
+        <!-- Menu Plus Mobile (Slide-Up Sheet pour Statistiques, Paramètres, Clients, Livraisons, etc.) -->
+        <div id="mobile-plus-backdrop" class="mobile-plus-backdrop" onclick="closeMobilePlusMenu()" aria-hidden="true"></div>
+        <div id="mobile-plus-sheet" class="mobile-plus-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-plus-title">
+            <div class="mobile-plus-handle" onclick="closeMobilePlusMenu()"></div>
+            <div class="mobile-plus-head">
+                <h3 id="mobile-plus-title" style="margin:0;font-size:1.05rem;font-weight:700">Outils & Gestion</h3>
+                <button type="button" class="mobile-plus-close" onclick="closeMobilePlusMenu()" aria-label="Fermer le menu">✕</button>
+            </div>
+            <div class="mobile-plus-grid">
+                <a href="{{ route('analytics.index') }}" class="mobile-plus-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                    <div class="mobile-plus-icon" style="background:rgba(158, 27, 50, 0.12);color:var(--brand-1)">
+                        <x-icon name="analytics" :size="22" />
+                    </div>
+                    <div class="mobile-plus-info">
+                        <strong>Statistiques & Performance</strong>
+                        <span>Chiffre d'affaires, panier moyen & alertes de stock</span>
+                    </div>
+                    <x-icon name="arrow-right" :size="16" />
+                </a>
+
+                <a href="{{ route('shop.settings') }}" class="mobile-plus-item {{ request()->routeIs('shop.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                    <div class="mobile-plus-icon" style="background:rgba(59, 130, 246, 0.12);color:#3b82f6">
+                        <x-icon name="settings" :size="22" />
+                    </div>
+                    <div class="mobile-plus-info">
+                        <strong>Paramètres de la Boutique</strong>
+                        <span>Identité, logo, T-Money, Flooz & coordonnées</span>
+                    </div>
+                    <x-icon name="arrow-right" :size="16" />
+                </a>
+
+                <a href="{{ route('customers.index') }}" class="mobile-plus-item {{ request()->routeIs('customers.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                    <div class="mobile-plus-icon" style="background:rgba(16, 185, 129, 0.12);color:#10b981">
+                        <x-icon name="users" :size="22" />
+                    </div>
+                    <div class="mobile-plus-info">
+                        <strong>Fichier Clients</strong>
+                        <span>Répertoire des acheteurs et historique d'achats</span>
+                    </div>
+                    <x-icon name="arrow-right" :size="16" />
+                </a>
+
+                <a href="{{ route('shipping.index') }}" class="mobile-plus-item {{ request()->routeIs('shipping.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                    <div class="mobile-plus-icon" style="background:rgba(245, 158, 11, 0.12);color:#f59e0b">
+                        <x-icon name="truck" :size="22" />
+                    </div>
+                    <div class="mobile-plus-info">
+                        <strong>Frais de Livraison</strong>
+                        <span>Tarifs par commune & zones de distribution</span>
+                    </div>
+                    <x-icon name="arrow-right" :size="16" />
+                </a>
+
+                <a href="{{ route('categories.index') }}" class="mobile-plus-item {{ request()->routeIs('categories.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                    <div class="mobile-plus-icon" style="background:rgba(139, 92, 246, 0.12);color:#8b5cf6">
+                        <x-icon name="categories" :size="22" />
+                    </div>
+                    <div class="mobile-plus-info">
+                        <strong>Gestion des Catégories</strong>
+                        <span>Rayons, organisation et classement des articles</span>
+                    </div>
+                    <x-icon name="arrow-right" :size="16" />
+                </a>
+            </div>
+        </div>
+        <script>
+            function openMobilePlusMenu(e) {
+                if (e) e.preventDefault();
+                var s = document.getElementById('mobile-plus-sheet');
+                var b = document.getElementById('mobile-plus-backdrop');
+                if (s && b) { s.classList.add('open'); b.classList.add('open'); document.body.style.overflow = 'hidden'; }
+            }
+            function closeMobilePlusMenu() {
+                var s = document.getElementById('mobile-plus-sheet');
+                var b = document.getElementById('mobile-plus-backdrop');
+                if (s && b) { s.classList.remove('open'); b.classList.remove('open'); document.body.style.overflow = ''; }
+            }
+            function toggleMobilePlusMenu(e) {
+                var s = document.getElementById('mobile-plus-sheet');
+                if (s && s.classList.contains('open')) { closeMobilePlusMenu(); } else { openMobilePlusMenu(e); }
+            }
+        </script>
     @endauth
 
     @hasSection('footer')

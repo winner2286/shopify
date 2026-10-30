@@ -1437,6 +1437,144 @@ body:has(.bottom-nav) {
   padding-bottom: calc(75px + env(safe-area-inset-bottom, 16px)) !important;
 }
 
+button.bottom-nav-item {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 1px;
+}
+
+/* ==========================================================================
+   MENU PLUS MOBILE (Slide-Up Sheet pour Statistiques & Outils)
+   ========================================================================== */
+.mobile-plus-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.mobile-plus-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-plus-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.45);
+  z-index: 9999;
+  transform: translateY(105%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 0.75rem 1.1rem calc(env(safe-area-inset-bottom, 16px) + 1.25rem);
+  box-sizing: border-box;
+}
+.mobile-plus-sheet.open {
+  transform: translateY(0);
+}
+
+.mobile-plus-handle {
+  width: 42px;
+  height: 4px;
+  background: var(--border-soft);
+  border-radius: 2px;
+  margin: 0 auto 0.85rem;
+  cursor: pointer;
+}
+
+.mobile-plus-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.85rem;
+}
+.mobile-plus-close {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.mobile-plus-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.mobile-plus-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.mobile-plus-item:active {
+  transform: scale(0.98);
+  background: rgba(158, 27, 50, 0.08);
+}
+.mobile-plus-item.active {
+  border-color: var(--brand-1);
+  background: rgba(158, 27, 50, 0.08);
+}
+.mobile-plus-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mobile-plus-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mobile-plus-info strong {
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--text);
+}
+.mobile-plus-info span {
+  font-size: 0.75rem;
+  color: var(--text-soft);
+  line-height: 1.3;
+}
+
+@media (max-width: 640px) {
+  .analytics-chart-row {
+    gap: 0.35rem !important;
+  }
+}
+
 /* Grilles Responsive Fluides */
 .dash-grid,
 .product-form-grid,
