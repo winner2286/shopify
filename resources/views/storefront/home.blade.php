@@ -4,50 +4,96 @@
 @section('body_class', 'has-live-filter')
 
 @section('content')
-<!-- Dynamic Hero Banner with Ambient Glow & Live Search -->
+@php
+    $featuredProduct = $products->first();
+    $featuredImg = $featuredProduct?->images->first();
+    $hasFeaturedDiscount = $featuredProduct && $featuredProduct->compare_at_price && $featuredProduct->compare_at_price > $featuredProduct->price;
+    $featuredDiscountPct = $hasFeaturedDiscount ? round((($featuredProduct->compare_at_price - $featuredProduct->price) / $featuredProduct->compare_at_price) * 100) : 0;
+
+    // Produits mis en avant pour les bannières d'offres spéciales (style Burger King Deals)
+    $promoProducts = $products->count() >= 3 
+        ? $products->slice(1, 2) 
+        : ($products->count() >= 2 ? $products->slice(0, 2) : collect());
+@endphp
+
+<!-- Dynamic Hero Banner with Split Hero & Glowing Spotlight Pedestal -->
 <section class="store-hero">
     <div class="hero-ambient-glow"></div>
+    <div class="hero-ambient-glow-2"></div>
     <div class="container">
-        <div class="hero-live-badge">
-            <span class="live-dot"></span>
-            <span>Ouvert aux commandes • Boutique Officielle</span>
-        </div>
+        <div class="store-hero-split">
+            <!-- Colonne 1 : Titre percutant, Slogan & Actions directes -->
+            <div class="hero-content-col reveal-on-scroll">
+                <div class="hero-live-badge">
+                    <span class="live-dot"></span>
+                    <span>Ouvert aux commandes • Boutique Officielle</span>
+                </div>
 
-        <h1>{{ $shop->name }}</h1>
-        <p>{{ $shop->description ?: 'Bienvenue sur notre boutique officielle. Découvrez nos sélections exclusives avec livraison rapide et paiement Mobile Money sécurisé.' }}</p>
+                <h1>{{ $shop->name }}</h1>
+                <p>{{ $shop->description ?: 'Bienvenue sur notre boutique officielle. Découvrez nos sélections exclusives avec commande directe, livraison rapide et paiement sécurisé.' }}</p>
 
-        <!-- Barre de recherche interactive instantanée -->
-        <div class="hero-search-wrap">
-            <span class="hero-search-icon"><x-icon name="search" size="18" /></span>
-            <input id="hero-live-search" type="search" placeholder="Rechercher un plat, un article, un produit..." class="hero-search-input" autocomplete="off">
-            <button id="hero-search-clear" type="button" class="hero-search-clear" style="display:none" title="Effacer">&times;</button>
-        </div>
+                <!-- Barre de recherche interactive instantanée -->
+                <div class="hero-search-wrap" style="width:100%">
+                    <span class="hero-search-icon"><x-icon name="search" size="18" /></span>
+                    <input id="hero-live-search" type="search" placeholder="Rechercher un plat, un article, un produit..." class="hero-search-input" autocomplete="off">
+                    <button id="hero-search-clear" type="button" class="hero-search-clear" style="display:none" title="Effacer">&times;</button>
+                </div>
 
-        <!-- Boutons d'action -->
-        <div style="display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap">
-            <a href="#catalogue-section" class="btn-store" style="display:inline-flex;align-items:center;gap:.5rem" onclick="document.getElementById('catalogue-section')?.scrollIntoView({behavior:'smooth'}); return false;">
-                <x-icon name="shopping-bag" size="18" /> Explorer le catalogue
-            </a>
-            @if ($shop->whatsapp_formatted)
-                <a href="https://wa.me/{{ $shop->whatsapp_formatted }}?text={{ urlencode('Bonjour ' . $shop->name . ', je souhaite passer une commande !') }}" target="_blank" class="btn-whatsapp" style="display:inline-flex;align-items:center;gap:.5rem">
-                    <x-icon name="whatsapp" size="18" /> Commander sur WhatsApp
-                </a>
+                <!-- Boutons d'action -->
+                <div class="hero-actions-row" style="display:flex;gap:.75rem;flex-wrap:wrap">
+                    <a href="#catalogue-section" class="btn-store" style="display:inline-flex;align-items:center;gap:.5rem" onclick="document.getElementById('catalogue-section')?.scrollIntoView({behavior:'smooth'}); return false;">
+                        <x-icon name="shopping-bag" size="18" /> Explorer le catalogue
+                    </a>
+                    @if ($shop->whatsapp_formatted)
+                        <a href="https://wa.me/{{ $shop->whatsapp_formatted }}?text={{ urlencode('Bonjour ' . $shop->name . ', je souhaite passer une commande !') }}" target="_blank" class="btn-whatsapp" style="display:inline-flex;align-items:center;gap:.5rem">
+                            <x-icon name="whatsapp" size="18" /> Commander sur WhatsApp
+                        </a>
+                    @endif
+                </div>
+
+                <!-- Invitation visuelle au défilement interactif -->
+                <div style="margin-top:1.2rem">
+                    <a href="#catalogue-section" class="hero-scroll-cue" onclick="document.getElementById('catalogue-section')?.scrollIntoView({behavior:'smooth'}); return false;">
+                        <span>Découvrir la sélection & les tarifs</span>
+                        <span class="hero-scroll-arrow">↓</span>
+                    </a>
+                </div>
+
+                <!-- Micro-puces de réassurance dans le Hero -->
+                <div class="hero-trust-bar">
+                    <span class="hero-trust-item"><x-icon name="truck" size="14" /> Livraison express</span>
+                    <span class="hero-trust-item"><x-icon name="wallet" size="14" /> T-Money & Flooz acceptés</span>
+                    <span class="hero-trust-item"><x-icon name="sparkles" size="14" /> 100% Qualité</span>
+                </div>
+            </div>
+
+            <!-- Colonne 2 : Vitrine Piédestal Flottante Inspirée Burger King -->
+            @if ($featuredProduct)
+                <div class="hero-spotlight-col reveal-on-scroll" style="--delay: 1">
+                    <div class="hero-pedestal-wrap">
+                        <div class="hero-pedestal-glow"></div>
+                        <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $featuredProduct->slug) }}" class="hero-spotlight-card">
+                            <span class="hero-spotlight-badge">
+                                <span>⭐</span> {{ $hasFeaturedDiscount ? '-' . $featuredDiscountPct . '% Réduction' : 'Sélection Vedette' }}
+                            </span>
+                            @if ($featuredImg)
+                                <img src="{{ $featuredImg->thumbnail_url }}" alt="{{ $featuredProduct->title }}" class="hero-spotlight-img" loading="eager" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $featuredProduct->id }}&color={{ urlencode($shop->brand_color ?: '#10b981') }}'">
+                            @else
+                                <div class="hero-spotlight-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-soft);color:var(--text-faint)">
+                                    <x-icon name="shopping-bag" size="56" />
+                                </div>
+                            @endif
+                            <div class="hero-spotlight-info">
+                                <div class="hero-spotlight-title">{{ $featuredProduct->title }}</div>
+                                <div class="hero-spotlight-price">{{ number_format($featuredProduct->price, 0, ',', ' ') }} FCFA</div>
+                                <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:700;color:var(--store-primary);margin-top:.4rem">
+                                    Voir l'article <x-icon name="arrow-right" size="13" />
+                                </span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
             @endif
-        </div>
-
-        <!-- Invitation visuelle au défilement interactif -->
-        <div style="margin-top:1.4rem">
-            <a href="#catalogue-section" class="hero-scroll-cue" onclick="document.getElementById('catalogue-section')?.scrollIntoView({behavior:'smooth'}); return false;">
-                <span>Découvrir la sélection & les tarifs</span>
-                <span class="hero-scroll-arrow">↓</span>
-            </a>
-        </div>
-
-        <!-- Micro-puces de réassurance dans le Hero -->
-        <div class="hero-trust-bar">
-            <span class="hero-trust-item"><x-icon name="truck" size="15" /> Livraison rapide à Lomé</span>
-            <span class="hero-trust-item"><x-icon name="wallet" size="15" /> T-Money & Flooz acceptés</span>
-            <span class="hero-trust-item"><x-icon name="sparkles" size="15" /> Articles 100% garantis</span>
         </div>
     </div>
 </section>
@@ -68,6 +114,59 @@
         <span class="marquee-item"><x-icon name="sparkles" size="15" /> Qualité & Fraîcheur garanties</span>
     </div>
 </div>
+
+<!-- Section Bons Plans & Coups de Cœur (Inspirée BK King Deals, 100% Universelle pour tout commerce) -->
+@if ($promoProducts->isNotEmpty())
+    <div class="container" style="margin-top:2.2rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+            <div>
+                <span style="font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--store-primary);display:flex;align-items:center;gap:.4rem">
+                    <x-icon name="flame" size="14" /> Incontournables & Bons Plans
+                </span>
+                <h2 style="font-size:1.45rem;font-weight:800;margin:.25rem 0 0;letter-spacing:-0.01em">
+                    Sélections Spéciales
+                </h2>
+            </div>
+            <a href="#catalogue-section" style="font-size:.85rem;font-weight:700;color:var(--store-primary);text-decoration:none" onclick="document.getElementById('catalogue-section')?.scrollIntoView({behavior:'smooth'}); return false;">
+                Tout afficher ↓
+            </a>
+        </div>
+
+        <div class="promo-deals-grid">
+            @foreach ($promoProducts as $promo)
+                @php
+                    $pImg = $promo->images->first();
+                    $pHasDiscount = $promo->compare_at_price && $promo->compare_at_price > $promo->price;
+                    $pDiscountPct = $pHasDiscount ? round((($promo->compare_at_price - $promo->price) / $promo->compare_at_price) * 100) : 0;
+                @endphp
+                <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $promo->slug) }}" class="promo-deal-card reveal-on-scroll" style="--delay: {{ $loop->index }}">
+                    <div class="promo-deal-content">
+                        <div>
+                            <span class="promo-deal-tag">
+                                {{ $pHasDiscount ? '-' . $pDiscountPct . '% Réduction' : ($loop->first ? '⭐ Coup de cœur' : '🔥 Tendance') }}
+                            </span>
+                            <h3 class="promo-deal-title">{{ $promo->title }}</h3>
+                            <p class="promo-deal-desc">{{ $promo->description ?: 'Qualité garantie, disponible immédiatement pour livraison rapide.' }}</p>
+                        </div>
+                        <div class="promo-deal-footer">
+                            <span class="promo-deal-price">{{ number_format($promo->price, 0, ',', ' ') }} FCFA</span>
+                            <span class="promo-deal-btn">
+                                Commander <x-icon name="arrow-right" size="13" />
+                            </span>
+                        </div>
+                    </div>
+                    @if ($pImg)
+                        <img src="{{ $pImg->thumbnail_url }}" alt="{{ $promo->title }}" class="promo-deal-img" loading="lazy" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $promo->id }}&color={{ urlencode($shop->brand_color ?: '#10b981') }}'">
+                    @else
+                        <div class="promo-deal-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-soft);color:var(--text-faint)">
+                            <x-icon name="shopping-bag" size="28" />
+                        </div>
+                    @endif
+                </a>
+            @endforeach
+        </div>
+    </div>
+@endif
 
 <!-- Catégories Interactives (Filtre sans rechargement) -->
 @if ($categories->isNotEmpty())

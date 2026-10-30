@@ -80,6 +80,14 @@
             0% { transform: translateX(-150%); }
             100% { transform: translateX(250%); }
         }
+        @keyframes flameFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(1.2deg); }
+        }
+        @keyframes spotlightGlow {
+            0%, 100% { transform: scale(1); opacity: 0.55; }
+            50% { transform: scale(1.18); opacity: 0.85; }
+        }
 
         .store-header {
             position: sticky; top: 0; z-index: 40;
@@ -187,37 +195,64 @@
         }
         .btn-whatsapp:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45); color: #fff; }
 
-        /* Dynamic Animated Hero */
+        /* Dynamic Animated Hero (Inspiré de l'architecture immersive Burger King) */
         .store-hero {
             position: relative;
-            padding: 4.5rem 0 3.5rem;
-            text-align: center;
+            padding: 3.5rem 0 3rem;
             overflow: hidden;
             border-bottom: 1px solid var(--border);
-            background: radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--store-primary) 18%, transparent) 0%, transparent 70%);
+            background: radial-gradient(circle at 80% 30%, color-mix(in srgb, var(--store-primary) 18%, transparent) 0%, transparent 65%),
+                        radial-gradient(circle at 15% 85%, color-mix(in srgb, var(--store-primary) 10%, transparent) 0%, transparent 55%);
         }
         .hero-ambient-glow {
             position: absolute;
-            top: -25%;
-            left: 50%;
-            width: 580px;
-            height: 380px;
+            top: -20%;
+            left: 60%;
+            width: 600px;
+            height: 420px;
             border-radius: 50%;
             background: radial-gradient(circle, var(--store-primary-glow) 0%, transparent 70%);
+            filter: blur(75px);
+            pointer-events: none;
+            animation: floatGlow 14s ease-in-out infinite;
+            z-index: 0;
+        }
+        .hero-ambient-glow-2 {
+            position: absolute;
+            bottom: -20%;
+            left: -10%;
+            width: 480px;
+            height: 340px;
+            border-radius: 50%;
+            background: radial-gradient(circle, color-mix(in srgb, var(--store-primary) 25%, transparent) 0%, transparent 70%);
             filter: blur(65px);
             pointer-events: none;
-            animation: floatGlow 12s ease-in-out infinite;
             z-index: 0;
         }
         .store-hero .container {
             position: relative;
             z-index: 1;
         }
+
+        /* Split Hero à 2 colonnes : Texte percutant + Vitrine Flottante */
+        .store-hero-split {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 3rem;
+            align-items: center;
+            min-height: 440px;
+            text-align: left;
+        }
+        .hero-content-col {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
         .hero-live-badge {
             display: inline-flex;
             align-items: center;
             gap: .5rem;
-            background: color-mix(in srgb, var(--surface) 80%, transparent);
+            background: color-mix(in srgb, var(--surface) 85%, transparent);
             border: 1px solid color-mix(in srgb, var(--store-primary) 35%, var(--border));
             backdrop-filter: blur(10px);
             padding: .35rem .95rem;
@@ -235,22 +270,216 @@
             background: #22c55e;
             animation: pulseLive 2s infinite;
         }
-        .store-hero h1 {
-            font-size: clamp(2.3rem, 5.5vw, 4rem);
+        .hero-content-col h1 {
+            font-size: clamp(2.3rem, 5vw, 3.8rem);
             font-family: var(--font-display);
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            margin-bottom: .75rem;
-            background: linear-gradient(180deg, var(--text) 40%, color-mix(in srgb, var(--text) 70%, var(--store-primary)) 100%);
+            font-weight: 900;
+            letter-spacing: -0.025em;
+            line-height: 1.12;
+            margin: 0 0 1rem;
+            background: linear-gradient(180deg, var(--text) 50%, color-mix(in srgb, var(--text) 70%, var(--store-primary)) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .store-hero p {
-            font-size: 1.15rem;
+        .hero-content-col p {
+            font-size: 1.1rem;
             line-height: 1.6;
-            max-width: 650px;
-            margin: 0 auto 1.6rem;
+            margin: 0 0 1.5rem;
             color: var(--text-soft);
+            max-width: 540px;
+        }
+
+        /* Vitrine Piédestal Flottante */
+        .hero-spotlight-col {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .hero-pedestal-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 360px;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hero-pedestal-glow {
+            position: absolute;
+            inset: 8%;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--store-primary-glow) 0%, transparent 70%);
+            filter: blur(45px);
+            animation: spotlightGlow 5s infinite ease-in-out;
+            z-index: 0;
+        }
+        .hero-spotlight-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            border-radius: 28px;
+            background: color-mix(in srgb, var(--surface) 92%, #fff);
+            border: 1px solid color-mix(in srgb, var(--store-primary) 35%, var(--border));
+            padding: 1.3rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 48px rgba(0,0,0,0.25);
+            text-decoration: none;
+            color: var(--text);
+            transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .35s;
+            animation: flameFloat 6s ease-in-out infinite;
+        }
+        .hero-spotlight-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 0 28px 65px var(--store-primary-glow);
+        }
+        .hero-spotlight-badge {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            font-size: .78rem;
+            font-weight: 800;
+            padding: .3rem .75rem;
+            border-radius: 99px;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+        }
+        .hero-spotlight-img {
+            width: 80%;
+            height: 64%;
+            object-fit: cover;
+            border-radius: 18px;
+            margin-bottom: .8rem;
+            filter: drop-shadow(0 12px 24px rgba(0,0,0,0.3));
+        }
+        .hero-spotlight-info {
+            text-align: center;
+            width: 100%;
+        }
+        .hero-spotlight-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: .25rem;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .hero-spotlight-price {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: var(--store-primary);
+            font-family: var(--font-display);
+        }
+
+        /* Bannières Offres Spéciales (Style King Eco Deals) */
+        .promo-deals-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin: 2.2rem 0 3rem;
+        }
+        .promo-deal-card {
+            background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 96%, #fff) 0%, var(--surface) 100%);
+            border: 1px solid color-mix(in srgb, var(--store-primary) 30%, var(--border));
+            border-radius: 20px;
+            padding: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+            transition: transform .3s ease, box-shadow .3s ease;
+            text-decoration: none;
+            color: var(--text);
+            position: relative;
+            overflow: hidden;
+        }
+        .promo-deal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 36px var(--store-primary-glow);
+            border-color: var(--store-primary);
+        }
+        .promo-deal-tag {
+            display: inline-block;
+            font-size: .72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            padding: .2rem .6rem;
+            border-radius: 6px;
+            background: color-mix(in srgb, var(--store-primary) 18%, var(--surface));
+            color: var(--store-primary);
+            margin-bottom: .4rem;
+        }
+        .promo-deal-img {
+            width: 95px;
+            height: 95px;
+            border-radius: 14px;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid var(--border);
+        }
+        .promo-deal-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .promo-deal-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin: 0 0 .3rem;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .promo-deal-desc {
+            font-size: .85rem;
+            color: var(--text-soft);
+            margin: 0 0 .6rem;
+            line-height: 1.35;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .promo-deal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            margin-top: auto;
+        }
+        .promo-deal-price {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: var(--store-primary);
+            font-family: var(--font-display);
+        }
+        .promo-deal-btn {
+            font-size: .78rem;
+            font-weight: 700;
+            padding: .35rem .75rem;
+            border-radius: 8px;
+            background: var(--store-primary);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            border: none;
+            transition: transform .2s ease;
+        }
+        .promo-deal-card:hover .promo-deal-btn {
+            transform: scale(1.05);
         }
 
         /* Hero Search Input */
@@ -375,7 +604,135 @@
             grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
             gap: 1.5rem; margin: 2rem 0;
         }
+        @media (max-width: 900px) {
+            .store-hero-split {
+                grid-template-columns: 1fr;
+                gap: 2.2rem;
+                text-align: center;
+                min-height: auto;
+            }
+            .hero-content-col {
+                align-items: center;
+                text-align: center;
+            }
+            .hero-content-col h1 {
+                font-size: clamp(2rem, 5.5vw, 2.7rem);
+                margin: 0 auto 1rem;
+            }
+            .hero-content-col p {
+                margin: 0 auto 1.4rem;
+            }
+            .hero-search-wrap {
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .hero-actions-row {
+                justify-content: center;
+            }
+            .hero-pedestal-wrap {
+                max-width: 300px;
+                margin: 0 auto;
+            }
+            .promo-deals-grid {
+                grid-template-columns: 1fr;
+                gap: 1.1rem;
+                margin: 1.8rem 0 2.2rem;
+            }
+        }
+
         @media (max-width: 640px) {
+            .store-hero {
+                padding: 2rem 0 1.6rem;
+            }
+            .store-hero-split {
+                gap: 1.5rem;
+            }
+            .hero-content-col h1 {
+                font-size: 1.95rem;
+                line-height: 1.18;
+            }
+            .hero-content-col p {
+                font-size: .95rem;
+                line-height: 1.5;
+            }
+            .hero-pedestal-wrap {
+                max-width: 250px;
+            }
+            .hero-spotlight-card {
+                padding: 1rem;
+                border-radius: 20px;
+            }
+            .hero-spotlight-badge {
+                font-size: .7rem;
+                padding: .25rem .6rem;
+                top: .75rem;
+                left: .75rem;
+            }
+            .hero-spotlight-img {
+                width: 75%;
+                height: 125px;
+                border-radius: 12px;
+                margin-bottom: .6rem;
+            }
+            .hero-spotlight-title {
+                font-size: 1rem;
+            }
+            .hero-spotlight-price {
+                font-size: 1.15rem;
+            }
+            .hero-search-wrap {
+                max-width: 100%;
+                margin: 1.1rem 0 1.3rem;
+            }
+            .hero-search-input {
+                padding: .75rem 2.4rem .75rem 2.6rem;
+                font-size: .9rem;
+            }
+            .hero-actions-row {
+                width: 100%;
+                flex-direction: column;
+                gap: .6rem;
+            }
+            .hero-actions-row .btn-store,
+            .hero-actions-row .btn-whatsapp {
+                width: 100%;
+                justify-content: center;
+                padding: .7rem 1rem;
+            }
+            .hero-trust-bar {
+                gap: .6rem;
+                margin-top: 1.2rem;
+                font-size: .78rem;
+            }
+            .hero-trust-item {
+                padding: .3rem .6rem;
+            }
+            .promo-deals-grid {
+                grid-template-columns: 1fr;
+                gap: .85rem;
+                margin: 1.2rem 0 1.8rem;
+            }
+            .promo-deal-card {
+                padding: 1rem;
+                border-radius: 16px;
+                gap: .85rem;
+            }
+            .promo-deal-img {
+                width: 76px;
+                height: 76px;
+                border-radius: 10px;
+            }
+            .promo-deal-title {
+                font-size: .98rem;
+                font-weight: 700;
+                line-height: 1.3;
+                margin: 0 0 .25rem;
+            }
+            .promo-deal-price {
+                font-size: 1.05rem;
+                font-weight: 800;
+                color: var(--store-primary);
+            }
             .store-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: .75rem;
@@ -441,15 +798,6 @@
             }
             .cart-pill {
                 padding: .35rem .75rem; font-size: .82rem;
-            }
-            .store-hero {
-                padding: 2.6rem 0 2rem;
-            }
-            .store-hero h1 {
-                font-size: 1.9rem;
-            }
-            .store-hero p {
-                font-size: .95rem;
             }
         }
         @media (max-width: 360px) {
