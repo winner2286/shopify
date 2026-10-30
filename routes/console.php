@@ -168,3 +168,61 @@ Artisan::command('mail:test {to?}', function (?string $to = null) {
     }
 })->purpose('Teste l\'envoi d\'un email OTP via la configuration SMTP active');
 
+Artisan::command('admin:list', function () {
+    $this->info("--- Liste des Utilisateurs & Administrateurs Zanika ---");
+    $users = \App\Models\User::with('shop')->get();
+    if ($users->isEmpty()) {
+        $this->warn("Aucun utilisateur trouvé.");
+        return;
+    }
+
+    $rows = $users->map(fn ($u) => [
+        'ID' => $u->id,
+        'Nom' => $u->name,
+        'Email' => $u->email,
+        'Rôle' => $u->role === \App\Models\User::ROLE_ADMIN ? '⭐ SUPER-ADMIN' : 'Marchand',
+        'Boutique' => $u->shop ? $u->shop->name . ' (' . $u->shop->subdomain . ')' : '(aucune)',
+        'Vérifié' => $u->isVerified() ? 'Oui' : 'Non',
+    ]);
+
+    $this->table(['ID', 'Nom', 'Email', 'Rôle', 'Boutique', 'Vérifié'], $rows);
+})->purpose('Affiche la liste de tous les utilisateurs et leur rôle sur Zanika');
+
+Artisan::command('admin:promote {email}', function (string $email) {
+    $user = \App\Models\User::where('email', trim($email))->first();
+    if (! $user) {
+        $this->error("Utilisateur introuvable avec l'email : {$email}");
+        return 1;
+    }
+
+    $user->update([
+        'role' => \App\Models\User::ROLE_ADMIN,
+        'email_verified_at' => $user->email_verified_at ?: now(),
+        'terms_accepted_at' => $user->terms_accepted_at ?: now(),
+    ]);
+
+    $this->info("✅ Succès : L'utilisateur {$user->name} ({$user->email}) a été promu SUPER-ADMINISTRATEUR !");
+    return 0;
+})->purpose('Promeut un utilisateur existant au rang de Super-Administrateur');
+
+Artisan::command('admin:create {email} {password} {name?}', function (string $email, string $password, ?string $name = null) {
+    $name = $name ?: 'Super Administrateur';
+    $user = \App\Models\User::updateOrCreate(
+        ['email' => trim($email)],
+        [
+            'name' => $name,
+            'password' => \Illuminate\Support\Facades\Hash::make($password),
+            'role' => \App\Models\User::ROLE_ADMIN,
+            'email_verified_at' => now(),
+            'terms_accepted_at' => now(),
+            'country' => 'TG',
+        ]
+    );
+
+    $this->info("✅ Compte Super-Administrateur prêt !");
+    $this->line("Email : {$user->email}");
+    $this->line("Rôle  : {$user->role}");
+    $this->line("Accès direct : " . url('/admin'));
+    return 0;
+})->purpose('Crée ou met à jour un compte Super-Administrateur avec mot de passe');
+

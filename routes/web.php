@@ -107,6 +107,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('/boutiques', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'shops'])->name('admin.shops');
         Route::post('/boutiques/{shop}/suspendre', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'toggleSuspend'])->name('admin.shops.toggle_suspend');
+        Route::post('/boutiques/{shop}/impersonate', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'impersonate'])->name('admin.shops.impersonate');
+        Route::post('/impersonate/quitter', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'leaveImpersonate'])->name('admin.impersonate.leave');
+        Route::get('/abonnements', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'subscriptions'])->name('admin.subscriptions');
+        Route::post('/abonnements/{shop}', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'updateSubscription'])->name('admin.subscriptions.update');
         Route::get('/ia', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'aiUsage'])->name('admin.ai_usage');
         Route::get('/formules', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'plans'])->name('admin.plans');
     });
@@ -139,9 +143,11 @@ Route::get('/migrate-now', function () {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'PlanSeeder', '--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('media:restore-defaults');
+        \App\Models\User::whereIn('email', ['kougnimag@gmail.com', 'kougnima@icloud.com', 'admin@example.test'])
+            ->update(['role' => \App\Models\User::ROLE_ADMIN]);
         return response()->json([
             'status' => 'success',
-            'message' => 'Migrations, plans et médias initialisés avec succès.',
+            'message' => 'Migrations, plans, médias et comptes Super-Admin initialisés avec succès.',
             'output' => \Illuminate\Support\Facades\Artisan::output(),
         ]);
     } catch (\Throwable $e) {

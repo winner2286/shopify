@@ -39,6 +39,20 @@
 <body>
     @include('partials.splash-screen')
     <div id="scroll-progress-bar" class="scroll-progress-bar" aria-hidden="true"></div>
+    @if (session('admin_impersonator_id'))
+        <div style="background:linear-gradient(90deg, #d97706, #b45309);color:#ffffff;padding:.65rem 1rem;font-size:.9rem;font-weight:600;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.3);flex-wrap:wrap;gap:.5rem">
+            <div style="display:flex;align-items:center;gap:.6rem">
+                <x-icon name="shield" size="18" />
+                <span>Mode Support Client Actif : Vous administrez la boutique de <strong>{{ auth()->user()->name }}</strong> ({{ auth()->user()->shop?->name ?: auth()->user()->email }}).</span>
+            </div>
+            <form method="POST" action="{{ route('admin.impersonate.leave') }}" style="margin:0">
+                @csrf
+                <button type="submit" class="btn btn-sm" style="background:#ffffff;color:#92400e;font-weight:700;border:none;padding:.3rem .8rem;border-radius:6px;cursor:pointer">
+                    ← Quitter le mode support & revenir à l'Admin
+                </button>
+            </form>
+        </div>
+    @endif
     @guest
         <div class="top-announcement">
             <span>Plateforme e-commerce tout-en-un pour l'Afrique de l'Ouest • Paiements T-Money & Flooz intégrés • Essai gratuit 14 jours</span>

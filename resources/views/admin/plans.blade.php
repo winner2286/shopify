@@ -10,9 +10,20 @@
             <p style="margin:0;color:var(--text-soft)">Grille tarifaire, limites de produits et quotas d'intelligence artificielle.</p>
         </div>
 
-        <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
-            <x-icon name="arrow-left" size="14" /> Tableau de bord admin
-        </a>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+            <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="zap" size="15" /> Dashboard
+            </a>
+            <a href="{{ route('admin.shops') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="shop" size="15" /> Boutiques
+            </a>
+            <a href="{{ route('admin.subscriptions') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="credit-card" size="15" /> Abonnements & CA
+            </a>
+            <a href="{{ route('admin.ai_usage') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="sparkles" size="15" /> Quotas IA
+            </a>
+        </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:1.5rem">

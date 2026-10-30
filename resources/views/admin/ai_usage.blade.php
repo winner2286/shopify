@@ -10,7 +10,20 @@
             <p style="margin:0;color:var(--text-soft)">Suivi technique et financier des requêtes d'intelligence artificielle (Gemini Flash).</p>
         </div>
 
-        <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm">← Tableau de bord admin</a>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+            <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="zap" size="15" /> Dashboard
+            </a>
+            <a href="{{ route('admin.shops') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="shop" size="15" /> Boutiques
+            </a>
+            <a href="{{ route('admin.subscriptions') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="credit-card" size="15" /> Abonnements & CA
+            </a>
+            <a href="{{ route('admin.plans') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="diamond" size="15" /> Formules
+            </a>
+        </div>
     </div>
 
     <!-- 4 Métriques IA -->

@@ -6,13 +6,27 @@
 <div class="container" style="max-width:1120px;padding:2rem 1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
         <div>
-            <h1 style="font-size:1.8rem;margin:0">Annuaire des Boutiques</h1>
-            <p style="margin:0;color:var(--text-soft)">Gestion, modération et suivi des boutiques hébergées sur Zanika.</p>
+            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
+                <x-icon name="shop" size="24" style="color:var(--brand-1)" />
+                <h1 style="font-size:1.8rem;margin:0">Annuaire des Boutiques</h1>
+            </div>
+            <p style="margin:0;color:var(--text-soft)">Gestion, modération et suivi de toutes les boutiques hébergées sur Zanika.</p>
         </div>
 
-        <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
-            <x-icon name="arrow-left" size="14" /> Tableau de bord admin
-        </a>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+            <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="zap" size="15" /> Dashboard
+            </a>
+            <a href="{{ route('admin.subscriptions') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="credit-card" size="15" /> Abonnements & CA
+            </a>
+            <a href="{{ route('admin.ai_usage') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="sparkles" size="15" /> Quotas IA
+            </a>
+            <a href="{{ route('admin.plans') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="diamond" size="15" /> Formules
+            </a>
+        </div>
     </div>
 
     @if (session('status'))
@@ -76,10 +90,18 @@
                             @endif
                         </td>
                         <td style="padding:1rem;text-align:right">
-                            <div style="display:flex;gap:.5rem;justify-content:flex-end">
+                            <div style="display:flex;gap:.5rem;justify-content:flex-end;align-items:center">
                                 <a href="{{ url('/b/' . $shop->subdomain) }}" target="_blank" class="btn btn-ghost btn-sm" title="Voir la vitrine" style="display:inline-flex;align-items:center">
                                     <x-icon name="eye" size="16" />
                                 </a>
+
+                                <form method="POST" action="{{ route('admin.shops.impersonate', $shop) }}" style="display:inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-ghost btn-sm" title="Prendre la main sur la boutique (Mode Support)" style="display:inline-flex;align-items:center;gap:.3rem;color:var(--brand-1)">
+                                        <x-icon name="user" size="14" />
+                                        <span>Gérer</span>
+                                    </button>
+                                </form>
 
                                 <form method="POST" action="{{ route('admin.shops.toggle_suspend', $shop) }}" data-confirm="Confirmer l'action de modération pour {{ $shop->name }} ?">
                                     @csrf
