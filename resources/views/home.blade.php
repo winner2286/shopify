@@ -842,27 +842,41 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                         @endif
                     </div>
 
+                    @php
+                        $mPrice = $plan->monthly_price ?: ($plan->slug === 'essentiel' ? 10000 : ($plan->slug === 'pro' ? 15000 : 30000));
+                        $maxP = $plan->max_products ?: ($plan->slug === 'essentiel' ? 50 : ($plan->slug === 'pro' ? 300 : 2500));
+                        $storage = $plan->storage_mb ?: ($plan->slug === 'essentiel' ? 2048 : ($plan->slug === 'pro' ? 8192 : 25600));
+                        $credits = $plan->ai_credits ?: ($plan->slug === 'essentiel' ? 80 : ($plan->slug === 'pro' ? 350 : 1200));
+                        $extraFeats = (!empty($plan->features) && count($plan->features) > 0 && !in_array('Tableau de bord simple', $plan->features))
+                            ? $plan->features
+                            : ($plan->slug === 'essentiel'
+                                ? ['Publicité IA : textes & accroches simples', 'Tableau de bord de vente simple', 'Support standard par email']
+                                : ($plan->slug === 'pro'
+                                    ? ['Publicité IA : textes, visuels & scripts TikTok', 'Codes promo & soldes programmées', 'Alertes rupture de stock (WhatsApp/SMS)', 'Statistiques complètes & top ventes', 'Support prioritaire par WhatsApp']
+                                    : ['Campagnes IA sponsorisées complètes', 'Codes promo illimités & ventes privées', 'Gestion multi-collaborateurs (jusqu\'à 3 accès)', 'Export comptable des commandes (Excel / PDF)', 'Connexion de nom de domaine personnalisé', 'Chargé de compte dédié & Support VIP 7j/7']
+                                )
+                            );
+                    @endphp
+
                     <div class="plan-price-wrap">
-                        <span class="plan-price" data-plan-monthly="{{ $plan->monthly_price }}">
-                            {{ $plan->monthly_price ? number_format($plan->monthly_price, 0, ',', ' ') : 'Bientôt' }}
+                        <span class="plan-price" data-plan-monthly="{{ $mPrice }}">
+                            {{ number_format($mPrice, 0, ',', ' ') }}
                         </span>
-                        @if ($plan->monthly_price)
-                            <span class="plan-period">FCFA / mois</span>
-                        @endif
+                        <span class="plan-period">FCFA / mois</span>
                     </div>
 
                     <ul class="plan-features">
                         <li>
                             <x-icon name="check" :size="16" />
-                            <span>Jusqu'à <strong>{{ number_format($plan->max_products, 0, ',', ' ') }} produits</strong> en catalogue</span>
+                            <span>Jusqu'à <strong>{{ number_format($maxP, 0, ',', ' ') }} produits</strong> en catalogue</span>
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />
-                            <span><strong>{{ $plan->storage_mb >= 1024 ? ($plan->storage_mb / 1024).' Go' : $plan->storage_mb.' Mo' }}</strong> d'espace de stockage photos</span>
+                            <span><strong>{{ $storage >= 1024 ? ($storage / 1024).' Go' : $storage.' Mo' }}</strong> d'espace de stockage photos</span>
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />
-                            <span><strong>{{ $plan->ai_credits }} crédits d'IA</strong> par mois</span>
+                            <span><strong>{{ $credits }} crédits d'IA</strong> par mois</span>
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />
@@ -876,7 +890,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                             <x-icon name="check" :size="16" />
                             <span>Boutique physique & itinéraire Maps</span>
                         </li>
-                        @foreach ($plan->features ?? [] as $f)
+                        @foreach ($extraFeats as $f)
                             <li>
                                 <x-icon name="check" :size="16" />
                                 <span>{{ $f }}</span>
