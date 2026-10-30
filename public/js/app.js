@@ -21,6 +21,9 @@
 
   function applyTheme(theme) {
     root.setAttribute('data-theme', theme);
+    if (document.body) {
+      document.body.setAttribute('data-theme', theme);
+    }
     try {
       localStorage.setItem('theme', theme);
     } catch (e) {}
@@ -292,6 +295,9 @@
   root.setAttribute('data-theme', savedTheme);
 
   document.addEventListener('DOMContentLoaded', function () {
+    if (document.body) {
+      document.body.setAttribute('data-theme', getCurrentTheme());
+    }
     syncThemeButtons();
     initConfirmInterceptors();
 

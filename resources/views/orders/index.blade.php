@@ -77,7 +77,46 @@
             </p>
         </div>
     @else
-        <div class="table-wrap" style="margin-bottom:1.5rem">
+        <!-- Vue Cartes Mobiles pour Commandes -->
+        <div class="order-mobile-cards" style="margin-bottom:1.5rem">
+            @foreach ($orders as $order)
+                <div class="order-mobile-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+                        <div style="font-family:monospace;font-weight:700;font-size:1rem;color:var(--brand-1)">
+                            <a href="{{ route('orders.show', $order) }}" style="color:inherit;text-decoration:none">{{ $order->order_number }}</a>
+                        </div>
+                        <span class="badge {{ $order->status === 'delivered' ? 'badge-ok' : ($order->status === 'cancelled' ? 'badge-draft' : 'badge-warn') }}" style="font-size:.74rem;padding:.15rem .5rem;margin:0">
+                            {{ $order->status_label }}
+                        </span>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:.85rem;margin-bottom:.5rem">
+                        <div>
+                            <strong>{{ $order->customer_name }}</strong>
+                            @if ($order->customer_phone)
+                                <span style="color:var(--text-soft);font-size:.8rem"> • {{ $order->customer_phone }}</span>
+                            @endif
+                        </div>
+                        <span style="color:var(--text-soft);font-size:.78rem">{{ $order->created_at->format('d/m H:i') }}</span>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.5rem;border-top:1px solid var(--border)">
+                        <div>
+                            <div style="font-size:1.05rem;font-weight:700;font-family:var(--font-display);color:var(--text)">
+                                {{ number_format($order->total, 0, ',', ' ') }} FCFA
+                            </div>
+                            <small style="font-size:.74rem;color:var(--text-soft)">{{ $order->payment_method_label }} ({{ $order->payment_status_label }})</small>
+                        </div>
+                        <a href="{{ route('orders.show', $order) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem">
+                            Gérer <x-icon name="arrow-right" size="14" />
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <!-- Vue Tableau Tablette / Ordinateur -->
+        <div class="table-wrap orders-desktop-table" style="margin-bottom:1.5rem">
             <table class="table" style="width:100%;min-width:680px;border-collapse:collapse;font-size:.95rem">
                 <thead>
                     <tr style="background:var(--bg-soft);border-bottom:1px solid var(--border);text-align:left">

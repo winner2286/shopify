@@ -14,7 +14,7 @@
             <p style="margin:0;color:var(--text-soft)">Tour de contrôle globale de l'écosystème Zanika : commerçants, boutiques, abonnements et ventes.</p>
         </div>
 
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <div class="admin-nav-pills">
             <a href="{{ route('admin.shops') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
                 <x-icon name="shop" size="15" /> Boutiques
             </a>

@@ -23,7 +23,7 @@
 
     <form method="POST" action="{{ route('products.store') }}" enctype="multipart/form-data" data-once>
         @csrf
-        <div class="dash-grid" style="grid-template-columns: minmax(320px, 2fr) minmax(300px, 1fr);">
+        <div class="product-form-grid">
             
             <!-- Informations principales -->
             <div style="display:flex;flex-direction:column;gap:1.5rem">

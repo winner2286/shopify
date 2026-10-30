@@ -35,8 +35,7 @@
     @auth
         <script src="{{ asset('js/order-notifications.js') }}?v={{ file_exists(public_path('js/order-notifications.js')) ? filemtime(public_path('js/order-notifications.js')) : '1.1' }}" defer></script>
     @endauth
-</head>
-<body>
+<body class="@auth has-bottom-nav @endauth">
     @include('partials.splash-screen')
     <div id="scroll-progress-bar" class="scroll-progress-bar" aria-hidden="true"></div>
     @if (app()->isDownForMaintenance())
@@ -93,9 +92,10 @@
             <nav class="nav-actions" aria-label="Navigation principale">
                 @auth
                     @if (auth()->user()->isAdmin())
-                        <a id="nav-admin" href="{{ route('admin.dashboard') }}" class="btn btn-sm" style="background:linear-gradient(135deg, #ef4444, #dc2626);color:#ffffff;font-weight:700;display:inline-flex;align-items:center;gap:.35rem;border:none;box-shadow:0 2px 8px rgba(239, 68, 68, 0.4);margin-right:.25rem">
+                        <a id="nav-admin" href="{{ route('admin.dashboard') }}" class="btn btn-sm {{ request()->routeIs('admin.*') ? 'mobile-hide-on-admin' : '' }}" style="background:linear-gradient(135deg, #ef4444, #dc2626);color:#ffffff;font-weight:700;display:inline-flex;align-items:center;gap:.35rem;border:none;box-shadow:0 2px 8px rgba(239, 68, 68, 0.4);margin-right:.25rem">
                             <x-icon name="shield" :size="15" />
-                            <span>⭐ Cockpit Super-Admin</span>
+                            <span class="nav-admin-full">⭐ Cockpit Super-Admin</span>
+                            <span class="nav-admin-short">⭐ Cockpit</span>
                         </a>
                     @endif
                     @if (auth()->user()->shop && auth()->user()->shop->subdomain)
@@ -140,7 +140,7 @@
         <nav class="bottom-nav" aria-label="Navigation mobile">
             <div class="bottom-nav-inner">
                 @if (auth()->user()->isAdmin())
-                    <a href="{{ route('admin.dashboard') }}" class="bottom-nav-item {{ request()->routeIs('admin.*') ? 'active' : '' }}" style="color:#ef4444">
+                    <a href="{{ route('admin.dashboard') }}" class="bottom-nav-item admin-cockpit-link {{ request()->routeIs('admin.*') ? 'active' : '' }}">
                         <span class="icon" aria-hidden="true"><x-icon name="shield" :size="20" /></span>
                         <span>Cockpit</span>
                     </a>

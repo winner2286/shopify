@@ -13,7 +13,7 @@
             <p style="margin:0;color:var(--text-soft)">Supervision des formules souscrites, des essais gratuits 14 jours et des encaissements de la plateforme.</p>
         </div>
 
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <div class="admin-nav-pills">
             <a href="{{ route('admin.dashboard') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
                 <x-icon name="zap" size="15" /> Dashboard
             </a>

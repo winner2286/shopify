@@ -123,11 +123,11 @@
                                 <span class="format-radio-dot"></span>
                             </div>
                             <div class="format-pick-info">
-                                <div style="display:flex;align-items:center;gap:.35rem">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem">
                                     <strong style="font-size:.9rem;color:var(--text)">Format MP4</strong>
-                                    <span class="badge badge-ok" style="font-size:.65rem;padding:.1rem .4rem">Top WhatsApp</span>
+                                    <span class="badge badge-ok" style="font-size:.65rem;padding:.12rem .45rem;flex-shrink:0;white-space:nowrap">Top WhatsApp</span>
                                 </div>
-                                <small style="font-size:.74rem;color:var(--text-soft);display:block;margin-top:.15rem">Recommandé TikTok, WhatsApp & Reels</small>
+                                <small style="font-size:.74rem;color:var(--text-soft);display:block;margin-top:.2rem">Recommandé TikTok, WhatsApp & Reels</small>
                             </div>
                         </button>
 
@@ -136,11 +136,11 @@
                                 <span class="format-radio-dot"></span>
                             </div>
                             <div class="format-pick-info">
-                                <div style="display:flex;align-items:center;gap:.35rem">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem">
                                     <strong style="font-size:.9rem;color:var(--text)">Format WebM</strong>
-                                    <span class="badge badge-draft" style="font-size:.65rem;padding:.1rem .4rem">Ultra-léger</span>
+                                    <span class="badge badge-draft" style="font-size:.65rem;padding:.12rem .45rem;flex-shrink:0;white-space:nowrap">Ultra-léger</span>
                                 </div>
-                                <small style="font-size:.74rem;color:var(--text-soft);display:block;margin-top:.15rem">Plus compressé pour les navigateurs</small>
+                                <small style="font-size:.74rem;color:var(--text-soft);display:block;margin-top:.2rem">Plus compressé pour les navigateurs</small>
                             </div>
                         </button>
                     </div>
@@ -197,9 +197,9 @@
                     <div class="script-cards-grid">
                         @foreach ($ad->generated_scripts as $idx => $script)
                             <div class="script-pick-card {{ $idx === 0 ? 'selected' : '' }}" data-script-choice="{{ $idx }}">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">
-                                    <strong style="font-size:.92rem">{{ $script['title'] }}</strong>
-                                    <span class="badge badge-ok" style="font-size:.75rem">20-25 sec</span>
+                                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.6rem;margin-bottom:.35rem">
+                                    <strong style="font-size:.92rem;flex:1;min-width:0;line-height:1.35">{{ $script['title'] }}</strong>
+                                    <span class="badge badge-ok" style="font-size:.72rem;flex-shrink:0;white-space:nowrap;padding:.15rem .45rem">20-25 sec</span>
                                 </div>
                                 <div style="font-size:.82rem;color:var(--text-soft);line-height:1.4">
                                     {{ $script['concept'] }}
@@ -1066,15 +1066,54 @@
         box-shadow: 0 25px 60px rgba(0,0,0,0.3);
     }
 
+    .btn-format-pick {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .75rem .9rem;
+        background: var(--surface);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        text-align: left;
+        transition: all .2s ease;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .format-pick-info {
+        flex: 1;
+        min-width: 0;
+    }
+
     @media (max-width: 860px) {
         .studio-grid {
             grid-template-columns: 1fr;
+            gap: 1.5rem;
         }
         .studio-player-col {
-            max-width: 320px;
+            max-width: 440px;
+            width: 100%;
+            margin: 0 auto;
         }
         .theme-chips-grid, .audio-chips-grid {
             grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .format-choice-grid {
+            grid-template-columns: 1fr !important;
+            gap: .65rem;
+        }
+        .studio-player-col {
+            max-width: 100%;
+        }
+        .settings-box {
+            padding: 1rem .9rem;
+        }
+        .script-pick-card {
+            padding: .85rem .9rem;
         }
     }
 </style>

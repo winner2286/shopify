@@ -65,8 +65,47 @@
                 Aucun produit ne correspond à votre recherche.<br>
                 <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm" style="margin-top:1rem">+ Créer votre premier produit</a>
             </div>
-        @else
-            <div class="table-wrap">
+            <!-- Vue Cartes Mobiles pour Produits -->
+            <div class="product-mobile-cards">
+                @foreach ($products as $prod)
+                    <div class="product-mobile-card">
+                        @php $thumb = $prod->primaryImage?->thumbnail_url ?? $prod->images->first()?->thumbnail_url; @endphp
+                        @if ($thumb)
+                            <img src="{{ $thumb }}" alt="{{ $prod->title }}" class="product-mobile-card-img" loading="lazy" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $prod->id }}'">
+                        @else
+                            <div class="product-mobile-card-img" style="display:grid;place-items:center;color:var(--text-faint)">
+                                <x-icon name="camera" size="20" />
+                            </div>
+                        @endif
+                        <div class="product-mobile-card-info">
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;margin-bottom:.25rem">
+                                <strong style="font-size:.95rem;line-height:1.3;display:block">
+                                    <a href="{{ route('products.edit', $prod) }}" style="color:inherit;text-decoration:none">{{ $prod->title }}</a>
+                                </strong>
+                                <span class="badge-status {{ $prod->status === 'active' ? 'badge-active' : 'badge-hidden' }}" style="flex-shrink:0;font-size:.7rem">
+                                    {{ $prod->status === 'active' ? 'Actif' : 'Masqué' }}
+                                </span>
+                            </div>
+                            <div style="font-size:.8rem;color:var(--text-soft);margin-bottom:.35rem">
+                                @if ($prod->categories->isNotEmpty())
+                                    {{ $prod->categories->pluck('name')->join(', ') }}
+                                @else
+                                    <em>Non classé</em>
+                                @endif
+                            </div>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">
+                                <div>
+                                    <strong style="color:var(--brand-1);font-size:.95rem">{{ number_format($prod->price, 0, ',', ' ') }} FCFA</strong>
+                                </div>
+                                <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm" style="padding:.25rem .65rem;font-size:.8rem">Modifier</a>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <!-- Vue Tableau Tablette / Ordinateur -->
+            <div class="table-wrap products-desktop-table">
                 <table class="table">
                     <thead>
                         <tr>

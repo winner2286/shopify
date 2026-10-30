@@ -300,6 +300,7 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   display: inline-flex; align-items: center; gap: .5rem;
   padding: .35rem .85rem; border: 1px solid var(--border); border-radius: 999px;
   background: var(--bg-soft); font-size: .85rem; font-weight: 550; color: var(--text);
+  white-space: nowrap; flex-shrink: 0;
   transition: transform .2s;
 }
 .badge:hover { transform: translateY(-1px); }
@@ -1282,25 +1283,216 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 .svg-icon { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; flex-shrink: 0; line-height: 1; }
 .svg-icon svg { width: 1em; height: 1em; }
 
-/* Mobile bottom nav */
+/* Mobile bottom nav - Haute ergonomie tactile & Support complet Thème Clair / Thème Sombre */
+:root,
+:root[data-theme='dark'],
+[data-theme='dark'] {
+  --bottom-nav-bg: #0d0d12;
+  --bottom-nav-border: rgba(255, 255, 255, 0.08);
+  --bottom-nav-shadow: 0 -4px 25px rgba(0, 0, 0, 0.5);
+  --bottom-nav-text: #94a3b8;
+  --bottom-nav-active: #f43f5e;
+}
+
+:root[data-theme='light'],
+[data-theme='light'] {
+  --bottom-nav-bg: #ffffff;
+  --bottom-nav-border: rgba(15, 23, 42, 0.09);
+  --bottom-nav-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08);
+  --bottom-nav-text: #64748b;
+  --bottom-nav-active: #9e1b32;
+}
+
 .bottom-nav {
-  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
-  height: 64px; background: #0e0e13; border-top: 1px solid var(--border);
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  height: calc(58px + env(safe-area-inset-bottom, 0px));
+  background: var(--bottom-nav-bg) !important;
+  border-top: 1px solid var(--bottom-nav-border) !important;
+  box-shadow: var(--bottom-nav-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
-.bottom-nav-inner { display: flex; height: 100%; justify-content: space-around; align-items: center; }
+
+/* Rendu explicite Thème Clair pour la barre mobile (Fond Blanc Pur & Accents Bordeaux) */
+html[data-theme='light'] .bottom-nav,
+body[data-theme='light'] .bottom-nav,
+[data-theme='light'] .bottom-nav {
+  background: #ffffff !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.09) !important;
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.07) !important;
+}
+
+.bottom-nav-inner {
+  display: flex;
+  height: 58px;
+  max-width: 540px;
+  margin: 0 auto;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
 .bottom-nav-item {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  font-size: .75rem; font-weight: 500; color: var(--text-soft); gap: 3px; padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  font-size: .65rem;
+  font-weight: 500;
+  color: var(--bottom-nav-text) !important;
+  gap: 2px;
+  padding: 4px 1px;
+  text-decoration: none;
+  transition: color 0.15s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-.bottom-nav-item.active { color: #f43f5e; font-weight: 600; }
-.bottom-nav-item .icon svg { width: 22px; height: 22px; }
+
+.bottom-nav-item:hover,
+.bottom-nav-item:focus {
+  color: var(--text) !important;
+}
+
+html[data-theme='light'] .bottom-nav-item,
+body[data-theme='light'] .bottom-nav-item,
+[data-theme='light'] .bottom-nav-item {
+  color: #64748b !important;
+}
+
+html[data-theme='light'] .bottom-nav-item:hover,
+html[data-theme='light'] .bottom-nav-item:focus,
+[data-theme='light'] .bottom-nav-item:hover,
+[data-theme='light'] .bottom-nav-item:focus {
+  color: #0f172a !important;
+}
+
+.bottom-nav-item.active {
+  color: var(--bottom-nav-active) !important;
+  font-weight: 700;
+}
+
+html[data-theme='light'] .bottom-nav-item.active,
+body[data-theme='light'] .bottom-nav-item.active,
+[data-theme='light'] .bottom-nav-item.active {
+  color: #9e1b32 !important;
+  font-weight: 700;
+}
+
+.bottom-nav-item.admin-cockpit-link {
+  color: #ef4444 !important;
+  font-weight: 600;
+}
+
+.bottom-nav-item.admin-cockpit-link.active {
+  color: #dc2626 !important;
+  font-weight: 800;
+}
+
+html[data-theme='light'] .bottom-nav-item.admin-cockpit-link,
+[data-theme='light'] .bottom-nav-item.admin-cockpit-link {
+  color: #dc2626 !important;
+}
+
+.bottom-nav-item .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+}
+
+.bottom-nav-item .icon svg {
+  width: 19px;
+  height: 19px;
+  transition: transform .15s ease;
+}
+
+.bottom-nav-item:active .icon svg {
+  transform: scale(0.9);
+}
+
+.bottom-nav-item span:not(.icon) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.1;
+  font-size: .63rem;
+  letter-spacing: -0.01em;
+}
+
+/* Espacement garanti sous le contenu pour la barre mobile */
+body.has-bottom-nav,
+body:has(.bottom-nav) {
+  padding-bottom: calc(75px + env(safe-area-inset-bottom, 16px)) !important;
+}
+
+/* Grilles Responsive Fluides */
+.dash-grid,
+.product-form-grid,
+.categories-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 900px) {
+  .dash-grid {
+    grid-template-columns: minmax(300px, 1fr) minmax(300px, 2fr);
+  }
+  .product-form-grid {
+    grid-template-columns: minmax(320px, 2fr) minmax(300px, 1fr);
+  }
+  .categories-layout {
+    grid-template-columns: 340px 1fr;
+  }
+}
+
+/* Navigation Super-Admin & Onglets */
+.admin-nav-pills {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+}
+
+.nav-admin-short { display: none; }
+@media (max-width: 640px) {
+  .nav-admin-full { display: none; }
+  .nav-admin-short { display: inline; }
+}
+
+/* Cartes Responsive Mobiles : Catégories, Produits & Commandes */
+.category-mobile-cards,
+.product-mobile-cards,
+.order-mobile-cards {
+  display: none;
+}
+
+.categories-desktop-table,
+.products-desktop-table,
+.orders-desktop-table {
+  display: block;
+}
 
 @media (max-width: 768px) {
   .nav-links { display: none; }
-  .bottom-nav { display: block; }
-  body:has(.bottom-nav) { padding-bottom: 74px; }
+  .bottom-nav { display: block !important; }
   
-  /* Cacher les liens du header pour les marchands connectés sur mobile (présents dans la bottom-nav) */
+  /* Cacher les liens du header pour les marchands connectés sur mobile */
   .nav-actions #nav-dashboard,
   .nav-actions #nav-orders,
   .nav-actions #nav-products,
@@ -1309,6 +1501,73 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   .nav-actions #nav-analytics,
   .nav-actions #nav-shop {
     display: none;
+  }
+
+  .mobile-hide-on-admin {
+    display: none !important;
+  }
+
+  /* Pills Admin sur mobile */
+  .admin-nav-pills {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: .5rem !important;
+  }
+  .admin-nav-pills .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: .5rem .5rem !important;
+    font-size: .8rem !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Catégories : Passage automatique de tableau à cartes fluides */
+  .categories-desktop-table { display: none !important; }
+  .category-mobile-cards { display: flex !important; flex-direction: column; gap: .75rem; }
+  .category-mobile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.1rem;
+    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Produits : Cartes tactiles haute visibilité */
+  .products-desktop-table { display: none !important; }
+  .product-mobile-cards { display: flex !important; flex-direction: column; gap: .75rem; }
+  .product-mobile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .95rem 1rem;
+    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    gap: .85rem;
+    align-items: center;
+  }
+
+  /* Commandes : Cartes marchands fluides */
+  .orders-desktop-table { display: none !important; }
+  .order-mobile-cards { display: flex !important; flex-direction: column; gap: .85rem; }
+  .order-mobile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.15rem;
+    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Thème Clair pour cartes mobiles */
+  [data-theme='light'] .category-mobile-card,
+  [data-theme='light'] .product-mobile-card,
+  [data-theme='light'] .order-mobile-card {
+    background: #ffffff !important;
+    border-color: rgba(15, 23, 42, 0.09) !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
   }
 }
 

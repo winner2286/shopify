@@ -35,7 +35,7 @@
         @csrf
         @method('PUT')
         
-        <div class="dash-grid" style="grid-template-columns: minmax(320px, 2fr) minmax(300px, 1fr);">
+        <div class="product-form-grid">
             
             <div style="display:flex;flex-direction:column;gap:1.5rem">
                 <!-- Détails produit -->

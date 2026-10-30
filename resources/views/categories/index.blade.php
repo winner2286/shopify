@@ -24,7 +24,7 @@
         </div>
     @endif
 
-    <div class="dash-grid" style="grid-template-columns: minmax(300px, 1fr) minmax(300px, 2fr);">
+    <div class="categories-layout">
         <!-- Formulaire création de catégorie -->
         <section class="card panel">
             <h3>Ajouter une catégorie</h3>
@@ -63,7 +63,33 @@
                     Ajoutez vos catégories pour organiser votre boutique.
                 </div>
             @else
-                <div class="table-wrap">
+                <!-- Vue cartes sur mobile (évite tout défilement horizontal et tronquage) -->
+                <div class="category-mobile-cards">
+                    @foreach ($categories as $cat)
+                        <div class="category-mobile-card">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem">
+                                <div style="display:flex;align-items:center;gap:.4rem;min-width:0">
+                                    <span class="pill" style="font-size:.7rem;padding:.15rem .45rem;flex-shrink:0">#{{ $cat->display_order }}</span>
+                                    <strong style="font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $cat->name }}</strong>
+                                </div>
+                                <span class="badge-status {{ $cat->is_visible ? 'badge-active' : 'badge-hidden' }}" style="flex-shrink:0">
+                                    {{ $cat->is_visible ? 'Visible' : 'Masquée' }}
+                                </span>
+                            </div>
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding-top:.45rem;border-top:1px solid var(--border)">
+                                <span style="font-size:.82rem;color:var(--text-soft)">{{ $cat->products_count }} produit(s)</span>
+                                <form method="POST" action="{{ route('categories.destroy', $cat) }}" style="margin:0" data-confirm="Supprimer cette catégorie ? Les produits resteront disponibles.">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);padding:.25rem .5rem">Supprimer</button>
+                                </form>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <!-- Vue tableau sur tablette et ordinateur -->
+                <div class="table-wrap categories-desktop-table">
                     <table class="table">
                         <thead>
                             <tr>
@@ -82,7 +108,7 @@
                                     <td>{{ $cat->products_count }} produit(s)</td>
                                     <td>
                                         <span class="badge-status {{ $cat->is_visible ? 'badge-active' : 'badge-hidden' }}">
-                                            {{ $cat->is_visible ? 'Visible' : 'Masquée' }}
+                                             {{ $cat->is_visible ? 'Visible' : 'Masquée' }}
                                         </span>
                                     </td>
                                     <td style="text-align:right;">

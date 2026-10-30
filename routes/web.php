@@ -185,3 +185,12 @@ Route::get('/api/tts', [\App\Http\Controllers\MediaController::class, 'tts'])
     ->name('api.tts');
 
 
+
+// Route dev-login
+if (app()->environment('local')) {
+    Route::get('/dev-login', function () {
+        $u = \App\Models\User::where('email', 'kougnima@icloud.com')->first() ?? \App\Models\User::first();
+        if ($u) { \Illuminate\Support\Facades\Auth::login($u); return redirect()->route('admin.dashboard'); }
+        return 'No user';
+    });
+}
