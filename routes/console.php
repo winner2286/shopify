@@ -226,3 +226,54 @@ Artisan::command('admin:create {email} {password} {name?}', function (string $em
     return 0;
 })->purpose('Crée ou met à jour un compte Super-Administrateur avec mot de passe');
 
+Artisan::command('admin:maintenance {action=status : on, off ou status} {--message= : Message d\'information} {--time= : Durée estimée}', function (string $action = 'status') {
+    $action = strtolower($action);
+    if ($action === 'on' || $action === 'down') {
+        $secret = 'zanika-admin-bypass';
+        $message = (string) ($this->option('message') ?: 'Nous effectuons actuellement une amélioration technique planifiée de la plateforme pour optimiser la rapidité et la fiabilité de vos boutiques.');
+        $time = (string) $this->option('time');
+
+        Artisan::call('down', [
+            '--secret' => $secret,
+            '--render' => 'errors.503',
+        ]);
+
+        $payload = [
+            'active' => true,
+            'message' => $message,
+            'estimated_time' => $time,
+            'activated_at' => now()->format('d/m/Y à H:i'),
+            'activated_by' => 'Console CLI',
+            'secret' => $secret,
+        ];
+        @file_put_contents(storage_path('framework/maintenance_info.json'), json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        $this->warn("🔴 La plateforme Zanika est maintenant en MODE MAINTENANCE.");
+        $this->line("Message affiché : {$message}");
+        $this->info("Lien secret de contournement : " . url('/' . $secret));
+        return 0;
+    } elseif ($action === 'off' || $action === 'up') {
+        Artisan::call('up');
+        if (file_exists(storage_path('framework/maintenance_info.json'))) {
+            @unlink(storage_path('framework/maintenance_info.json'));
+        }
+        $this->info("🟢 La plateforme Zanika est à nouveau EN LIGNE (Accès public rétabli).");
+        return 0;
+    } else {
+        $isDown = app()->isDownForMaintenance();
+        if ($isDown) {
+            $this->warn("🔴 Statut : MODE MAINTENANCE ACTIF");
+            $infoFile = storage_path('framework/maintenance_info.json');
+            if (file_exists($infoFile)) {
+                $info = json_decode(file_get_contents($infoFile), true) ?: [];
+                $this->line("Activé le : " . ($info['activated_at'] ?? 'inconnu'));
+                $this->line("Message   : " . ($info['message'] ?? ''));
+                $this->info("Bypass    : " . url('/' . ($info['secret'] ?? 'zanika-admin-bypass')));
+            }
+        } else {
+            $this->info("🟢 Statut : EN LIGNE (Fonctionnement normal)");
+        }
+        return 0;
+    }
+})->purpose('Contrôle ou affiche le statut du mode maintenance de la plateforme');
+

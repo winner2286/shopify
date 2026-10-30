@@ -11,6 +11,7 @@ use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 
 use App\Models\Subscription;
 
@@ -49,10 +50,13 @@ class PlatformAdminController extends Controller
         $recentShops = Shop::with(['owner', 'subscription.plan'])->latest()->take(6)->get();
         $recentOrders = Order::withoutGlobalScopes()->with(['shop'])->latest()->take(6)->get();
 
+        $isMaintenanceActive = app()->isDownForMaintenance();
+
         return view('admin.dashboard', compact(
             'totalMerchants', 'totalShops', 'publishedShops', 'totalProducts',
             'totalOrders', 'totalGmv', 'aiCallsCount', 'aiTotalCostFcfa',
-            'aiTotalTokens', 'recentShops', 'recentOrders', 'activeSubsCount', 'trialSubsCount'
+            'aiTotalTokens', 'recentShops', 'recentOrders', 'activeSubsCount', 'trialSubsCount',
+            'isMaintenanceActive'
         ));
     }
 
@@ -257,5 +261,63 @@ class PlatformAdminController extends Controller
         }
 
         return back()->with('status', "L'abonnement de la boutique « {$shop->name} » a été mis à jour avec succès.");
+    }
+
+    /**
+     * J-07 : Centre de contrôle du Mode Maintenance de toute la plateforme
+     */
+    public function maintenance(Request $request)
+    {
+        $this->checkAdmin($request);
+
+        $isDown = app()->isDownForMaintenance();
+        $infoFile = storage_path('framework/maintenance_info.json');
+        $info = file_exists($infoFile) ? json_decode(file_get_contents($infoFile), true) : [];
+        $secret = $info['secret'] ?? 'zanika-admin-bypass';
+
+        return view('admin.maintenance', compact('isDown', 'info', 'secret'));
+    }
+
+    /**
+     * Basculer l'état du mode maintenance (Artisan down / up)
+     */
+    public function toggleMaintenance(Request $request): RedirectResponse
+    {
+        $this->checkAdmin($request);
+
+        $action = $request->input('action'); // 'activate' ou 'deactivate'
+
+        if ($action === 'activate') {
+            $secret = 'zanika-admin-bypass';
+            $message = trim((string) $request->input('message', ''));
+            if (empty($message)) {
+                $message = 'Nous effectuons actuellement une amélioration technique planifiée de la plateforme pour optimiser la rapidité et la fiabilité de vos boutiques.';
+            }
+            $estimatedTime = trim((string) $request->input('estimated_time', ''));
+
+            Artisan::call('down', [
+                '--secret' => $secret,
+                '--render' => 'errors.503',
+            ]);
+
+            $payload = [
+                'active' => true,
+                'message' => $message,
+                'estimated_time' => $estimatedTime,
+                'activated_at' => now()->format('d/m/Y à H:i'),
+                'activated_by' => $request->user()->name . ' (' . $request->user()->email . ')',
+                'secret' => $secret,
+            ];
+            @file_put_contents(storage_path('framework/maintenance_info.json'), json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            return back()->with('status', "🔴 Le site est maintenant en MODE MAINTENANCE. Les clients et commerçants voient la page 503 personnalisée. Vous conservez l'accès administrateur et le lien secret.");
+        } else {
+            Artisan::call('up');
+            if (file_exists(storage_path('framework/maintenance_info.json'))) {
+                @unlink(storage_path('framework/maintenance_info.json'));
+            }
+
+            return back()->with('status', "🟢 Le site a été REMIS EN LIGNE avec succès. La plateforme et toutes les boutiques sont à nouveau accessibles au public.");
+        }
     }
 }

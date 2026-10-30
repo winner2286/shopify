@@ -39,6 +39,17 @@
 <body>
     @include('partials.splash-screen')
     <div id="scroll-progress-bar" class="scroll-progress-bar" aria-hidden="true"></div>
+    @if (app()->isDownForMaintenance())
+        <div style="background:linear-gradient(90deg, #dc2626, #991b1b);color:#ffffff;padding:.55rem 1rem;font-size:.88rem;font-weight:700;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:99998;box-shadow:0 4px 12px rgba(0,0,0,0.3);flex-wrap:wrap;gap:.5rem">
+            <div style="display:flex;align-items:center;gap:.6rem">
+                <span style="display:inline-block;width:9px;height:9px;background:#ffffff;border-radius:50%;box-shadow:0 0 8px #ffffff"></span>
+                <span>🔴 ATTENTION : Le site est en MODE MAINTENANCE. L'accès public est restreint à la page 503.</span>
+            </div>
+            <a href="{{ route('admin.maintenance') }}" class="btn btn-sm" style="background:#ffffff;color:#991b1b;font-weight:700;border:none;padding:.25rem .75rem;border-radius:6px;text-decoration:none">
+                Gérer la maintenance
+            </a>
+        </div>
+    @endif
     @if (session('admin_impersonator_id'))
         <div style="background:linear-gradient(90deg, #d97706, #b45309);color:#ffffff;padding:.65rem 1rem;font-size:.9rem;font-weight:600;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.3);flex-wrap:wrap;gap:.5rem">
             <div style="display:flex;align-items:center;gap:.6rem">

@@ -23,6 +23,9 @@
             <a href="{{ route('admin.ai_usage') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
                 <x-icon name="sparkles" size="15" /> Quotas IA
             </a>
+            <a href="{{ route('admin.maintenance') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="wrench" size="15" /> Maintenance
+            </a>
         </div>
     </div>
 

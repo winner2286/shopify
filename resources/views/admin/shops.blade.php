@@ -26,6 +26,9 @@
             <a href="{{ route('admin.plans') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
                 <x-icon name="diamond" size="15" /> Formules
             </a>
+            <a href="{{ route('admin.maintenance') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+                <x-icon name="wrench" size="15" /> Maintenance
+            </a>
         </div>
     </div>
 

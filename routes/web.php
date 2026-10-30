@@ -113,6 +113,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/abonnements/{shop}', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'updateSubscription'])->name('admin.subscriptions.update');
         Route::get('/ia', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'aiUsage'])->name('admin.ai_usage');
         Route::get('/formules', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'plans'])->name('admin.plans');
+        Route::get('/maintenance', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'maintenance'])->name('admin.maintenance');
+        Route::post('/maintenance', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'toggleMaintenance'])->name('admin.maintenance.toggle');
     });
 });
 
