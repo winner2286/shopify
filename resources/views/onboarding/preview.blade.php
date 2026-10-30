@@ -90,8 +90,11 @@
             Touchez le logo qui correspond le mieux à l'image de marque de votre commerce.
         </p>
 
-        @php $chosenLogoId = $shop->onboarding_data['chosen_logo']['id'] ?? 1; @endphp
-        <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));gap:1rem;">
+        @php 
+            $hasCustomLogo = !empty($shop->logo_path);
+            $chosenLogoId = $hasCustomLogo ? null : ($shop->onboarding_data['chosen_logo']['id'] ?? 1); 
+        @endphp
+        <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));gap:1rem;margin-bottom:1.5rem">
             @foreach ($logos as $logo)
                 <form method="POST" action="{{ route('onboarding.select_logo') }}">
                     @csrf
@@ -111,6 +114,35 @@
                     </button>
                 </form>
             @endforeach
+        </div>
+
+        <!-- Option Alternative : Téléverser son propre logo -->
+        <div style="background:var(--bg-soft);border:1px dashed var(--border);border-radius:14px;padding:1.25rem 1.4rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <strong style="font-size:1rem;display:flex;align-items:center;gap:.5rem">
+                        <x-icon name="upload" size="18" style="color:var(--store-primary)" /> Vous possédez déjà votre propre logo ?
+                    </strong>
+                    <p style="margin:.25rem 0 0;color:var(--text-soft);font-size:.85rem">
+                        Importez votre propre fichier (PNG, JPG, WebP ou SVG). Il remplacera les propositions générées.
+                    </p>
+                </div>
+
+                @if ($hasCustomLogo)
+                    <div style="display:flex;align-items:center;gap:.75rem">
+                        <img src="{{ asset('storage/' . $shop->logo_path) }}" alt="" style="width:48px;height:48px;border-radius:12px;object-fit:cover;border:2px solid #10b981">
+                        <span style="font-size:.85rem;color:#10b981;font-weight:700">✓ Logo personnalisé actif</span>
+                    </div>
+                @endif
+            </div>
+
+            <form method="POST" action="{{ route('onboarding.upload_logo') }}" enctype="multipart/form-data" style="margin-top:1rem;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+                @csrf
+                <input type="file" name="custom_logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" required class="input" style="max-width:320px;padding:.4rem">
+                <button type="submit" class="btn btn-ghost" style="border:1px solid var(--border)">
+                    Importer mon logo
+                </button>
+            </form>
         </div>
     </section>
 

@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/onboarding/apercu', [OnboardingController::class, 'preview'])->name('onboarding.preview');
     Route::post('/onboarding/logo', [OnboardingController::class, 'selectLogo'])->name('onboarding.select_logo');
+    Route::post('/onboarding/logo/upload', [OnboardingController::class, 'uploadCustomLogo'])->name('onboarding.upload_logo');
 
     // Module C - Catalogue & Stock
     Route::resource('produits', ProductController::class)

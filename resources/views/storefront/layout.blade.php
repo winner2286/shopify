@@ -14,14 +14,14 @@
     <meta property="og:title" content="@yield('title', $shop->name . ' : Boutique officielle')">
     <meta property="og:description" content="@yield('description', $shop->description ?: 'Découvrez notre sélection de produits sur notre boutique en ligne. Livraison rapide et paiement sécurisé.')">
     @if ($shop->logo_path)
-        <meta property="og:image" content="{{ asset($shop->logo_path) }}">
+        <meta property="og:image" content="{{ asset('storage/' . $shop->logo_path) }}">
     @else
         <meta property="og:image" content="{{ url('/api/placeholder-image?title=' . urlencode($shop->name) . '&color=' . urlencode($shop->brand_color ?: '#10b981')) }}">
     @endif
 
     <!-- Icônes pour Apple iOS (iPhone/iPad) & Android -->
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ $shop->logo_path ? asset($shop->logo_path) : asset('apple-touch-icon.png') }}?v=3">
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ $shop->logo_path ? asset($shop->logo_path) : asset('apple-touch-icon.png') }}?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ $shop->logo_path ? asset('storage/' . $shop->logo_path) : asset('apple-touch-icon.png') }}?v=3">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ $shop->logo_path ? asset('storage/' . $shop->logo_path) : asset('apple-touch-icon.png') }}?v=3">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=3">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=3">
     <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=3">
@@ -818,10 +818,10 @@
         <div class="container store-header-inner">
             <a href="{{ url('/b/' . $shop->subdomain) }}" class="store-brand">
                 <span class="store-logo">
-                    @if (!empty($shop->onboarding_data['chosen_logo']['svg']))
-                        {!! str_contains($shop->onboarding_data['chosen_logo']['svg'], 'width=') ? $shop->onboarding_data['chosen_logo']['svg'] : str_replace('<svg ', '<svg width="40" height="40" style="width:100%;height:100%;max-width:40px;max-height:40px;display:block;" ', $shop->onboarding_data['chosen_logo']['svg']) !!}
-                    @elseif ($shop->logo_path)
+                    @if ($shop->logo_path)
                         <img src="{{ asset('storage/' . $shop->logo_path) }}" alt="{{ $shop->name }}" style="width:100%;height:100%;object-fit:cover;display:block">
+                    @elseif (!empty($shop->onboarding_data['chosen_logo']['svg']))
+                        {!! str_contains($shop->onboarding_data['chosen_logo']['svg'], 'width=') ? $shop->onboarding_data['chosen_logo']['svg'] : str_replace('<svg ', '<svg width="40" height="40" style="width:100%;height:100%;max-width:40px;max-height:40px;display:block;" ', $shop->onboarding_data['chosen_logo']['svg']) !!}
                     @else
                         {{ strtoupper(substr($shop->name ?: 'B', 0, 1)) }}
                     @endif

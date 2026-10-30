@@ -203,7 +203,7 @@ class OnboardingController extends Controller
     }
 
     /**
-     * Sélection du logo préféré
+     * Sélection du logo préféré généré par l'IA
      */
     public function selectLogo(Request $request): RedirectResponse
     {
@@ -216,9 +216,53 @@ class OnboardingController extends Controller
         if ($chosen) {
             $data = $shop->onboarding_data ?? [];
             $data['chosen_logo'] = $chosen;
-            $shop->update(['onboarding_data' => $data]);
+            
+            // Si un logo customisé existait sur le disque, on l'efface pour activer le logo IA sélectionné
+            if ($shop->logo_path && Storage::disk('public')->exists($shop->logo_path)) {
+                Storage::disk('public')->delete($shop->logo_path);
+            }
+
+            $shop->update([
+                'logo_path' => null,
+                'onboarding_data' => $data,
+            ]);
         }
 
         return back()->with('status', 'Logo appliqué à votre boutique.');
+    }
+
+    /**
+     * Téléversement direct du logo propre au commerçant (Fichier image personnalisé)
+     */
+    public function uploadCustomLogo(Request $request): RedirectResponse
+    {
+        $shop = $request->user()->shop;
+
+        $request->validate([
+            'custom_logo' => ['required', 'image', 'mimes:jpeg,png,webp,jpg,svg', 'max:5120'],
+        ], [
+            'custom_logo.required' => 'Veuillez sélectionner votre fichier de logo.',
+            'custom_logo.image' => 'Le fichier sélectionné doit être une image (PNG, JPG, WebP ou SVG).',
+            'custom_logo.max' => 'La taille maximale autorisée est de 5 Mo.',
+        ]);
+
+        $imageService = app(\App\Services\ImageService::class);
+        $processed = $imageService->processAndStore($request->file('custom_logo'), "shops/{$shop->id}/logo");
+
+        if (!empty($processed['path'])) {
+            if ($shop->logo_path && Storage::disk('public')->exists($shop->logo_path)) {
+                Storage::disk('public')->delete($shop->logo_path);
+            }
+
+            $data = $shop->onboarding_data ?? [];
+            unset($data['chosen_logo']);
+
+            $shop->update([
+                'logo_path' => $processed['path'],
+                'onboarding_data' => $data,
+            ]);
+        }
+
+        return back()->with('status', 'Votre propre logo a été importé et appliqué avec succès à votre boutique !');
     }
 }
