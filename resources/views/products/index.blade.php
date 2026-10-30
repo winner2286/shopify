@@ -25,6 +25,35 @@
         <div class="alert alert-ok" role="status">{{ session('status') }}</div>
     @endif
 
+    @php
+        $userShop = auth()->user()->shop;
+        $activePlan = $userShop?->currentPlan();
+        $prodCount = $userShop?->products()->count() ?? 0;
+        $maxProd = $userShop?->maxProducts() ?? 50;
+        $prodPct = min(100, round(($prodCount / max(1, $maxProd)) * 100));
+    @endphp
+
+    @if ($userShop && $activePlan)
+        <div style="margin-bottom:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem">
+            <div style="display:flex;align-items:center;gap:.75rem;flex:1;min-width:240px">
+                <div style="font-size:.9rem">
+                    Formule <strong>{{ $activePlan->name }}</strong> :
+                    <span style="color:{{ $prodCount >= $maxProd ? 'var(--danger)' : 'var(--text-soft)' }}">
+                        <strong>{{ $prodCount }}</strong> / {{ $maxProd }} articles utilisés
+                    </span>
+                </div>
+                <div style="flex:1;max-width:160px;height:7px;background:var(--bg-soft);border-radius:99px;overflow:hidden;border:1px solid var(--border)">
+                    <div style="height:100%;width:{{ $prodPct }}%;background:{{ $prodCount >= $maxProd ? 'var(--danger)' : 'var(--brand-primary)' }};border-radius:99px"></div>
+                </div>
+            </div>
+            @if ($activePlan->isEssentiel() || $activePlan->isPro())
+                <a href="{{ route('home') }}#tarifs" target="_blank" style="font-size:.82rem;font-weight:600;color:var(--brand-primary);text-decoration:none;display:inline-flex;align-items:center;gap:.3rem">
+                    Agrandir mon catalogue (Changer de formule) →
+                </a>
+            @endif
+        </div>
+    @endif
+
     <!-- Barre de filtres et recherche (C-05) -->
     <div class="card panel" style="margin-bottom: 1.5rem; padding: 1.2rem;">
         <form method="GET" action="{{ route('products.index') }}" class="toolbar">

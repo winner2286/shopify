@@ -18,4 +18,33 @@ class Plan extends Model
     {
         return $this->hasMany(Subscription::class);
     }
+
+    public function isEssentiel(): bool
+    {
+        return $this->slug === 'essentiel';
+    }
+
+    public function isPro(): bool
+    {
+        return $this->slug === 'pro';
+    }
+
+    public function isPremium(): bool
+    {
+        return $this->slug === 'premium';
+    }
+
+    public function canAccessFeature(string $feature): bool
+    {
+        return match ($feature) {
+            'promo_codes', 'discounts' => in_array($this->slug, ['pro', 'premium'], true),
+            'ai_scripts', 'ai_visuals', 'tiktok_ads' => in_array($this->slug, ['pro', 'premium'], true),
+            'stock_alerts' => in_array($this->slug, ['pro', 'premium'], true),
+            'advanced_stats' => in_array($this->slug, ['pro', 'premium'], true),
+            'team_members', 'collaborators' => $this->slug === 'premium',
+            'custom_domain' => $this->slug === 'premium',
+            'export_accounting' => $this->slug === 'premium',
+            default => true,
+        };
+    }
 }

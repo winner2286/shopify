@@ -46,6 +46,65 @@ class Shop extends Model
         return $this->hasOne(Subscription::class)->latestOfMany();
     }
 
+    /**
+     * Formule d'abonnement active de la boutique
+     */
+    public function currentPlan(): Plan
+    {
+        $sub = $this->subscription;
+        if ($sub && in_array($sub->status, ['active', 'trial', 'grace'], true) && $sub->plan) {
+            return $sub->plan;
+        }
+
+        return Plan::where('slug', 'essentiel')->first() ?? Plan::first() ?? new Plan([
+            'slug' => 'essentiel',
+            'name' => 'Essentiel',
+            'monthly_price' => 10000,
+            'max_products' => 50,
+            'storage_mb' => 2048,
+            'ai_credits' => 80,
+            'full_generations' => 1,
+            'active' => true,
+        ]);
+    }
+
+    public function maxProducts(): int
+    {
+        return (int) $this->currentPlan()->max_products;
+    }
+
+    public function canAddProduct(): bool
+    {
+        return $this->products()->count() < $this->maxProducts();
+    }
+
+    public function remainingProductsCount(): int
+    {
+        return max(0, $this->maxProducts() - $this->products()->count());
+    }
+
+    public function canUseFeature(string $feature): bool
+    {
+        return $this->currentPlan()->canAccessFeature($feature);
+    }
+
+    public function aiCreditsMonthly(): int
+    {
+        return (int) $this->currentPlan()->ai_credits;
+    }
+
+    public function aiCreditsUsedThisMonth(): int
+    {
+        return (int) $this->aiGenerations()
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+    }
+
+    public function aiCreditsRemaining(): int
+    {
+        return max(0, $this->aiCreditsMonthly() - $this->aiCreditsUsedThisMonth());
+    }
+
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class)->orderBy('display_order');

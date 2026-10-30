@@ -816,9 +816,9 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 
         <!-- Sélecteur de formules pour mobile (Accès direct en 1 clic) -->
         <div class="mobile-plan-nav" id="mobile-plan-nav">
-            <button type="button" class="mobile-plan-pill" data-plan-idx="0">Starter</button>
+            <button type="button" class="mobile-plan-pill" data-plan-idx="0">Essentiel</button>
             <button type="button" class="mobile-plan-pill active" data-plan-idx="1">⭐ Pro (Recommandé)</button>
-            <button type="button" class="mobile-plan-pill" data-plan-idx="2">Business</button>
+            <button type="button" class="mobile-plan-pill" data-plan-idx="2">Premium</button>
         </div>
         <div class="mobile-swipe-hint">
             <span>← Glissez pour comparer les 3 formules →</span>
@@ -833,12 +833,12 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 
                     <div class="plan-name">{{ $plan->name }}</div>
                     <div class="plan-desc">
-                        @if ($plan->slug === 'starter')
-                            Idéal pour lancer son premier commerce en ligne et tester ses premiers produits.
+                        @if ($plan->slug === 'essentiel')
+                            Idéal pour lancer votre boutique en ligne et professionnaliser vos ventes.
                         @elseif ($plan->slug === 'pro')
-                            Pour les boutiques en pleine expansion qui veulent automatiser avec l'IA.
+                            Pour les commerces actifs qui veulent accélérer leurs ventes avec l'IA.
                         @else
-                            Pour les grandes marques et commerces établis à fort volume de commandes.
+                            Pour les grandes marques et commerces à fort volume de commandes.
                         @endif
                     </div>
 
@@ -858,7 +858,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />
-                            <span><strong>{{ $plan->storage_mb >= 1024 ? ($plan->storage_mb / 1024).' Go' : $plan->storage_mb.' Mo' }}</strong> d'espace de stockage d'images</span>
+                            <span><strong>{{ $plan->storage_mb >= 1024 ? ($plan->storage_mb / 1024).' Go' : $plan->storage_mb.' Mo' }}</strong> d'espace de stockage photos</span>
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />
@@ -870,7 +870,11 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />
-                            <span>Paiements T-Money, Flooz & Cash</span>
+                            <span>Paiements T-Money, Flooz & Cash (0% com.)</span>
+                        </li>
+                        <li>
+                            <x-icon name="check" :size="16" />
+                            <span>Boutique physique & itinéraire Maps</span>
                         </li>
                         @foreach ($plan->features ?? [] as $f)
                             <li>

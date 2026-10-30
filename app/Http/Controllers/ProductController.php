@@ -87,6 +87,11 @@ class ProductController extends Controller
     {
         $user = $request->user();
         $shop = $user->shop ?? Shop::firstOrCreate(['user_id' => $user->id], ['name' => 'Ma Boutique', 'status' => Shop::DRAFT]);
+
+        if (! $shop->canAddProduct()) {
+            return redirect()->route('products.index')->with('error', "Limite de catalogue atteinte ({$shop->products()->count()} / {$shop->maxProducts()} articles sur votre formule {$shop->currentPlan()->name}). Passez à la formule Pro ou Premium pour agrandir votre boutique !");
+        }
+
         $categories = $shop->categories()->get();
 
         return view('products.create', compact('categories'));
@@ -96,6 +101,10 @@ class ProductController extends Controller
     {
         $user = $request->user();
         $shop = $user->shop ?? Shop::firstOrCreate(['user_id' => $user->id], ['name' => 'Ma Boutique', 'status' => Shop::DRAFT]);
+
+        if (! $shop->canAddProduct()) {
+            return redirect()->route('products.index')->with('error', "Impossible d'ajouter cet article : vous avez atteint le quota maximal de {$shop->maxProducts()} produits de votre formule {$shop->currentPlan()->name}. Passez à la formule supérieure pour débloquer plus d'articles !");
+        }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:120'],

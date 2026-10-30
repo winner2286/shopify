@@ -40,6 +40,12 @@
                 <x-icon name="sparkles" :size="15" />
                 <span>Assistant IA</span>
             </a>
+            @if ($shop)
+                <span class="pill" style="border-color:color-mix(in srgb, var(--brand-primary) 35%, var(--border));background:color-mix(in srgb, var(--brand-primary) 10%, transparent)">
+                    Formule : <strong>{{ $shop->currentPlan()->name }}</strong>
+                    <span style="font-size:.78rem;opacity:.85">({{ $shop->products()->count() }}/{{ $shop->maxProducts() }} arts • {{ $shop->aiCreditsRemaining() }} crédits IA)</span>
+                </span>
+            @endif
             <span class="pill">Statut : {{ $shop ? ($shop->isPublished() ? 'En ligne' : ($shop->isPaused() ? 'En pause' : 'Brouillon')) : 'Non configurée' }}</span>
         </div>
     </div>

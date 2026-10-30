@@ -138,6 +138,61 @@ class PlatformAdminController extends Controller
     }
 
     /**
+     * Modification d'une formule d'abonnement (prix, quotas, stockage, features)
+     */
+    public function updatePlan(Request $request, Plan $plan): RedirectResponse
+    {
+        $this->checkAdmin($request);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:60',
+            'monthly_price' => 'required|integer|min:0',
+            'max_products' => 'required|integer|min:1',
+            'storage_mb' => 'required|integer|min:100',
+            'ai_credits' => 'required|integer|min:0',
+            'full_generations' => 'required|integer|min:1',
+            'features' => 'nullable|string',
+        ]);
+
+        $featuresArray = [];
+        if (! empty($validated['features'])) {
+            $lines = explode("\n", str_replace("\r", "", $validated['features']));
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                if ($trimmed !== '') {
+                    $featuresArray[] = $trimmed;
+                }
+            }
+        }
+
+        $plan->update([
+            'name' => $validated['name'],
+            'monthly_price' => $validated['monthly_price'],
+            'max_products' => $validated['max_products'],
+            'storage_mb' => $validated['storage_mb'],
+            'ai_credits' => $validated['ai_credits'],
+            'full_generations' => $validated['full_generations'],
+            'active' => $request->has('active'),
+            'features' => $featuresArray,
+        ]);
+
+        return back()->with('status', "La formule « {$plan->name} » a été modifiée avec succès.");
+    }
+
+    /**
+     * Activer / Désactiver une formule en 1 clic
+     */
+    public function togglePlan(Request $request, Plan $plan): RedirectResponse
+    {
+        $this->checkAdmin($request);
+
+        $plan->update(['active' => ! $plan->active]);
+
+        $stateMsg = $plan->active ? 'activée et visible aux marchands' : 'désactivée et masquée du site';
+        return back()->with('status', "La formule « {$plan->name} » est désormais {$stateMsg}.");
+    }
+
+    /**
      * Mode Impersonation : Se connecter en 1 clic dans l'espace d'un commerçant (Support Client)
      */
     public function impersonate(Request $request, Shop $shop): RedirectResponse

@@ -72,6 +72,15 @@ class AdvertisingController extends Controller
             }
         }
 
+        // Séparation des fonctionnalités publicitaires IA selon la formule
+        if (in_array($validated['channel'], ['tiktok', 'instagram'], true) && ! $shop->canUseFeature('tiktok_ads')) {
+            return back()->withInput()->with('error', "La génération de scripts vidéo TikTok & visuels Instagram est réservée aux formules Pro et Premium. Passez à la formule Pro (15 000 FCFA) pour débloquer ces canaux !");
+        }
+
+        if ($shop->aiCreditsRemaining() <= 0) {
+            return back()->withInput()->with('error', "Quota mensuel de crédits IA atteint ({$shop->aiCreditsMonthly()} crédits sur votre formule {$shop->currentPlan()->name}). Passez au forfait supérieur pour continuer à générer des publicités !");
+        }
+
         try {
             $ad = $this->aiAdvertisingService->generate($shop, $validated);
 
