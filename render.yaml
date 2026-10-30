@@ -62,6 +62,17 @@ services:
         value: kougnimag@gmail.com
       - key: MAIL_FROM_NAME
         value: "Zanika"
+      # Passerelle de paiement FeexPay (Mobile Money & Carte Bancaire)
+      - key: FEEXPAY_SHOP_ID
+        value: "698dd650a7ffb88696f5id86"
+      - key: FEEXPAY_TOKEN
+        value: "test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn"
+      - key: FEEXPAY_MODE
+        value: "SANDBOX"
+      - key: FEEXPAY_BASE_URL
+        value: "https://api-v2.feexpay.me"
+      - key: FEEXPAY_CURRENCY
+        value: "XOF"
 
 # Base de données PostgreSQL infogérée Render (Tier Gratuit)
 databases:

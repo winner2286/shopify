@@ -117,9 +117,9 @@
         if (typeof FeexPayButton !== 'undefined') {
             try {
                 FeexPayButton.init('feexpay-btn-sub', {
-                    id: '{{ config('feexpay.shop_id') }}',
+                    id: '{{ config('feexpay.shop_id', '698dd650a7ffb88696f5id86') }}',
                     amount: {{ (int) $plan->monthly_price }},
-                    token: '{{ config('feexpay.token') }}',
+                    token: '{{ config('feexpay.token', 'test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn') }}',
                     callback_url: '{{ route('feexpay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}',
                     mode: '{{ config('feexpay.mode', 'SANDBOX') }}',
                     custom_id: 'SUB:{{ $subscription->id }}:{{ $plan->id }}',

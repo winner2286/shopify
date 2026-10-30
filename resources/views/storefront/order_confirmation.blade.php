@@ -122,9 +122,9 @@
                         if (typeof FeexPayButton !== 'undefined') {
                             try {
                                 FeexPayButton.init('feexpay-btn-order', {
-                                    id: '{{ config('feexpay.shop_id') }}',
+                                    id: '{{ config('feexpay.shop_id', '698dd650a7ffb88696f5id86') }}',
                                     amount: {{ (int) $order->total }},
-                                    token: '{{ config('feexpay.token') }}',
+                                    token: '{{ config('feexpay.token', 'test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn') }}',
                                     callback_url: '{{ route('feexpay.callback') }}?custom_id=ORDER:{{ $order->id }}',
                                     mode: '{{ config('feexpay.mode', 'SANDBOX') }}',
                                     custom_id: 'ORDER:{{ $order->id }}',

@@ -19,11 +19,11 @@ class FeexPayService
 
     public function __construct()
     {
-        $this->shopId = (string) config('feexpay.shop_id', env('FEEXPAY_SHOP_ID', ''));
-        $this->token = (string) config('feexpay.token', env('FEEXPAY_TOKEN', ''));
-        $this->mode = strtoupper((string) config('feexpay.mode', env('FEEXPAY_MODE', 'SANDBOX')));
-        $this->baseUrl = rtrim((string) config('feexpay.base_url', env('FEEXPAY_BASE_URL', 'https://api-v2.feexpay.me')), '/');
-        $this->currency = (string) config('feexpay.currency', 'XOF');
+        $this->shopId = (string) (config('feexpay.shop_id') ?: env('FEEXPAY_SHOP_ID', '698dd650a7ffb88696f5id86'));
+        $this->token = (string) (config('feexpay.token') ?: env('FEEXPAY_TOKEN', 'test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn'));
+        $this->mode = strtoupper((string) (config('feexpay.mode') ?: env('FEEXPAY_MODE', 'SANDBOX')));
+        $this->baseUrl = rtrim((string) (config('feexpay.base_url') ?: env('FEEXPAY_BASE_URL', 'https://api-v2.feexpay.me')), '/');
+        $this->currency = (string) (config('feexpay.currency') ?: 'XOF');
     }
 
     public function getShopId(): string

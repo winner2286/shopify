@@ -25,6 +25,22 @@ if [ -f /var/www/html/.env ]; then
     fi
 fi
 
+# Export automatique des identifiants FeexPay (Sandbox / Test)
+export FEEXPAY_SHOP_ID="${FEEXPAY_SHOP_ID:-698dd650a7ffb88696f5id86}"
+export FEEXPAY_TOKEN="${FEEXPAY_TOKEN:-test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn}"
+export FEEXPAY_MODE="${FEEXPAY_MODE:-SANDBOX}"
+export FEEXPAY_BASE_URL="${FEEXPAY_BASE_URL:-https://api-v2.feexpay.me}"
+export FEEXPAY_CURRENCY="${FEEXPAY_CURRENCY:-XOF}"
+
+if [ -f /var/www/html/.env ]; then
+    for var in FEEXPAY_SHOP_ID FEEXPAY_TOKEN FEEXPAY_MODE FEEXPAY_BASE_URL FEEXPAY_CURRENCY; do
+        eval val=\$$var
+        if ! grep -q "^${var}=" /var/www/html/.env; then
+            echo "${var}=${val}" >> /var/www/html/.env
+        fi
+    done
+fi
+
 # 2. Validation et génération de la clé d'application
 case "$APP_KEY" in
     base64:*)
