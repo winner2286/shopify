@@ -112,8 +112,11 @@
                     <a id="nav-ads" href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ads.*') ? 'btn-primary' : '' }}">Publicité</a>
                     <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
                     <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Paramètres</a>
-                    <form method="POST" action="{{ route('logout') }}" style="display:inline">@csrf
-                        <button id="nav-logout" class="btn btn-ghost btn-sm" type="submit">Déconnexion</button>
+                    <form method="POST" action="{{ route('logout') }}" style="display:inline;margin:0">@csrf
+                        <button id="nav-logout" class="btn btn-ghost btn-sm" type="submit" title="Déconnexion" aria-label="Déconnexion">
+                            <span class="logout-text">Déconnexion</span>
+                            <span class="logout-icon" aria-hidden="true"><x-icon name="log-out" :size="16" /></span>
+                        </button>
                     </form>
                 @else
                     <a id="nav-login" href="{{ route('login') }}" class="btn btn-ghost btn-sm">Connexion</a>

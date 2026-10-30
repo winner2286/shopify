@@ -1470,6 +1470,8 @@ body:has(.bottom-nav) {
 }
 
 .nav-admin-short { display: none; }
+.logout-icon { display: none; }
+.logout-text { display: inline; }
 @media (max-width: 640px) {
   .nav-admin-full { display: none; }
   .nav-admin-short { display: inline; }
@@ -1501,7 +1503,9 @@ body:has(.bottom-nav) {
   .nav-links { display: none; }
   .bottom-nav { display: block !important; }
   
-  /* Cacher les liens du header pour les marchands connectés sur mobile */
+  /* Cacher les liens du header pour les marchands et admin connectés sur mobile */
+  /* Le bouton Cockpit est déjà présent dans la barre de navigation inférieure */
+  .nav-actions #nav-admin,
   .nav-actions #nav-dashboard,
   .nav-actions #nav-orders,
   .nav-actions #nav-products,
@@ -1509,7 +1513,15 @@ body:has(.bottom-nav) {
   .nav-actions #nav-ads,
   .nav-actions #nav-analytics,
   .nav-actions #nav-shop {
-    display: none;
+    display: none !important;
+  }
+
+  /* Déconnexion compacte avec icône sur mobile pour libérer l'espace du header */
+  .logout-text { display: none !important; }
+  .logout-icon { display: inline-flex !important; align-items: center; justify-content: center; }
+  #nav-logout {
+    padding: 0.35rem 0.55rem !important;
+    min-height: 34px !important;
   }
 
   .mobile-hide-on-admin {
