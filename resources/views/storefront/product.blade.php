@@ -247,6 +247,10 @@
                             <div class="card-stock-pill">
                                 <span class="card-stock-dot"></span> En stock
                             </div>
+                            <div class="product-rating-row">
+                                <span class="product-stars">★★★★★</span>
+                                <span class="product-rating-text">4.9 • Recommandé</span>
+                            </div>
                             <h3 class="product-card-title">
                                 <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $rel->slug) }}">
                                     {{ $rel->title }}

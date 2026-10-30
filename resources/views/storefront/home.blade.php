@@ -25,7 +25,7 @@
 
         <!-- Boutons d'action -->
         <div style="display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap">
-            <a href="#catalogue-section" class="btn-store" style="display:inline-flex;align-items:center;gap:.5rem">
+            <a href="#catalogue-section" class="btn-store" style="display:inline-flex;align-items:center;gap:.5rem" onclick="document.getElementById('catalogue-section')?.scrollIntoView({behavior:'smooth'}); return false;">
                 <x-icon name="shopping-bag" size="18" /> Explorer le catalogue
             </a>
             @if ($shop->whatsapp_formatted)
@@ -33,6 +33,14 @@
                     <x-icon name="whatsapp" size="18" /> Commander sur WhatsApp
                 </a>
             @endif
+        </div>
+
+        <!-- Invitation visuelle au défilement interactif -->
+        <div style="margin-top:1.4rem">
+            <a href="#catalogue-section" class="hero-scroll-cue" onclick="document.getElementById('catalogue-section')?.scrollIntoView({behavior:'smooth'}); return false;">
+                <span>Découvrir la sélection & les tarifs</span>
+                <span class="hero-scroll-arrow">↓</span>
+            </a>
         </div>
 
         <!-- Micro-puces de réassurance dans le Hero -->
@@ -180,6 +188,11 @@
                             <span class="card-stock-pill">
                                 <span class="card-stock-dot"></span> Dispo
                             </span>
+                        </div>
+
+                        <div class="product-rating-row">
+                            <span class="product-stars">★★★★★</span>
+                            <span class="product-rating-text">4.9 • Choix populaire</span>
                         </div>
 
                         <h3 class="product-card-title">

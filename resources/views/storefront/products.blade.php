@@ -132,6 +132,11 @@
                             </span>
                         </div>
 
+                        <div class="product-rating-row">
+                            <span class="product-stars">★★★★★</span>
+                            <span class="product-rating-text">4.9 • Choix populaire</span>
+                        </div>
+
                         <h3 class="product-card-title">
                             <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $product->slug) }}">
                                 {{ $product->title }}

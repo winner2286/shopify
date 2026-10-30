@@ -410,15 +410,15 @@
                 grid-template-columns: 1fr;
             }
         }
-        /* Scroll Reveal Animations (Cascade fluide lors du défilement) */
+        /* Scroll Reveal Animations (Cascade fluide et dynamique lors du défilement) */
         .reveal-on-scroll {
             opacity: 0;
-            transform: translateY(30px) scale(0.97);
-            filter: blur(3px);
-            transition: opacity .7s cubic-bezier(0.16, 1, 0.3, 1),
-                        transform .7s cubic-bezier(0.16, 1, 0.3, 1),
-                        filter .6s ease;
-            transition-delay: calc(var(--delay, 0) * 60ms);
+            transform: translateY(40px) scale(0.96);
+            filter: blur(4px);
+            transition: opacity .75s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform .75s cubic-bezier(0.16, 1, 0.3, 1),
+                        filter .65s ease;
+            transition-delay: calc(var(--delay, 0) * 80ms);
             will-change: opacity, transform, filter;
         }
         .reveal-on-scroll.in-view {
@@ -427,10 +427,33 @@
             filter: blur(0);
         }
 
+        /* Bouton d'invitation au défilement Hero */
+        .hero-scroll-cue {
+            display: inline-flex; align-items: center; gap: .6rem;
+            padding: .45rem 1.15rem; border-radius: 99px;
+            background: color-mix(in srgb, var(--surface) 85%, transparent);
+            border: 1px solid color-mix(in srgb, var(--store-primary) 35%, var(--border));
+            color: var(--text-soft); font-size: .84rem; font-weight: 600;
+            text-decoration: none; transition: all .25s ease;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+        }
+        .hero-scroll-cue:hover {
+            color: var(--text); border-color: var(--store-primary);
+            transform: translateY(2px); box-shadow: 0 6px 18px var(--store-primary-glow);
+        }
+        .hero-scroll-arrow {
+            display: inline-block; animation: bounceDown 1.8s infinite ease-in-out;
+            color: var(--store-primary); font-weight: 800; font-size: .95rem;
+        }
+        @keyframes bounceDown {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(4px); }
+        }
+
         /* Cartes Produits Dynamiques & Captivantes */
         .product-card {
             background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 97%, #fff) 0%, var(--surface) 100%);
-            border: 1px solid color-mix(in srgb, var(--store-primary) 18%, var(--border));
+            border: 1px solid color-mix(in srgb, var(--store-primary) 22%, var(--border));
             border-radius: var(--radius);
             overflow: hidden;
             display: flex;
@@ -439,12 +462,23 @@
             transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1),
                         box-shadow .35s cubic-bezier(0.16, 1, 0.3, 1),
                         border-color .25s ease;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 6px 22px rgba(0, 0, 0, 0.14);
         }
         .product-card:hover {
-            transform: translateY(-8px) scale(1.01);
-            box-shadow: 0 20px 42px -10px var(--store-primary-glow), 0 0 0 1px color-mix(in srgb, var(--store-primary) 50%, transparent);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 42px -10px var(--store-primary-glow), 0 0 0 1px color-mix(in srgb, var(--store-primary) 60%, transparent);
             border-color: var(--store-primary);
+        }
+
+        .product-rating-row {
+            display: flex; align-items: center; gap: .4rem;
+            margin-bottom: .35rem; font-size: .75rem;
+        }
+        .product-stars {
+            color: #f59e0b; letter-spacing: 1px; font-size: .82rem;
+        }
+        .product-rating-text {
+            color: var(--text-faint); font-weight: 600; font-size: .74rem;
         }
         .product-img-wrap {
             position: relative; width: 100%; aspect-ratio: 1;

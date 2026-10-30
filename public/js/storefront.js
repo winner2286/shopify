@@ -356,11 +356,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     observer.unobserve(entry.target);
                 }
             });
-        }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
         document.querySelectorAll('.reveal, .reveal-on-scroll, .product-card').forEach(function (el) {
             var rect = el.getBoundingClientRect();
-            if (rect.top < window.innerHeight * 0.85 && rect.bottom > 0) {
+            // N'active d'emblée que les éléments situés dans le tiers supérieur de la vue
+            if (rect.top < window.innerHeight * 0.35 && rect.bottom > 0) {
                 el.classList.add('in-view');
                 el.classList.add('in');
             } else {
