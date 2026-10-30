@@ -237,7 +237,7 @@
 <!-- Garanties & Engagements avec Effet de Relief -->
 <div class="container" style="margin-top:4rem">
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:1.5rem">
-        <div class="card" style="text-align:center;padding:2rem 1.4rem;transition:transform .2s;border-radius:14px">
+        <div class="card reveal-on-scroll" style="--delay: 1;text-align:center;padding:2rem 1.4rem;border-radius:14px">
             <div style="margin-bottom:.8rem;display:flex;justify-content:center;color:var(--store-primary)">
                 <x-icon name="truck" size="36" />
             </div>
@@ -245,7 +245,7 @@
             <p style="font-size:.9rem;color:var(--text-soft);margin:0;line-height:1.5">Expédition soignée à Lomé et dans toutes les préfectures du Togo.</p>
         </div>
 
-        <div class="card" style="text-align:center;padding:2rem 1.4rem;transition:transform .2s;border-radius:14px">
+        <div class="card reveal-on-scroll" style="--delay: 2;text-align:center;padding:2rem 1.4rem;border-radius:14px">
             <div style="margin-bottom:.8rem;display:flex;justify-content:center;color:var(--store-primary)">
                 <x-icon name="wallet" size="36" />
             </div>
@@ -253,7 +253,7 @@
             <p style="font-size:.9rem;color:var(--text-soft);margin:0;line-height:1.5">Règlement direct via T-Money, Flooz ou paiement à la livraison en espèces.</p>
         </div>
 
-        <div class="card" style="text-align:center;padding:2rem 1.4rem;transition:transform .2s;border-radius:14px">
+        <div class="card reveal-on-scroll" style="--delay: 3;text-align:center;padding:2rem 1.4rem;border-radius:14px">
             <div style="margin-bottom:.8rem;display:flex;justify-content:center;color:var(--store-primary)">
                 <x-icon name="whatsapp" size="36" />
             </div>

@@ -410,20 +410,32 @@
                 grid-template-columns: 1fr;
             }
         }
-        /* Scroll Reveal Animations (Cascade fluide et dynamique lors du défilement) */
+        /* Scroll Reveal Animations Bi-directionnelles Fluides (Haut-Bas et Bas-Haut) */
         .reveal-on-scroll {
             opacity: 0;
-            transform: translateY(40px) scale(0.96);
             filter: blur(4px);
-            transition: opacity .75s cubic-bezier(0.16, 1, 0.3, 1),
-                        transform .75s cubic-bezier(0.16, 1, 0.3, 1),
-                        filter .65s ease;
-            transition-delay: calc(var(--delay, 0) * 80ms);
+            transition: opacity .65s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform .65s cubic-bezier(0.16, 1, 0.3, 1),
+                        filter .55s ease;
+            transition-delay: calc(var(--delay, 0) * 70ms);
             will-change: opacity, transform, filter;
         }
+
+        /* Quand on défile vers le bas (ou par défaut) : les éléments montent du bas */
+        .reveal-on-scroll.from-bottom,
+        .reveal-on-scroll:not(.from-top) {
+            transform: translateY(38px) scale(0.96);
+        }
+
+        /* Quand on défile vers le haut : les éléments descendent du haut */
+        .reveal-on-scroll.from-top {
+            transform: translateY(-38px) scale(0.96);
+        }
+
+        /* État visible quand l'élément est dans la fenêtre */
         .reveal-on-scroll.in-view {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0) scale(1) !important;
             filter: blur(0);
         }
 

@@ -345,28 +345,50 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // -------------------------------------------------------------
-    // 6. Smooth Scroll Reveal (IntersectionObserver)
+    // 6. Smooth Bi-directional Scroll Reveal (Haut-Bas & Bas-Haut)
     // -------------------------------------------------------------
     if ('IntersectionObserver' in window) {
+        let lastScrollY = window.scrollY || document.documentElement.scrollTop;
+        let scrollDirection = 'down';
+
+        window.addEventListener('scroll', function () {
+            const currentScrollY = window.scrollY || document.documentElement.scrollTop;
+            if (Math.abs(currentScrollY - lastScrollY) > 3) {
+                scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+                lastScrollY = currentScrollY;
+            }
+        }, { passive: true });
+
         const observer = new IntersectionObserver(function (entries) {
             entries.forEach(function (entry) {
+                const target = entry.target;
                 if (entry.isIntersecting) {
-                    entry.target.classList.add('in-view');
-                    entry.target.classList.add('in');
-                    observer.unobserve(entry.target);
+                    if (scrollDirection === 'down') {
+                        target.classList.remove('from-top');
+                        target.classList.add('from-bottom');
+                    } else {
+                        target.classList.remove('from-bottom');
+                        target.classList.add('from-top');
+                    }
+                    target.classList.add('in-view');
+                    target.classList.add('in');
+                } else {
+                    // Quand l'élément quitte l'écran (vers le haut ou vers le bas), on retire in-view
+                    // pour qu'il puisse se réanimer naturellement dès qu'on défile à nouveau dessus !
+                    target.classList.remove('in-view');
+                    target.classList.remove('in');
                 }
             });
-        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        }, { threshold: 0.08, rootMargin: '-15px 0px -15px 0px' });
 
-        document.querySelectorAll('.reveal, .reveal-on-scroll, .product-card').forEach(function (el) {
+        document.querySelectorAll('.reveal, .reveal-on-scroll, .product-card, .store-guarantee-card').forEach(function (el) {
             var rect = el.getBoundingClientRect();
-            // N'active d'emblée que les éléments situés dans le tiers supérieur de la vue
+            // N'active d'emblée que les éléments situés dans la partie haute au chargement
             if (rect.top < window.innerHeight * 0.35 && rect.bottom > 0) {
                 el.classList.add('in-view');
                 el.classList.add('in');
-            } else {
-                observer.observe(el);
             }
+            observer.observe(el);
         });
     }
 
