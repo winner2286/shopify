@@ -83,10 +83,11 @@
                     <!-- Canvas HD 9:16 (720 x 1280) -->
                     <canvas id="ad-video-canvas" width="720" height="1280" class="ad-canvas"></canvas>
 
-                    <!-- Overlay Play/Pause central -->
+                    <!-- Overlay Play/Pause discret et non-obstruant -->
                     <div id="ad-center-play-overlay" class="center-play-overlay">
                         <div class="center-play-icon">
-                            <x-icon name="play" :size="38" />
+                            <x-icon name="play" :size="18" />
+                            <span>Lancer la vidéo</span>
                         </div>
                     </div>
                 </div>
@@ -716,30 +717,34 @@
         position: absolute;
         inset: 0;
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: center;
-        background: rgba(0,0,0,0.35);
+        padding-bottom: 2rem;
+        background: transparent;
         cursor: pointer;
         transition: opacity .25s ease;
         z-index: 5;
     }
 
     .center-play-icon {
-        width: 72px;
-        height: 72px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.9);
-        color: var(--brand-1);
-        display: flex;
+        padding: .5rem 1.15rem;
+        border-radius: 30px;
+        background: rgba(15, 23, 42, 0.88);
+        backdrop-filter: blur(10px);
+        color: #ffffff;
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-        padding-left: 4px;
-        transition: transform .2s ease;
+        gap: .5rem;
+        font-size: .84rem;
+        font-weight: 700;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+        border: 1px solid rgba(255,255,255,0.22);
+        transition: transform .2s ease, background .2s ease;
     }
 
     .center-play-icon:hover {
-        transform: scale(1.08);
+        transform: scale(1.05);
+        background: rgba(236, 72, 153, 0.95);
     }
 
     /* Barre de contrôle */

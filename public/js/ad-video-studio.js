@@ -721,19 +721,119 @@
             if (sceneBadge) {
                 const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
                 const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
+                const scriptCtx = this.getActiveScriptContext();
                 if (this.currentTime < s1End) {
-                    sceneBadge.textContent = 'Scène 1 : Accroche Flash ⚡';
-                    sceneBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+                    sceneBadge.textContent = `Scène 1 : ${scriptCtx.scene1Badge}`;
+                    sceneBadge.style.background = 'rgba(239, 68, 68, 0.25)';
                     sceneBadge.style.color = '#ef4444';
                 } else if (this.currentTime < s2End) {
-                    sceneBadge.textContent = 'Scène 2 : Découverte & Prix 💎';
-                    sceneBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+                    sceneBadge.textContent = `Scène 2 : ${scriptCtx.scene2Badge}`;
+                    sceneBadge.style.background = 'rgba(16, 185, 129, 0.25)';
                     sceneBadge.style.color = '#10b981';
                 } else {
-                    sceneBadge.textContent = 'Scène 3 : Commande WhatsApp 📱';
-                    sceneBadge.style.background = 'rgba(37, 211, 102, 0.2)';
+                    sceneBadge.textContent = `Scène 3 : ${scriptCtx.scene3Badge}`;
+                    sceneBadge.style.background = 'rgba(37, 211, 102, 0.25)';
                     sceneBadge.style.color = '#25D366';
                 }
+            }
+        },
+
+        // --- ANALYSE CONTEXTUELLE DU SCRIPT ACTIF (DIRECTEUR ARTISTIQUE & MONTEUR IA) ---
+        getActiveScriptContext: function () {
+            const scripts = this.config.scripts || [];
+            const script = scripts[this.currentScriptIndex] || scripts[0] || {};
+            const title = (script.title || '').toLowerCase();
+            const concept = (script.concept || '').toLowerCase();
+            const steps = script.steps || [];
+            const step0Voice = (steps[0] && steps[0].voiceover) ? steps[0].voiceover : '';
+            const step1Voice = (steps[1] && steps[1].voiceover) ? steps[1].voiceover : '';
+            const step2Voice = (steps[2] && steps[2].voiceover) ? steps[2].voiceover : '';
+
+            // Détection du fil conducteur éditorial du script
+            const isProblem = title.includes('problème') || concept.includes('besoin') || concept.includes('concrèt') || concept.includes('résout') || step0Voice.includes('?') || step0Voice.toLowerCase().includes('marre') || step0Voice.toLowerCase().includes('envie');
+            const isSocialProof = title.includes('avis') || title.includes('preuve') || concept.includes('témoignage') || step0Voice.toLowerCase().includes('avis') || step0Voice.toLowerCase().includes('étoile');
+            const isFlash = title.includes('flash') || title.includes('promo') || concept.includes('réduction') || concept.includes('déstockage');
+
+            let mode = 'craving';
+            if (isProblem) mode = 'problem_solution';
+            else if (isSocialProof) mode = 'social_proof';
+            else if (isFlash) mode = 'flash_sale';
+
+            if (mode === 'problem_solution') {
+                return {
+                    mode: 'problem_solution',
+                    scriptTitle: script.title || 'Problème / Solution',
+                    scene1Badge: '🚨 LE DILEMME DU JOUR',
+                    scene1Hook: 'GROSSE FAIM AU BUREAU ?',
+                    scene1Sub: 'Ne cherchez plus quoi manger ce midi !',
+                    scene1Emoji: '🤯',
+                    scene1Color: '#ef4444',
+                    scene1Corner1: '🛑 STOP SCROLL',
+                    scene1Corner2: '🤔 QUOI MANGER ?',
+                    scene2Badge: '💡 LA SOLUTION EN 1 CLIC',
+                    scene2Title: 'VOTRE REPAS CHAUD & SAVOUREUX',
+                    scene2Pill: '⚡ PRÉPARÉ MINUTE • 100% FRAIS',
+                    scene2Color: '#10b981',
+                    scene3Badge: '🛵 LIVRAISON RAPIDE',
+                    scene3Title: 'EN ROUTE VERS VOTRE BUREAU !',
+                    scene3Sub: 'Livraison express à votre porte partout à Lomé',
+                    scene3Cta: 'COMMANDER SUR WHATSAPP',
+                    ugcCommentUser: '@koffi_bureau',
+                    ugcCommentText: 'On a une grosse faim au bureau là, vous livrez vite à Lomé ? 🤤',
+                    ugcRating: '5.0 / 5 • Sauveur de nos pauses déjeuner !',
+                    lookbookBadge: 'LE REPAS D\'EXCEPTION DU MIDI',
+                    lookbookSpec: '01 / SAVEUR AUTHENTIQUE • 02 / SERVICE MINUTE • 03 / LIVRAISON EXPRESS'
+                };
+            } else if (mode === 'social_proof') {
+                return {
+                    mode: 'social_proof',
+                    scriptTitle: script.title || 'Preuve Sociale',
+                    scene1Badge: '⭐ TOUT LE MONDE EN PARLE',
+                    scene1Hook: 'LA PÉPITE VIRALE DU MOMENT !',
+                    scene1Sub: 'Déjà plus de 500 clients conquis à Lomé',
+                    scene1Emoji: '🔥',
+                    scene1Color: '#f59e0b',
+                    scene1Corner1: '⭐ 4.9/5 AVIS',
+                    scene1Corner2: '🔥 TENDANCE LOMÉ',
+                    scene2Badge: '🏆 VALIDÉ PAR LES CLIENTS',
+                    scene2Title: 'NOTE MOYENNE : 4.9 / 5',
+                    scene2Pill: '❤️ 100% RECOMMANDÉ À LOMÉ',
+                    scene2Color: '#3b82f6',
+                    scene3Badge: '📦 STOCK TRÈS LIMITÉ',
+                    scene3Title: 'FAITES COMME TOUT LE MONDE !',
+                    scene3Sub: 'Réservez le vôtre avant la rupture définitive',
+                    scene3Cta: 'RÉSERVER SUR WHATSAPP',
+                    ugcCommentUser: '@aicha_lome',
+                    ugcCommentText: 'Tout le monde en parle sur TikTok, j\'ai commandé et c\'est juste incroyable ! 😍',
+                    ugcRating: '4.9 / 5 • Plus de 180 avis vérifiés',
+                    lookbookBadge: 'SÉLECTION PRIVÉE VIP',
+                    lookbookSpec: '01 / CONNAISSEURS AVISÉS • 02 / STOCK RESTREINT • 03 / EXPÉDITION SOIGNÉE'
+                };
+            } else {
+                return {
+                    mode: 'craving',
+                    scriptTitle: script.title || 'Accroche Gourmande',
+                    scene1Badge: '🔥 ALERTE GOURMANDE !',
+                    scene1Hook: 'ATTENDEZ ! REGARDEZ ÇA !',
+                    scene1Sub: 'La merveille croustillante qui fait saliver !',
+                    scene1Emoji: '🤤',
+                    scene1Color: '#ec4899',
+                    scene1Corner1: '🔥 100% GOURMAND',
+                    scene1Corner2: '🤤 TOUT CHAUD',
+                    scene2Badge: '💎 CRAQUAGE IMMÉDIAT',
+                    scene2Title: 'CROUSTILLANT & ULTRA SAVOUREUX',
+                    scene2Pill: '⭐ 10/10 AU TEST GOURMANDISE',
+                    scene2Color: '#f59e0b',
+                    scene3Badge: '⚡ FAITES-VOUS PLAISIR',
+                    scene3Title: 'SERVI TOUT CHAUD CHEZ VOUS !',
+                    scene3Sub: 'Paiement sécurisé par T-Money, Flooz ou à la livraison',
+                    scene3Cta: 'COMMANDER SUR WHATSAPP',
+                    ugcCommentUser: '@delali_food',
+                    ugcCommentText: 'Ça a l\'air tellement bon et croustillant ! Comment on commande svp ?? 🤤',
+                    ugcRating: '5.0 / 5 • Le meilleur goût de la capitale !',
+                    lookbookBadge: 'COLLECTION GOURMET PRESTIGE',
+                    lookbookSpec: '01 / INGRÉDIENTS D\'EXCEPTION • 02 / RECETTE EXCLUSIVE • 03 / FINITION LUXE'
+                };
             }
         },
 
@@ -753,54 +853,98 @@
             } else {
                 this.renderCapCutStyle(ctx, w, h, t);
             }
-
-            // Égaliseur audio supprimé à la demande de l'utilisateur
         },
 
         // =========================================================================
         // STYLE 1 : TIKTOK / CAPCUT PRO (Plein Écran Immersif, Zooms & Kinetic Text)
         // =========================================================================
         renderCapCutStyle: function (ctx, w, h, t) {
+            const scriptCtx = this.getActiveScriptContext();
+
             // Fond Ken Burns immersif avec la photo du produit
             this.drawKenBurnsBackground(ctx, w, h, t);
 
-            // Particules d'énergie désactivées
+            // Header TikTok tendance en haut
+            this.drawTikTokTopBar(ctx, w, h, t, scriptCtx);
 
-            // Header de boutique moderne
-            this.drawBrandingHeader(ctx, w, h, t);
+            // TikTok UI HUD sur la droite (profil, like, com, share, disque vinyle)
+            this.drawTikTokSocialIcons(ctx, w - 52, 580, t);
 
             const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
             const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
 
             if (t < s1End) {
-                this.drawCapCutScene1(ctx, w, h, t);
+                this.drawCapCutScene1(ctx, w, h, t, scriptCtx);
             } else if (t < s2End) {
-                this.drawCapCutScene2(ctx, w, h, t);
+                this.drawCapCutScene2(ctx, w, h, t, scriptCtx);
             } else {
-                this.drawCapCutScene3(ctx, w, h, t);
+                this.drawCapCutScene3(ctx, w, h, t, scriptCtx);
             }
         },
 
-        drawCapCutScene1: function (ctx, w, h, t) {
+        drawTikTokTopBar: function (ctx, w, h, t, scriptCtx) {
+            ctx.save();
+            const barY = 55;
+
+            // Pilule boutique TikTok officielle
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1.5;
+            this.roundRect(ctx, 35, barY, 320, 46, 23);
+            ctx.fill();
+            ctx.stroke();
+
+            // Petit logo ou icône
+            ctx.fillStyle = '#ec4899';
+            ctx.beginPath();
+            ctx.arc(60, barY + 23, 13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 13px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🛍️', 60, barY + 23);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 17px system-ui, -apple-system, sans-serif';
+            ctx.textAlign = 'left';
+            this.drawTruncatedText(ctx, (this.config.shopName || 'Boutique').toUpperCase(), 82, barY + 23, 210);
+
+            this.drawCheckmark(ctx, 305, barY + 23, 9, '#3b82f6');
+
+            // Badge TikTok LIVE / Tendance à droite
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+            this.roundRect(ctx, w - 165, barY, 120, 46, 23);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 15px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('🔴 VIRAL', w - 105, barY + 24);
+
+            ctx.restore();
+        },
+
+        drawCapCutScene1: function (ctx, w, h, t, scriptCtx) {
+            scriptCtx = scriptCtx || this.getActiveScriptContext();
             const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
             const p = Math.min(t / s1End, 1);
             ctx.save();
 
-            // Flash d'impact au démarrage
+            // Flash d'impact au démarrage (0.25s)
             if (t < 0.25) {
-                const flashAlpha = (1 - t / 0.25) * 0.7;
+                const flashAlpha = (1 - t / 0.25) * 0.75;
                 ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
                 ctx.fillRect(0, 0, w, h);
             }
 
-            // Sticker d'accroche virale qui pulse
+            // Sticker d'accroche virale dynamique basé sur le script
             const badgeY = 135 + Math.sin(t * 8) * 4;
-            const badgeText = this.config.promoBadge || '⚡ ATTENTION TOUT LOMÉ !';
+            const badgeText = scriptCtx.scene1Badge;
             ctx.font = '900 28px system-ui, -apple-system, sans-serif';
             const bWidth = ctx.measureText(badgeText).width + 60;
 
-            ctx.fillStyle = '#ef4444';
-            ctx.shadowColor = '#ef4444';
+            ctx.fillStyle = scriptCtx.scene1Color;
+            ctx.shadowColor = scriptCtx.scene1Color;
             ctx.shadowBlur = 30;
             this.roundRect(ctx, (w - bWidth) / 2, badgeY, bWidth, 54, 27);
             ctx.fill();
@@ -811,7 +955,7 @@
             ctx.textBaseline = 'middle';
             ctx.fillText(badgeText, w / 2, badgeY + 27);
 
-            // Carte produit grand format 3D qui grossit
+            // Carte produit grand format 3D qui grossit avec pulsation
             const cardW = 540;
             const cardH = 540;
             const cardY = 225;
@@ -827,7 +971,7 @@
             const ringGrad = ctx.createLinearGradient(-cardW / 2, -cardH / 2, cardW / 2, cardH / 2);
             ringGrad.addColorStop(0, '#ec4899');
             ringGrad.addColorStop(0.5, '#8b5cf6');
-            ringGrad.addColorStop(1, '#3b82f6');
+            ringGrad.addColorStop(1, scriptCtx.scene1Color);
             ctx.strokeStyle = ringGrad;
             ctx.lineWidth = 6;
             ctx.strokeRect(-cardW / 2 - 8, -cardH / 2 - 8, cardW + 16, cardH + 16);
@@ -859,21 +1003,22 @@
                 ctx.restore();
             }
 
-            // Badges sur les coins de la carte
-            this.drawCornerBadge(ctx, -cardW / 2 + 20, -cardH / 2 + 20, '🔥 EXCLUSIF', '#f59e0b');
-            this.drawCornerBadge(ctx, cardW / 2 - 140, -cardH / 2 + 20, '⭐ TOP VENTE', '#10b981');
+            // Badges sur les coins de la carte spécifiques au script
+            this.drawCornerBadge(ctx, -cardW / 2 + 20, -cardH / 2 + 20, scriptCtx.scene1Corner1, '#f59e0b');
+            this.drawCornerBadge(ctx, cardW / 2 - 170, -cardH / 2 + 20, scriptCtx.scene1Corner2, '#10b981');
 
             ctx.restore();
 
-            // Sous-titres cinétiques Alex Hormozi / TikTok
+            // Grand sous-titre de choc
             const activeScript = this.config.scripts[this.currentScriptIndex];
-            const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Attendez, ne scrollez pas ! Regardez cette offre incroyable...';
+            const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : scriptCtx.scene1Sub;
             this.drawKineticSubtitles(ctx, w / 2, 880, 620, hookText, t, 0);
 
             ctx.restore();
         },
 
-        drawCapCutScene2: function (ctx, w, h, t) {
+        drawCapCutScene2: function (ctx, w, h, t, scriptCtx) {
+            scriptCtx = scriptCtx || this.getActiveScriptContext();
             ctx.save();
 
             const floatY = Math.sin(t * 3.5) * 8;
@@ -881,6 +1026,21 @@
             const cardH = 490;
             const cardX = (w - cardW) / 2;
             const cardY = 150 + floatY;
+
+            // Grand bandeau révélateur adapté au script
+            const solBadgeY = cardY - 45;
+            ctx.save();
+            ctx.font = '900 24px system-ui, sans-serif';
+            const sbText = scriptCtx.scene2Badge;
+            const sbW = ctx.measureText(sbText).width + 50;
+            ctx.fillStyle = scriptCtx.scene2Color;
+            this.roundRect(ctx, (w - sbW) / 2, solBadgeY, sbW, 44, 22);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(sbText, w / 2, solBadgeY + 22);
+            ctx.restore();
 
             ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
             ctx.shadowBlur = 40;
@@ -897,7 +1057,7 @@
             this.roundRect(ctx, cardX, cardY, cardW, cardH, 30);
             ctx.stroke();
 
-            // Titre du produit
+            // Titre du produit ou de la formule
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
@@ -931,46 +1091,44 @@
             ctx.fillText(priceText, 0, 2);
             ctx.restore();
 
-            // Ancien prix barré
-            if (this.config.oldPrice) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                ctx.font = 'bold 24px system-ui';
-                ctx.textAlign = 'center';
-                const oldText = this.config.oldPrice;
-                const oldW = ctx.measureText(oldText).width;
-                const oldY = titleY + 145;
-                ctx.fillText(oldText, w / 2, oldY);
-                ctx.strokeStyle = '#ef4444';
-                ctx.lineWidth = 3.5;
-                ctx.beginPath();
-                ctx.moveTo(w / 2 - oldW / 2 - 8, oldY);
-                ctx.lineTo(w / 2 + oldW / 2 + 8, oldY);
-                ctx.stroke();
-            }
-
-            const chipsY = titleY + (this.config.oldPrice ? 190 : 165);
-            this.drawFeatureChips(ctx, w, chipsY);
+            // Ancien prix barré ou pill d'argument clé adapté au script
+            const chipsY = titleY + 165;
+            ctx.save();
+            ctx.font = 'bold 20px system-ui';
+            const chipW = ctx.measureText(scriptCtx.scene2Pill).width + 40;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1.5;
+            this.roundRect(ctx, (w - chipW) / 2, chipsY - 20, chipW, 40, 20);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#10b981';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(scriptCtx.scene2Pill, w / 2, chipsY);
+            ctx.restore();
 
             // Sous-titre scène 2
             const activeScript = this.config.scripts[this.currentScriptIndex];
-            const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'Super qualité garantie, disponible immédiatement chez nous.';
+            const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : scriptCtx.scene2Title;
             this.drawKineticSubtitles(ctx, w / 2, 1100, 620, voiceover, t, 1);
 
             ctx.restore();
         },
 
-        drawCapCutScene3: function (ctx, w, h, t) {
+        drawCapCutScene3: function (ctx, w, h, t, scriptCtx) {
+            scriptCtx = scriptCtx || this.getActiveScriptContext();
             ctx.save();
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = '900 40px system-ui, -apple-system, sans-serif';
+            ctx.font = '900 38px system-ui, -apple-system, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('STOCK LIMITÉ !', w / 2, 160);
+            ctx.fillText(scriptCtx.scene3Title, w / 2, 160);
 
             ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.font = '600 24px system-ui';
-            ctx.fillText('Commandez vite avant rupture définitive', w / 2, 205);
+            ctx.font = '600 23px system-ui';
+            ctx.fillText(scriptCtx.scene3Sub, w / 2, 205);
 
             const miniSize = 250;
             const miniY = 255;
@@ -1008,28 +1166,25 @@
             ctx.shadowBlur = 0;
 
             this.drawWhatsAppIcon(ctx, -btnW / 2 + 55, 0, 26);
-
             ctx.fillStyle = '#ffffff';
-            ctx.font = '900 30px system-ui, -apple-system, sans-serif';
+            ctx.font = '900 29px system-ui';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            ctx.fillText('COMMANDER SUR WHATSAPP', -btnW / 2 + 105, 0);
+            ctx.fillText(scriptCtx.scene3Cta, -btnW / 2 + 105, 0);
             ctx.restore();
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 36px monospace, system-ui';
+            ctx.font = 'bold 36px monospace';
             ctx.textAlign = 'center';
             ctx.fillText(this.config.shopPhone, w / 2, 735);
 
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 24px system-ui';
-            ctx.fillText('🚚 Livraison express partout à Lomé & au Togo', w / 2, 795);
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 22px system-ui';
+            ctx.fillText('⚡ ' + scriptCtx.scene3Badge + ' • Lomé & environs', w / 2, 790);
 
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-            ctx.font = '500 21px system-ui';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.font = '600 18px system-ui';
             ctx.fillText('Paiement : T-Money • Flooz • Cash à la livraison', w / 2, 840);
-
-            // Points/confettis lumineux désactivés
 
             const activeScript = this.config.scripts[this.currentScriptIndex];
             const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-moi sur WhatsApp pour recevoir votre colis dès aujourd\'hui !';
@@ -1042,7 +1197,9 @@
         // STYLE 2 : PRÉSENTATEUR UGC IA FACE CAMÉRA (Créateur TikTok + Onde Vocale)
         // =========================================================================
         renderUgcStyle: function (ctx, w, h, t) {
-            // Fond studio créateur sombre avec bokeh chaud
+            const scriptCtx = this.getActiveScriptContext();
+
+            // Fond studio créateur sombre avec dégradé subtil
             const grad = ctx.createRadialGradient(w / 2, h * 0.35, 100, w / 2, h * 0.5, h * 0.85);
             grad.addColorStop(0, '#1e1b2e');
             grad.addColorStop(0.5, '#110e1b');
@@ -1050,116 +1207,249 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, w, h);
 
-            // Points lumineux désactivés
+            // 1. HUD Créateur TikTok en haut (REC clignotant + 4K 60FPS + VU-mètre)
+            this.drawUgcTopHud(ctx, w, h, t);
 
-            // 1. Cadre du Présentateur IA avec onde vocale en temps réel
-            const avatarSize = 460;
-            const avatarX = (w - avatarSize) / 2;
-            const avatarY = 90;
+            // TikTok UI HUD sur la droite (profil, like, com, share, disque vinyle)
+            this.drawTikTokSocialIcons(ctx, w - 52, 580, t);
 
-            // Anneau d'onde vocale dynamique autour du présentateur
-            this.drawWaveformRing(ctx, w / 2, avatarY + avatarSize / 2, avatarSize / 2 + 10, t);
-
-            // Photo du présentateur
-            ctx.save();
-            this.roundRect(ctx, avatarX, avatarY, avatarSize, avatarSize, 36);
-            ctx.clip();
-            if (this.ugcAvatarLoaded) {
-                ctx.drawImage(this.ugcAvatar, avatarX, avatarY, avatarSize, avatarSize);
-            } else {
-                ctx.fillStyle = '#2d2542';
-                ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 80px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('👤', w / 2, avatarY + avatarSize / 2);
-            }
-            ctx.restore();
-
-            // Bordure stylisée présentateur
-            ctx.save();
-            ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 4;
-            this.roundRect(ctx, avatarX, avatarY, avatarSize, avatarSize, 36);
-            ctx.stroke();
-            ctx.restore();
-
-            // Badge du créateur vérifié
-            const creatorBadgeY = avatarY + avatarSize - 22;
-            ctx.save();
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-            ctx.lineWidth = 1.5;
-            this.roundRect(ctx, w / 2 - 160, creatorBadgeY, 320, 44, 22);
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 19px system-ui';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('Aïcha • Avis Vérifié Togo', w / 2 - 10, creatorBadgeY + 22);
-            this.drawCheckmark(ctx, w / 2 + 125, creatorBadgeY + 22, 9, '#3b82f6');
-            ctx.restore();
-
-            // 2. Incrustation Carte Produit (flottante au centre)
-            const prodW = 540;
-            const prodH = 260;
-            const prodY = 600;
-            const prodX = (w - prodW) / 2;
-
-            ctx.save();
-            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-            ctx.shadowBlur = 30;
-            ctx.shadowOffsetY = 12;
-            ctx.fillStyle = 'rgba(24, 20, 36, 0.95)';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.lineWidth = 2;
-            this.roundRect(ctx, prodX, prodY, prodW, prodH, 24);
-            ctx.fill();
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-
-            // Miniature produit dans la carte
-            const thumbSize = 210;
-            this.drawProductImage(ctx, prodX + 25, prodY + 25, thumbSize, thumbSize, 18);
-
-            // Détails texte de la carte
-            const textLeft = prodX + thumbSize + 45;
-            ctx.fillStyle = '#10b981';
-            ctx.font = 'bold 15px system-ui';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            ctx.fillText('LE PRODUIT TESTÉ 📦', textLeft, prodY + 30);
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 24px system-ui';
-            this.drawTruncatedText(ctx, this.config.productTitle, textLeft, prodY + 65, prodW - thumbSize - 65);
-
-            // Prix dans la carte
-            ctx.fillStyle = '#f59e0b';
-            ctx.font = '900 32px system-ui';
-            ctx.fillText(this.config.price || '15 000 FCFA', textLeft, prodY + 115);
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.font = '600 16px system-ui';
-            ctx.fillText('Boutique : ' + this.config.shopName, textLeft, prodY + 165);
-            ctx.fillText('Livraison à Lomé : Disponible', textLeft, prodY + 195);
-            ctx.restore();
-
-            // 3. Icônes d'interface TikTok sur le côté droit
-            this.drawTikTokSocialIcons(ctx, w - 55, 620, t);
-
-            // 4. Scène d'Appel à l'action ou sous-titres
             const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
             const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
 
-            if (t >= s2End) {
-                // Bouton WhatsApp géant
-                const btnY = 910;
+            if (t < s1End) {
+                // SCÈNE 1 UGC : Créateur face caméra réagissant à un commentaire / dilemme viral
+                const avatarSize = 430;
+                const avatarX = (w - avatarSize) / 2;
+                const avatarY = 100;
+
+                // Anneau d'onde vocale dynamique autour du présentateur
+                this.drawWaveformRing(ctx, w / 2, avatarY + avatarSize / 2, avatarSize / 2 + 10, t);
+
+                // Photo du présentateur
+                ctx.save();
+                this.roundRect(ctx, avatarX, avatarY, avatarSize, avatarSize, 36);
+                ctx.clip();
+                if (this.ugcAvatarLoaded) {
+                    ctx.drawImage(this.ugcAvatar, avatarX, avatarY, avatarSize, avatarSize);
+                } else {
+                    ctx.fillStyle = '#2d2542';
+                    ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 80px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('👤', w / 2, avatarY + avatarSize / 2);
+                }
+                ctx.restore();
+
+                // Bordure stylisée néon
+                ctx.save();
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 4;
+                this.roundRect(ctx, avatarX, avatarY, avatarSize, avatarSize, 36);
+                ctx.stroke();
+                ctx.restore();
+
+                // Badge créateur vérifié
+                const creatorBadgeY = avatarY + avatarSize - 22;
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.lineWidth = 1.5;
+                this.roundRect(ctx, w / 2 - 165, creatorBadgeY, 330, 44, 22);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Aïcha • Avis Vérifiés Togo', w / 2 - 12, creatorBadgeY + 22);
+                this.drawCheckmark(ctx, w / 2 + 130, creatorBadgeY + 22, 9, '#3b82f6');
+                ctx.restore();
+
+                // Bulle de commentaire TikTok interactif
+                this.drawFloatingTikTokComment(ctx, w / 2, 600, 600, scriptCtx.ugcCommentUser, scriptCtx.ugcCommentText, t);
+
+                // Sticker d'accroche éditorial du script
+                ctx.save();
+                ctx.translate(w / 2, 730);
+                const pop = 1.0 + 0.03 * Math.sin(t * 6);
+                ctx.scale(pop, pop);
+                ctx.fillStyle = scriptCtx.scene1Color;
+                ctx.shadowColor = scriptCtx.scene1Color;
+                ctx.shadowBlur = 20;
+                this.roundRect(ctx, -210, -22, 420, 44, 22);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 18px system-ui';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(scriptCtx.scene1Badge, 0, 0);
+                ctx.restore();
+
+                // Sous-titres cinétiques Scène 1
+                const activeScript = this.config.scripts[this.currentScriptIndex];
+                const hookText = (activeScript && activeScript.steps[0] && activeScript.steps[0].voiceover)
+                    ? activeScript.steps[0].voiceover
+                    : 'Regardez ce que j\'ai testé pour vous aujourd\'hui...';
+                this.drawKineticSubtitles(ctx, w / 2, 1020, 620, hookText, t, 0);
+
+            } else if (t < s2End) {
+                // SCÈNE 2 UGC : Test produit en direct & Avis vérifié avec Présentateur en PiP
+                // Mini avatar créateur en haut à gauche (Picture-in-Picture)
+                const pipSize = 140;
+                const pipX = 40;
+                const pipY = 95;
+
+                this.drawWaveformRing(ctx, pipX + pipSize / 2, pipY + pipSize / 2, pipSize / 2 + 6, t);
+
+                ctx.save();
+                this.roundRect(ctx, pipX, pipY, pipSize, pipSize, 22);
+                ctx.clip();
+                if (this.ugcAvatarLoaded) {
+                    ctx.drawImage(this.ugcAvatar, pipX, pipY, pipSize, pipSize);
+                } else {
+                    ctx.fillStyle = '#2d2542';
+                    ctx.fillRect(pipX, pipY, pipSize, pipSize);
+                }
+                ctx.restore();
+
+                ctx.save();
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 3;
+                this.roundRect(ctx, pipX, pipY, pipSize, pipSize, 22);
+                ctx.stroke();
+                ctx.restore();
+
+                // Badge PiP
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+                this.roundRect(ctx, pipX + pipSize + 15, pipY + 30, 240, 36, 18);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 14px system-ui';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🔴 TEST EN DIRECT', pipX + pipSize + 30, pipY + 48);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '600 13px system-ui';
+                ctx.fillText('Avis sincère sans filtre', pipX + pipSize + 30, pipY + 80);
+
+                // Grande carte produit testé
+                const cardW = 580;
+                const cardH = 430;
+                const cardX = (w - cardW) / 2;
+                const cardY = 265;
+
+                ctx.save();
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                ctx.shadowBlur = 35;
+                ctx.fillStyle = 'rgba(20, 16, 32, 0.95)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+                ctx.lineWidth = 2;
+                this.roundRect(ctx, cardX, cardY, cardW, cardH, 28);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Photo du produit au format vitrine
+                const imgSize = 250;
+                this.drawProductImage(ctx, cardX + 25, cardY + 25, imgSize, imgSize, 20);
+
+                // Détails produit & notes
+                const textX = cardX + imgSize + 45;
+                ctx.fillStyle = scriptCtx.scene2Color;
+                ctx.font = '900 15px system-ui';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText(scriptCtx.scene2Badge, textX, cardY + 30);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 24px system-ui';
+                this.drawTruncatedText(ctx, this.config.productTitle, textX, cardY + 65, cardW - imgSize - 65);
+
+                // Prix promotionnel
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = '900 32px system-ui';
+                ctx.fillText(this.config.price || '15 000 FCFA', textX, cardY + 115);
+
+                // Statut boutique & livraison
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                ctx.font = '600 15px system-ui';
+                ctx.fillText('Boutique : ' + this.config.shopName, textX, cardY + 165);
+                ctx.fillText('Livraison : Express à Lomé', textX, cardY + 195);
+
+                // Bandeau d'évaluation client au bas de la carte
+                const ratingY = cardY + 295;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.lineWidth = 1;
+                this.roundRect(ctx, cardX + 20, ratingY, cardW - 40, 110, 18);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 20px system-ui';
+                ctx.fillText('⭐⭐⭐⭐⭐ AVIS CLIENT VÉRIFIÉ', cardX + 38, ratingY + 22);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'italic 500 17px system-ui';
+                this.drawTruncatedText(ctx, `"${scriptCtx.ugcRating}"`, cardX + 38, ratingY + 58, cardW - 80);
+
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 15px system-ui';
+                ctx.fillText(scriptCtx.scene2Pill, cardX + 38, ratingY + 85);
+
+                ctx.restore();
+
+                // Sous-titres cinétiques Scène 2
+                const activeScript = this.config.scripts[this.currentScriptIndex];
+                const demoVoice = (activeScript && activeScript.steps[1] && activeScript.steps[1].voiceover)
+                    ? activeScript.steps[1].voiceover
+                    : 'La qualité est juste incroyable et le prix est top.';
+                this.drawKineticSubtitles(ctx, w / 2, 1020, 620, demoVoice, t, 1);
+
+            } else {
+                // SCÈNE 3 UGC : Recommandation finale créateur & Commande WhatsApp
+                // Verdict Créateur
+                ctx.save();
+                ctx.fillStyle = '#10b981';
+                ctx.font = '900 22px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('👍 ' + scriptCtx.scene3Badge, w / 2, 220);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 36px system-ui';
+                this.drawTruncatedText(ctx, scriptCtx.scene3Title, w / 2, 275, 620);
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.font = '500 20px system-ui';
+                ctx.fillText(scriptCtx.scene3Sub, w / 2, 320);
+
+                // Miniature du produit avec badge
+                const miniSize = 220;
+                const miniY = 360;
+                this.drawProductImage(ctx, (w - miniSize) / 2, miniY, miniSize, miniSize, 22);
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 3;
+                this.roundRect(ctx, (w - miniSize) / 2, miniY, miniSize, miniSize, 22);
+                ctx.stroke();
+
+                // Bouton WhatsApp géant avec ripple
+                const btnY = 620;
                 const btnW = 560;
                 const btnH = 96;
+
+                const ripple = (t * 2.2) % 1;
+                ctx.strokeStyle = `rgba(37, 211, 102, ${0.75 * (1 - ripple)})`;
+                ctx.lineWidth = 4;
+                this.roundRect(ctx, (w - btnW) / 2 - ripple * 25, btnY - ripple * 15, btnW + ripple * 50, btnH + ripple * 30, 48);
+                ctx.stroke();
 
                 const pulse = 1.0 + 0.03 * Math.sin(t * 8);
                 ctx.save();
@@ -1178,24 +1468,25 @@
                 ctx.font = '900 28px system-ui';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('COMMANDER SUR WHATSAPP', -btnW / 2 + 105, 0);
+                ctx.fillText(scriptCtx.scene3Cta, -btnW / 2 + 105, 0);
                 ctx.restore();
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 30px monospace';
+                ctx.font = 'bold 34px monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText(this.config.shopPhone, w / 2, 1060);
+                ctx.fillText(this.config.shopPhone, w / 2, 765);
 
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                ctx.font = '600 18px system-ui';
+                ctx.fillText('Paiement : T-Money • Flooz • Cash à la livraison', w / 2, 820);
+                ctx.restore();
+
+                // Sous-titres cinétiques Scène 3
                 const activeScript = this.config.scripts[this.currentScriptIndex];
-                const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Cliquez sur WhatsApp pour commander directement !';
-                this.drawKineticSubtitles(ctx, w / 2, 1140, 620, ctaVoice, t, 2);
-            } else {
-                const activeScript = this.config.scripts[this.currentScriptIndex];
-                const segIdx = (t < s1End) ? 0 : 1;
-                const currentText = (segIdx === 0)
-                    ? (activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Regardez ce que j\'ai trouvé pour vous...')
-                    : (activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'La qualité est juste incroyable et le prix est top.');
-                this.drawKineticSubtitles(ctx, w / 2, 980, 640, currentText, t, segIdx);
+                const ctaVoice = (activeScript && activeScript.steps[2] && activeScript.steps[2].voiceover)
+                    ? activeScript.steps[2].voiceover
+                    : 'Cliquez sur WhatsApp pour commander directement !';
+                this.drawKineticSubtitles(ctx, w / 2, 1040, 620, ctaVoice, t, 2);
             }
         },
 
@@ -1203,7 +1494,9 @@
         // STYLE 3 : SHOWCASE LOOKBOOK LUXE (Haute Couture, Reflets Or & Élégance)
         // =========================================================================
         renderLookbookStyle: function (ctx, w, h, t) {
-            // Fond noir obsidienne avec poussière dorée
+            const scriptCtx = this.getActiveScriptContext();
+
+            // Fond noir obsidienne avec reflets or chauds
             const grad = ctx.createRadialGradient(w / 2, h * 0.4, 60, w / 2, h * 0.5, h * 0.9);
             grad.addColorStop(0, '#1c160c');
             grad.addColorStop(0.5, '#0e0b06');
@@ -1211,48 +1504,32 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, w, h);
 
-            // Points lumineux dorés désactivés
-
-            // Header Luxe Signature
-            ctx.save();
-            ctx.fillStyle = '#d4af37';
-            ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", serif';
-            ctx.letterSpacing = '3px';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText((this.config.shopName || 'BOUTIQUE').toUpperCase() + ' • SÉLECTION PRIVÉE', w / 2, 70);
-
-            ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(w / 2 - 180, 95);
-            ctx.lineTo(w / 2 + 180, 95);
-            ctx.stroke();
-            ctx.restore();
+            // Sceau d'or en filigrane discret tournant en haut à droite
+            this.drawGoldWaxSeal(ctx, w - 85, 145, 42, t);
 
             const s1End = this.timeline ? this.timeline.sceneEnds[0] : 5.5;
             const s2End = this.timeline ? this.timeline.sceneEnds[1] : 15.0;
 
             if (t < s1End) {
-                // Scène 1 Lookbook : Entrée majestueuse avec cadre doré
+                // SCÈNE 1 LOOKBOOK : Dévoilement Majestueux sur Piédestal & Reflet Miroir
                 const cardW = 510;
                 const cardH = 510;
-                const cardY = 160;
-                const p = Math.min(t / s1End, 1);
-                const tilt = Math.sin(t * 1.5) * 0.02;
+                const cardY = 175;
+                const tilt = Math.sin(t * 1.5) * 0.015;
 
                 ctx.save();
                 ctx.translate(w / 2, cardY + cardH / 2);
                 ctx.rotate(tilt);
 
-                ctx.shadowColor = 'rgba(212, 175, 55, 0.25)';
-                ctx.shadowBlur = 35;
+                // Cadre extérieur or avec ombre ambrée
+                ctx.shadowColor = 'rgba(212, 175, 55, 0.35)';
+                ctx.shadowBlur = 40;
                 ctx.strokeStyle = '#d4af37';
                 ctx.lineWidth = 3;
-                this.roundRect(ctx, -cardW / 2 - 8, -cardH / 2 - 8, cardW + 16, cardH + 16, 26);
+                this.roundRect(ctx, -cardW / 2 - 10, -cardH / 2 - 10, cardW + 20, cardH + 20, 26);
                 ctx.stroke();
 
-                ctx.fillStyle = '#100e0b';
+                ctx.fillStyle = '#0f0c08';
                 this.roundRect(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 22);
                 ctx.fill();
                 ctx.shadowBlur = 0;
@@ -1260,28 +1537,40 @@
                 this.drawProductImage(ctx, -cardW / 2 + 10, -cardH / 2 + 10, cardW - 20, cardH - 20, 18);
                 ctx.restore();
 
-                // Ruban "COLLECTION PRESTIGE"
+                // Ruban Signature Prestige adapté au script
+                ctx.save();
                 ctx.fillStyle = '#d4af37';
-                ctx.font = 'bold 26px serif';
+                ctx.font = 'bold 24px serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(this.config.promoBadge || 'COLLECTION PRIVÉE', w / 2, 740);
+                ctx.fillText('✦ ' + scriptCtx.lookbookBadge + ' ✦', w / 2, 755);
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 36px system-ui';
-                this.drawTruncatedText(ctx, this.config.productTitle, w / 2, 795, 620);
+                ctx.font = 'bold 36px serif';
+                this.drawTruncatedText(ctx, this.config.productTitle, w / 2, 810, 620);
 
+                ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(w / 2 - 180, 835);
+                ctx.lineTo(w / 2 + 180, 835);
+                ctx.stroke();
+                ctx.restore();
+
+                // Sous-titres cinétiques Scène 1
                 const activeScript = this.config.scripts[this.currentScriptIndex];
-                const hookText = activeScript && activeScript.steps[0] ? activeScript.steps[0].voiceover : 'Une pièce rare et élégante sélectionnée pour vous.';
-                this.drawKineticSubtitles(ctx, w / 2, 920, 620, hookText, t, 0);
+                const hookText = (activeScript && activeScript.steps[0] && activeScript.steps[0].voiceover)
+                    ? activeScript.steps[0].voiceover
+                    : 'Une création d\'exception réservée aux plus exigeants.';
+                this.drawKineticSubtitles(ctx, w / 2, 940, 620, hookText, t, 0);
 
             } else if (t < s2End) {
-                // Scène 2 Lookbook : Macro détails & Ruban de prix doré satiné
-                const cardW = 460;
-                const cardH = 460;
-                const cardY = 150 + Math.sin(t * 2) * 6;
+                // SCÈNE 2 LOOKBOOK : Gros plan Haute Facture & Spécifications VIP
+                const cardW = 470;
+                const cardH = 470;
+                const cardY = 165 + Math.sin(t * 2) * 6;
 
                 ctx.save();
-                ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
                 ctx.shadowBlur = 40;
                 ctx.fillStyle = '#120f0a';
                 this.roundRect(ctx, (w - cardW) / 2, cardY, cardW, cardH, 24);
@@ -1296,11 +1585,11 @@
                 ctx.stroke();
                 ctx.restore();
 
-                // Prix or satiné
+                // Plaque Gravée Prix Or Satiné
                 const priceY = cardY + cardH + 70;
                 ctx.save();
                 const pText = 'PRIX PRIVILÈGE : ' + (this.config.price || '15 000 FCFA');
-                ctx.font = '900 34px serif';
+                ctx.font = '900 32px serif';
                 const pW = ctx.measureText(pText).width + 70;
 
                 const goldGrad = ctx.createLinearGradient((w - pW) / 2, 0, (w + pW) / 2, 0);
@@ -1321,32 +1610,34 @@
                 ctx.fillText(pText, w / 2, priceY);
                 ctx.restore();
 
-                // 3 spécifications de prestige
-                const specs = ['01 / FINITION SUPÉRIEURE', '02 / ÉDITION LIMITÉE', '03 / LIVRAISON VIP'];
+                // 3 spécifications VIP exclusives adaptées au script
                 ctx.fillStyle = '#d4af37';
-                ctx.font = 'bold 17px -apple-system, sans-serif';
+                ctx.font = 'bold 17px system-ui, serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(specs.join('   •   '), w / 2, priceY + 65);
+                ctx.fillText(scriptCtx.lookbookSpec, w / 2, priceY + 65);
 
+                // Sous-titres cinétiques Scène 2
                 const activeScript = this.config.scripts[this.currentScriptIndex];
-                const voiceover = activeScript && activeScript.steps[1] ? activeScript.steps[1].voiceover : 'Finition irréprochable et matière noble pour les plus exigeants.';
-                this.drawKineticSubtitles(ctx, w / 2, 1100, 620, voiceover, t, 1);
+                const voiceover = (activeScript && activeScript.steps[1] && activeScript.steps[1].voiceover)
+                    ? activeScript.steps[1].voiceover
+                    : 'Finition irréprochable et matière noble pour les plus exigeants.';
+                this.drawKineticSubtitles(ctx, w / 2, 1080, 620, voiceover, t, 1);
 
             } else {
-                // Scène 3 Lookbook : Carte Conciergerie WhatsApp VIP
+                // SCÈNE 3 LOOKBOOK : Carte Conciergerie VIP & Commande WhatsApp
                 ctx.save();
                 ctx.fillStyle = '#d4af37';
                 ctx.font = '900 32px serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('SERVICE COMMANDES VIP', w / 2, 190);
+                ctx.fillText('CONCIERGERIE PRIVÉE VIP', w / 2, 200);
 
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
                 ctx.font = '500 22px system-ui';
-                ctx.fillText('Réservation immédiate et livraison discrète', w / 2, 235);
+                ctx.fillText(scriptCtx.scene3Sub || 'Réservation exclusive et livraison discrète à Lomé', w / 2, 245);
 
                 const miniSize = 240;
                 ctx.save();
-                ctx.translate(w / 2, 290 + miniSize / 2);
+                ctx.translate(w / 2, 305 + miniSize / 2);
                 this.drawProductImage(ctx, -miniSize / 2, -miniSize / 2, miniSize, miniSize, 20);
                 ctx.strokeStyle = '#d4af37';
                 ctx.lineWidth = 3;
@@ -1354,8 +1645,8 @@
                 ctx.stroke();
                 ctx.restore();
 
-                // Bouton WhatsApp doré / noir
-                const btnY = 610;
+                // Bouton WhatsApp Doré / Noir VIP
+                const btnY = 620;
                 const btnW = 540;
                 const btnH = 92;
 
@@ -1376,23 +1667,245 @@
                 ctx.font = '900 28px system-ui';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('COMMANDER SUR WHATSAPP', -btnW / 2 + 95, 0);
+                ctx.fillText(scriptCtx.scene3Cta, -btnW / 2 + 95, 0);
                 ctx.restore();
 
                 ctx.fillStyle = '#d4af37';
-                ctx.font = 'bold 34px monospace';
+                ctx.font = 'bold 36px monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText(this.config.shopPhone, w / 2, 765);
+                ctx.fillText(this.config.shopPhone, w / 2, 775);
 
                 ctx.fillStyle = '#ffffff';
                 ctx.font = '600 21px system-ui';
-                ctx.fillText('Expédition express à Lomé & partout au Togo', w / 2, 820);
-
-                const activeScript = this.config.scripts[this.currentScriptIndex];
-                const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-nous sur WhatsApp pour réserver votre pièce.';
-                this.drawKineticSubtitles(ctx, w / 2, 1050, 620, ctaVoice, t, 2);
+                ctx.fillText('Expédition express à Lomé & partout au Togo', w / 2, 830);
                 ctx.restore();
+
+                // Sous-titres cinétiques Scène 3
+                const activeScript = this.config.scripts[this.currentScriptIndex];
+                const ctaVoice = (activeScript && activeScript.steps[2] && activeScript.steps[2].voiceover)
+                    ? activeScript.steps[2].voiceover
+                    : 'Écrivez-nous sur WhatsApp pour réserver votre pièce.';
+                this.drawKineticSubtitles(ctx, w / 2, 1050, 620, ctaVoice, t, 2);
             }
+
+            // Bandes Cinemascope 2.35:1 dessinées en superposition finale pour encadrer le plan
+            this.drawCinemascopeBars(ctx, w, h, t);
+        },
+
+        // --- MODULES VISUELS COMPLÉMENTAIRES (HUD UGC, COMMENTAIRES & LUXE) ---
+
+        drawUgcTopHud: function (ctx, w, h, t) {
+            ctx.save();
+            const topY = 48;
+
+            // Clignotement REC rouge
+            const isRecOn = (Math.floor(t * 2) % 2 === 0);
+            ctx.fillStyle = isRecOn ? '#ef4444' : 'rgba(239, 68, 68, 0.4)';
+            ctx.beginPath();
+            ctx.arc(52, topY + 12, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            const sec = Math.floor(t);
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 16px monospace';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`REC ${m}:${s}`, 68, topY + 12);
+
+            // Badge Qualité & Créateur
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            this.roundRect(ctx, w / 2 - 110, topY - 3, 220, 30, 15);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('4K 60FPS • UGC CREATOR', w / 2, topY + 12);
+
+            // Barres Audio VU-mètre à droite
+            for (let i = 0; i < 4; i++) {
+                const barH = 8 + Math.abs(Math.sin(t * 10 + i * 1.5)) * 14;
+                ctx.fillStyle = i === 3 ? '#ef4444' : '#10b981';
+                ctx.fillRect(w - 110 + i * 8, topY + 18 - barH, 5, barH);
+            }
+            ctx.restore();
+        },
+
+        drawFloatingTikTokComment: function (ctx, cx, cy, maxW, username, text, t) {
+            ctx.save();
+            const boxW = Math.min(maxW, 580);
+            const padX = 22;
+            const padY = 18;
+            const userStr = username || '@client_togo';
+
+            ctx.font = '500 18px system-ui, -apple-system, sans-serif';
+            // Découpage du texte en 2 ou 3 lignes
+            const words = (text || 'Comment on commande svp ?').split(' ');
+            const lines = [];
+            let cur = '';
+            const maxTextW = boxW - 130;
+            words.forEach(w => {
+                const test = cur ? cur + ' ' + w : w;
+                if (ctx.measureText(test).width > maxTextW) {
+                    lines.push(cur);
+                    cur = w;
+                } else {
+                    cur = test;
+                }
+            });
+            if (cur) lines.push(cur);
+
+            const lineH = 26;
+            const boxH = Math.max(105, 55 + lines.length * lineH + padY);
+            const bx = cx - boxW / 2;
+            const by = cy - boxH / 2;
+
+            // Ombre portée douce
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+            ctx.shadowBlur = 25;
+            ctx.shadowOffsetY = 10;
+
+            // Fond blanc style bulle de réponse TikTok
+            ctx.fillStyle = '#ffffff';
+            this.roundRect(ctx, bx, by, boxW, boxH, 20);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Petite flèche de bulle vers le haut
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(cx - 12, by);
+            ctx.lineTo(cx, by - 10);
+            ctx.lineTo(cx + 12, by);
+            ctx.closePath();
+            ctx.fill();
+
+            // Avatar rond de l'utilisateur
+            const avSize = 42;
+            const avX = bx + padX;
+            const avY = by + padY;
+            ctx.fillStyle = '#8b5cf6';
+            ctx.beginPath();
+            ctx.arc(avX + avSize / 2, avY + avSize / 2, avSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 20px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(userStr.slice(1, 2).toUpperCase() || 'U', avX + avSize / 2, avY + avSize / 2);
+
+            // Mention "En réponse à"
+            const textLeft = avX + avSize + 14;
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '600 12px system-ui';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('En réponse à ' + userStr, textLeft, avY);
+
+            // Commentaire posé
+            ctx.fillStyle = '#111827';
+            ctx.font = 'bold 17px system-ui, -apple-system, sans-serif';
+            lines.forEach((line, idx) => {
+                ctx.fillText(line, textLeft, avY + 20 + idx * lineH);
+            });
+
+            // Icône Coeur TikTok à droite
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '18px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('❤️', bx + boxW - 32, by + boxH / 2 - 6);
+            ctx.fillStyle = '#6b7280';
+            ctx.font = 'bold 11px system-ui';
+            ctx.fillText('842', bx + boxW - 32, by + boxH / 2 + 14);
+
+            ctx.restore();
+        },
+
+        drawCinemascopeBars: function (ctx, w, h, t) {
+            ctx.save();
+            const barH = 82;
+
+            // Barre supérieure Cinemascope
+            ctx.fillStyle = '#060503';
+            ctx.fillRect(0, 0, w, barH);
+
+            // Liseré or métallique
+            ctx.strokeStyle = '#d4af37';
+            ctx.shadowColor = '#d4af37';
+            ctx.shadowBlur = 12;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, barH);
+            ctx.lineTo(w, barH);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Titre Maison d'Exception
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 16px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const name = (this.config.shopName || 'BOUTIQUE').toUpperCase();
+            ctx.fillText(`★ MAISON ${name} • HAUTE ÉDITION ★`, w / 2, barH / 2);
+
+            // Barre inférieure Cinemascope
+            ctx.fillStyle = '#060503';
+            ctx.fillRect(0, h - barH, w, barH);
+
+            ctx.strokeStyle = '#d4af37';
+            ctx.shadowColor = '#d4af37';
+            ctx.shadowBlur = 12;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, h - barH);
+            ctx.lineTo(w, h - barH);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = 'rgba(212, 175, 55, 0.85)';
+            ctx.font = '600 13px system-ui';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('CINEMASCOPE 2.35:1 • SÉLECTION PRIVÉE TOGO', w / 2, h - barH / 2);
+
+            ctx.restore();
+        },
+
+        drawGoldWaxSeal: function (ctx, cx, cy, radius, t) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(t * 0.35);
+
+            // Cercle extérieur dentelé ou or
+            ctx.fillStyle = 'rgba(20, 16, 8, 0.9)';
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Cercle intérieur
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius - 8, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Étoile centrale
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '900 18px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('★', 0, 0);
+
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 8px system-ui';
+            ctx.fillText('PRESTIGE', 0, radius - 15);
+            ctx.fillText('CERTIFIÉ', 0, -radius + 15);
+
+            ctx.restore();
         },
 
         // --- NOUVEAUX MODULES VISUELS HAUTE FIDÉLITÉ ---
