@@ -1413,8 +1413,8 @@
         </div>
     </div>
 
-    <!-- Floating WhatsApp Radar Bubble -->
-    @if ($shop->whatsapp_formatted)
+    <!-- Floating WhatsApp Radar Bubble (Masqué sur Panier & Commande pour éviter tout chevauchement) -->
+    @if ($shop->whatsapp_formatted && !request()->routeIs('storefront.cart*') && !request()->routeIs('storefront.checkout*'))
         <aside class="floating-wa-bubble">
             <span class="floating-wa-tooltip">Une question ? Écrivez-nous sur WhatsApp !</span>
             <a href="https://wa.me/{{ $shop->whatsapp_formatted }}" target="_blank" class="floating-wa-btn" title="Discuter sur WhatsApp" aria-label="Contacter sur WhatsApp">
