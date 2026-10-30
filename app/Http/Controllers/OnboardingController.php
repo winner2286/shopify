@@ -80,6 +80,9 @@ class OnboardingController extends Controller
             'target_audience' => ['nullable', 'string', 'max:100'],
             'visual_style' => ['required', 'in:moderne,elegant,colore,minimaliste,artisanal'],
             'brand_color' => ['nullable', 'string', 'regex:/^#[a-fA-F0-9]{6}$/'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'maps_url' => ['nullable', 'string', 'max:500'],
         ], [
             'suggested_name.required' => 'Indiquez un nom pour votre boutique.',
             'visual_style.required' => 'Choisissez un style visuel.',
@@ -91,11 +94,23 @@ class OnboardingController extends Controller
         $data['target_audience'] = $validated['target_audience'] ?? 'Grand public';
         $data['visual_style'] = $validated['visual_style'];
         $data['brand_color'] = $validated['brand_color'] ?? '#6d3df2';
+        $data['address'] = $validated['address'] ?? null;
+        $data['city'] = $validated['city'] ?? null;
+        $data['maps_url'] = $validated['maps_url'] ?? null;
 
         $contact = $shop->contact ?? [];
         if (! empty($validated['whatsapp'])) {
             $contact['whatsapp'] = $validated['whatsapp'];
             $contact['phone'] = $contact['phone'] ?? $validated['whatsapp'];
+        }
+        if (isset($validated['address'])) {
+            $contact['address'] = $validated['address'];
+        }
+        if (isset($validated['city'])) {
+            $contact['city'] = $validated['city'];
+        }
+        if (isset($validated['maps_url'])) {
+            $contact['maps_url'] = $validated['maps_url'];
         }
 
         $shop->update([

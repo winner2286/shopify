@@ -50,11 +50,24 @@
                 </div>
 
                 @if ($shop->address || $shop->city)
-                    <div style="background:var(--bg-soft);padding:1.2rem;border-radius:var(--radius-sm);margin-top:1.5rem">
-                        <strong style="display:inline-flex;align-items:center;gap:.3rem"><x-icon name="map-pin" size="16" /> Adresse de la boutique :</strong>
-                        <p style="margin:.3rem 0 0;color:var(--text-soft)">
-                            {{ $shop->address ? $shop->address . ' - ' : '' }}{{ $shop->city ?: 'Lomé, Togo' }}
-                        </p>
+                    <div style="background:var(--bg-soft);padding:1.4rem;border-radius:var(--radius-sm);margin-top:1.5rem;border:1px solid var(--border)">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+                            <div>
+                                <strong style="display:inline-flex;align-items:center;gap:.35rem;font-size:1.05rem">
+                                    <x-icon name="map-pin" size="18" style="color:var(--store-primary)" />
+                                    Boutique physique & Point de retrait :
+                                </strong>
+                                <p style="margin:.4rem 0 0;color:var(--text);font-weight:500">
+                                    {{ $shop->address ? $shop->address . ' - ' : '' }}{{ $shop->city ?: 'Lomé, Togo' }}
+                                </p>
+                            </div>
+                            @if ($shop->maps_url)
+                                <a href="{{ $shop->maps_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-store btn-sm" style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem">
+                                    <x-icon name="map" size="15" />
+                                    <span>Voir sur Google Maps ↗</span>
+                                </a>
+                            @endif
+                        </div>
                     </div>
                 @endif
             </div>

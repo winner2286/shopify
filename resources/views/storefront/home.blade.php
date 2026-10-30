@@ -224,4 +224,41 @@
         </div>
     </div>
 </div>
+
+<!-- Section Boutique Physique & Localisation Maps -->
+@if ($shop->address || $shop->maps_url)
+    <div class="container" style="margin-top:3.5rem">
+        <div class="card" style="padding:2.2rem 1.8rem;border-radius:18px;background:radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--store-primary) 8%, var(--surface)) 0%, var(--surface) 100%);border:1px solid color-mix(in srgb, var(--store-primary) 25%, var(--border));box-shadow:0 12px 32px rgba(0,0,0,0.06)">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem">
+                <div style="max-width:560px">
+                    <span style="display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .75rem;border-radius:999px;background:color-mix(in srgb, var(--store-primary) 15%, transparent);color:var(--store-primary);font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.8rem">
+                        <x-icon name="map-pin" :size="13" /> Boutique Physique
+                    </span>
+                    <h3 style="font-size:1.45rem;font-weight:700;margin:0 0 .6rem;color:var(--text)">
+                        Venez nous rendre visite en magasin !
+                    </h3>
+                    <p style="color:var(--text-soft);font-size:.95rem;line-height:1.6;margin:0 0 1rem">
+                        Découvrez nos articles en vrai, bénéficiez de conseils personnalisés et retirez vos commandes directement sur place.
+                    </p>
+                    <div style="display:flex;align-items:flex-start;gap:.6rem;font-size:.95rem;color:var(--text);font-weight:600">
+                        <x-icon name="map-pin" :size="18" style="color:var(--store-primary);flex-shrink:0;margin-top:2px" />
+                        <span>{{ $shop->address ? $shop->address . ' — ' : '' }}{{ $shop->city ?: 'Lomé, Togo' }}</span>
+                    </div>
+                </div>
+
+                @if ($shop->maps_url)
+                    <div style="display:flex;flex-direction:column;gap:.75rem;align-items:flex-start">
+                        <a href="{{ $shop->maps_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-store" style="padding:.75rem 1.4rem;font-size:.95rem;display:inline-flex;align-items:center;gap:.5rem;border-radius:12px;box-shadow:0 6px 20px color-mix(in srgb, var(--store-primary) 35%, transparent)">
+                            <x-icon name="map" :size="17" />
+                            <span>Ouvrir l'itinéraire Google Maps ↗</span>
+                        </a>
+                        <span style="font-size:.78rem;color:var(--text-faint);display:inline-flex;align-items:center;gap:.3rem">
+                            <x-icon name="check-circle" :size="13" style="color:var(--ok)" /> Localisation GPS vérifiée
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+@endif
 @endsection

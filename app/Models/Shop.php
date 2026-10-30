@@ -191,6 +191,21 @@ class Shop extends Model
         return $this->contact['city'] ?? 'Lomé';
     }
 
+    public function getMapsUrlAttribute(): ?string
+    {
+        if (! empty($this->contact['maps_url'])) {
+            return $this->contact['maps_url'];
+        }
+        if (! empty($this->address) && preg_match('/https?:\/\/(?:www\.)?(?:google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl)[^\s\)]+/', $this->address, $matches)) {
+            return $matches[0];
+        }
+        if (! empty($this->address)) {
+            $query = trim($this->address . ($this->city ? ', ' . $this->city : ', Lomé'));
+            return 'https://www.google.com/maps/search/?api=1&query=' . urlencode($query);
+        }
+        return null;
+    }
+
     public function getWhatsappFormattedAttribute(): ?string
     {
         $raw = $this->whatsapp;

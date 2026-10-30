@@ -262,9 +262,40 @@
                 </div>
             </div>
 
-            <div style="margin-top:1.2rem">
-                <label for="address" class="label">Adresse physique / Quartier</label>
+            <div style="margin-top:1.2rem;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm)">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:.5rem">
+                    <label for="address" class="label" style="margin-bottom:0;display:flex;align-items:center;gap:.4rem;font-weight:700">
+                        <x-icon name="map-pin" size="18" style="color:var(--brand-primary)" />
+                        Adresse physique / Localisation GPS
+                    </label>
+                    <button type="button" id="btn-settings-geo" class="btn btn-ghost btn-sm" onclick="useSettingsLocation()" style="padding:.3rem .75rem;font-size:.82rem;display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--brand-primary);color:var(--brand-primary);border-radius:20px;cursor:pointer;background:transparent" title="Détecter automatiquement ma position GPS">
+                        <x-icon name="map-pin" :size="14" />
+                        <span id="settings-geo-text">📍 Utiliser ma position actuelle</span>
+                    </button>
+                </div>
+                <p class="hint" style="margin-top:0;margin-bottom:.8rem">
+                    Cette adresse et le bouton d'itinéraire Google Maps apparaîtront sur votre boutique en ligne pour guider vos visiteurs vers votre magasin physique.
+                </p>
+
                 <input id="address" type="text" name="address" class="input" value="{{ old('address', $shop->address) }}" placeholder="Ex. Tokoin Doumasséssé, près de la pharmacie">
+                <input type="hidden" id="maps_url" name="maps_url" value="{{ old('maps_url', $shop->maps_url) }}">
+
+                <!-- Carte interactive et statut GPS -->
+                <div id="settings-geo-box" style="display:{{ old('maps_url', $shop->maps_url) ? 'block' : 'none' }};margin-top:.85rem;padding:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap">
+                        <span style="font-size:.82rem;font-weight:600;display:inline-flex;align-items:center;gap:.35rem;color:var(--ok)">
+                            <x-icon name="check-circle" :size="15" />
+                            <span id="settings-geo-status">Position GPS enregistrée</span>
+                        </span>
+                        <a id="settings-maps-link" href="{{ old('maps_url', $shop->maps_url) ?: '#' }}" target="_blank" style="font-size:.8rem;color:var(--brand-primary);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:3px">
+                            <x-icon name="map" :size="13" />
+                            <span>Ouvrir dans Google Maps ↗</span>
+                        </a>
+                    </div>
+                    <div style="height:150px;width:100%;border-radius:6px;overflow:hidden;border:1px solid var(--border);position:relative">
+                        <iframe id="settings-map-iframe" style="width:100%;height:100%;border:none;background:#f8fafc" loading="lazy" src=""></iframe>
+                    </div>
+                </div>
             </div>
 
             <div style="margin-top:2rem;display:flex;justify-content:flex-end;gap:1rem">
@@ -363,4 +394,111 @@
     .delete-close-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 1.5rem; line-height: 1; padding: .25rem; }
     .delete-close-btn:hover { color: var(--text); }
 </style>
+
+<script>
+function useSettingsLocation() {
+    var btn = document.getElementById('btn-settings-geo');
+    var btnText = document.getElementById('settings-geo-text');
+    var addressInput = document.getElementById('address');
+    var cityInput = document.getElementById('city');
+    var mapsUrlInput = document.getElementById('maps_url');
+    var feedbackBox = document.getElementById('settings-geo-box');
+    var statusMsg = document.getElementById('settings-geo-status');
+    var mapsLink = document.getElementById('settings-maps-link');
+    var mapIframe = document.getElementById('settings-map-iframe');
+
+    if (!navigator.geolocation) {
+        alert("La géolocalisation n'est pas supportée par votre navigateur.");
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = "📍 Détection en cours...";
+
+    navigator.geolocation.getCurrentPosition(
+        function (pos) {
+            var lat = pos.coords.latitude.toFixed(6);
+            var lng = pos.coords.longitude.toFixed(6);
+            var accuracy = Math.round(pos.coords.accuracy);
+
+            var mapsUrl = "https://www.google.com/maps?q=" + lat + "," + lng;
+            if (mapsUrlInput) mapsUrlInput.value = mapsUrl;
+
+            var embedUrl = "https://www.openstreetmap.org/export/embed.html?bbox=" + (parseFloat(lng) - 0.005) + "%2C" + (parseFloat(lat) - 0.004) + "%2C" + (parseFloat(lng) + 0.005) + "%2C" + (parseFloat(lat) + 0.004) + "&layer=mapnik&marker=" + lat + "%2C" + lng;
+
+            if (mapsLink) mapsLink.href = mapsUrl;
+            if (mapIframe) mapIframe.src = embedUrl;
+            if (feedbackBox) feedbackBox.style.display = 'block';
+
+            // Géocodage inverse via OpenStreetMap Nominatim
+            fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + lat + "&lon=" + lng + "&zoom=18&addressdetails=1", {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data && data.address) {
+                    var a = data.address;
+                    var place = a.suburb || a.neighbourhood || a.quarter || a.road || a.residential;
+                    var city = a.city || a.town || a.village || a.county || a.state || 'Lomé';
+                    if (place && (!addressInput.value.trim() || addressInput.value.includes('Position GPS'))) {
+                        addressInput.value = place;
+                    }
+                    if (city && cityInput) {
+                        cityInput.value = city;
+                    }
+                    if (statusMsg) statusMsg.textContent = "Position GPS détectée (" + (place || 'Boutique') + ", ±" + accuracy + "m)";
+                } else {
+                    if (!addressInput.value.trim()) {
+                        addressInput.value = "Position GPS (" + lat + ", " + lng + ")";
+                    }
+                    if (statusMsg) statusMsg.textContent = "Position GPS détectée (±" + accuracy + "m)";
+                }
+            })
+            .catch(function () {
+                if (!addressInput.value.trim()) {
+                    addressInput.value = "Position GPS (" + lat + ", " + lng + ")";
+                }
+                if (statusMsg) statusMsg.textContent = "Position GPS détectée (±" + accuracy + "m)";
+            })
+            .finally(function () {
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.textContent = "✓ Position actualisée (Recalculer)";
+            });
+        },
+        function (err) {
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "📍 Utiliser ma position actuelle";
+
+            var msg = "Impossible d'obtenir votre position GPS.";
+            if (err.code === 1) {
+                msg = "Veuillez autoriser l'accès à votre position dans le navigateur pour activer la localisation.";
+            } else if (err.code === 2) {
+                msg = "Signal GPS indisponible. Veuillez saisir votre adresse manuellement.";
+            } else if (err.code === 3) {
+                msg = "Délai de géolocalisation dépassé. Veuillez réessayer.";
+            }
+            alert(msg);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 0
+        }
+    );
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var mapsUrl = document.getElementById('maps_url')?.value;
+    if (mapsUrl) {
+        var match = mapsUrl.match(/q=([-\d.]+),([-\d.]+)/);
+        if (match) {
+            var lat = match[1];
+            var lng = match[2];
+            var embedUrl = "https://www.openstreetmap.org/export/embed.html?bbox=" + (parseFloat(lng) - 0.005) + "%2C" + (parseFloat(lat) - 0.004) + "%2C" + (parseFloat(lng) + 0.005) + "%2C" + (parseFloat(lat) + 0.004) + "&layer=mapnik&marker=" + lat + "%2C" + lng;
+            var mapIframe = document.getElementById('settings-map-iframe');
+            if (mapIframe) mapIframe.src = embedUrl;
+        }
+    }
+});
+</script>
 @endsection

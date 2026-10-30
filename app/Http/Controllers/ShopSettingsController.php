@@ -55,6 +55,7 @@ class ShopSettingsController extends Controller
             'email' => ['nullable', 'email', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
+            'maps_url' => ['nullable', 'string', 'max:500'],
         ], [
             'subdomain.regex' => 'Le sous-domaine doit contenir uniquement des lettres minuscules, chiffres ou tirets (sans tiret au début ou à la fin).',
             'subdomain.not_in' => 'Ce sous-domaine est réservé par la plateforme.',
@@ -68,6 +69,7 @@ class ShopSettingsController extends Controller
         $contact['email'] = $validated['email'] ?? null;
         $contact['address'] = $validated['address'] ?? null;
         $contact['city'] = $validated['city'] ?? 'Lomé';
+        $contact['maps_url'] = $validated['maps_url'] ?? null;
 
         $shop->update([
             'name' => $validated['name'],

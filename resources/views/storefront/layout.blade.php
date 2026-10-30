@@ -681,10 +681,18 @@
                         {{ $shop->description ?: 'Boutique en ligne officielle. Paiement à la livraison et Mobile Money.' }}
                     </p>
                     @if ($shop->city || $shop->address)
-                        <p style="font-size:.85rem;color:var(--text-faint);margin:0;display:flex;align-items:center;gap:.4rem">
-                            <x-icon name="map-pin" :size="14" />
-                            <span>{{ $shop->address ? $shop->address . ', ' : '' }}{{ $shop->city ?: 'Lomé, Togo' }}</span>
-                        </p>
+                        <div style="margin-top:.75rem">
+                            <p style="font-size:.85rem;color:var(--text-soft);margin:0 0 .4rem;display:flex;align-items:flex-start;gap:.4rem">
+                                <x-icon name="map-pin" :size="15" style="color:var(--store-primary);flex-shrink:0;margin-top:2px" />
+                                <span>{{ $shop->address ? $shop->address . ', ' : '' }}{{ $shop->city ?: 'Lomé, Togo' }}</span>
+                            </p>
+                            @if ($shop->maps_url)
+                                <a href="{{ $shop->maps_url }}" target="_blank" rel="noopener noreferrer" style="font-size:.8rem;color:var(--store-primary);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;background:color-mix(in srgb, var(--store-primary) 12%, transparent);border-radius:20px;border:1px solid color-mix(in srgb, var(--store-primary) 25%, transparent)">
+                                    <x-icon name="map" :size="13" />
+                                    <span>Itinéraire Google Maps ↗</span>
+                                </a>
+                            @endif
+                        </div>
                     @endif
                 </div>
 

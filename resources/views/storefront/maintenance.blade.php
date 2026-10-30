@@ -63,6 +63,24 @@
             </div>
         @endif
 
+        @if ($shop->address || $shop->city)
+            <div style="background:var(--bg-soft);padding:1.2rem;border-radius:var(--radius-sm);margin-bottom:1.5rem;font-size:.88rem">
+                <div style="font-weight:600;display:flex;align-items:center;justify-content:center;gap:.35rem;margin-bottom:.3rem">
+                    <x-icon name="map-pin" size="15" />
+                    <span>Notre magasin physique reste ouvert</span>
+                </div>
+                <div style="color:var(--text-soft)">{{ $shop->address ? $shop->address . ', ' : '' }}{{ $shop->city ?: 'Lomé, Togo' }}</div>
+                @if ($shop->maps_url)
+                    <div style="margin-top:.6rem">
+                        <a href="{{ $shop->maps_url }}" target="_blank" rel="noopener noreferrer" style="font-size:.82rem;color:var(--brand-primary);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:.3rem">
+                            <x-icon name="map" size="13" />
+                            <span>Itinéraire Google Maps ↗</span>
+                        </a>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <div style="font-size:.85rem;color:var(--text-faint)">
             Propulsé par <a href="{{ route('home') }}" style="color:var(--text);display:inline-flex;align-items:center;gap:.35rem"><img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:16px;width:16px;border-radius:4px;vertical-align:middle"> <strong style="font-family:'Montserrat',sans-serif">Zanika</strong> <x-icon name="sparkles" size="12" /></a>
         </div>
