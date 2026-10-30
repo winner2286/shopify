@@ -146,7 +146,7 @@
 
                         <td style="padding:1rem">
                             @if ($trialEnds)
-                                <div style="font-size:.85rem">
+                                <div style="font-size:.85rem;font-weight:600">
                                     {{ $trialEnds->format('d/m/Y') }}
                                 </div>
                                 @if ($sub->status === 'trial')
@@ -160,12 +160,27 @@
                                         </div>
                                     @endif
                                 @endif
+                                @if ($sub->trial_reminder_sent_at)
+                                    <div style="font-size:.72rem;color:var(--text-soft);margin-top:.2rem;display:inline-flex;align-items:center;gap:.25rem">
+                                        <span>✉️ Rappel envoyé le {{ $sub->trial_reminder_sent_at->format('d/m') }}</span>
+                                    </div>
+                                @endif
                             @else
                                 <span style="color:var(--text-soft);font-size:.85rem">—</span>
                             @endif
                         </td>
 
-                        <td style="padding:1rem;text-align:right">
+                        <td style="padding:1rem;text-align:right;white-space:nowrap">
+                            @if ($sub && $sub->status === 'trial')
+                                <form method="POST" action="{{ route('admin.subscriptions.send_reminder', $shop) }}" style="display:inline-block;margin-right:.4rem" onsubmit="return confirm('Envoyer immédiatement l\'email de rappel J-3 à {{ addslashes($shop->owner?->email ?? '') }} ?')">
+                                    @csrf
+                                    <button type="submit" class="btn btn-ghost btn-sm" title="Envoyer email rappel d'essai J-3 au marchand" style="display:inline-flex;align-items:center;gap:.3rem;color:#f59e0b;border:1px solid rgba(245,158,11,0.3)">
+                                        <x-icon name="send" size="13" />
+                                        <span>Rappel J-3</span>
+                                    </button>
+                                </form>
+                            @endif
+
                             <!-- Formulaire de modification rapide d'abonnement -->
                             <details style="position:relative;display:inline-block;text-align:left">
                                 <summary class="btn btn-ghost btn-sm" style="cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:.3rem">

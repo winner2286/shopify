@@ -13,7 +13,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 
+use App\Mail\TrialExpiringMail;
 use App\Models\Subscription;
+use Illuminate\Support\Facades\Mail;
 
 class PlatformAdminController extends Controller
 {
@@ -316,6 +318,44 @@ class PlatformAdminController extends Controller
         }
 
         return back()->with('status', "L'abonnement de la boutique « {$shop->name} » a été mis à jour avec succès.");
+    }
+
+    /**
+     * Déclenchement manuel par l'admin de l'email de rappel d'expiration d'essai (J-3)
+     */
+    public function sendTrialReminder(Request $request, Shop $shop): RedirectResponse
+    {
+        $this->checkAdmin($request);
+
+        $user = $shop->owner;
+        if (! $user || empty($user->email)) {
+            return back()->with('error', "Cette boutique n'a pas d'adresse email propriétaire valide.");
+        }
+
+        $sub = $shop->subscription;
+        $daysRemaining = $sub ? $sub->daysRemaining() : 3;
+        if ($daysRemaining <= 0) {
+            $daysRemaining = 3;
+        }
+
+        try {
+            Mail::to($user->email)->send(
+                new TrialExpiringMail(
+                    $user,
+                    $shop,
+                    $sub ?? new Subscription(['trial_ends_at' => now()->addDays(3)]),
+                    $daysRemaining
+                )
+            );
+
+            if ($sub) {
+                $sub->update(['trial_reminder_sent_at' => now()]);
+            }
+
+            return back()->with('status', "✉️ Email de rappel J-{$daysRemaining} envoyé avec succès à {$user->email} ({$shop->name}).");
+        } catch (\Throwable $e) {
+            return back()->with('error', "Erreur lors de l'envoi de l'email : " . $e->getMessage());
+        }
     }
 
     /**

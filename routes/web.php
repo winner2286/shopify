@@ -111,6 +111,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/impersonate/quitter', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'leaveImpersonate'])->name('admin.impersonate.leave');
         Route::get('/abonnements', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'subscriptions'])->name('admin.subscriptions');
         Route::post('/abonnements/{shop}', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'updateSubscription'])->name('admin.subscriptions.update');
+        Route::post('/abonnements/{shop}/rappel-essai', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'sendTrialReminder'])->name('admin.subscriptions.send_reminder');
         Route::get('/ia', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'aiUsage'])->name('admin.ai_usage');
         Route::get('/formules', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'plans'])->name('admin.plans');
         Route::post('/formules/{plan}/update', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'updatePlan'])->name('admin.plans.update');

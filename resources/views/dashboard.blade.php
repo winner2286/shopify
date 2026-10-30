@@ -50,6 +50,48 @@
         </div>
     </div>
 
+    @php
+        $sub = $shop?->subscription;
+        $isTrialExpiring = $sub && $sub->isExpiringSoon(3);
+        $daysLeft = $sub?->daysRemaining() ?? 0;
+    @endphp
+
+    @if ($isTrialExpiring)
+        <div class="card" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.06));border:1px solid rgba(245, 158, 11, 0.4);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+            <div style="display:flex;align-items:center;gap:.9rem">
+                <span style="font-size:1.8rem">⚠️</span>
+                <div>
+                    <div style="font-weight:700;color:#d97706;font-size:1.05rem">
+                        Votre essai gratuit expire dans {{ $daysLeft <= 1 ? ($daysLeft == 0 ? "quelques heures" : "1 jour") : "$daysLeft jours" }} !
+                    </div>
+                    <div style="font-size:.87rem;color:var(--text-soft);margin-top:.15rem">
+                        Choisissez votre formule dès maintenant (Essentiel 10 000 FCFA, Pro 15 000 FCFA ou Premium 30 000 FCFA) pour continuer à vendre en ligne sans coupure.
+                    </div>
+                </div>
+            </div>
+            <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;box-shadow:0 4px 14px rgba(245, 158, 11, 0.35);color:#fff">
+                Choisir ma formule →
+            </a>
+        </div>
+    @elseif ($sub && $sub->status === 'expired')
+        <div class="card" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(220, 38, 38, 0.06));border:1px solid rgba(239, 68, 68, 0.4);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+            <div style="display:flex;align-items:center;gap:.9rem">
+                <span style="font-size:1.8rem">🛑</span>
+                <div>
+                    <div style="font-weight:700;color:#ef4444;font-size:1.05rem">
+                        Votre période d'essai gratuit a expiré !
+                    </div>
+                    <div style="font-size:.87rem;color:var(--text-soft);margin-top:.15rem">
+                        Activez votre abonnement pour continuer à recevoir vos commandes et accéder à toutes les fonctionnalités IA.
+                    </div>
+                </div>
+            </div>
+            <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:#ef4444;border-color:#ef4444;color:#fff">
+                Activer mon forfait maintenant →
+            </a>
+        </div>
+    @endif
+
     @if (session('status')) <div class="alert alert-ok" role="status">{{ session('status') }}</div> @endif
 
     <div class="dash-grid">

@@ -277,3 +277,10 @@ Artisan::command('admin:maintenance {action=status : on, off ou status} {--messa
     }
 })->purpose('Contrôle ou affiche le statut du mode maintenance de la plateforme');
 
+// Planification automatique quotidienne des rappels de fin d'essai à J-3
+\Illuminate\Support\Facades\Schedule::command('subscriptions:send-trial-reminders')
+    ->dailyAt('09:00')
+    ->name('send-trial-expiring-reminders')
+    ->withoutOverlapping();
+
+
