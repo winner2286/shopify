@@ -1080,7 +1080,7 @@
 </style>
 
 <!-- Initialisation du Studio Vidéo Publicitaire IA -->
-<script src="{{ asset('js/ad-video-studio.js') }}"></script>
+<script src="{{ asset('js/ad-video-studio.js') }}?v={{ file_exists(public_path('js/ad-video-studio.js')) ? filemtime(public_path('js/ad-video-studio.js')) : '1.3' }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.AdVideoStudio !== 'undefined') {

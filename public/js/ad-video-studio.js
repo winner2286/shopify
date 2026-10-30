@@ -49,18 +49,8 @@
             this.activeVoiceSource = null;
             this.timeline = null;
 
-            // Système de particules ambiantes
+            // Particules ambiantes désactivées pour une vidéo nette et sans bruit visuel
             this.particles = [];
-            for (let i = 0; i < 40; i++) {
-                this.particles.push({
-                    x: Math.random() * this.canvas.width,
-                    y: Math.random() * this.canvas.height,
-                    radius: Math.random() * 4 + 1.5,
-                    speedY: Math.random() * 0.8 + 0.3,
-                    alpha: Math.random() * 0.6 + 0.2,
-                    pulse: Math.random() * Math.PI * 2
-                });
-            }
 
             // Chargement de l'image produit ultra-résilient (Base64 data URI ou URL avec retry CORS)
             this.productImg = new Image();
@@ -764,7 +754,7 @@
                 this.renderCapCutStyle(ctx, w, h, t);
             }
 
-            this.drawAudioVisualizer(ctx, w, h, t);
+            // Égaliseur audio supprimé à la demande de l'utilisateur
         },
 
         // =========================================================================
@@ -774,8 +764,7 @@
             // Fond Ken Burns immersif avec la photo du produit
             this.drawKenBurnsBackground(ctx, w, h, t);
 
-            // Particules d'énergie flottantes
-            this.drawParticles(ctx, w, h, t);
+            // Particules d'énergie désactivées
 
             // Header de boutique moderne
             this.drawBrandingHeader(ctx, w, h, t);
@@ -1040,7 +1029,7 @@
             ctx.font = '500 21px system-ui';
             ctx.fillText('Paiement : T-Money • Flooz • Cash à la livraison', w / 2, 840);
 
-            this.drawConfetti(ctx, w, h, t);
+            // Points/confettis lumineux désactivés
 
             const activeScript = this.config.scripts[this.currentScriptIndex];
             const ctaVoice = activeScript && activeScript.steps[2] ? activeScript.steps[2].voiceover : 'Écrivez-moi sur WhatsApp pour recevoir votre colis dès aujourd\'hui !';
@@ -1061,7 +1050,7 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, w, h);
 
-            this.drawParticles(ctx, w, h, t);
+            // Points lumineux désactivés
 
             // 1. Cadre du Présentateur IA avec onde vocale en temps réel
             const avatarSize = 460;
@@ -1222,7 +1211,7 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, w, h);
 
-            this.drawGoldParticles(ctx, w, h, t);
+            // Points lumineux dorés désactivés
 
             // Header Luxe Signature
             ctx.save();
@@ -1451,20 +1440,7 @@
         },
 
         drawParticles: function (ctx, w, h, t) {
-            ctx.save();
-            this.particles.forEach(p => {
-                p.y -= p.speedY;
-                if (p.y < 0) {
-                    p.y = h;
-                    p.x = Math.random() * w;
-                }
-                const alpha = p.alpha * (0.6 + 0.4 * Math.sin(t * 3 + p.pulse));
-                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.restore();
+            // Désactivé (points lumineux supprimés)
         },
 
         drawBrandingHeader: function (ctx, w, h, t) {
@@ -1803,18 +1779,7 @@
         },
 
         drawGoldParticles: function (ctx, w, h, t) {
-            ctx.save();
-            ctx.fillStyle = '#d4af37';
-            for (let i = 0; i < 30; i++) {
-                const x = ((i * 47 + t * 25) % w);
-                const y = ((h - (i * 59 + t * 40)) % h);
-                const size = (Math.sin(t * 3 + i) * 0.5 + 0.5) * 2.5 + 1;
-                ctx.globalAlpha = Math.sin(t * 2 + i) * 0.4 + 0.5;
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
+            // Désactivé (points lumineux dorés supprimés)
         },
 
         drawProductImage: function (ctx, x, y, w, h, radius) {
@@ -1944,40 +1909,11 @@
         },
 
         drawAudioVisualizer: function (ctx, w, h, t) {
-            if (!this.soundEnabled || this.audioPreset === 'none') return;
-            ctx.save();
-            const bars = 16;
-            const barW = 6;
-            const gap = 5;
-            const totalW = bars * (barW + gap);
-            const startX = w - totalW - 40;
-            const startY = h - 50;
-
-            for (let i = 0; i < bars; i++) {
-                const height = Math.abs(Math.sin(t * 12 + i * 0.8)) * 32 + 6;
-                const barGrad = ctx.createLinearGradient(0, startY, 0, startY - height);
-                barGrad.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
-                barGrad.addColorStop(1, '#25D366');
-
-                ctx.fillStyle = barGrad;
-                this.roundRect(ctx, startX + i * (barW + gap), startY - height, barW, height, 3);
-                ctx.fill();
-            }
-            ctx.restore();
+            // Désactivé (égaliseur audio vert supprimé)
         },
 
         drawConfetti: function (ctx, w, h, t) {
-            ctx.save();
-            const colors = ['#f59e0b', '#25D366', '#3b82f6', '#ec4899', '#ffffff'];
-            for (let i = 0; i < 20; i++) {
-                const cx = (Math.sin(i * 99 + t * 4) * 0.5 + 0.5) * w;
-                const cy = ((t * 80 + i * 45) % h);
-                ctx.fillStyle = colors[i % colors.length];
-                ctx.beginPath();
-                ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
+            // Désactivé (confettis supprimés)
         },
 
         drawWhatsAppIcon: function (ctx, x, y, radius) {
