@@ -66,6 +66,104 @@
                 </form>
             @endif
         </div>
+    @elseif ($order->payment_method === 'feexpay')
+        <div class="card" style="margin-bottom:2rem;border-left:4px solid #FF2D6D">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.8rem;margin-bottom:1rem">
+                <h3 style="margin:0;display:flex;align-items:center;gap:.5rem">
+                    <x-icon name="credit-card" size="20" style="color:#FF2D6D" />
+                    Paiement en ligne FeexPay (Mobile Money & Carte)
+                </h3>
+                @if ($order->payment_status === 'paid')
+                    <span class="badge badge-ok" style="display:inline-flex;align-items:center;gap:.3rem"><x-icon name="check" size="14" /> Paiement Validé</span>
+                @else
+                    <span class="badge badge-warn" style="display:inline-flex;align-items:center;gap:.3rem"><x-icon name="clock" size="14" /> En attente de règlement</span>
+                @endif
+            </div>
+
+            @if ($order->payment_status === 'paid')
+                <div style="color:var(--ok);font-weight:600;font-size:1.05rem;display:flex;align-items:center;gap:.4rem">
+                    <x-icon name="check-circle" size="18" /> Votre paiement de {{ number_format($order->total, 0, ',', ' ') }} FCFA a été validé avec succès par FeexPay !
+                </div>
+            @else
+                <p style="color:var(--text-soft);margin-bottom:1.2rem;line-height:1.6">
+                    Cliquez sur le bouton ci-dessous pour payer instantanément par <strong>T-Money, Flooz, MTN, Moov, Orange, Wave ou Carte bancaire</strong> via la passerelle sécurisée FeexPay.
+                </p>
+
+                <!-- Bouton FeexPay officiel et conteneur sécurisé -->
+                <div style="display:flex;flex-direction:column;align-items:center;gap:.8rem;margin:1.5rem 0">
+                    <div id="feexpay-btn-order" style="width:100%;max-width:380px;min-height:50px;display:flex;justify-content:center;align-items:center">
+                        <button type="button" id="feexpay-trigger-btn" class="btn btn-primary" style="background:#FF2D6D;border-color:#FF2D6D;color:#fff;width:100%;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.4rem;border-radius:10px;box-shadow:0 6px 20px rgba(255,45,109,0.3)">
+                            <x-icon name="credit-card" size="18" /> Payer {{ number_format($order->total, 0, ',', ' ') }} FCFA via FeexPay
+                        </button>
+                    </div>
+                    <div id="feexpay-kyc-notice" style="display:none;width:100%;max-width:440px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.85rem 1rem;font-size:.84rem;color:#92400e;line-height:1.45;text-align:center">
+                        ⏳ <strong>Validation KYC en cours chez FeexPay :</strong> Pour activer les encaissements réels, validez vos informations dans votre tableau de bord FeexPay. Vous pouvez déjà tester le parcours complet avec le bouton de test ci-dessous.
+                    </div>
+                </div>
+
+                <!-- Simulation de test direct si en mode test/sandbox -->
+                <form method="POST" action="{{ route('storefront.order.simulate_mobile_money', ['subdomain' => $shop->subdomain, 'orderNumber' => $order->order_number]) }}" style="background:var(--bg-soft);padding:1rem;border-radius:var(--radius-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-top:1.5rem;border:1px dashed var(--border)">
+                    @csrf
+                    <div>
+                        <div style="font-weight:600;font-size:.92rem">Mode Test / Démonstration (Sandbox)</div>
+                        <div style="font-size:.82rem;color:var(--text-soft)">Simuler la confirmation automatique de paiement sans débiter de compte</div>
+                    </div>
+                    <button type="submit" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.4rem;color:#FF2D6D;border-color:rgba(255,45,109,0.3);font-weight:700">
+                        <x-icon name="zap" size="16" /> Valider le test FeexPay
+                    </button>
+                </form>
+
+                <script src="https://api-v2.feexpay.me/feexpay-javascript-sdk/index.js"></script>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const triggerBtn = document.getElementById('feexpay-trigger-btn');
+                        const kycNotice = document.getElementById('feexpay-kyc-notice');
+
+                        if (typeof FeexPayButton !== 'undefined') {
+                            try {
+                                FeexPayButton.init('feexpay-btn-order', {
+                                    id: '{{ config('feexpay.shop_id') }}',
+                                    amount: {{ (int) $order->total }},
+                                    token: '{{ config('feexpay.token') }}',
+                                    callback_url: '{{ route('feexpay.callback') }}?custom_id=ORDER:{{ $order->id }}',
+                                    mode: '{{ config('feexpay.mode', 'SANDBOX') }}',
+                                    custom_id: 'ORDER:{{ $order->id }}',
+                                    description: 'Commande #{{ $order->order_number }} sur {{ addslashes($shop->name) }}',
+                                    currency: 'XOF',
+                                    buttonText: 'Payer {{ number_format($order->total, 0, ',', ' ') }} FCFA via FeexPay 💳',
+                                    callback: function(response) {
+                                        if (response && (response.status === 'SUCCESSFUL' || response.status === 'SUCCESS')) {
+                                            window.location.href = '{{ route('feexpay.callback') }}?custom_id=ORDER:{{ $order->id }}&reference=' + (response.reference || '');
+                                        }
+                                    }
+                                });
+                            } catch (e) {
+                                console.error('Erreur initialisation FeexPay:', e);
+                            }
+                        }
+
+                        // Détecter si le compte est en attente de validation KYC
+                        setTimeout(() => {
+                            const errEl = document.querySelector('.feexpay-error-message');
+                            if (errEl) {
+                                errEl.style.display = 'none'; // Masquer le message technique brut
+                                if (kycNotice) kycNotice.style.display = 'block';
+                            }
+                        }, 1200);
+
+                        if (triggerBtn) {
+                            triggerBtn.addEventListener('click', function() {
+                                if (typeof FeexPayButton !== 'undefined' && typeof FeexPayButton.showPaymentModal === 'function') {
+                                    FeexPayButton.showPaymentModal();
+                                } else {
+                                    if (kycNotice) kycNotice.style.display = 'block';
+                                }
+                            });
+                        }
+                    });
+                </script>
+            @endif
+        </div>
     @endif
 
     <!-- Détails de la commande -->

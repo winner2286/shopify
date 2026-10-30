@@ -30,6 +30,7 @@ class Order extends Model
     public const PAYMENT_TMONEY = 'tmoney';
     public const PAYMENT_FLOOZ = 'flooz';
     public const PAYMENT_CARD = 'card';
+    public const PAYMENT_FEEXPAY = 'feexpay';
 
     public const PAYMENT_STATUS_PENDING = 'pending';
     public const PAYMENT_STATUS_PAID = 'paid';
@@ -96,6 +97,7 @@ class Order extends Model
             self::PAYMENT_TMONEY => 'T-Money Togo',
             self::PAYMENT_FLOOZ => 'Flooz Moov',
             self::PAYMENT_CARD => 'Carte bancaire',
+            self::PAYMENT_FEEXPAY => 'FeexPay (Mobile Money & Carte)',
             default => ucfirst($this->payment_method),
         };
     }

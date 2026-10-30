@@ -23,6 +23,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'migrate-now',
             'zanika-admin-bypass',
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'api/feexpay/webhook',
+            'feexpay/webhook',
+            'feexpay/callback',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

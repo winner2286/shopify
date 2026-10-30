@@ -144,8 +144,25 @@
                     </h3>
 
                     <div style="display:flex;flex-direction:column;gap:.6rem">
+                        <!-- Option FeexPay (Mobile Money & Carte Bancaire) -->
+                        <label style="display:flex;align-items:center;gap:.75rem;padding:1rem 1.2rem;background:linear-gradient(135deg, rgba(255, 45, 109, 0.08), rgba(139, 92, 246, 0.04));border:1.5px solid #FF2D6D;border-radius:var(--radius-sm);cursor:pointer">
+                            <input type="radio" name="payment_method" value="feexpay" {{ old('payment_method', 'feexpay') === 'feexpay' ? 'checked' : '' }} style="accent-color:#FF2D6D;width:18px;height:18px">
+                            <div style="flex:1">
+                                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem">
+                                    <div style="font-weight:700;display:flex;align-items:center;gap:.45rem;color:var(--text)">
+                                        <x-icon name="credit-card" size="17" style="color:#FF2D6D" />
+                                        <span>Paiement en ligne instantané (FeexPay)</span>
+                                    </div>
+                                    <span class="badge" style="background:#FF2D6D;color:#fff;font-size:.72rem;font-weight:700;padding:.15rem .45rem">Recommandé</span>
+                                </div>
+                                <div style="font-size:.84rem;color:var(--text-soft);margin-top:.2rem">
+                                    T-Money, Flooz, MTN, Moov, Orange, Wave et Cartes bancaires (Visa / Mastercard).
+                                </div>
+                            </div>
+                        </label>
+
                         <label style="display:flex;align-items:center;gap:.75rem;padding:.9rem 1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer">
-                            <input type="radio" name="payment_method" value="cash_on_delivery" {{ old('payment_method', 'cash_on_delivery') === 'cash_on_delivery' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
+                            <input type="radio" name="payment_method" value="cash_on_delivery" {{ old('payment_method') === 'cash_on_delivery' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
                             <div style="flex:1">
                                 <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="wallet" size="16" /> Espèces à la livraison</div>
                                 <div style="font-size:.85rem;color:var(--text-soft)">Réglez directement en espèces au livreur lors de la réception de votre colis.</div>
@@ -155,16 +172,16 @@
                         <label style="display:flex;align-items:center;gap:.75rem;padding:.9rem 1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer">
                             <input type="radio" name="payment_method" value="tmoney" {{ old('payment_method') === 'tmoney' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
                             <div style="flex:1">
-                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> T-Money (Togocom)</div>
-                                <div style="font-size:.85rem;color:var(--text-soft)">Paiement Mobile Money direct et sécurisé.</div>
+                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> T-Money direct (Togocom)</div>
+                                <div style="font-size:.85rem;color:var(--text-soft)">Paiement manuel direct par transfert T-Money.</div>
                             </div>
                         </label>
 
                         <label style="display:flex;align-items:center;gap:.75rem;padding:.9rem 1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer">
                             <input type="radio" name="payment_method" value="flooz" {{ old('payment_method') === 'flooz' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
                             <div style="flex:1">
-                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> Flooz (Moov Africa)</div>
-                                <div style="font-size:.85rem;color:var(--text-soft)">Paiement Mobile Money par compte Flooz.</div>
+                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> Flooz direct (Moov Africa)</div>
+                                <div style="font-size:.85rem;color:var(--text-soft)">Paiement manuel direct par compte Flooz.</div>
                             </div>
                         </label>
                     </div>

@@ -69,9 +69,14 @@
                     </div>
                 </div>
             </div>
-            <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;box-shadow:0 4px 14px rgba(245, 158, 11, 0.35);color:#fff">
-                Choisir ma formule →
-            </a>
+            <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+                <a href="{{ route('subscription.checkout', $shop?->currentPlan()->slug ?? 'essentiel') }}" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;box-shadow:0 4px 14px rgba(245, 158, 11, 0.35);color:#fff">
+                    Renouveler via FeexPay ({{ number_format($shop?->currentPlan()->monthly_price ?? 10000, 0, ',', ' ') }} F) →
+                </a>
+                <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-ghost btn-sm" style="white-space:nowrap;font-size:.82rem">
+                    Changer de formule
+                </a>
+            </div>
         </div>
     @elseif ($sub && $sub->status === 'expired')
         <div class="card" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(220, 38, 38, 0.06));border:1px solid rgba(239, 68, 68, 0.4);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
@@ -86,9 +91,14 @@
                     </div>
                 </div>
             </div>
-            <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:#ef4444;border-color:#ef4444;color:#fff">
-                Activer mon forfait maintenant →
-            </a>
+            <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+                <a href="{{ route('subscription.checkout', $shop?->currentPlan()->slug ?? 'essentiel') }}" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:#ef4444;border-color:#ef4444;color:#fff">
+                    Activer mon forfait ({{ number_format($shop?->currentPlan()->monthly_price ?? 10000, 0, ',', ' ') }} F) →
+                </a>
+                <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-ghost btn-sm" style="white-space:nowrap;font-size:.82rem">
+                    Voir toutes les formules
+                </a>
+            </div>
         </div>
     @endif
 

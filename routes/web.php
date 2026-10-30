@@ -187,9 +187,16 @@ Route::get('/api/placeholder-image', [\App\Http\Controllers\MediaController::cla
 Route::get('/api/tts', [\App\Http\Controllers\MediaController::class, 'tts'])
     ->name('api.tts');
 
+// Passerelle de paiement FeexPay (Mobile Money & Cartes Bancaires)
+Route::match(['get', 'post'], '/feexpay/callback', [\App\Http\Controllers\FeexPayController::class, 'callback'])->name('feexpay.callback');
+Route::post('/api/feexpay/webhook', [\App\Http\Controllers\FeexPayController::class, 'webhook'])->name('feexpay.webhook');
 
+// Paiements et abonnements SaaS commerçant via FeexPay
+Route::middleware('auth')->group(function () {
+    Route::get('/abonnement/paiement/{plan:slug}', [\App\Http\Controllers\FeexPayController::class, 'subscriptionCheckout'])->name('subscription.checkout');
+    Route::post('/abonnement/simulate/{subscription}/{plan}', [\App\Http\Controllers\FeexPayController::class, 'simulateSubscriptionPayment'])->name('subscription.simulate');
+});
 
-// Route dev-login
 if (app()->environment('local')) {
     Route::get('/dev-login', function () {
         $u = \App\Models\User::where('email', 'kougnima@icloud.com')->first() ?? \App\Models\User::first();

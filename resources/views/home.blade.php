@@ -898,9 +898,15 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                         @endforeach
                     </ul>
 
-                    <a href="{{ route('register') }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block">
-                        Démarrer l'essai gratuit
-                    </a>
+                    @auth
+                        <a href="{{ route('subscription.checkout', $plan->slug) }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block" style="font-weight:700">
+                            Souscrire via FeexPay ({{ number_format($mPrice, 0, ',', ' ') }} F) →
+                        </a>
+                    @else
+                        <a href="{{ route('register') }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block">
+                            Démarrer l'essai gratuit
+                        </a>
+                    @endauth
                 </div>
             @endforeach
         </div>
