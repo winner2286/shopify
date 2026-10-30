@@ -378,15 +378,62 @@
         @media (max-width: 640px) {
             .store-grid {
                 grid-template-columns: repeat(2, 1fr);
-                gap: .85rem;
+                gap: .75rem;
                 margin: 1.2rem 0;
             }
+            .product-card-body {
+                padding: .75rem .65rem;
+            }
+            .product-card-title {
+                font-size: .88rem;
+                margin-bottom: .2rem;
+                line-height: 1.3;
+            }
+            .product-price {
+                font-size: 1.05rem;
+            }
+            .product-old-price {
+                font-size: .78rem;
+            }
+            .product-rating-row {
+                font-size: .68rem;
+                gap: .25rem;
+                margin-bottom: .25rem;
+            }
+            .product-stars {
+                font-size: .72rem;
+            }
+            .product-rating-text {
+                font-size: .68rem;
+            }
+            .btn-add-cart {
+                padding: .45rem .55rem;
+                font-size: .76rem;
+                gap: .25rem;
+                white-space: nowrap;
+            }
+            .btn-card-wa-icon {
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+                flex-shrink: 0;
+            }
+            .product-card-badge-top {
+                font-size: .65rem;
+                padding: .15rem .4rem;
+                top: .45rem; right: .45rem;
+            }
+            .product-discount-badge {
+                font-size: .68rem;
+                padding: .2rem .45rem;
+                top: .45rem; left: .45rem;
+            }
             .store-header-inner {
-                height: 60px;
+                height: 58px;
                 gap: .5rem;
             }
             .store-brand {
-                font-size: 1.05rem;
+                font-size: 1.02rem;
                 gap: .5rem;
             }
             .store-logo {
@@ -396,13 +443,13 @@
                 padding: .35rem .75rem; font-size: .82rem;
             }
             .store-hero {
-                padding: 2.8rem 0 2.2rem;
+                padding: 2.6rem 0 2rem;
             }
             .store-hero h1 {
-                font-size: 2rem;
+                font-size: 1.9rem;
             }
             .store-hero p {
-                font-size: 1rem;
+                font-size: .95rem;
             }
         }
         @media (max-width: 360px) {

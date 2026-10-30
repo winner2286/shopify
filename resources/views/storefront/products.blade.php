@@ -150,24 +150,21 @@
                             @endif
                         </div>
 
-                        <!-- Actions Carte Produit (Ajout AJAX fluide + WhatsApp) -->
+                        <!-- Actions Carte Produit (Ajout AJAX fluide + WhatsApp direct) -->
                         <div style="margin-top:.85rem;display:flex;gap:.45rem;align-items:center">
-                            <form class="ajax-add-cart" method="POST" action="{{ url('/b/' . $shop->subdomain . '/panier/ajouter') }}" style="flex:1">
+                            <form class="ajax-add-cart" method="POST" action="{{ url('/b/' . $shop->subdomain . '/panier/ajouter') }}" style="flex:1;min-width:0">
                                 @csrf
                                 <input type="hidden" name="product_id" value="{{ $product->id }}">
                                 <input type="hidden" name="quantity" value="1">
                                 <button type="submit" class="btn btn-add-cart btn-block" style="width:100%" aria-label="Ajouter {{ $product->title }} au panier">
-                                    <x-icon name="shopping-bag" size="15" /> + Ajouter
+                                    <x-icon name="shopping-bag" size="14" /> + Ajouter
                                 </button>
                             </form>
                             @if ($waProductUrl)
                                 <a href="{{ $waProductUrl }}" target="_blank" class="btn-card-wa-icon" title="Commander en 1 clic sur WhatsApp" aria-label="Commander sur WhatsApp">
-                                    <x-icon name="whatsapp" size="18" />
+                                    <x-icon name="whatsapp" size="17" />
                                 </a>
                             @endif
-                            <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $product->slug) }}" class="btn btn-ghost btn-sm" aria-label="Voir la fiche détaillée" style="display:inline-flex;align-items:center;padding:.5rem .7rem">
-                                <x-icon name="arrow-right" size="16" />
-                            </a>
                         </div>
                     </div>
                 </article>
