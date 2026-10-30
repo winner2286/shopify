@@ -71,6 +71,9 @@ class CartService
 
         $image = $product->images()->orderBy('sort_order')->first();
         $imageUrl = $image ? ($image->thumbnail_url ?: $image->url) : null;
+        if (! $imageUrl) {
+            $imageUrl = '/api/placeholder-image?id=' . $product->id . '&color=' . urlencode($shop->brand_color ?: '#10b981');
+        }
 
         $cart[$productId] = [
             'product_id' => $product->id,
