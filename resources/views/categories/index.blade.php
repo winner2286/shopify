@@ -86,7 +86,7 @@
                                         </span>
                                     </td>
                                     <td style="text-align:right;">
-                                        <form method="POST" action="{{ route('categories.destroy', $cat) }}" style="display:inline;" onsubmit="return confirm('Supprimer cette catégorie ?');">
+                                        <form method="POST" action="{{ route('categories.destroy', $cat) }}" style="display:inline;" data-confirm="Supprimer cette catégorie ? Les produits resteront disponibles.">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger)">Supprimer</button>

@@ -64,7 +64,7 @@
                                 {{ $zone->is_active ? 'Active' : 'Désactivée' }}
                             </span>
 
-                            <form method="POST" action="{{ route('shipping.destroy', $zone) }}" onsubmit="return confirm('Supprimer cette zone ?');">
+                            <form method="POST" action="{{ route('shipping.destroy', $zone) }}" data-confirm="Supprimer cette zone de livraison ?">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);padding:.2rem .6rem;font-size:.85rem">

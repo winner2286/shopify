@@ -77,7 +77,7 @@
                         <label class="label" style="font-size:.85rem">Lien direct de votre boutique :</label>
                         <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
                             <input id="store-url-input" type="text" readonly value="{{ $shop->public_url }}" class="input" style="flex:1;min-width:240px;background:var(--bg-soft);font-weight:600">
-                            <button type="button" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem" onclick="navigator.clipboard.writeText(document.getElementById('store-url-input').value); alert('Lien copié dans le presse-papier !');">
+                            <button type="button" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem" onclick="navigator.clipboard.writeText(document.getElementById('store-url-input').value); window.BoutiqToast('Lien copié dans le presse-papier !', 'success');">
                                 <x-icon name="copy" size="14" /> Copier le lien
                             </button>
                             <a href="https://wa.me/?text={{ urlencode('Bonjour, venez découvrir notre nouvelle boutique en ligne « '.$shop->name.' » sur Zanika : ' . $shop->public_url) }}" target="_blank" class="btn btn-primary btn-sm" style="background:#25D366;border-color:#25D366;color:#fff;display:inline-flex;align-items:center;gap:.4rem">
@@ -86,7 +86,7 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('shop.toggle_pause') }}" onsubmit="return confirm('Mettre votre boutique en pause ? Les visiteurs verront un message de maintenance.');">
+                    <form method="POST" action="{{ route('shop.toggle_pause') }}" data-confirm="Mettre votre boutique en pause ? Les visiteurs verront un message de maintenance.">
                         @csrf
                         <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--warn)">
                             Mettre la boutique en pause temporaire

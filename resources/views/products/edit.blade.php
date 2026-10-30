@@ -10,7 +10,7 @@
             <h1>Modifier le produit</h1>
         </div>
         <div>
-            <form method="POST" action="{{ route('products.destroy', $product) }}" style="display:inline" onsubmit="return confirm('Archiver ce produit ? Il ne sera plus proposé sur la boutique.');">
+            <form method="POST" action="{{ route('products.destroy', $product) }}" style="display:inline" data-confirm="Archiver ce produit ? Il ne sera plus proposé sur la boutique.">
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger)">Archiver le produit</button>
@@ -67,7 +67,7 @@
                             @foreach ($product->images as $img)
                                 <div class="gallery-item">
                                     <img src="{{ $img->url }}" alt="">
-                                    <button type="button" onclick="if(confirm('Supprimer cette photo ?')) document.getElementById('delete-img-{{ $img->id }}').submit();" title="Supprimer" style="display:grid;place-items:center"><x-icon name="x" size="14" /></button>
+                                    <button type="button" data-confirm="Supprimer cette photo du produit ?" data-confirm-action="document.getElementById('delete-img-{{ $img->id }}').submit();" title="Supprimer" style="display:grid;place-items:center"><x-icon name="x" size="14" /></button>
                                 </div>
                             @endforeach
                         </div>

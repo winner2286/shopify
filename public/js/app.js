@@ -3,6 +3,17 @@
   var root = document.documentElement;
   var sunSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>';
   var moonSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+  var eyeSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var eyeOffSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>';
+
+  var iconSvgs = {
+    warning: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    pause: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
+    danger: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
+    success: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    info: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+    close: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+  };
 
   function getCurrentTheme() {
     return root.getAttribute('data-theme') || 'dark';
@@ -26,6 +37,253 @@
     });
   }
 
+  // ----- Toasts de Notifications Modernes (Remplace les popups bloquantes) -----
+  window.BoutiqToast = function (message, type, duration) {
+    if (!message) return;
+    duration = duration || 3600;
+
+    if (!type) {
+      var low = String(message).toLowerCase();
+      if (low.indexOf('copié') !== -1 || low.indexOf('succès') !== -1 || low.indexOf('enregistré') !== -1 || low.indexOf('félicitations') !== -1) {
+        type = 'success';
+      } else if (low.indexOf('dépasse') !== -1 || low.indexOf('limite') !== -1 || low.indexOf('attention') !== -1 || low.indexOf('pause') !== -1) {
+        type = 'warning';
+      } else if (low.indexOf('erreur') !== -1 || low.indexOf('invalide') !== -1 || low.indexOf('pas valide') !== -1 || low.indexOf('échec') !== -1) {
+        type = 'error';
+      } else {
+        type = 'info';
+      }
+    }
+
+    var container = document.getElementById('boutiq-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'boutiq-toast-container';
+      container.className = 'boutiq-toast-container';
+      document.body.appendChild(container);
+    }
+
+    var toast = document.createElement('div');
+    toast.className = 'boutiq-toast';
+
+    var iconSvg = type === 'success' ? iconSvgs.success : (type === 'warning' ? iconSvgs.warning : (type === 'error' ? iconSvgs.danger : iconSvgs.info));
+    toast.innerHTML =
+      '<div class="boutiq-toast-icon toast-' + type + '">' + iconSvg + '</div>' +
+      '<div class="boutiq-toast-msg">' + String(message).replace(/\n/g, '<br>') + '</div>' +
+      '<button type="button" class="boutiq-toast-close" aria-label="Fermer">' + iconSvgs.close + '</button>';
+
+    var removeToast = function () {
+      toast.classList.add('hiding');
+      setTimeout(function () {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 250);
+    };
+
+    toast.querySelector('.boutiq-toast-close').addEventListener('click', removeToast);
+    container.appendChild(toast);
+
+    setTimeout(removeToast, duration);
+  };
+
+  // Remplacement transparent de window.alert par BoutiqToast
+  window.alert = function (message) {
+    window.BoutiqToast(message);
+  };
+
+  // ----- Modale de Confirmation Moderne (Remplace window.confirm) -----
+  window.BoutiqConfirm = function (opts) {
+    if (typeof opts === 'string') {
+      opts = { message: opts };
+    }
+    opts = opts || {};
+    var msg = opts.message || 'Êtes-vous sûr de vouloir continuer ?';
+    var lower = msg.toLowerCase();
+
+    // Auto-détection intelligente du contexte
+    var isPause = lower.indexOf('pause') !== -1;
+    var isDelete = lower.indexOf('supprimer') !== -1 || lower.indexOf('archiver') !== -1 || lower.indexOf('vider') !== -1 || lower.indexOf('annuler') !== -1;
+    var isPaid = lower.indexOf('encaissement') !== -1 || lower.indexOf('payer') !== -1;
+
+    var variant = opts.variant || (isDelete ? 'danger' : (isPause ? 'warning' : (isPaid ? 'success' : 'primary')));
+    var iconKey = opts.icon || (isPause ? 'pause' : (isDelete ? 'danger' : (isPaid ? 'success' : 'warning')));
+    
+    var defaultTitle = isPause ? 'Mise en pause de la boutique' : (isDelete ? 'Confirmation requise' : (isPaid ? 'Confirmation de paiement' : 'Confirmation'));
+    var title = opts.title || defaultTitle;
+
+    var defaultConfirm = isPause ? 'Mettre en pause' : (lower.indexOf('supprimer') !== -1 ? 'Supprimer' : (lower.indexOf('archiver') !== -1 ? 'Archiver' : (lower.indexOf('vider') !== -1 ? 'Vider' : (isPaid ? 'Confirmer le paiement' : 'Confirmer'))));
+    var confirmText = opts.confirmText || defaultConfirm;
+    var cancelText = opts.cancelText || 'Annuler';
+
+    return new Promise(function (resolve) {
+      // Fermer toute modale existante
+      var existing = document.querySelector('.boutiq-modal-backdrop');
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+
+      var backdrop = document.createElement('div');
+      backdrop.className = 'boutiq-modal-backdrop';
+
+      var dialog = document.createElement('div');
+      dialog.className = 'boutiq-modal-dialog';
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+
+      var iconSvg = iconSvgs[iconKey] || iconSvgs.warning;
+
+      dialog.innerHTML =
+        '<div class="boutiq-modal-header">' +
+          '<div class="boutiq-modal-icon-wrap variant-' + variant + '">' + iconSvg + '</div>' +
+          '<div>' +
+            '<h3 class="boutiq-modal-title">' + title + '</h3>' +
+            '<p class="boutiq-modal-body" style="margin-top:.4rem">' + msg.replace(/\n/g, '<br>') + '</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="boutiq-modal-actions">' +
+          '<button type="button" class="boutiq-modal-btn boutiq-modal-btn-cancel">' + cancelText + '</button>' +
+          '<button type="button" class="boutiq-modal-btn boutiq-modal-btn-confirm variant-' + variant + '">' + confirmText + '</button>' +
+        '</div>';
+
+      backdrop.appendChild(dialog);
+      document.body.appendChild(backdrop);
+
+      // Animation d'ouverture
+      setTimeout(function () {
+        backdrop.classList.add('active');
+        var btnConfirm = dialog.querySelector('.boutiq-modal-btn-confirm');
+        if (btnConfirm) btnConfirm.focus();
+      }, 20);
+
+      var cleanup = function (confirmed) {
+        document.removeEventListener('keydown', onKeyDown);
+        backdrop.classList.remove('active');
+        setTimeout(function () {
+          if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+          if (confirmed) {
+            if (typeof opts.onConfirm === 'function') opts.onConfirm();
+            resolve(true);
+          } else {
+            if (typeof opts.onCancel === 'function') opts.onCancel();
+            resolve(false);
+          }
+        }, 220);
+      };
+
+      dialog.querySelector('.boutiq-modal-btn-confirm').addEventListener('click', function () {
+        cleanup(true);
+      });
+      dialog.querySelector('.boutiq-modal-btn-cancel').addEventListener('click', function () {
+        cleanup(false);
+      });
+      backdrop.addEventListener('click', function (e) {
+        if (e.target === backdrop) cleanup(false);
+      });
+
+      var onKeyDown = function (e) {
+        if (e.key === 'Escape') {
+          cleanup(false);
+        } else if (e.key === 'Enter') {
+          if (document.activeElement && document.activeElement.classList.contains('boutiq-modal-btn-cancel')) {
+            cleanup(false);
+          } else {
+            cleanup(true);
+          }
+        }
+      };
+      document.addEventListener('keydown', onKeyDown);
+    });
+  };
+
+  // Conversion automatique de tous les onsubmit="return confirm(...)" et onclick="if(confirm(...))..."
+  function initConfirmInterceptors() {
+    document.querySelectorAll('form[onsubmit*="confirm("]').forEach(function (form) {
+      var raw = form.getAttribute('onsubmit');
+      var match = raw.match(/confirm\(\s*(['"])(.*?)\1\s*\)/);
+      if (match) {
+        var message = match[2].replace(/\\'/g, "'").replace(/\\"/g, '"');
+        form.removeAttribute('onsubmit');
+        form.setAttribute('data-confirm', message);
+      }
+    });
+
+    document.querySelectorAll('[onclick*="confirm("]').forEach(function (el) {
+      var raw = el.getAttribute('onclick');
+      var match = raw.match(/if\s*\(\s*confirm\(\s*(['"])(.*?)\1\s*\)\s*\)\s*(.*?);?$/);
+      if (match) {
+        var message = match[2].replace(/\\'/g, "'").replace(/\\"/g, '"');
+        var actionCode = match[3];
+        el.removeAttribute('onclick');
+        el.setAttribute('data-confirm', message);
+        el.setAttribute('data-confirm-action', actionCode);
+      }
+    });
+  }
+
+  // Interception globale des soumissions de formulaires nécessitant confirmation
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || !form.getAttribute) return;
+    var msg = form.getAttribute('data-confirm');
+    if (msg && !form._boutiqConfirmed) {
+      if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        return;
+      }
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      window.BoutiqConfirm({
+        message: msg,
+        onConfirm: function () {
+          form._boutiqConfirmed = true;
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+          setTimeout(function () { form._boutiqConfirmed = false; }, 1200);
+        }
+      });
+    }
+  }, true);
+
+  // Interception globale des clics nécessitant confirmation
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-confirm]');
+    if (!el || el.tagName === 'FORM' || el._boutiqConfirmed) return;
+    var msg = el.getAttribute('data-confirm');
+    var actionCode = el.getAttribute('data-confirm-action');
+    if (msg) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      window.BoutiqConfirm({
+        message: msg,
+        onConfirm: function () {
+          el._boutiqConfirmed = true;
+          if (actionCode) {
+            try {
+              new Function(actionCode).call(el);
+            } catch (err) {
+              console.error(err);
+            }
+          } else if (el.tagName === 'A' && el.href) {
+            window.location.href = el.href;
+          }
+          setTimeout(function () { el._boutiqConfirmed = false; }, 1200);
+        }
+      });
+    }
+  }, true);
+
+  // ----- Afficher / masquer le mot de passe (Œil de connexion & inscription) -----
+  function togglePasswordVisibility(btn) {
+    if (!btn) return;
+    var targetId = btn.getAttribute('data-toggle-pw');
+    var input = targetId ? document.getElementById(targetId) : (btn.parentElement ? btn.parentElement.querySelector('input') : null);
+    if (!input) return;
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.innerHTML = show ? eyeOffSvg : eyeSvg;
+    btn.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+    btn.setAttribute('title', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+  }
+
   // Appliquer le thème dès l'exécution du script
   var savedTheme = 'dark';
   try {
@@ -35,8 +293,9 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     syncThemeButtons();
+    initConfirmInterceptors();
 
-    // Délégation d'événement sur tous les boutons de bascule
+    // Délégation d'événement sur tous les boutons de bascule de thème
     document.addEventListener('click', function (e) {
       var btn = e.target.closest('.theme-toggle-btn, #theme-toggle');
       if (btn) {
@@ -46,16 +305,19 @@
       }
     });
 
-    // ----- Afficher / masquer le mot de passe -----
+    // Initialisation visuelle des boutons œil de mot de passe au chargement
     document.querySelectorAll('[data-toggle-pw]').forEach(function (btn) {
       btn.innerHTML = eyeSvg;
-      btn.addEventListener('click', function () {
-        var input = document.getElementById(btn.getAttribute('data-toggle-pw'));
-        var show = input.type === 'password';
-        input.type = show ? 'text' : 'password';
-        btn.innerHTML = show ? eyeOffSvg : eyeSvg;
-        btn.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
-      });
+    });
+
+    // Délégation globale pour basculer la visibilité du mot de passe
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-toggle-pw]');
+      if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePasswordVisibility(btn);
+      }
     });
 
     // ----- Indicateur de force du mot de passe -----

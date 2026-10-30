@@ -389,7 +389,7 @@
                     </div>
 
                     <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('ad-text-{{ $index }}').innerText); alert('Texte copié dans le presse-papier !');" style="display:inline-flex;align-items:center;gap:.35rem">
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('ad-text-{{ $index }}').innerText); window.BoutiqToast ? window.BoutiqToast('Texte publicitaire copié dans le presse-papier !', 'success') : alert('Texte copié !');" style="display:inline-flex;align-items:center;gap:.35rem">
                             <x-icon name="copy" :size="15" />
                             <span>Copier le texte</span>
                         </button>

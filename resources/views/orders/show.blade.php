@@ -191,7 +191,7 @@
                 </div>
 
                 @if ($order->payment_status !== 'paid')
-                    <form method="POST" action="{{ route('orders.mark_paid', $order) }}" onsubmit="return confirm('Confirmer l\'encaissement du paiement ?');">
+                    <form method="POST" action="{{ route('orders.mark_paid', $order) }}" data-confirm="Confirmer l'encaissement du paiement pour cette commande ?">
                         @csrf
                         <button type="submit" class="btn btn-ghost btn-sm btn-block" style="color:var(--ok);display:inline-flex;align-items:center;justify-content:center;gap:.4rem">
                             <x-icon name="check" size="16" /> Marquer comme Payé / Encaissé
@@ -245,7 +245,7 @@
                         L'annulation est possible avant expédition. Les articles seront <strong>automatiquement restitués au stock</strong>.
                     </p>
 
-                    <form method="POST" action="{{ route('orders.cancel', $order) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette commande ? Les stocks seront réintégrés.');">
+                    <form method="POST" action="{{ route('orders.cancel', $order) }}" data-confirm="Êtes-vous sûr de vouloir annuler cette commande ? Les stocks seront réintégrés.">
                         @csrf
                         <div style="margin-bottom:.8rem">
                             <label for="cancellation_reason" class="label" style="font-size:.85rem">Motif d'annulation obligatoire *</label>

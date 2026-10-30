@@ -81,7 +81,7 @@
                                     <x-icon name="eye" size="16" />
                                 </a>
 
-                                <form method="POST" action="{{ route('admin.shops.toggle_suspend', $shop) }}" onsubmit="return confirm('Confirmer l\'action de modération pour {{ $shop->name }} ?');">
+                                <form method="POST" action="{{ route('admin.shops.toggle_suspend', $shop) }}" data-confirm="Confirmer l'action de modération pour {{ $shop->name }} ?">
                                     @csrf
                                     @if ($shop->status === 'suspended')
                                         <button type="submit" class="btn btn-primary btn-sm" style="background:var(--ok)">

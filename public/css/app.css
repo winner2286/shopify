@@ -1176,8 +1176,11 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   position: absolute; right: 4px; top: 4px; width: 42px; height: 40px;
   border: 0; background: transparent; color: var(--text-soft); cursor: pointer;
   border-radius: 8px; display: grid; place-items: center;
+  z-index: 2; transition: all .15s ease;
 }
 .pw button:hover { color: #ffffff; background: #202028; }
+[data-theme='light'] .pw button { color: #64748b; }
+[data-theme='light'] .pw button:hover { color: #0f172a; background: #f1f5f9; }
 .error { color: #f87185; font-size: .88rem; margin-top: .35rem; font-weight: 500; }
 .hint { color: var(--text-faint); font-size: .85rem; margin-top: .35rem; }
 
@@ -3362,4 +3365,313 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 
 [data-theme='light'] .progress i {
   background: var(--brand-1) !important;
+}
+
+/* ==========================================================================
+   MODAL DE CONFIRMATION & NOTIFICATIONS TOAST MODERNES (SaaS DESIGN)
+   ========================================================================== */
+
+/* 1. Backdrop de la modale */
+.boutiq-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 7, 14, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+}
+
+.boutiq-modal-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 2. Boîte de dialogue */
+.boutiq-modal-dialog {
+  background: #14121e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  max-width: 460px;
+  width: 100%;
+  padding: 1.75rem;
+  position: relative;
+  transform: scale(0.94) translateY(12px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+  opacity: 0;
+  color: #f8fafc;
+}
+
+.boutiq-modal-backdrop.active .boutiq-modal-dialog {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+[data-theme='light'] .boutiq-modal-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 25px 50px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+
+/* 3. Icône & Header */
+.boutiq-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.boutiq-modal-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.boutiq-modal-icon-wrap.variant-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.boutiq-modal-icon-wrap.variant-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.boutiq-modal-icon-wrap.variant-primary {
+  background: rgba(109, 61, 242, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(109, 61, 242, 0.3);
+}
+
+.boutiq-modal-icon-wrap.variant-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.boutiq-modal-title {
+  margin: 0;
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: inherit;
+  line-height: 1.35;
+}
+
+.boutiq-modal-body {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--text-soft, #94a3b8);
+}
+
+[data-theme='light'] .boutiq-modal-body {
+  color: #475569;
+}
+
+/* 4. Actions */
+.boutiq-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='light'] .boutiq-modal-actions {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+.boutiq-modal-btn {
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.boutiq-modal-btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text, #e2e8f0);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.boutiq-modal-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme='light'] .boutiq-modal-btn-cancel {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+[data-theme='light'] .boutiq-modal-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.boutiq-modal-btn-confirm {
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.boutiq-modal-btn-confirm.variant-warning {
+  background: #f59e0b;
+}
+
+.boutiq-modal-btn-confirm.variant-warning:hover {
+  background: #d97706;
+}
+
+.boutiq-modal-btn-confirm.variant-danger {
+  background: #ef4444;
+}
+
+.boutiq-modal-btn-confirm.variant-danger:hover {
+  background: #dc2626;
+}
+
+.boutiq-modal-btn-confirm.variant-primary {
+  background: var(--brand-1, #6d3df2);
+}
+
+.boutiq-modal-btn-confirm.variant-primary:hover {
+  filter: brightness(1.1);
+}
+
+.boutiq-modal-btn-confirm.variant-success {
+  background: #10b981;
+}
+
+.boutiq-modal-btn-confirm.variant-success:hover {
+  background: #059669;
+}
+
+/* 5. Conteneur & Toasts Modernes */
+.boutiq-toast-container {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-width: 380px;
+  width: calc(100% - 3rem);
+  pointer-events: none;
+}
+
+.boutiq-toast {
+  pointer-events: auto;
+  background: rgba(18, 15, 28, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  color: #f8fafc;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.4;
+  animation: boutiqToastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.boutiq-toast.hiding {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.96);
+}
+
+[data-theme='light'] .boutiq-toast {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.18);
+  color: #0f172a;
+}
+
+.boutiq-toast-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.boutiq-toast-icon.toast-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.boutiq-toast-icon.toast-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.boutiq-toast-icon.toast-error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.boutiq-toast-icon.toast-info {
+  background: rgba(109, 61, 242, 0.2);
+  color: #a78bfa;
+}
+
+.boutiq-toast-msg {
+  flex: 1;
+}
+
+.boutiq-toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text-faint, #64748b);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.boutiq-toast-close:hover {
+  color: #fff;
+}
+
+[data-theme='light'] .boutiq-toast-close:hover {
+  color: #0f172a;
+}
+
+@keyframes boutiqToastSlideIn {
+  0% { opacity: 0; transform: translateY(-16px) scale(0.94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }

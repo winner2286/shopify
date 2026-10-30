@@ -47,7 +47,10 @@
 
             <div class="field">
                 <label for="password_confirmation">Confirmer le mot de passe</label>
-                <input id="password_confirmation" name="password_confirmation" type="password" class="input" autocomplete="new-password" required>
+                <div class="pw">
+                    <input id="password_confirmation" name="password_confirmation" type="password" class="input" autocomplete="new-password" required>
+                    <button type="button" data-toggle-pw="password_confirmation" aria-label="Afficher le mot de passe"><x-icon name="eye" size="18" /></button>
+                </div>
             </div>
 
             <div class="field">

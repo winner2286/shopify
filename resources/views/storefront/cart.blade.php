@@ -84,7 +84,7 @@
                 </div>
 
                 <div style="padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;background:var(--bg-soft)">
-                    <form method="POST" action="{{ url('/b/' . $shop->subdomain . '/panier/vider') }}" onsubmit="return confirm('Voulez-vous vider l\'ensemble de votre panier ?');">
+                    <form method="POST" action="{{ url('/b/' . $shop->subdomain . '/panier/vider') }}" data-confirm="Voulez-vous vider l'ensemble de votre panier ?">
                         @csrf
                         <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger)">
                             Vider le panier
