@@ -3,8 +3,8 @@
 @section('title', 'Studio Vidéo & Publicité IA : ' . $ad->channel_label . ' - ' . config('platform.name'))
 
 @section('content')
-<div class="container" style="max-width:1080px;padding:2rem 1rem">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
+<div class="container studio-container" style="max-width:1080px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
         <div>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
                 <span class="svg-icon" style="color:var(--brand-2)"><x-icon name="sparkles" :size="24" /></span>
@@ -47,23 +47,23 @@
     <!-- ========================================================================= -->
     <!-- SECTION VEDETTE : STUDIO VIDÉO PUBLICITAIRE IA 9:16 (TIKTOK / REELS / WA)  -->
     <!-- ========================================================================= -->
-    <section class="card studio-card" style="padding:1.8rem;margin-bottom:3rem;background:linear-gradient(180deg, var(--surface) 0%, var(--bg-soft) 100%);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 12px 35px rgba(0,0,0,0.06);position:relative;overflow:hidden">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
+    <section class="card studio-card">
+        <div class="studio-header-banner">
             <div>
-                <div style="display:inline-flex;align-items:center;gap:.4rem;background:linear-gradient(135deg, rgba(109,61,242,0.15), rgba(236,72,153,0.15));color:var(--brand-1);padding:.35rem .85rem;border-radius:20px;font-size:.82rem;font-weight:700;margin-bottom:.6rem;border:1px solid rgba(109,61,242,0.25)">
+                <div class="studio-format-pill">
                     <x-icon name="video" :size="15" />
-                    <span>Format 9:16 Vertical (TikTok • Instagram Reels • Statuts WhatsApp)</span>
+                    <span>Format 9:16 Vertical (TikTok • Reels • WhatsApp)</span>
                 </div>
-                <h2 style="font-size:1.5rem;margin:0 0 .4rem;font-weight:800">
+                <h2 class="studio-header-title">
                     Générez votre Vidéo Publicitaire Animée en 1 Clic
                 </h2>
-                <p style="color:var(--text-soft);margin:0;font-size:.95rem">
+                <p class="studio-header-desc">
                     L'IA a composé le rythme, le zoom dynamique sur votre produit et le bouton de commande WhatsApp. Prévisualisez et téléchargez votre vidéo gratuitement.
                 </p>
             </div>
 
-            <div style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.25);padding:.4rem .9rem;border-radius:20px;font-size:.82rem;font-weight:700">
-                <span style="display:inline-block;width:8px;height:8px;background:#10b981;border-radius:50%;box-shadow:0 0 8px #10b981"></span>
+            <div class="studio-unlimited-badge">
+                <span class="unlimited-dot"></span>
                 <span>Rendu Navigateur Illimité • 0 FCFA</span>
             </div>
         </div>
@@ -109,12 +109,13 @@
                 </div>
 
                 <!-- Sélecteur de format d'export : MP4 vs WebM -->
-                <div class="format-choice-container" style="margin-top:1.1rem;margin-bottom:.8rem;width:100%">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-                        <label style="font-size:.82rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.5px;margin:0">
+                <!-- Sélecteur de format d'export : MP4 vs WebM -->
+                <div class="format-choice-container">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;gap:.5rem;flex-wrap:wrap">
+                        <label style="font-size:.8rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.5px;margin:0">
                             Format d'exportation vidéo :
                         </label>
-                        <span id="ad-format-tag" class="badge badge-ok" style="font-size:.7rem">MP4 sélectionné</span>
+                        <span id="ad-format-tag" class="badge badge-ok" style="font-size:.68rem;padding:.15rem .45rem">MP4 sélectionné</span>
                     </div>
 
                     <div class="format-choice-grid">
@@ -147,11 +148,11 @@
                 </div>
 
                 <!-- Bouton Téléchargement Vidéo Haute Conversion -->
-                <div style="width:100%">
+                <div class="export-btn-wrapper">
                     <button type="button" id="ad-btn-export" class="btn-export-video">
                         <div class="btn-export-glow"></div>
                         <span class="btn-export-content">
-                            <x-icon name="download" :size="22" />
+                            <x-icon name="download" :size="20" />
                             <span>
                                 <strong id="ad-export-title">Télécharger la Vidéo MP4</strong>
                                 <small id="ad-export-subtitle">Format 9:16 vertical • Recommandé TikTok & WhatsApp</small>
@@ -547,37 +548,130 @@
 
 <style>
     /* STYLES DU STUDIO VIDÉO */
+    .studio-container {
+        padding: 2rem 1rem;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 1080px;
+        margin: 0 auto;
+    }
+
+    .studio-card {
+        padding: 1.8rem;
+        margin-bottom: 3rem;
+        background: linear-gradient(180deg, var(--surface) 0%, var(--bg-soft) 100%);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 12px 35px rgba(0,0,0,0.06);
+        position: relative;
+        overflow: hidden;
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .studio-header-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .studio-format-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        background: linear-gradient(135deg, rgba(109,61,242,0.15), rgba(236,72,153,0.15));
+        color: var(--brand-1);
+        padding: .35rem .85rem;
+        border-radius: 20px;
+        font-size: .82rem;
+        font-weight: 700;
+        margin-bottom:.6rem;
+        border: 1px solid rgba(109,61,242,0.25);
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .studio-header-title {
+        font-size: 1.5rem;
+        margin: 0 0 .4rem;
+        font-weight: 800;
+        line-height: 1.25;
+    }
+
+    .studio-header-desc {
+        color: var(--text-soft);
+        margin: 0;
+        font-size: .95rem;
+        line-height: 1.45;
+    }
+
+    .studio-unlimited-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        background: rgba(16,185,129,0.1);
+        color: #10b981;
+        border: 1px solid rgba(16,185,129,0.25);
+        padding: .4rem .9rem;
+        border-radius: 20px;
+        font-size: .82rem;
+        font-weight: 700;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .unlimited-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        box-shadow: 0 0 8px #10b981;
+        flex-shrink: 0;
+    }
+
     .studio-grid {
         display: grid;
-        grid-template-columns: 360px 1fr;
-        gap: 2.2rem;
+        grid-template-columns: 340px 1fr;
+        gap: 2rem;
         align-items: start;
         margin-top: 1rem;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .studio-player-col {
         display: flex;
         flex-direction: column;
         align-items: center;
-        max-width: 360px;
+        justify-content: center;
+        max-width: 340px;
         margin: 0 auto;
         width: 100%;
+        box-sizing: border-box;
     }
 
     /* Cadre Smartphone 9:16 réaliste */
     .phone-frame {
         width: 100%;
-        max-width: 340px;
+        max-width: 320px;
         aspect-ratio: 9 / 16;
-        border-radius: 42px;
+        border-radius: 36px;
         background: #090610;
-        border: 9px solid #1f1b2e;
-        box-shadow: 0 25px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.08);
+        border: 8px solid #1f1b2e;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.08);
         position: relative;
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
+        margin: 0 auto;
+        box-sizing: border-box;
     }
 
     .phone-notch {
@@ -652,13 +746,15 @@
     .player-controls-bar {
         display: flex;
         align-items: center;
-        gap: .6rem;
+        gap: .55rem;
         width: 100%;
-        margin-top: .9rem;
+        max-width: 320px;
+        margin: .85rem auto 0;
         background: var(--surface);
         border: 1px solid var(--border);
-        padding: .5rem .8rem;
+        padding: .5rem .75rem;
         border-radius: 16px;
+        box-sizing: border-box;
     }
 
     .btn-ctrl-play, .btn-ctrl-mute {
@@ -693,10 +789,19 @@
     }
 
     /* Sélecteur de format MP4 vs WebM */
+    .format-choice-container {
+        width: 100%;
+        max-width: 320px;
+        margin: 1rem auto .8rem;
+        box-sizing: border-box;
+    }
+
     .format-choice-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: .55rem;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .btn-format-pick {
@@ -711,6 +816,7 @@
         text-align: left;
         transition: all .2s ease;
         width: 100%;
+        box-sizing: border-box;
     }
 
     .btn-format-pick:hover {
@@ -751,13 +857,24 @@
         background: var(--brand-1);
     }
 
+    .export-btn-wrapper {
+        width: 100%;
+        max-width: 320px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+
     /* Bouton Téléchargement Haute Conversion */
     .btn-export-video {
         position: relative;
         width: 100%;
+        max-width: 320px;
+        margin: 0 auto;
+        display: block;
+        box-sizing: border-box;
         border: none;
         border-radius: 18px;
-        padding: 1rem 1.4rem;
+        padding: .95rem 1.1rem;
         background: linear-gradient(135deg, var(--brand-1) 0%, var(--brand-2) 100%);
         color: #fff;
         cursor: pointer;
@@ -1066,35 +1183,10 @@
         box-shadow: 0 25px 60px rgba(0,0,0,0.3);
     }
 
-    .btn-format-pick {
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-        padding: .75rem .9rem;
-        background: var(--surface);
-        border: 2px solid var(--border);
-        border-radius: var(--radius-sm);
-        cursor: pointer;
-        text-align: left;
-        transition: all .2s ease;
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .format-pick-info {
-        flex: 1;
-        min-width: 0;
-    }
-
     @media (max-width: 860px) {
         .studio-grid {
             grid-template-columns: 1fr;
             gap: 1.5rem;
-        }
-        .studio-player-col {
-            max-width: 440px;
-            width: 100%;
-            margin: 0 auto;
         }
         .theme-chips-grid, .audio-chips-grid {
             grid-template-columns: 1fr;
@@ -1102,18 +1194,100 @@
     }
 
     @media (max-width: 768px) {
-        .format-choice-grid {
-            grid-template-columns: 1fr !important;
-            gap: .65rem;
+        .studio-container {
+            padding: 1rem .65rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        .studio-card {
+            padding: 1.1rem .8rem !important;
+            border-radius: 18px !important;
+            margin-bottom: 2rem !important;
+            box-sizing: border-box !important;
+        }
+        .studio-header-title {
+            font-size: 1.25rem !important;
+        }
+        .studio-header-desc {
+            font-size: .85rem !important;
         }
         .studio-player-col {
-            max-width: 100%;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
+        }
+        .phone-frame {
+            max-width: 270px !important;
+            border: 6px solid #1f1b2e !important;
+            border-radius: 28px !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+        }
+        .player-controls-bar {
+            max-width: 270px !important;
+            padding: .45rem .6rem !important;
+            gap: .35rem !important;
+            margin: .85rem auto 0 !important;
+            box-sizing: border-box !important;
+        }
+        .player-controls-bar .time-readout {
+            font-size: .68rem !important;
+        }
+        .format-choice-container {
+            max-width: 270px !important;
+            margin: 1rem auto .8rem !important;
+            box-sizing: border-box !important;
+        }
+        .format-choice-grid {
+            grid-template-columns: 1fr !important;
+            gap: .6rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        .btn-format-pick {
+            padding: .65rem .75rem !important;
+            box-sizing: border-box !important;
+        }
+        .export-btn-wrapper {
+            max-width: 270px !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+        }
+        .btn-export-video {
+            max-width: 270px !important;
+            padding: .85rem .95rem !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+        }
+        .btn-export-content strong {
+            font-size: .95rem !important;
+        }
+        .btn-export-content small {
+            font-size: .72rem !important;
+        }
+        .export-progress-container {
+            max-width: 270px !important;
+            margin: .8rem auto 0 !important;
+            box-sizing: border-box !important;
+        }
+        .studio-settings-col {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
         }
         .settings-box {
-            padding: 1rem .9rem;
+            padding: 1rem .85rem !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
         .script-pick-card {
-            padding: .85rem .9rem;
+            padding: .85rem .9rem !important;
+            box-sizing: border-box !important;
         }
     }
 </style>
