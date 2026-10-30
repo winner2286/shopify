@@ -1472,6 +1472,26 @@ body:has(.bottom-nav) {
 .nav-admin-short { display: none; }
 .logout-icon { display: none; }
 .logout-text { display: inline; }
+
+/* En-têtes de tableau de bord & catalogue */
+.dash-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+.dash-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.dash-head-btn .btn-short-text {
+  display: none;
+}
+.dash-head-btn .btn-full-text {
+  display: inline;
+}
 @media (max-width: 640px) {
   .nav-admin-full { display: none; }
   .nav-admin-short { display: inline; }
@@ -1540,6 +1560,34 @@ body:has(.bottom-nav) {
     text-align: center !important;
     padding: .5rem .5rem !important;
     font-size: .8rem !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Actions du catalogue sur mobile (Gérer les catégories & Ajouter un produit côte à côte sur la même ligne) */
+  .dash-head {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+  .dash-head-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+  .dash-head-actions .dash-head-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 0.55rem 0.45rem !important;
+    font-size: 0.82rem !important;
+    min-height: 42px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     box-sizing: border-box !important;
   }
 
@@ -1783,6 +1831,8 @@ body:has(.bottom-nav) {
   .nav-actions .btn-sm { padding: .26rem .45rem; font-size: .75rem; }
   .theme-toggle-btn { width: 32px !important; height: 32px !important; min-height: 32px !important; }
   .hero-content h1 { font-size: 1.5rem; }
+  .dash-head-actions .dash-head-btn .btn-full-text { display: none !important; }
+  .dash-head-actions .dash-head-btn .btn-short-text { display: inline !important; }
 }
 
 /* Animations d'apparition */

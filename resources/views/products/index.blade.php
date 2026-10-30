@@ -9,9 +9,15 @@
             <p style="margin:0">Catalogue</p>
             <h1>Mes Produits</h1>
         </div>
-        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-            <a href="{{ route('categories.index') }}" class="btn btn-ghost">Gérer les catégories</a>
-            <a id="btn-add-product" href="{{ route('products.create') }}" class="btn btn-primary">+ Ajouter un produit</a>
+        <div class="dash-head-actions">
+            <a href="{{ route('categories.index') }}" class="btn btn-ghost dash-head-btn">
+                <span class="btn-full-text">Gérer les catégories</span>
+                <span class="btn-short-text">Catégories</span>
+            </a>
+            <a id="btn-add-product" href="{{ route('products.create') }}" class="btn btn-primary dash-head-btn">
+                <span class="btn-full-text">+ Ajouter un produit</span>
+                <span class="btn-short-text">+ Produit</span>
+            </a>
         </div>
     </div>
 
