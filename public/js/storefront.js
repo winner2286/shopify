@@ -356,16 +356,169 @@ document.addEventListener('DOMContentLoaded', function () {
                     observer.unobserve(entry.target);
                 }
             });
-        }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+        }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
 
         document.querySelectorAll('.reveal, .reveal-on-scroll, .product-card').forEach(function (el) {
             var rect = el.getBoundingClientRect();
-            if (rect.top < window.innerHeight * 0.55 && rect.bottom > 0) {
+            if (rect.top < window.innerHeight * 0.85 && rect.bottom > 0) {
                 el.classList.add('in-view');
                 el.classList.add('in');
             } else {
                 observer.observe(el);
             }
         });
+    }
+
+    // -------------------------------------------------------------
+    // 7. Dynamic Scroll Effects (Header Compression & Progress Bar)
+    // -------------------------------------------------------------
+    const headerEl = document.querySelector('.store-header');
+    const progressBar = document.getElementById('store-scroll-progress');
+    const stickyBar = document.getElementById('mobile-sticky-bar');
+
+    function handleScroll() {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollPercent = docHeight > 0 ? Math.min(100, Math.max(0, (scrollTop / docHeight) * 100)) : 0;
+
+        if (progressBar) {
+            progressBar.style.width = scrollPercent + '%';
+        }
+
+        if (headerEl) {
+            if (scrollTop > 35) {
+                headerEl.classList.add('scrolled');
+            } else {
+                headerEl.classList.remove('scrolled');
+            }
+        }
+
+        if (stickyBar) {
+            if (scrollTop > 320) {
+                stickyBar.classList.add('visible');
+            } else {
+                stickyBar.classList.remove('visible');
+            }
+        }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    // -------------------------------------------------------------
+    // 8. Preuve Sociale Locale en Direct (Live Sales Toast)
+    // -------------------------------------------------------------
+    const liveSaleToast = document.getElementById('store-live-sale-toast');
+    const liveSaleImg = document.getElementById('live-sale-img');
+    const liveSaleProduct = document.getElementById('live-sale-product');
+    const liveSaleCity = document.getElementById('live-sale-city');
+    const liveSaleTime = document.getElementById('live-sale-time');
+
+    if (liveSaleToast) {
+        const togoCities = [
+            'Lomé (Agoè-Nyivé)',
+            'Lomé (Totsi)',
+            'Lomé (Adidogomé)',
+            'Lomé (Tokoin)',
+            'Lomé (Bè-Kpota)',
+            'Lomé (Hedzranawoé)',
+            'Lomé (Baguida)',
+            'Kpalimé',
+            'Kara',
+            'Atakpamé',
+            'Sokodé',
+            'Tsévié'
+        ];
+
+        const times = [
+            'Il y a 3 min',
+            'Il y a 6 min',
+            'Il y a 9 min',
+            'Il y a 14 min',
+            'Il y a 22 min'
+        ];
+
+        function getAvailableProducts() {
+            const cards = Array.from(document.querySelectorAll('.product-card'));
+            return cards.map(function (c) {
+                const title = c.getAttribute('data-product-title') || (c.querySelector('.product-card-title a') ? c.querySelector('.product-card-title a').textContent.trim() : '');
+                const img = c.querySelector('img') ? c.querySelector('img').getAttribute('src') : null;
+                return { title: title, img: img };
+            }).filter(function (p) { return p.title && p.title.length > 0; });
+        }
+
+        let toastCloseTimer = null;
+
+        function triggerLiveSale() {
+            const products = getAvailableProducts();
+            if (!products || products.length === 0) return;
+
+            const randomProd = products[Math.floor(Math.random() * products.length)];
+            const randomCity = togoCities[Math.floor(Math.random() * togoCities.length)];
+            const randomTime = times[Math.floor(Math.random() * times.length)];
+
+            if (liveSaleProduct) liveSaleProduct.textContent = randomProd.title;
+            if (liveSaleCity) liveSaleCity.textContent = randomCity;
+            if (liveSaleTime) liveSaleTime.textContent = randomTime;
+
+            if (liveSaleImg) {
+                if (randomProd.img) {
+                    liveSaleImg.src = randomProd.img;
+                    liveSaleImg.style.display = 'block';
+                } else {
+                    liveSaleImg.style.display = 'none';
+                }
+            }
+
+            liveSaleToast.classList.add('active');
+
+            if (toastCloseTimer) clearTimeout(toastCloseTimer);
+            toastCloseTimer = setTimeout(function () {
+                liveSaleToast.classList.remove('active');
+            }, 5500);
+        }
+
+        // Première notification après 5 secondes, puis récurrence toutes les 22 secondes
+        setTimeout(function () {
+            triggerLiveSale();
+            setInterval(function () {
+                triggerLiveSale();
+            }, 22000);
+        }, 5000);
+    }
+
+    // -------------------------------------------------------------
+    // 9. Effet 3D Tilt Tactile sur les Cartes Produits (Desktop)
+    // -------------------------------------------------------------
+    if (window.matchMedia('(pointer: fine)').matches) {
+        document.querySelectorAll('.product-card').forEach(function (card) {
+            card.addEventListener('mousemove', function (e) {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const rotateX = ((y - centerY) / centerY) * -4;
+                const rotateY = ((x - centerX) / centerX) * 4;
+
+                card.style.transform = 'perspective(1000px) rotateX(' + rotateX.toFixed(2) + 'deg) rotateY(' + rotateY.toFixed(2) + 'deg) translateY(-8px)';
+            });
+
+            card.addEventListener('mouseleave', function () {
+                card.style.transform = '';
+            });
+        });
+    }
+
+    // -------------------------------------------------------------
+    // 10. Compteur Visiteurs en Direct (Fiche Produit Scarcity)
+    // -------------------------------------------------------------
+    const viewersCountEl = document.getElementById('product-viewers-count');
+    if (viewersCountEl) {
+        setInterval(function () {
+            const rand = Math.floor(Math.random() * 6) + 3; // 3 à 8 personnes
+            viewersCountEl.textContent = rand + ' personnes';
+        }, 11000);
     }
 });

@@ -70,7 +70,7 @@
                     $waProductMsg = urlencode("Bonjour {$shop->name}, je souhaite commander cet article :\n- {$product->title}\n- Prix : " . number_format($product->price, 0, ',', ' ') . " FCFA\nLien : " . url('/b/' . $shop->subdomain . '/produits/' . $product->slug));
                     $waProductUrl = $shop->whatsapp_formatted ? "https://wa.me/{$shop->whatsapp_formatted}?text={$waProductMsg}" : '';
                 @endphp
-                <article class="product-card reveal-on-scroll"
+                <article class="product-card reveal-on-scroll" style="--delay: {{ $loop->index % 8 }}"
                     data-product-id="{{ $product->id }}"
                     data-product-title="{{ $product->title }}"
                     data-product-price="{{ number_format($product->price, 0, ',', ' ') }} FCFA"
@@ -99,17 +99,38 @@
                             <span class="product-discount-badge">-{{ $discountPct }}%</span>
                         @endif
 
-                        <button type="button" class="btn-quick-view" onclick="openQuickView(this)" title="Aperçu rapide" aria-label="Aperçu rapide de {{ $product->title }}">
-                            <x-icon name="eye" size="18" />
-                        </button>
+                        <span class="product-card-badge-top">
+                            <span class="card-stock-dot"></span> Prêt à livrer
+                        </span>
+
+                        <!-- Boutons d'Action Flottants (Aperçu + WhatsApp direct) -->
+                        <div class="product-card-actions-float">
+                            <button type="button" class="btn-card-action btn-card-qv" onclick="openQuickView(this)" title="Aperçu rapide" aria-label="Aperçu rapide de {{ $product->title }}">
+                                <x-icon name="eye" size="16" />
+                            </button>
+                            @if ($waProductUrl)
+                                <a href="{{ $waProductUrl }}" target="_blank" class="btn-card-action btn-card-wa" title="Commander sur WhatsApp" aria-label="Commander sur WhatsApp">
+                                    <x-icon name="whatsapp" size="16" />
+                                </a>
+                            @endif
+                        </div>
                     </div>
 
                     <div class="product-card-body">
-                        @if ($product->categories->isNotEmpty())
-                            <div style="font-size:.75rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem">
-                                {{ $product->categories->first()->name }}
-                            </div>
-                        @endif
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:.4rem;margin-bottom:.3rem">
+                            @if ($product->categories->isNotEmpty())
+                                <span style="font-size:.72rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600">
+                                    {{ $product->categories->first()->name }}
+                                </span>
+                            @else
+                                <span style="font-size:.72rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600">
+                                    Sélection
+                                </span>
+                            @endif
+                            <span class="card-stock-pill">
+                                <span class="card-stock-dot"></span> Dispo
+                            </span>
+                        </div>
 
                         <h3 class="product-card-title">
                             <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $product->slug) }}">
@@ -118,21 +139,27 @@
                         </h3>
 
                         <div class="product-price-box">
-                            <span class="product-price">{{ number_format($product->price, 0, ',', ' ') }} FCFA</span>
+                            <span class="product-price">{{ number_format($product->price, 0, ',', ' ') }} <small style="font-size:.65em;font-weight:700">FCFA</small></span>
                             @if ($hasDiscount)
                                 <span class="product-old-price">{{ number_format($product->compare_at_price, 0, ',', ' ') }} FCFA</span>
                             @endif
                         </div>
 
-                        <div style="margin-top:.85rem;display:flex;gap:.4rem;align-items:center">
+                        <!-- Actions Carte Produit (Ajout AJAX fluide + WhatsApp) -->
+                        <div style="margin-top:.85rem;display:flex;gap:.45rem;align-items:center">
                             <form class="ajax-add-cart" method="POST" action="{{ url('/b/' . $shop->subdomain . '/panier/ajouter') }}" style="flex:1">
                                 @csrf
                                 <input type="hidden" name="product_id" value="{{ $product->id }}">
                                 <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="btn btn-add-cart btn-block" style="width:100%">
-                                    <x-icon name="shopping-cart" size="15" /> + Ajouter
+                                <button type="submit" class="btn btn-add-cart btn-block" style="width:100%" aria-label="Ajouter {{ $product->title }} au panier">
+                                    <x-icon name="shopping-bag" size="15" /> + Ajouter
                                 </button>
                             </form>
+                            @if ($waProductUrl)
+                                <a href="{{ $waProductUrl }}" target="_blank" class="btn-card-wa-icon" title="Commander en 1 clic sur WhatsApp" aria-label="Commander sur WhatsApp">
+                                    <x-icon name="whatsapp" size="18" />
+                                </a>
+                            @endif
                             <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $product->slug) }}" class="btn btn-ghost btn-sm" aria-label="Voir la fiche détaillée" style="display:inline-flex;align-items:center;padding:.5rem .7rem">
                                 <x-icon name="arrow-right" size="16" />
                             </a>

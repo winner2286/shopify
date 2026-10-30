@@ -86,10 +86,28 @@
             backdrop-filter: blur(16px);
             background: color-mix(in srgb, var(--bg) 85%, transparent);
             border-bottom: 1px solid var(--border);
+            transition: all .25s ease;
+        }
+        .store-header.scrolled {
+            background: color-mix(in srgb, var(--bg) 95%, transparent);
+            border-bottom-color: color-mix(in srgb, var(--store-primary) 30%, var(--border));
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
         .store-header-inner {
             display: flex; align-items: center; justify-content: space-between;
             gap: 1rem; height: 68px;
+            transition: height .25s ease;
+        }
+        .store-header.scrolled .store-header-inner {
+            height: 58px;
+        }
+        .store-scroll-progress {
+            position: absolute; bottom: -1px; left: 0; height: 2px; width: 0%;
+            background: linear-gradient(90deg, var(--store-primary), #25D366);
+            box-shadow: 0 0 10px var(--store-primary);
+            transition: width .1s ease-out;
+            z-index: 41;
+            pointer-events: none;
         }
         .store-brand {
             display: flex; align-items: center; gap: .75rem;
@@ -392,27 +410,65 @@
                 grid-template-columns: 1fr;
             }
         }
+        /* Scroll Reveal Animations (Cascade fluide lors du défilement) */
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translateY(30px) scale(0.97);
+            filter: blur(3px);
+            transition: opacity .7s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform .7s cubic-bezier(0.16, 1, 0.3, 1),
+                        filter .6s ease;
+            transition-delay: calc(var(--delay, 0) * 60ms);
+            will-change: opacity, transform, filter;
+        }
+        .reveal-on-scroll.in-view {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+
+        /* Cartes Produits Dynamiques & Captivantes */
         .product-card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: var(--radius); overflow: hidden;
-            display: flex; flex-direction: column; position: relative;
-            transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .25s cubic-bezier(0.16, 1, 0.3, 1), border-color .2s;
+            background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 97%, #fff) 0%, var(--surface) 100%);
+            border: 1px solid color-mix(in srgb, var(--store-primary) 18%, var(--border));
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1),
+                        box-shadow .35s cubic-bezier(0.16, 1, 0.3, 1),
+                        border-color .25s ease;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
         }
         .product-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 16px 36px rgba(0,0,0,0.22);
-            border-color: color-mix(in srgb, var(--store-primary) 40%, var(--border));
+            transform: translateY(-8px) scale(1.01);
+            box-shadow: 0 20px 42px -10px var(--store-primary-glow), 0 0 0 1px color-mix(in srgb, var(--store-primary) 50%, transparent);
+            border-color: var(--store-primary);
         }
         .product-img-wrap {
             position: relative; width: 100%; aspect-ratio: 1;
             background: var(--bg-soft); overflow: hidden; display: block;
         }
+        .product-img-wrap::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.15) 50%, transparent 60%);
+            transform: translateX(-100%);
+            transition: transform .7s ease;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .product-card:hover .product-img-wrap::after {
+            transform: translateX(100%);
+        }
         .product-img-wrap img {
             width: 100%; height: 100%; object-fit: cover;
-            transition: transform .4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform .6s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .product-card:hover .product-img-wrap img {
-            transform: scale(1.08);
+            transform: scale(1.09);
         }
         .product-discount-badge {
             position: absolute; top: .65rem; left: .65rem;
@@ -421,26 +477,47 @@
             box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
             animation: discountPulse 2.5s infinite; z-index: 2;
         }
-        .btn-quick-view {
-            position: absolute; bottom: .75rem; right: .75rem;
-            width: 38px; height: 38px; border-radius: 50%;
+        .product-card-badge-top {
+            position: absolute; top: .65rem; right: .65rem;
             background: rgba(18, 18, 22, 0.85); backdrop-filter: blur(8px);
-            color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; opacity: 0; transform: translateY(8px);
-            transition: all .25s ease; z-index: 3;
+            color: var(--ok); font-size: .7rem; font-weight: 700;
+            padding: .2rem .5rem; border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            z-index: 2; display: inline-flex; align-items: center; gap: .25rem;
         }
-        .product-card:hover .btn-quick-view {
+        .product-card-actions-float {
+            position: absolute; bottom: .75rem; right: .75rem;
+            display: flex; gap: .45rem; z-index: 3;
+            opacity: 0; transform: translateY(8px);
+            transition: all .25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .product-card:hover .product-card-actions-float {
             opacity: 1; transform: translateY(0);
         }
-        .btn-quick-view:hover {
-            background: var(--store-primary); transform: scale(1.1);
+        .btn-card-action {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: rgba(18, 18, 22, 0.9); backdrop-filter: blur(8px);
+            color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all .2s ease; text-decoration: none;
+        }
+        .btn-card-action:hover {
+            transform: scale(1.12);
+        }
+        .btn-card-action.btn-card-wa {
+            background: #25D366; border-color: #25D366; color: #fff;
+        }
+        .btn-card-action.btn-card-wa:hover {
+            box-shadow: 0 4px 14px rgba(37, 211, 102, 0.5);
+        }
+        .btn-card-action.btn-card-qv:hover {
+            background: var(--store-primary); border-color: var(--store-primary);
         }
         .product-card-body {
-            padding: 1rem; display: flex; flex-direction: column; flex: 1;
+            padding: 1rem 1.1rem; display: flex; flex-direction: column; flex: 1;
         }
         .product-card-title {
-            font-size: 1rem; font-weight: 600; margin: 0 0 .4rem;
+            font-size: 1.02rem; font-weight: 700; margin: 0 0 .35rem;
             color: var(--text); line-height: 1.35;
         }
         .product-card-title a {
@@ -450,12 +527,22 @@
         .product-card-title a:hover {
             color: var(--store-primary);
         }
+        .card-stock-pill {
+            display: inline-flex; align-items: center; gap: .35rem;
+            font-size: .74rem; font-weight: 700; color: #10b981;
+            margin-bottom: .25rem;
+        }
+        .card-stock-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #10b981; box-shadow: 0 0 6px #10b981;
+            display: inline-block;
+        }
         .product-price-box {
-            display: flex; align-items: baseline; gap: .5rem; margin-top: auto; padding-top: .6rem;
+            display: flex; align-items: baseline; gap: .6rem; margin-top: auto; padding-top: .7rem;
         }
         .product-price {
-            font-size: 1.2rem; font-weight: 700; color: var(--text);
-            font-family: var(--font-display);
+            font-size: 1.25rem; font-weight: 800; color: var(--text);
+            font-family: var(--font-display); letter-spacing: -.01em;
         }
         .product-old-price {
             font-size: .85rem; color: var(--text-faint); text-decoration: line-through;
@@ -463,23 +550,95 @@
 
         /* AJAX Cart Button & Micro-Spinner */
         .btn-add-cart {
-            background: var(--store-primary-soft); color: var(--text);
-            border: 1px solid color-mix(in srgb, var(--store-primary) 30%, transparent);
-            padding: .45rem .8rem; border-radius: var(--radius-sm);
-            font-weight: 600; font-size: .88rem; cursor: pointer;
-            transition: all .2s; display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+            background: color-mix(in srgb, var(--store-primary) 18%, var(--surface));
+            color: var(--text);
+            border: 1px solid color-mix(in srgb, var(--store-primary) 35%, transparent);
+            padding: .5rem .85rem; border-radius: var(--radius-sm);
+            font-weight: 700; font-size: .88rem; cursor: pointer;
+            transition: all .25s ease; display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
         }
         .btn-add-cart:hover {
             background: var(--store-primary); color: #fff;
+            border-color: var(--store-primary);
+            box-shadow: 0 6px 16px var(--store-primary-glow);
+            transform: translateY(-1px);
         }
         .btn-success-pulse {
             background: #16a34a !important; color: #fff !important; border-color: #16a34a !important;
             animation: badgeBounce .35s ease;
         }
+        .btn-card-wa-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 38px; height: 38px; border-radius: var(--radius-sm);
+            background: rgba(37, 211, 102, 0.12); color: #25D366;
+            border: 1px solid rgba(37, 211, 102, 0.3);
+            transition: all .2s ease; text-decoration: none; flex-shrink: 0;
+        }
+        .btn-card-wa-icon:hover {
+            background: #25D366; color: #fff;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+            transform: scale(1.08);
+        }
         .store-spinner {
             width: 14px; height: 14px; border: 2px solid currentColor;
             border-right-color: transparent; border-radius: 50%;
             display: inline-block; animation: spinSlow .7s linear infinite;
+        }
+
+        /* Live Activity / Social Proof Toast */
+        .live-sales-toast {
+            position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 95;
+            background: color-mix(in srgb, var(--surface) 95%, #000);
+            border: 1px solid color-mix(in srgb, var(--store-primary) 30%, var(--border));
+            backdrop-filter: blur(14px);
+            border-radius: 14px;
+            padding: .65rem .95rem;
+            display: flex; align-items: center; gap: .75rem;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            max-width: 340px;
+            opacity: 0; transform: translateY(20px);
+            transition: opacity .4s ease, transform .4s ease;
+            pointer-events: none;
+        }
+        .live-sales-toast.active {
+            opacity: 1; transform: translateY(0);
+            pointer-events: auto;
+        }
+        .live-sales-thumb {
+            width: 40px; height: 40px; border-radius: 8px;
+            object-fit: cover; border: 1px solid var(--border); flex-shrink: 0;
+        }
+        .live-sales-text {
+            font-size: .8rem; color: var(--text-soft); line-height: 1.35;
+        }
+        .live-sales-text strong {
+            color: var(--text); font-weight: 700;
+        }
+        .live-sales-badge {
+            font-size: .7rem; font-weight: 700; color: #22c55e;
+            display: flex; align-items: center; gap: .25rem; margin-top: .15rem;
+        }
+        @media (max-width: 600px) {
+            .live-sales-toast { bottom: 5rem; left: 1rem; right: 1rem; max-width: none; }
+        }
+
+        /* Mobile Sticky Product Bar (Fiche Produit) */
+        .mobile-sticky-product-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 90;
+            background: color-mix(in srgb, var(--surface) 95%, transparent);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid color-mix(in srgb, var(--store-primary) 25%, var(--border));
+            padding: .75rem 1rem;
+            display: none; align-items: center; justify-content: space-between; gap: .75rem;
+            box-shadow: 0 -8px 25px rgba(0,0,0,0.3);
+            transform: translateY(100%);
+            transition: transform .3s ease;
+        }
+        .mobile-sticky-product-bar.visible {
+            transform: translateY(0);
+        }
+        @media (max-width: 768px) {
+            .mobile-sticky-product-bar { display: flex; }
         }
 
         /* Floating WhatsApp Radar Bubble */
@@ -621,6 +780,7 @@
     @endif
 
     <header class="store-header">
+        <div id="store-scroll-progress" class="store-scroll-progress"></div>
         <div class="container store-header-inner">
             <a href="{{ url('/b/' . $shop->subdomain) }}" class="store-brand">
                 <span class="store-logo">
@@ -821,5 +981,17 @@
             </a>
         </aside>
     @endif
+    <!-- Notification Interactive de Commande en Direct (Preuve Sociale Locale) -->
+    <div id="store-live-sale-toast" class="live-sales-toast" aria-live="polite">
+        <img id="live-sale-img" src="" alt="" class="live-sales-thumb" style="display:none">
+        <div class="live-sales-text">
+            <div><strong id="live-sale-product">Article Vedette</strong></div>
+            <div style="font-size:.76rem;color:var(--text-soft)">Commandé à <span id="live-sale-city">Lomé</span> • <span id="live-sale-time">Il y a 6 min</span></div>
+            <div class="live-sales-badge">
+                <x-icon name="check" size="12" /> Commande vérifiée
+            </div>
+        </div>
+        <button type="button" class="toast-close" onclick="document.getElementById('store-live-sale-toast').classList.remove('active')" style="margin-left:auto;font-size:1.1rem">&times;</button>
+    </div>
 </body>
 </html>
