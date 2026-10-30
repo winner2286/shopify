@@ -1612,6 +1612,11 @@ body:has(.bottom-nav) {
     text-align: center;
     min-width: 0;
   }
+  /* Masquer le mockup de démonstration sur tablette et mobile pour aérer l'écran d'accueil */
+  .hero-mockup-col,
+  .hero-mockup-frame {
+    display: none !important;
+  }
   .shopify-hero-grid > * {
     min-width: 0;
     max-width: 100%;
@@ -2612,14 +2617,9 @@ body:has(.bottom-nav) {
     margin-top: 0.6rem !important;
   }
 
-  /* Mockup Frame sur Mobile : compacté de 250px */
+  /* Mockup Frame sur Mobile : masqué pour supprimer l'encombrement et rendre l'accueil ultra-direct */
+  .hero-mockup-col,
   .hero-mockup-frame {
-    margin-top: 1rem !important;
-    border-radius: 14px !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
-  }
-  /* Masquer le graphique lourd 7 barres sur mobile pour soulager l'écran */
-  .sales-chart-wrap {
     display: none !important;
   }
   /* Masquer le toast flottant qui cache les boutons sur mobile */

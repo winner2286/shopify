@@ -46,7 +46,7 @@
         </div>
 
         <!-- Colonne droite : Mockup visuel interactif dynamique avec commutateur d'onglets -->
-        <div class="reveal">
+        <div class="reveal hero-mockup-col">
             <div class="hero-mockup-frame">
                 <!-- Barre supérieure navigateur -->
                 <div class="mockup-top-bar">
