@@ -16,3 +16,6 @@ storage/framework/views/*
 database/database.sqlite*
 *.bat
 docker-compose.override.yml
+backend
+frontend
+infrastructure
