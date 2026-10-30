@@ -85,6 +85,13 @@
                 <div style="font-size:.85rem;color:var(--text-soft);margin-bottom:.2rem">Lieu de livraison :</div>
                 <div style="font-weight:600">{{ $order->delivery_zone_name }}</div>
                 <div style="color:var(--text-soft);font-size:.9rem">{{ $order->delivery_address }}</div>
+                @if (preg_match('/https?:\/\/(?:www\.)?(?:google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl)[^\s\)]+/', $order->delivery_address, $matches))
+                    <div style="margin-top:.4rem">
+                        <a href="{{ $matches[0] }}" target="_blank" style="font-size:.82rem;color:var(--brand-1);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:3px">
+                            <x-icon name="map-pin" size="13" /> Voir ma position sur Google Maps ↗
+                        </a>
+                    </div>
+                @endif
             </div>
         </div>
 

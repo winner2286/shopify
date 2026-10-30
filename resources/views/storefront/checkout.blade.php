@@ -95,8 +95,39 @@
                     </div>
 
                     <div style="margin-bottom:1rem">
-                        <label for="delivery_address" class="label">Quartier & Adresse précise de livraison *</label>
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:.45rem">
+                            <label for="delivery_address" class="label" style="margin-bottom:0">Quartier & Adresse précise de livraison *</label>
+                            
+                            <!-- Bouton Utiliser ma position actuelle -->
+                            <button type="button" id="btn-geolocation" class="btn btn-ghost btn-sm" onclick="useCurrentLocation()" style="padding:.3rem .75rem;font-size:.82rem;display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--store-primary);color:var(--store-primary);border-radius:20px;cursor:pointer;background:transparent" title="Détecter automatiquement ma position GPS">
+                                <x-icon name="map-pin" :size="14" />
+                                <span id="geo-btn-text">📍 Utiliser ma position actuelle</span>
+                            </button>
+                        </div>
+
                         <input id="delivery_address" type="text" name="delivery_address" value="{{ old('delivery_address') }}" placeholder="Ex. Tokoin Doumasséssé, près de la pharmacie" class="input">
+
+                        <!-- Cadre de retour visuel et carte interactive Maps -->
+                        <div id="geo-feedback-box" style="display:none;margin-top:.6rem;padding:.75rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm)">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap">
+                                <span style="font-size:.82rem;font-weight:600;display:inline-flex;align-items:center;gap:.35rem;color:var(--ok)">
+                                    <x-icon name="check-circle" :size="15" />
+                                    <span id="geo-status-msg">Position GPS détectée avec succès</span>
+                                </span>
+                                <a id="geo-maps-link" href="#" target="_blank" style="font-size:.8rem;color:var(--brand-1);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:3px">
+                                    <x-icon name="map" :size="13" />
+                                    <span>Ouvrir dans Google Maps ↗</span>
+                                </a>
+                            </div>
+
+                            <!-- Carte intégrée avec repère -->
+                            <div style="height:170px;width:100%;border-radius:8px;overflow:hidden;border:1px solid var(--border);position:relative">
+                                <iframe id="geo-map-iframe" style="width:100%;height:100%;border:none;background:#f8fafc" loading="lazy" src=""></iframe>
+                            </div>
+                            <p class="hint" style="margin-top:.45rem;margin-bottom:0;font-size:.76rem;line-height:1.4">
+                                📍 <strong>Position GPS enregistrée :</strong> Le livreur pourra ouvrir votre position exacte sur Google Maps pour vous livrer directement à votre porte. Vous pouvez ajuster ou compléter l'adresse ci-dessus si besoin.
+                            </p>
+                        </div>
                     </div>
 
                     <div>
@@ -205,6 +236,94 @@
         const total = subtotal + fee;
         document.getElementById('shipping-display').innerText = fee === 0 ? 'Gratuit' : fee.toLocaleString('fr-FR') + ' FCFA';
         document.getElementById('total-display').innerText = total.toLocaleString('fr-FR') + ' FCFA';
+    }
+
+    function useCurrentLocation() {
+        var btn = document.getElementById('btn-geolocation');
+        var btnText = document.getElementById('geo-btn-text');
+        var addressInput = document.getElementById('delivery_address');
+        var feedbackBox = document.getElementById('geo-feedback-box');
+        var mapsLink = document.getElementById('geo-maps-link');
+        var mapIframe = document.getElementById('geo-map-iframe');
+        var statusMsg = document.getElementById('geo-status-msg');
+
+        if (!navigator.geolocation) {
+            alert("La géolocalisation n'est pas supportée par votre navigateur.");
+            return;
+        }
+
+        if (btnText) btnText.textContent = "⏳ Détection de votre position...";
+        if (btn) btn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                var lat = pos.coords.latitude.toFixed(6);
+                var lng = pos.coords.longitude.toFixed(6);
+                var accuracy = Math.round(pos.coords.accuracy || 0);
+
+                var mapsUrl = "https://www.google.com/maps?q=" + lat + "," + lng;
+                var embedUrl = "https://www.openstreetmap.org/export/embed.html?bbox=" + (parseFloat(lng) - 0.005) + "%2C" + (parseFloat(lat) - 0.004) + "%2C" + (parseFloat(lng) + 0.005) + "%2C" + (parseFloat(lat) + 0.004) + "&layer=mapnik&marker=" + lat + "%2C" + lng;
+
+                if (mapsLink) mapsLink.href = mapsUrl;
+                if (mapIframe) mapIframe.src = embedUrl;
+                if (feedbackBox) feedbackBox.style.display = 'block';
+
+                // Tentative de géocodage inverse via OpenStreetMap Nominatim
+                fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + lat + "&lon=" + lng + "&zoom=18&addressdetails=1", {
+                    headers: { 'Accept': 'application/json' }
+                })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    var parts = [];
+                    if (data && data.address) {
+                        var a = data.address;
+                        var place = a.suburb || a.neighbourhood || a.quarter || a.road || a.residential;
+                        var city = a.city || a.town || a.village || a.county || a.state;
+                        if (place) parts.push(place);
+                        if (city && city !== place) parts.push(city);
+                    }
+                    var textLoc = parts.length > 0 ? parts.join(', ') : "Position GPS";
+
+                    if (!addressInput.value.trim() || addressInput.value.includes('google.com/maps')) {
+                        addressInput.value = textLoc + " [GPS: " + mapsUrl + "]";
+                    } else if (!addressInput.value.includes(mapsUrl)) {
+                        addressInput.value = addressInput.value.trim() + " [GPS: " + mapsUrl + "]";
+                    }
+                    if (statusMsg) statusMsg.textContent = "Position GPS détectée (" + textLoc + ", ±" + accuracy + "m)";
+                })
+                .catch(function () {
+                    if (!addressInput.value.trim() || addressInput.value.includes('google.com/maps')) {
+                        addressInput.value = "Position GPS (" + lat + ", " + lng + ") [GPS: " + mapsUrl + "]";
+                    } else if (!addressInput.value.includes(mapsUrl)) {
+                        addressInput.value = addressInput.value.trim() + " [GPS: " + mapsUrl + "]";
+                    }
+                    if (statusMsg) statusMsg.textContent = "Position GPS détectée (±" + accuracy + "m)";
+                })
+                .finally(function () {
+                    if (btn) btn.disabled = false;
+                    if (btnText) btnText.textContent = "✓ Position actualisée (Recalculer)";
+                });
+            },
+            function (err) {
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.textContent = "📍 Utiliser ma position actuelle";
+
+                var msg = "Impossible d'obtenir votre position GPS.";
+                if (err.code === 1) {
+                    msg = "Veuillez autoriser l'accès à votre position dans le navigateur pour activer la localisation.";
+                } else if (err.code === 2) {
+                    msg = "Signal GPS indisponible. Veuillez saisir votre adresse manuellement.";
+                } else if (err.code === 3) {
+                    msg = "Délai de géolocalisation dépassé. Veuillez réessayer.";
+                }
+                alert(msg);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 12000,
+                maximumAge: 0
+            }
+        );
     }
 </script>
 @endsection

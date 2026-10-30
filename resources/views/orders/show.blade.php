@@ -145,6 +145,13 @@
                 <div style="margin-bottom:1rem">
                     <div style="font-size:.85rem;color:var(--text-soft)">Adresse précise :</div>
                     <div style="line-height:1.4">{{ $order->delivery_address }}</div>
+                    @if (preg_match('/https?:\/\/(?:www\.)?(?:google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl)[^\s\)]+/', $order->delivery_address, $matches))
+                        <div style="margin-top:.45rem">
+                            <a href="{{ $matches[0] }}" target="_blank" class="btn btn-sm" style="background:#2563eb;color:#fff;display:inline-flex;align-items:center;gap:.35rem;text-decoration:none;font-weight:600;padding:.35rem .75rem;border-radius:6px" title="Ouvrir la position GPS dans Google Maps">
+                                <x-icon name="map-pin" size="14" /> Ouvrir dans Google Maps (GPS Livreur) ↗
+                            </a>
+                        </div>
+                    @endif
                 </div>
 
                 @if ($order->delivery_notes)

@@ -69,7 +69,7 @@ class CheckoutController extends Controller
             'customer_phone' => ['required', 'string', 'max:30'],
             'customer_email' => ['nullable', 'email', 'max:100'],
             'shipping_zone_id' => ['required', 'integer'],
-            'delivery_address' => ['nullable', 'string', 'max:255'],
+            'delivery_address' => ['nullable', 'string', 'max:500'],
             'delivery_notes' => ['nullable', 'string', 'max:500'],
             'payment_method' => ['required', 'in:cash_on_delivery,tmoney,flooz,card'],
         ], [
