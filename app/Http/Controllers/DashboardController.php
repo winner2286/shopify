@@ -9,6 +9,12 @@ class DashboardController extends Controller
     public function __invoke(Request $request)
     {
         $user = $request->user();
+
+        // Le Super-Admin est automatiquement dirigé vers son cockpit de gestion globale
+        if ($user->isAdmin() && ! $request->has('store_view')) {
+            return redirect()->route('admin.dashboard');
+        }
+
         $shop = $user->shop;
         $productsCount = $shop ? $shop->products()->where('status', '!=', 'archived')->count() : 0;
         $lowStockCount = $shop ? $shop->products()->where('track_stock', true)->where('stock', '>', 0)->whereColumn('stock', '<=', 'low_stock_threshold')->count() : 0;
