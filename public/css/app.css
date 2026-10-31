@@ -175,8 +175,10 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   position: sticky; top: 0; z-index: 80;
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
   transition: background .2s, border-color .2s;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .nav-inner {
   display: flex; align-items: center; justify-content: space-between;
@@ -1439,8 +1441,8 @@ html[data-theme='light'] .bottom-nav-item.admin-cockpit-link,
   text-overflow: ellipsis;
   max-width: 100%;
   line-height: 1.15;
-  font-size: .72rem;
-  letter-spacing: -0.01em;
+  font-size: clamp(0.63rem, 2.3vw, 0.72rem);
+  letter-spacing: -0.025em;
 }
 
 /* Espacement garanti sous le contenu pour la barre mobile */
@@ -1669,6 +1671,10 @@ button.bottom-nav-item {
     width: min(1180px, 100% - 1.25rem);
     max-width: 100%;
     box-sizing: border-box;
+  }
+  .nav-inner {
+    height: 58px;
+    gap: .5rem;
   }
   .nav-links { display: none; }
   .bottom-nav { display: block !important; }

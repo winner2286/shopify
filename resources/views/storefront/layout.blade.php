@@ -92,9 +92,11 @@
         .store-header {
             position: sticky; top: 0; z-index: 40;
             backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             background: color-mix(in srgb, var(--bg) 85%, transparent);
             border-bottom: 1px solid var(--border);
             transition: all .25s ease;
+            padding-top: env(safe-area-inset-top, 0px);
         }
         .store-header.scrolled {
             background: color-mix(in srgb, var(--bg) 95%, transparent);
