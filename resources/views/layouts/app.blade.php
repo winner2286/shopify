@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="dark">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>@yield('title', config('platform.name').' : votre boutique en ligne créée par l\'IA')</title>
     <meta name="description" content="@yield('description', 'Créez, promouvez et gérez votre boutique en ligne en quelques minutes grâce à l\'intelligence artificielle. Paiement Mobile Money, carte et à la livraison.')">
     <script>
@@ -144,28 +144,28 @@
             <div class="bottom-nav-inner">
                 @if (auth()->user()->isAdmin())
                     <a href="{{ route('admin.dashboard') }}" class="bottom-nav-item admin-cockpit-link {{ request()->routeIs('admin.*') ? 'active' : '' }}">
-                        <span class="icon" aria-hidden="true"><x-icon name="shield" :size="20" /></span>
+                        <span class="icon" aria-hidden="true"><x-icon name="shield" :size="23" /></span>
                         <span>Cockpit</span>
                     </a>
                 @endif
                 <a href="{{ route('dashboard') }}" class="bottom-nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <span class="icon" aria-hidden="true"><x-icon name="home" :size="20" /></span>
+                    <span class="icon" aria-hidden="true"><x-icon name="home" :size="23" /></span>
                     <span>Accueil</span>
                 </a>
                 <a href="{{ route('orders.index') }}" class="bottom-nav-item {{ request()->routeIs('orders.*') ? 'active' : '' }}">
-                    <span class="icon" aria-hidden="true"><x-icon name="orders" :size="20" /></span>
+                    <span class="icon" aria-hidden="true"><x-icon name="orders" :size="23" /></span>
                     <span>Commandes</span>
                 </a>
                 <a href="{{ route('products.index') }}" class="bottom-nav-item {{ request()->routeIs('products.*') ? 'active' : '' }}">
-                    <span class="icon" aria-hidden="true"><x-icon name="products" :size="20" /></span>
+                    <span class="icon" aria-hidden="true"><x-icon name="products" :size="23" /></span>
                     <span>Produits</span>
                 </a>
                 <a href="{{ route('ads.index') }}" class="bottom-nav-item {{ request()->routeIs('ads.*') ? 'active' : '' }}">
-                    <span class="icon" aria-hidden="true"><x-icon name="ads" :size="20" /></span>
+                    <span class="icon" aria-hidden="true"><x-icon name="ads" :size="23" /></span>
                     <span>Publicité</span>
                 </a>
                 <button type="button" class="bottom-nav-item bottom-nav-plus-btn {{ request()->routeIs(['analytics.*', 'shop.*', 'customers.*', 'shipping.*', 'categories.*']) ? 'active' : '' }}" onclick="toggleMobilePlusMenu(event)" aria-label="Menu Plus d'options">
-                    <span class="icon" aria-hidden="true"><x-icon name="grid" :size="20" /></span>
+                    <span class="icon" aria-hidden="true"><x-icon name="grid" :size="23" /></span>
                     <span>Plus</span>
                 </button>
             </div>

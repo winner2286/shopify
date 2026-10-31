@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>@yield('title', $shop->name . ' : Boutique en ligne')</title>
     <meta name="description" content="@yield('description', $shop->description ?: 'Découvrez notre sélection d\'articles de qualité sur notre boutique en ligne. Livraison rapide et paiement sécurisé.')">
     <meta name="theme-color" content="{{ $shop->brand_color ?: '#6d3df2' }}">
