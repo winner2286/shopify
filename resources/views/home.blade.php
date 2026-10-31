@@ -899,12 +899,14 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                     </ul>
 
                     @auth
-                        <a href="{{ route('subscription.checkout', $plan->slug) }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block" style="font-weight:700">
-                            Souscrire via FeexPay ({{ number_format($mPrice, 0, ',', ' ') }} F) →
+                        <a href="{{ route('subscription.checkout', $plan->slug) }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block plan-cta-btn" style="font-weight:700">
+                            <span>Souscrire via FeexPay</span>
+                            <span class="plan-btn-price" data-plan-btn-monthly="{{ $mPrice }}">({{ number_format($mPrice, 0, ',', ' ') }} F) →</span>
                         </a>
                     @else
-                        <a href="{{ route('register') }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block">
-                            Démarrer l'essai gratuit
+                        <a href="{{ route('register') }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block plan-cta-btn" style="font-weight:700">
+                            <span>Démarrer l'essai gratuit</span>
+                            <span style="display:inline-block;margin-left:2px">→</span>
                         </a>
                     @endauth
                 </div>

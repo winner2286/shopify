@@ -702,6 +702,15 @@
           setTimeout(function () { el.style.transform = 'scale(1)'; }, 200);
         }
       });
+
+      var planBtnPriceEls = document.querySelectorAll('[data-plan-btn-monthly]');
+      planBtnPriceEls.forEach(function (el) {
+        var monthly = parseInt(el.getAttribute('data-plan-btn-monthly'), 10);
+        if (monthly > 0) {
+          var val = isYearly ? Math.round(monthly * 0.8) : monthly;
+          el.textContent = '(' + val.toLocaleString('fr-FR') + ' F) →';
+        }
+      });
     }
 
     if (btnMonthly) btnMonthly.addEventListener('click', function () { updateBilling(false); });
