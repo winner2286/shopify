@@ -122,11 +122,11 @@
                                 <span class="format-radio-dot"></span>
                             </div>
                             <div class="format-pick-info">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem">
-                                    <strong style="font-size:.9rem;color:var(--text)">Format MP4</strong>
-                                    <span class="badge badge-ok" style="font-size:.65rem;padding:.12rem .45rem;flex-shrink:0">Recommandé</span>
+                                <div class="format-pick-header">
+                                    <strong class="format-pick-name">Format MP4</strong>
+                                    <span class="badge badge-ok format-badge">Recommandé</span>
                                 </div>
-                                <small style="font-size:.74rem;color:var(--text-soft);display:block;margin-top:.2rem">Idéal TikTok, WhatsApp & Instagram</small>
+                                <small class="format-pick-desc">Idéal TikTok, WhatsApp & Instagram</small>
                             </div>
                         </button>
 
@@ -135,11 +135,11 @@
                                 <span class="format-radio-dot"></span>
                             </div>
                             <div class="format-pick-info">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:.4rem">
-                                    <strong style="font-size:.9rem;color:var(--text)">Format WebM</strong>
-                                    <span class="badge badge-draft" style="font-size:.65rem;padding:.12rem .45rem;flex-shrink:0">Léger</span>
+                                <div class="format-pick-header">
+                                    <strong class="format-pick-name">Format WebM</strong>
+                                    <span class="badge badge-draft format-badge">Léger</span>
                                 </div>
-                                <small style="font-size:.74rem;color:var(--text-soft);display:block;margin-top:.2rem">Fichier ultra compressé</small>
+                                <small class="format-pick-desc">Fichier ultra compressé</small>
                             </div>
                         </button>
                     </div>
@@ -476,18 +476,24 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
+        max-width: 340px;
+        margin: 0 auto;
+        box-sizing: border-box;
     }
     .phone-frame {
-        width: 320px;
+        width: 100%;
+        max-width: 320px;
         height: 568px; /* Ratio 9:16 compact */
         background: #000;
-        border-radius: 40px;
-        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4), inset 0 0 0 6px #1e1e24;
+        border-radius: 38px;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4), inset 0 0 0 5px #1e1e24;
         position: relative;
         overflow: hidden;
         display: flex;
         justify-content: center;
         align-items: center;
+        box-sizing: border-box;
+        margin: 0 auto;
     }
     .phone-notch {
         position: absolute;
@@ -522,38 +528,44 @@
     .center-play-overlay {
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(0, 0, 0, 0.25);
         display: flex;
         justify-content: center;
         align-items: center;
-        transition: opacity .2s ease;
+        transition: opacity .25s ease;
         z-index: 8;
         cursor: pointer;
     }
     .center-play-icon {
-        background: rgba(255, 255, 255, 0.95);
-        color: #111;
-        font-size: .85rem;
+        background: rgba(255, 255, 255, 0.96);
+        color: #0f172a;
+        font-size: .82rem;
         font-weight: 700;
-        padding: .6rem 1.2rem;
-        border-radius: 30px;
+        padding: .55rem 1.15rem;
+        border-radius: 999px;
         display: inline-flex;
         align-items: center;
-        gap: .4rem;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        gap: .45rem;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        transition: transform .15s ease;
+    }
+    .center-play-icon:hover {
+        transform: scale(1.04);
     }
 
     /* PLAYER CONTROLS */
     .player-controls-bar {
         display: flex;
         align-items: center;
-        gap: .6rem;
-        width: 320px;
-        margin-top: .85rem;
+        gap: .5rem;
+        width: 100%;
+        max-width: 320px;
+        margin: .85rem auto 0;
         background: var(--bg-soft);
-        padding: .5rem .8rem;
+        padding: .5rem .7rem;
         border-radius: var(--radius-sm);
         border: 1px solid var(--border);
+        box-sizing: border-box;
     }
     .btn-ctrl-play, .btn-ctrl-mute {
         background: none;
@@ -569,38 +581,47 @@
         flex: 1;
         accent-color: var(--brand-1);
         cursor: pointer;
+        min-width: 0;
     }
     .time-readout {
         font-size: .74rem;
         font-family: monospace;
         color: var(--text-soft);
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     /* FORMAT PICKER */
     .format-choice-container {
-        width: 320px;
-        margin-top: .85rem;
+        width: 100%;
+        max-width: 320px;
+        margin: .85rem auto 0;
+        box-sizing: border-box;
     }
     .format-choice-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: .5rem;
+        width: 100%;
+        box-sizing: border-box;
     }
     .btn-format-pick {
         background: var(--bg-soft);
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
-        padding: .6rem .7rem;
+        padding: .55rem .5rem;
         display: flex;
-        align-items: center;
-        gap: .5rem;
+        align-items: flex-start;
+        gap: .45rem;
         cursor: pointer;
         text-align: left;
+        min-width: 0;
+        box-sizing: border-box;
+        transition: all .15s ease;
     }
     .btn-format-pick.selected {
         border-color: var(--brand-1);
-        background: rgba(109, 61, 242, 0.05);
+        background: rgba(109, 61, 242, 0.06);
     }
     .format-pick-radio {
         width: 14px;
@@ -611,6 +632,7 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        margin-top: .15rem;
     }
     .btn-format-pick.selected .format-pick-radio {
         border-color: var(--brand-1);
@@ -621,11 +643,43 @@
         background: var(--brand-1);
         border-radius: 50%;
     }
+    .format-pick-info {
+        min-width: 0;
+        flex: 1;
+        overflow: hidden;
+    }
+    .format-pick-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .25rem;
+        flex-wrap: wrap;
+    }
+    .format-pick-name {
+        font-size: .84rem;
+        color: var(--text);
+        white-space: nowrap;
+    }
+    .format-badge {
+        font-size: .62rem;
+        padding: .1rem .35rem;
+        flex-shrink: 0;
+    }
+    .format-pick-desc {
+        font-size: .68rem;
+        color: var(--text-soft);
+        display: block;
+        margin-top: .15rem;
+        line-height: 1.25;
+        word-break: break-word;
+    }
 
     /* EXPORT BUTTON */
     .export-btn-wrapper {
-        width: 320px;
-        margin-top: .85rem;
+        width: 100%;
+        max-width: 320px;
+        margin: .85rem auto 0;
+        box-sizing: border-box;
     }
     .btn-export-video {
         width: 100%;
@@ -633,13 +687,14 @@
         color: #fff;
         border: none;
         border-radius: var(--radius-sm);
-        padding: .9rem 1rem;
+        padding: .85rem .9rem;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         box-shadow: 0 4px 15px rgba(109, 61, 242, 0.35);
         transition: transform .15s ease;
+        box-sizing: border-box;
     }
     .btn-export-video:hover {
         transform: translateY(-2px);
@@ -647,24 +702,32 @@
     .btn-export-content {
         display: flex;
         align-items: center;
-        gap: .75rem;
+        gap: .65rem;
         text-align: left;
+        min-width: 0;
     }
     .btn-export-content strong {
         display: block;
-        font-size: .95rem;
+        font-size: .92rem;
+        line-height: 1.25;
+        word-break: break-word;
     }
     .btn-export-content small {
         display: block;
-        font-size: .72rem;
+        font-size: .7rem;
         opacity: .9;
+        line-height: 1.25;
+        word-break: break-word;
     }
     .export-progress-container {
-        width: 320px;
+        width: 100%;
+        max-width: 320px;
         background: var(--bg-soft);
         padding: .85rem;
         border-radius: var(--radius-sm);
         border: 1px solid var(--border);
+        box-sizing: border-box;
+        margin: .85rem auto 0;
     }
     .export-progress-track {
         height: 8px;
@@ -889,11 +952,84 @@
     }
 
     @media (max-width: 820px) {
+        .studio-container {
+            padding: 1rem .75rem 4.5rem !important;
+            overflow-x: hidden !important;
+            box-sizing: border-box !important;
+        }
+        .studio-card {
+            padding: 1.1rem .85rem !important;
+            margin-bottom: 2rem !important;
+            overflow-x: hidden !important;
+            box-sizing: border-box !important;
+        }
         .studio-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr !important;
+            gap: 1.75rem !important;
+            width: 100% !important;
         }
         .studio-player-col {
-            align-items: center;
+            width: 100% !important;
+            max-width: 340px !important;
+            margin: 0 auto !important;
+            align-items: center !important;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .studio-container {
+            padding: .6rem .4rem 5.5rem !important;
+            overflow-x: hidden !important;
+        }
+        .studio-container h1 {
+            font-size: 1.3rem !important;
+        }
+        .studio-card {
+            padding: 1rem .6rem !important;
+            border-radius: var(--radius-sm) !important;
+            overflow-x: hidden !important;
+        }
+        .studio-header-banner {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: .75rem !important;
+        }
+        .studio-header-title {
+            font-size: 1.22rem !important;
+            word-break: break-word !important;
+        }
+        .studio-header-desc {
+            font-size: .82rem !important;
+        }
+        .studio-unlimited-badge {
+            align-self: flex-start !important;
+        }
+        .settings-box {
+            padding: .9rem .75rem !important;
+        }
+    }
+
+    @media (max-width: 400px) {
+        .phone-frame {
+            max-width: 295px !important;
+            height: 524px !important;
+            border-radius: 30px !important;
+        }
+        .player-controls-bar,
+        .format-choice-container,
+        .export-btn-wrapper,
+        .export-progress-container {
+            max-width: 295px !important;
+        }
+        .format-choice-grid {
+            grid-template-columns: 1fr !important;
+            gap: .45rem !important;
+        }
+        .time-readout {
+            font-size: .68rem !important;
+        }
+        .btn-tone-chip span {
+            font-size: .8rem !important;
         }
     }
 </style>

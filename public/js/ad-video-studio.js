@@ -160,11 +160,11 @@
             const isStore = this.config.isStorePresentation;
             const scenes = [];
 
-            // Hook (2.2s)
+            // Hook (4.2s)
             scenes.push({
                 id: 0,
                 type: 'hook',
-                duration: 2.2,
+                duration: 4.2,
                 title: isStore ? this.config.shopName : (this.config.angle === 'promotions' ? 'OFFRES DU MOMENT' : 'NOUVELLE COLLECTION'),
                 subtitle: isStore ? 'Découvrez notre univers' : 'Sélection exclusive',
                 voiceover: isStore
@@ -173,12 +173,12 @@
                 product_index: null
             });
 
-            // Plans Produits (2.5s chacun)
+            // Plans Produits (4.5s chacun)
             products.forEach((p, idx) => {
                 scenes.push({
                     id: scenes.length,
                     type: 'product',
-                    duration: 2.5,
+                    duration: 4.5,
                     title: isStore ? p.category : p.title,
                     subtitle: isStore ? p.title : p.price,
                     voiceover: isStore
@@ -188,22 +188,22 @@
                 });
             });
 
-            // Plan Argument (2.0s)
+            // Plan Argument (4.0s)
             scenes.push({
                 id: scenes.length,
                 type: 'feature',
-                duration: 2.0,
+                duration: 4.0,
                 title: 'NOTRE ENGAGEMENT',
                 subtitle: this.config.assetPhrase || 'Commande simple et rapide',
                 voiceover: this.config.assetPhrase || 'Service rapide et soigné sur WhatsApp.',
                 product_index: null
             });
 
-            // Plan CTA (2.5s)
+            // Plan CTA (4.5s)
             scenes.push({
                 id: scenes.length,
                 type: 'cta',
-                duration: 2.5,
+                duration: 4.5,
                 title: 'COMMANDEZ EN 1 CLIC',
                 subtitle: this.config.shopName,
                 voiceover: `Écrivez-nous vite sur WhatsApp pour commander !`,
@@ -219,7 +219,12 @@
             this.timelineScenes = [];
 
             scenes.forEach((s, idx) => {
-                const dur = Math.max(1.8, parseFloat(s.duration) || 2.5);
+                const voiceText = (s.voiceover || '').trim();
+                const words = voiceText ? voiceText.split(/\s+/).filter(Boolean).length : 0;
+                // Calcul du temps oral réel : ~2.1 mots / seconde + 1.2s de pause/respiration
+                const voiceMin = words > 0 ? (words / 2.1) + 1.2 : 4.0;
+                const dur = Math.max(parseFloat(s.duration) || 0, voiceMin, 3.8);
+
                 const startTime = accumulatedTime;
                 const endTime = startTime + dur;
 
@@ -228,11 +233,11 @@
                     type: s.type || 'product',
                     title: s.title || '',
                     subtitle: s.subtitle || '',
-                    voiceover: s.voiceover || '',
+                    voiceover: voiceText,
                     productIndex: typeof s.product_index === 'number' ? s.product_index : null,
                     startTime: startTime,
                     endTime: endTime,
-                    duration: dur
+                    duration: Math.round(dur * 10) / 10
                 });
 
                 accumulatedTime = endTime;
@@ -243,6 +248,23 @@
             this.voicePlayed = {};
             this.timelineScenes.forEach((_, idx) => this.voicePlayed[idx] = false);
 
+            this.updateProgressUI();
+        },
+
+        // --- RECALCUL DYNAMIQUE DE LA TIMELINE SELON LA DURÉE RÉELLE DU FICHIER AUDIO ---
+        recalculateTimeline: function () {
+            if (!this.timelineScenes || this.timelineScenes.length === 0) return;
+            let accumulated = 0;
+            this.timelineScenes.forEach((sc, idx) => {
+                if (this.voiceBuffers && this.voiceBuffers[idx] && this.voiceBuffers[idx].duration) {
+                    const voiceNeeded = this.voiceBuffers[idx].duration + 0.9;
+                    sc.duration = Math.max(sc.duration, Math.round(voiceNeeded * 10) / 10, 3.8);
+                }
+                sc.startTime = accumulated;
+                sc.endTime = accumulated + sc.duration;
+                accumulated = sc.endTime;
+            });
+            this.duration = Math.round(accumulated * 10) / 10;
             this.updateProgressUI();
         },
 
@@ -276,6 +298,12 @@
                     .then(decoded => {
                         if (decoded) {
                             this.voiceBuffers[idx] = decoded;
+                            // Synchronisation dynamique : durée réelle de l'audio + 0.9s de marge
+                            const voiceNeeded = decoded.duration + 0.9;
+                            if (this.timelineScenes[idx]) {
+                                this.timelineScenes[idx].duration = Math.max(this.timelineScenes[idx].duration, Math.round(voiceNeeded * 10) / 10, 3.8);
+                            }
+                            this.recalculateTimeline();
                         }
                     })
                     .catch(err => {
@@ -284,6 +312,7 @@
             });
 
             return Promise.all(promises).then(() => {
+                this.recalculateTimeline();
                 if (statusEl) {
                     const loaded = this.voiceBuffers.filter(b => b !== null).length;
                     if (loaded > 0) {
@@ -734,7 +763,7 @@
             ctx.restore();
         },
 
-        // PLAN 0 : HOOK PERCUTANT (0 à 2s)
+        // PLAN 0 : HOOK PERCUTANT (4.0s - 5.0s)
         drawHookScene: function (ctx, w, h, elapsed, progress, scene) {
             ctx.save();
 
@@ -742,7 +771,7 @@
             const alpha = Math.min(elapsed / 0.35, 1);
             ctx.globalAlpha = alpha;
 
-            const centerY = 500;
+            const centerY = 420;
 
             // Grand logo ou initiale de la boutique
             if (this.shopLogoLoaded && this.shopLogoImg) {
@@ -969,13 +998,14 @@
             ctx.restore();
         },
 
-        // PLAN ARGUMENT FORT / ATOUT (2s)
+        // PLAN ARGUMENT FORT / ATOUT (3.8s - 4.8s)
         drawFeatureScene: function (ctx, w, h, elapsed, progress, scene) {
             ctx.save();
             const alpha = Math.min(elapsed / 0.4, 1);
             ctx.globalAlpha = alpha;
 
-            const centerY = 520;
+            // Centré plus haut pour dégager le centre de l'écran et ne pas être masqué par le bouton Play
+            const centerY = 400;
 
             // Grand médaillon central
             ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
@@ -992,24 +1022,24 @@
             // Titre de l'atout
             ctx.fillStyle = this.config.shopColor || '#6d3df2';
             ctx.font = '800 22px -apple-system, sans-serif';
-            ctx.fillText((scene.title || 'NOTRE ENGAGEMENT').toUpperCase(), w / 2, centerY + 40);
+            ctx.fillText((scene.title || 'NOTRE ENGAGEMENT').toUpperCase(), w / 2, centerY + 30);
 
             // Phrase forte
             ctx.fillStyle = '#ffffff';
             ctx.font = '800 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
             const phrase = scene.subtitle || this.config.assetPhrase || 'Service rapide et soigné';
-            this.drawWrappedCenteredText(ctx, phrase, w / 2, centerY + 105, 580, 46);
+            this.drawWrappedCenteredText(ctx, phrase, w / 2, centerY + 90, 580, 46);
 
             ctx.restore();
         },
 
-        // PLAN CALL TO ACTION FINAL (2 à 3s)
+        // PLAN CALL TO ACTION FINAL (4.0s - 5.0s)
         drawCtaScene: function (ctx, w, h, elapsed, progress, scene) {
             ctx.save();
             const alpha = Math.min(elapsed / 0.35, 1);
             ctx.globalAlpha = alpha;
 
-            const centerY = 480;
+            const centerY = 420;
 
             // Grand logo de la boutique
             if (this.shopLogoLoaded && this.shopLogoImg) {

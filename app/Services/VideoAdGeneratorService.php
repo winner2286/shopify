@@ -464,12 +464,13 @@ PRODUITS SÉLECTIONNÉS :
 {$productsListStr}
 
 STRUCTURE DU SCRIPT VIDÉO (SYNCHRONISÉE PLAN PAR PLAN) :
-1. Plan 0 (0-2s) : Hook percutant (accroche courte liée à l'angle et au secteur).
-2. Plans Produits (2-3s par produit) : Pour chaque produit listé, un plan dédié. LA VOIX DOIT PRONONCER EXACTEMENT LE NOM DU PRODUIT DU PLAN.
-3. Plan Argument (2s) : Un atout fort ("{$assetPhrase}").
-4. Plan CTA (2-3s) : Nom de la boutique "{$shop->name}", appel à commander sur WhatsApp.
+1. Plan 0 Hook (4.0s - 5.0s) : Accroche courte, captivante liée à l'angle et au secteur.
+2. Plans Produits (4.2s - 5.5s par produit) : Pour chaque produit listé, un plan dédié. LA VOIX DOIT PRONONCER EXACTEMENT LE NOM DU PRODUIT DU PLAN.
+3. Plan Argument (3.8s - 4.8s) : Un atout fort ("{$assetPhrase}").
+4. Plan CTA (4.0s - 5.0s) : Nom de la boutique "{$shop->name}", appel chaleureux à commander sur WhatsApp.
 
 RÈGLES CRITIQUES :
+- IMPORTANT TEMPS DE PAROLE : Chaque phrase doit être lue confortablement sans se presser. Les durées des plans doivent être de 4.0 à 5.5 secondes pour que la voix ne soit jamais coupée.
 - Phrases orales courtes, dynamiques, naturelles.
 - Pas de texte robotique, pas de faux superlatifs inventés.
 - Si Présentation boutique : parler des catégories, pas des prix.
@@ -485,10 +486,10 @@ Réponds STRICTEMENT en JSON valide avec ce format :
       "title": "Variante 1 : Impact Direct ({$duration}s)",
       "concept": "Accroche immédiate et présentation fluide de la collection",
       "scenes": [
-        {"id": 0, "type": "hook", "duration": 2.2, "title": "Accroche", "subtitle": "Sous-titre court", "voiceover": "Phrase d'accroche orale..."},
-        {"id": 1, "type": "product", "duration": 2.8, "title": "Nom produit 1", "subtitle": "Prix ou catégorie", "voiceover": "On commence avec le Nom Produit 1...", "product_index": 0},
-        {"id": 2, "type": "feature", "duration": 2.0, "title": "Atout", "subtitle": "Sous-titre", "voiceover": "Phrase atout..."},
-        {"id": 3, "type": "cta", "duration": 2.5, "title": "Commandez", "subtitle": "Lien WhatsApp", "voiceover": "Commandez vite chez {$shop->name} !"}
+        {"id": 0, "type": "hook", "duration": 4.2, "title": "Accroche", "subtitle": "Sous-titre court", "voiceover": "Phrase d'accroche orale..."},
+        {"id": 1, "type": "product", "duration": 4.5, "title": "Nom produit 1", "subtitle": "Prix ou catégorie", "voiceover": "On commence avec le Nom Produit 1...", "product_index": 0},
+        {"id": 2, "type": "feature", "duration": 4.0, "title": "Atout", "subtitle": "Sous-titre", "voiceover": "Phrase atout..."},
+        {"id": 3, "type": "cta", "duration": 4.5, "title": "Commandez", "subtitle": "Lien WhatsApp", "voiceover": "Commandez vite chez {$shop->name} !"}
       ]
     }
   ]
@@ -519,7 +520,7 @@ PROMPT;
                     $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($raw));
                     $decoded = json_decode($cleanJson, true);
                     if (is_array($decoded) && ! empty($decoded['scripts'])) {
-                        return $decoded;
+                        return $this->sanitizeAiScriptsDuration($decoded);
                     }
                 }
             } catch (\Throwable $e) {
@@ -544,7 +545,7 @@ PROMPT;
                     $text = $response->json('candidates.0.content.parts.0.text');
                     $decoded = json_decode($text, true);
                     if (is_array($decoded) && ! empty($decoded['scripts'])) {
-                        return $decoded;
+                        return $this->sanitizeAiScriptsDuration($decoded);
                     }
                 }
             } catch (\Throwable $e) {
@@ -553,6 +554,42 @@ PROMPT;
         }
 
         return null;
+    }
+
+    /**
+     * Ajuste dynamiquement la durée de chaque plan pour que la voix ne soit jamais coupée.
+     */
+    private function sanitizeAiScriptsDuration(array $aiPayload): array
+    {
+        if (empty($aiPayload['scripts']) || ! is_array($aiPayload['scripts'])) {
+            return $aiPayload;
+        }
+
+        foreach ($aiPayload['scripts'] as &$scObj) {
+            if (! empty($scObj['scenes']) && is_array($scObj['scenes'])) {
+                foreach ($scObj['scenes'] as &$scene) {
+                    $voiceText = $scene['voiceover'] ?? '';
+                    $scene['duration'] = $this->estimateSceneDuration($voiceText, 3.8, 6.2);
+                }
+                $scObj['steps'] = $this->convertScenesToSteps($scObj['scenes']);
+            }
+        }
+
+        return $aiPayload;
+    }
+
+    /**
+     * Calcule la durée nécessaire pour que la voix lise intégralement la phrase sans coupure,
+     * avec une marge de respiration (en français : ~2.1 mots / seconde + 1.0s de pause).
+     */
+    public function estimateSceneDuration(string $voiceover, float $min = 3.8, float $max = 6.5): float
+    {
+        $words = count(array_filter(preg_split('/\s+/u', trim($voiceover))));
+        if ($words <= 0) {
+            return $min;
+        }
+        $calculated = ($words / 2.15) + 1.0;
+        return round(min(max($calculated, $min), $max), 1);
     }
 
     /**
@@ -571,22 +608,12 @@ PROMPT;
         bool $isStorePresentation
     ): array {
         $pCount = count($products);
-
-        // Durées de chaque plan selon le ton et le nombre de produits
-        $planDuration = match ($tone) {
-            self::TONE_URGENT => 2.0,
-            self::TONE_DYNAMIQUE => 2.2,
-            self::TONE_FUN => 2.4,
-            self::TONE_LUXE => 2.8,
-            default => 2.5,
-        };
-
         $shopName = $shop->name;
 
         // === VARIATION 1 : ACCROCHE DIRECTE & VITRINE DYNAMIQUE ===
         $scenes1 = [];
 
-        // 1. Hook (0-2s)
+        // 1. Hook
         if ($isStorePresentation) {
             $hookText = match ($businessType) {
                 'food' => "Bienvenue chez {$shopName}, le temple des bonnes saveurs !",
@@ -598,7 +625,7 @@ PROMPT;
             $scenes1[] = [
                 'id' => 0,
                 'type' => 'hook',
-                'duration' => 2.2,
+                'duration' => $this->estimateSceneDuration($hookText, 4.0, 5.0),
                 'title' => $shopName,
                 'subtitle' => $customMessage ?: "Votre boutique en ligne de référence",
                 'voiceover' => $hookText,
@@ -615,7 +642,7 @@ PROMPT;
             $scenes1[] = [
                 'id' => 0,
                 'type' => 'hook',
-                'duration' => 2.2,
+                'duration' => $this->estimateSceneDuration($hookText, 4.0, 5.0),
                 'title' => match ($angle) {
                     self::ANGLE_PROMOTIONS => "🔥 OFFRES DU MOMENT",
                     self::ANGLE_NOUVEAUTES => "✨ NOUVELLE COLLECTION",
@@ -629,7 +656,7 @@ PROMPT;
             ];
         }
 
-        // 2. Plans Produits (2 à 3s par produit)
+        // 2. Plans Produits
         foreach ($products as $idx => $p) {
             $pTitle = $p['title'];
             $pPrice = $p['price'];
@@ -640,7 +667,7 @@ PROMPT;
                 $scenes1[] = [
                     'id' => count($scenes1),
                     'type' => 'product',
-                    'duration' => $planDuration,
+                    'duration' => $this->estimateSceneDuration($pVoiceover, 4.0, 5.5),
                     'title' => $pCategory,
                     'subtitle' => $pTitle,
                     'voiceover' => $pVoiceover,
@@ -657,7 +684,7 @@ PROMPT;
                 $scenes1[] = [
                     'id' => count($scenes1),
                     'type' => 'product',
-                    'duration' => $planDuration,
+                    'duration' => $this->estimateSceneDuration($pVoiceover, 4.2, 5.8),
                     'title' => $pTitle,
                     'subtitle' => $p['old_price'] ? "Promo : {$pPrice} (au lieu de {$p['old_price']})" : $pPrice,
                     'voiceover' => $pVoiceover,
@@ -666,25 +693,27 @@ PROMPT;
             }
         }
 
-        // 3. Plan Atout / Argument fort (2s)
+        // 3. Plan Atout / Argument fort
+        $featureVoiceover = $assetPhrase . ".";
         $scenes1[] = [
             'id' => count($scenes1),
             'type' => 'feature',
-            'duration' => 2.0,
+            'duration' => $this->estimateSceneDuration($featureVoiceover, 3.8, 5.2),
             'title' => "NOTRE ENGAGEMENT",
             'subtitle' => $assetPhrase,
-            'voiceover' => $assetPhrase . ".",
+            'voiceover' => $featureVoiceover,
             'product_index' => null,
         ];
 
-        // 4. Plan Call To Action Final (2-3s)
+        // 4. Plan Call To Action Final
+        $ctaVoiceover = "Commandez dès maintenant sur notre boutique ou contactez-nous sur WhatsApp !";
         $scenes1[] = [
             'id' => count($scenes1),
             'type' => 'cta',
-            'duration' => 2.5,
+            'duration' => $this->estimateSceneDuration($ctaVoiceover, 4.0, 5.2),
             'title' => "COMMANDEZ EN 1 CLIC",
             'subtitle' => $shopName,
-            'voiceover' => "Commandez dès maintenant sur notre boutique ou contactez-nous sur WhatsApp !",
+            'voiceover' => $ctaVoiceover,
             'product_index' => null,
         ];
 
@@ -692,23 +721,25 @@ PROMPT;
         $scenes2 = [];
 
         if ($isStorePresentation) {
+            $hookText2 = "Vous cherchez la simplicité et la qualité ? Rendez-vous chez {$shopName}.";
             $scenes2[] = [
                 'id' => 0,
                 'type' => 'hook',
-                'duration' => 2.2,
+                'duration' => $this->estimateSceneDuration($hookText2, 4.0, 5.0),
                 'title' => "TOUT AU MÊME ENDROIT",
                 'subtitle' => "Chez {$shopName}",
-                'voiceover' => "Vous cherchez la simplicité et la qualité ? Rendez-vous chez {$shopName}.",
+                'voiceover' => $hookText2,
                 'product_index' => null,
             ];
         } else {
+            $hookText2 = "Une envie de nouveauté sans vous compliquer la vie ? Regardez ça !";
             $scenes2[] = [
                 'id' => 0,
                 'type' => 'hook',
-                'duration' => 2.2,
+                'duration' => $this->estimateSceneDuration($hookText2, 4.0, 5.0),
                 'title' => "FAITES-VOUS PLAISIR",
                 'subtitle' => "Arrivage Spécial chez {$shopName}",
-                'voiceover' => "Une envie de nouveauté sans vous compliquer la vie ? Regardez ça !",
+                'voiceover' => $hookText2,
                 'product_index' => null,
             ];
         }
@@ -719,45 +750,49 @@ PROMPT;
             $pCategory = $p['category'];
 
             if ($isStorePresentation) {
+                $pVoiceover2 = "Retrouvez un large choix pour {$pCategory} conçu pour vous séduire.";
                 $scenes2[] = [
                     'id' => count($scenes2),
                     'type' => 'product',
-                    'duration' => $planDuration,
+                    'duration' => $this->estimateSceneDuration($pVoiceover2, 4.0, 5.5),
                     'title' => $pCategory,
                     'subtitle' => "Collection {$shopName}",
-                    'voiceover' => "Retrouvez un large choix pour {$pCategory} conçu pour vous séduire.",
+                    'voiceover' => $pVoiceover2,
                     'product_index' => $idx,
                 ];
             } else {
+                $pVoiceover2 = "Coup de projecteur sur {$pTitle}, disponible dès aujourd'hui à {$pPrice}.";
                 $scenes2[] = [
                     'id' => count($scenes2),
                     'type' => 'product',
-                    'duration' => $planDuration,
+                    'duration' => $this->estimateSceneDuration($pVoiceover2, 4.2, 5.8),
                     'title' => $pTitle,
                     'subtitle' => $pPrice,
-                    'voiceover' => "Coup de projecteur sur {$pTitle}, disponible dès aujourd'hui à {$pPrice}.",
+                    'voiceover' => $pVoiceover2,
                     'product_index' => $idx,
                 ];
             }
         }
 
+        $featureVoiceover2 = "Profitez de notre service rapide et soigné : {$assetPhrase}.";
         $scenes2[] = [
             'id' => count($scenes2),
             'type' => 'feature',
-            'duration' => 2.0,
+            'duration' => $this->estimateSceneDuration($featureVoiceover2, 3.8, 5.2),
             'title' => "SERVICE RAPIDE",
             'subtitle' => $assetPhrase,
-            'voiceover' => "Profitez de notre service rapide et soigné : {$assetPhrase}.",
+            'voiceover' => $featureVoiceover2,
             'product_index' => null,
         ];
 
+        $ctaVoiceover2 = "N'attendez plus, envoyez-nous un message WhatsApp pour passer votre commande !";
         $scenes2[] = [
             'id' => count($scenes2),
             'type' => 'cta',
-            'duration' => 2.5,
+            'duration' => $this->estimateSceneDuration($ctaVoiceover2, 4.0, 5.2),
             'title' => "DISPONIBLE IMMÉDIATEMENT",
             'subtitle' => "Écrivez-nous sur WhatsApp",
-            'voiceover' => "N'attendez plus, envoyez-nous un message WhatsApp pour passer votre commande !",
+            'voiceover' => $ctaVoiceover2,
             'product_index' => null,
         ];
 
