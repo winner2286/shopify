@@ -70,6 +70,15 @@ class LoginController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
+        // Si l'URL 'intended' en session était la page d'accueil '/', la nettoyer pour aller directement au tableau de bord
+        $intended = $request->session()->get('url.intended');
+        if ($intended) {
+            $path = trim(parse_url($intended, PHP_URL_PATH) ?? '', '/');
+            if ($path === '') {
+                $request->session()->forget('url.intended');
+            }
+        }
+
         if ($user->isAdmin()) {
             return redirect()->intended(route('admin.dashboard'));
         }

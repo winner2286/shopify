@@ -27,22 +27,51 @@
                 <span class="mobile-only">Vendez sur le web et WhatsApp. Encaissez par T-Money & Flooz. Gérez tout facilement.</span>
             </p>
 
-            <!-- Formulaire d'inscription instantané (Signature Shopify) -->
-            <form action="{{ route('register') }}" method="GET" class="hero-email-form">
-                <div class="hero-input-wrap">
-                    <input type="email" name="email" placeholder="Entrez votre adresse e-mail" required class="hero-email-input" aria-label="Adresse e-mail">
-                    <button id="hero-register" type="submit" class="btn btn-primary hero-email-btn">
-                        <span>Démarrer l'essai gratuit</span>
-                        <x-icon name="arrow-right" :size="16" />
-                    </button>
+            @auth
+                <div class="hero-auth-box" style="margin-top:1.5rem;padding:1.25rem 1.4rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                    <div>
+                        <div style="font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:.25rem">
+                            👋 Bonjour {{ auth()->user()->name }}
+                        </div>
+                        <div style="font-size:.88rem;color:var(--text-soft)">
+                            Vous êtes connecté à votre compte Zanika.
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap">
+                        @if (auth()->user()->isAdmin())
+                            <a href="{{ route('admin.dashboard') }}" class="btn btn-primary" style="font-weight:700">
+                                <x-icon name="shield" :size="16" /> Ouvrir le Cockpit Super-Admin →
+                            </a>
+                        @else
+                            <a href="{{ route('dashboard') }}" class="btn btn-primary" style="font-weight:700">
+                                Mon Tableau de bord →
+                            </a>
+                            @if (auth()->user()->shop && auth()->user()->shop->subdomain)
+                                <a href="{{ url('/b/' . auth()->user()->shop->subdomain) }}" target="_blank" class="btn btn-dark" style="font-weight:600">
+                                    <x-icon name="eye" :size="15" /> Voir ma boutique
+                                </a>
+                            @endif
+                        @endif
+                    </div>
                 </div>
-            </form>
+            @else
+                <!-- Formulaire d'inscription instantané (Signature Shopify) -->
+                <form action="{{ route('register') }}" method="GET" class="hero-email-form">
+                    <div class="hero-input-wrap">
+                        <input type="email" name="email" placeholder="Entrez votre adresse e-mail" required class="hero-email-input" aria-label="Adresse e-mail">
+                        <button id="hero-register" type="submit" class="btn btn-primary hero-email-btn">
+                            <span>Démarrer l'essai gratuit</span>
+                            <x-icon name="arrow-right" :size="16" />
+                        </button>
+                    </div>
+                </form>
 
-            <div class="hero-trust-row">
-                <span><x-icon name="check-circle" :size="15" /> 14 jours d'essai gratuit</span>
-                <span><x-icon name="check-circle" :size="15" /> Sans carte bancaire</span>
-                <span><x-icon name="check-circle" :size="15" /> <span class="desktop-only">Prêt en 3 minutes chrono</span><span class="mobile-only">Prêt en 3 min</span></span>
-            </div>
+                <div class="hero-trust-row">
+                    <span><x-icon name="check-circle" :size="15" /> 14 jours d'essai gratuit</span>
+                    <span><x-icon name="check-circle" :size="15" /> Sans carte bancaire</span>
+                    <span><x-icon name="check-circle" :size="15" /> <span class="desktop-only">Prêt en 3 minutes chrono</span><span class="mobile-only">Prêt en 3 min</span></span>
+                </div>
+            @endauth
         </div>
 
         <!-- Colonne droite : Mockup visuel interactif dynamique avec commutateur d'onglets -->
@@ -1016,7 +1045,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <div class="footer-grid-shopify">
             <!-- Colonne Marque -->
             <div>
-                <a href="{{ route('home') }}" class="logo" aria-label="Accueil {{ config('platform.name') }}" style="margin-bottom:1rem;display:inline-flex;align-items:center;gap:.65rem;text-decoration:none">
+                <a href="{{ auth()->check() ? (auth()->user()->isAdmin() ? route('admin.dashboard') : route('dashboard')) : route('home') }}" class="logo" aria-label="Accueil {{ config('platform.name') }}" style="margin-bottom:1rem;display:inline-flex;align-items:center;gap:.65rem;text-decoration:none">
                     <img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:34px;width:34px;border-radius:9px;object-fit:cover;box-shadow:0 2px 10px rgba(158,27,50,0.35)">
                     <span class="logo-text" style="font-family:'Montserrat',var(--font-display),sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-0.02em;">ZANIKA</span>
                 </a>

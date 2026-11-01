@@ -10,6 +10,15 @@ class HomeController extends Controller
 {
     public function __invoke()
     {
+        // Si l'utilisateur est déjà connecté, le rediriger directement vers son espace
+        if (auth()->check() && ! request()->has('landing')) {
+            if (auth()->user()->isAdmin()) {
+                return redirect()->route('admin.dashboard');
+            }
+
+            return redirect()->route('dashboard');
+        }
+
         // Auto-initialisation et mise à niveau des formules officielles
         if (Schema::hasTable('plans')) {
             $needsUpdate = Plan::where('slug', 'essentiel')
