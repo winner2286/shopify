@@ -88,6 +88,11 @@ class Product extends Model
         return $this->hasMany(StockMovement::class)->latest('id');
     }
 
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     public function isLowStock(): bool
     {
         return $this->track_stock && $this->stock > 0 && $this->stock <= $this->low_stock_threshold;

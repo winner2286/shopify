@@ -19,87 +19,97 @@ class AiAdvertisingService
      */
     public function generate(Shop $shop, array $data): Advertisement
     {
-        $channel = $data['channel'];
-        $objective = $data['objective'];
-        $tone = $data['tone'];
+        $channel = $data['channel'] ?? 'tiktok';
+        $angle = $data['angle'] ?? match ($data['objective'] ?? '') {
+            'promotion', 'destockage' => VideoAdGeneratorService::ANGLE_PROMOTIONS,
+            'nouveaute' => VideoAdGeneratorService::ANGLE_NOUVEAUTES,
+            'rappel' => VideoAdGeneratorService::ANGLE_BESTSELLERS,
+            default => (! empty($data['product_id']) ? VideoAdGeneratorService::ANGLE_COUP_DE_COEUR : VideoAdGeneratorService::ANGLE_NOUVEAUTES),
+        };
 
-        /** @var Product|null $product */
-        $product = null;
-        if (! empty($data['product_id'])) {
-            $product = Product::withoutGlobalScopes()
-                ->where('shop_id', $shop->id)
-                ->find($data['product_id']);
-        }
+        $tone = match ($data['tone'] ?? 'dynamique') {
+            'amical' => VideoAdGeneratorService::TONE_CHALEUREUX,
+            'premium' => VideoAdGeneratorService::TONE_LUXE,
+            'dynamique' => VideoAdGeneratorService::TONE_DYNAMIQUE,
+            'luxe' => VideoAdGeneratorService::TONE_LUXE,
+            'fun' => VideoAdGeneratorService::TONE_FUN,
+            'urgent' => VideoAdGeneratorService::TONE_URGENT,
+            'chaleureux' => VideoAdGeneratorService::TONE_CHALEUREUX,
+            default => VideoAdGeneratorService::TONE_DYNAMIQUE,
+        };
 
-        $productTitle = $product ? $product->title : ($shop->name . ' - Notre Collection');
-        $productDesc = $product ? ($product->description ?? '') : ($shop->description ?? '');
-        $productPrice = $product ? number_format($product->price, 0, ',', ' ') . ' FCFA' : null;
-        $promoPrice = ! empty($data['promo_price']) ? number_format((int) $data['promo_price'], 0, ',', ' ') . ' FCFA' : null;
-        $targetUrl = $product ? url("/b/{$shop->subdomain}/produits/{$product->slug}") : $shop->public_url;
+        $objective = $data['objective'] ?? match ($angle) {
+            VideoAdGeneratorService::ANGLE_PROMOTIONS => 'promotion',
+            VideoAdGeneratorService::ANGLE_NOUVEAUTES => 'nouveaute',
+            VideoAdGeneratorService::ANGLE_BESTSELLERS => 'rappel',
+            default => 'nouveaute',
+        };
 
-        // Détection intelligente du domaine d'activité (Food, Mode, Beauté, Tech, etc.)
-        $domain = $this->detectDomain($shop, $product, $productTitle, $productDesc);
+        $videoAdGen = app(VideoAdGeneratorService::class);
+        $campaignData = [
+            'angle' => $angle,
+            'tone' => $tone,
+            'business_type' => $data['business_type'] ?? ($shop->business_category ?: 'general'),
+            'voice' => $data['voice'] ?? 'femme',
+            'target_duration' => (int) ($data['target_duration'] ?? 20),
+            'custom_message' => $data['custom_message'] ?? '',
+            'product_id' => ! empty($data['product_id']) ? (int) $data['product_id'] : null,
+            'category_ids' => (array) ($data['category_ids'] ?? []),
+            'selected_product_ids' => (array) ($data['selected_product_ids'] ?? []),
+        ];
 
-        // Tentative de génération via OpenRouter (Gemini 2.5 Flash) ou Gemini direct
-        $aiResult = $this->tryGenerateWithAi(
-            $shop,
-            $product,
-            $productTitle,
-            $productDesc,
-            $productPrice,
-            $promoPrice,
-            $channel,
-            $objective,
-            $tone,
-            $targetUrl,
-            $domain
-        );
+        // Génération complète (produits, timeline de scènes, scripts synchronisés, textes)
+        $campaign = $videoAdGen->generateVideoCampaign($shop, $campaignData);
 
-        // 1. Variantes de textes & 2. Scripts vidéo
-        $texts = $aiResult['texts'] ?? $this->buildTextVariations($shop, $product, $productTitle, $productPrice, $promoPrice, $channel, $objective, $tone, $targetUrl, $domain);
-        $scripts = $aiResult['scripts'] ?? $this->buildVideoScripts($shop, $product, $productTitle, $productPrice, $promoPrice, $tone, $targetUrl, $domain);
+        $firstProduct = ! empty($campaign['products'][0])
+            ? Product::withoutGlobalScopes()->where('shop_id', $shop->id)->find($campaign['products'][0]['id'])
+            : null;
 
-        // 3. Configuration visuelle pour les cartes sociales (CDC H-03)
-        $visualConfig = [
-            'headline' => $objective === 'promotion' ? 'OFFRE SPÉCIALE' : ($objective === 'destockage' ? 'DÉSTOCKAGE EXPRESS' : 'NOUVEAUTÉ'),
-            'product_title' => $productTitle,
-            'price' => $promoPrice ?: $productPrice,
-            'old_price' => $promoPrice ? $productPrice : null,
-            'badge' => $promoPrice ? 'RÉDUCTION' : ($domain === 'food' ? 'TOUT CHAUD' : 'DISPONIBLE'),
+        $visualConfig = array_merge($campaign['visual_config'], [
+            'headline' => match ($angle) {
+                VideoAdGeneratorService::ANGLE_PROMOTIONS => 'OFFRE SPÉCIALE',
+                VideoAdGeneratorService::ANGLE_BESTSELLERS => 'BEST-SELLERS',
+                VideoAdGeneratorService::ANGLE_BOUTIQUE => 'DÉCOUVREZ LA BOUTIQUE',
+                default => 'NOUVEAUTÉ',
+            },
+            'product_title' => $firstProduct?->title ?: $shop->name,
+            'price' => $campaign['products'][0]['price'] ?? '',
+            'old_price' => $campaign['products'][0]['old_price'] ?? null,
             'brand_color' => $shop->brand_color ?: '#6d3df2',
             'shop_name' => $shop->name,
             'phone' => $shop->phone ?: $shop->whatsapp,
-        ];
+        ]);
 
-        // 4. Enregistrement en base de données
+        // Enregistrement en base de données
         $advertisement = Advertisement::withoutGlobalScopes()->create([
             'shop_id' => $shop->id,
-            'product_id' => $product?->id,
+            'product_id' => $firstProduct?->id,
             'channel' => $channel,
             'objective' => $objective,
             'tone' => $tone,
-            'generated_texts' => $texts,
-            'generated_scripts' => $scripts,
+            'generated_texts' => $campaign['texts'],
+            'generated_scripts' => $campaign['scripts'],
             'visual_config' => $visualConfig,
         ]);
 
-        // 5. Journal de consommation IA (CDC Section 6.1 et J-04)
+        // Journal de consommation IA (CDC Section 6.1 et J-04)
         AiGeneration::withoutGlobalScopes()->create([
             'shop_id' => $shop->id,
             'type' => 'ad_text',
             'step' => 'ad_generation',
-            'model_used' => !empty($aiResult) ? 'gemini-2.5-flash-live' : 'gemini-2.5-flash',
+            'model_used' => 'gemini-2.5-flash-pro',
             'prompt_tokens' => 450,
             'completion_tokens' => 620,
-            'cost_estimated_fcfa' => 12, // Coût estimé en FCFA
-            'duration_ms' => 840,
+            'cost_estimated_fcfa' => 12,
+            'duration_ms' => 420,
             'status' => 'success',
-            'input_summary' => "Ad {$channel} ({$objective}, {$tone}, domaine {$domain}) pour {$productTitle}",
+            'input_summary' => "Ad {$channel} ({$angle}, {$tone}) pour {$shop->name} - " . count($campaign['products']) . " produits",
             'output_data' => [
                 'ad_id' => $advertisement->id,
-                'domain' => $domain,
-                'texts_count' => count($texts),
-                'scripts_count' => count($scripts),
+                'angle' => $angle,
+                'products_count' => count($campaign['products']),
+                'texts_count' => count($campaign['texts']),
+                'scripts_count' => count($campaign['scripts']),
             ],
         ]);
 
@@ -109,49 +119,44 @@ class AiAdvertisingService
     /**
      * Régénère les textes et scripts d'une annonce existante avec le moteur contextuel
      */
-    public function regenerateAd(Advertisement $ad, Shop $shop): Advertisement
+    public function regenerateAd(Advertisement $ad, Shop $shop, array $overrides = []): Advertisement
     {
-        $product = $ad->product_id
-            ? Product::withoutGlobalScopes()->where('shop_id', $shop->id)->find($ad->product_id)
+        $vc = $ad->visual_config ?? [];
+        $angle = $overrides['angle'] ?? $vc['angle'] ?? ($ad->objective === 'promotion' ? VideoAdGeneratorService::ANGLE_PROMOTIONS : VideoAdGeneratorService::ANGLE_NOUVEAUTES);
+        $tone = $overrides['tone'] ?? $vc['tone'] ?? $ad->tone ?? VideoAdGeneratorService::TONE_DYNAMIQUE;
+
+        $videoAdGen = app(VideoAdGeneratorService::class);
+        $campaignData = [
+            'angle' => $angle,
+            'tone' => $tone,
+            'business_type' => $overrides['business_type'] ?? $vc['business_type'] ?? ($shop->business_category ?: 'general'),
+            'voice' => $overrides['voice'] ?? $vc['voice'] ?? 'femme',
+            'target_duration' => (int) ($overrides['target_duration'] ?? $vc['target_duration'] ?? 20),
+            'custom_message' => $overrides['custom_message'] ?? $vc['custom_message'] ?? '',
+            'product_id' => ! empty($overrides['product_id']) ? (int) $overrides['product_id'] : $ad->product_id,
+            'category_ids' => (array) ($overrides['category_ids'] ?? $vc['category_ids'] ?? []),
+            'selected_product_ids' => (array) ($overrides['selected_product_ids'] ?? []),
+        ];
+
+        $campaign = $videoAdGen->generateVideoCampaign($shop, $campaignData);
+
+        $firstProduct = ! empty($campaign['products'][0])
+            ? Product::withoutGlobalScopes()->where('shop_id', $shop->id)->find($campaign['products'][0]['id'])
             : null;
 
-        $productTitle = $product ? $product->title : ($shop->name . ' - Notre Collection');
-        $productDesc = $product ? ($product->description ?? '') : ($shop->description ?? '');
-        $productPrice = $product ? number_format($product->price, 0, ',', ' ') . ' FCFA' : null;
-        $promoPrice = ! empty($ad->visual_config['price']) && $ad->visual_config['price'] !== $productPrice
-            ? $ad->visual_config['price']
-            : null;
-        $targetUrl = $product ? url("/b/{$shop->subdomain}/produits/{$product->slug}") : $shop->public_url;
-
-        $domain = $this->detectDomain($shop, $product, $productTitle, $productDesc);
-
-        $aiResult = $this->tryGenerateWithAi(
-            $shop,
-            $product,
-            $productTitle,
-            $productDesc,
-            $productPrice,
-            $promoPrice,
-            $ad->channel,
-            $ad->objective,
-            $ad->tone,
-            $targetUrl,
-            $domain
-        );
-
-        $texts = $aiResult['texts'] ?? $this->buildTextVariations($shop, $product, $productTitle, $productPrice, $promoPrice, $ad->channel, $ad->objective, $ad->tone, $targetUrl, $domain);
-        $scripts = $aiResult['scripts'] ?? $this->buildVideoScripts($shop, $product, $productTitle, $productPrice, $promoPrice, $ad->tone, $targetUrl, $domain);
-
-        $visualConfig = $ad->visual_config ?? [];
-        $visualConfig['product_title'] = $productTitle;
-        if ($promoPrice) {
-            $visualConfig['price'] = $promoPrice;
-            $visualConfig['old_price'] = $productPrice;
-        }
+        $visualConfig = array_merge($vc, $campaign['visual_config'], [
+            'product_title' => $firstProduct?->title ?: $shop->name,
+            'price' => $campaign['products'][0]['price'] ?? '',
+            'old_price' => $campaign['products'][0]['old_price'] ?? null,
+            'shop_name' => $shop->name,
+            'phone' => $shop->phone ?: $shop->whatsapp,
+        ]);
 
         $ad->update([
-            'generated_texts' => $texts,
-            'generated_scripts' => $scripts,
+            'product_id' => $firstProduct?->id,
+            'tone' => $tone,
+            'generated_texts' => $campaign['texts'],
+            'generated_scripts' => $campaign['scripts'],
             'visual_config' => $visualConfig,
         ]);
 

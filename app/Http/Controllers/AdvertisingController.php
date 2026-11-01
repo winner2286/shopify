@@ -34,7 +34,7 @@ class AdvertisingController extends Controller
     }
 
     /**
-     * H-01 : Formulaire de création de publicité par l'IA
+     * H-01 : Formulaire de création de publicité vidéo par l'IA
      */
     public function create(Request $request)
     {
@@ -44,10 +44,19 @@ class AdvertisingController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $products = $shop->products()->where('status', Product::STATUS_ACTIVE)->get();
+        $products = $shop->products()
+            ->where('status', Product::STATUS_ACTIVE)
+            ->with(['primaryImage', 'images', 'categories'])
+            ->get();
+
+        $categories = $shop->categories()
+            ->where('is_visible', true)
+            ->withCount(['products' => fn($q) => $q->where('status', Product::STATUS_ACTIVE)])
+            ->get();
+
         $selectedProductId = (int) $request->query('produit_id');
 
-        return view('advertising.create', compact('shop', 'products', 'selectedProductId'));
+        return view('advertising.create', compact('shop', 'products', 'categories', 'selectedProductId'));
     }
 
     /**
@@ -58,10 +67,19 @@ class AdvertisingController extends Controller
         $shop = $request->user()->shop;
 
         $validated = $request->validate([
+            'angle' => ['nullable', 'string', 'in:promotions,nouveautes,bestsellers,coup_de_coeur,boutique'],
+            'tone' => ['nullable', 'string', 'in:dynamique,luxe,fun,urgent,chaleureux,amical,premium'],
+            'business_type' => ['nullable', 'string', 'max:100'],
+            'voice' => ['nullable', 'string', 'in:femme,homme,douce'],
+            'target_duration' => ['nullable', 'integer', 'in:15,20,25'],
+            'custom_message' => ['nullable', 'string', 'max:250'],
             'product_id' => ['nullable', 'integer'],
-            'channel' => ['required', 'in:whatsapp,tiktok,sms,instagram'],
-            'objective' => ['required', 'in:nouveaute,promotion,destockage,rappel'],
-            'tone' => ['required', 'in:amical,premium,dynamique'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['integer'],
+            'selected_product_ids' => ['nullable', 'array'],
+            'selected_product_ids.*' => ['integer'],
+            'channel' => ['nullable', 'string', 'in:whatsapp,tiktok,sms,instagram'],
+            'objective' => ['nullable', 'string'],
             'promo_price' => ['nullable', 'integer', 'min:0'],
         ]);
 
@@ -72,8 +90,10 @@ class AdvertisingController extends Controller
             }
         }
 
+        $channel = $validated['channel'] ?? 'tiktok';
+
         // Séparation des fonctionnalités publicitaires IA selon la formule
-        if (in_array($validated['channel'], ['tiktok', 'instagram'], true) && ! $shop->canUseFeature('tiktok_ads')) {
+        if (in_array($channel, ['tiktok', 'instagram'], true) && ! $shop->canUseFeature('tiktok_ads')) {
             return back()->withInput()->with('error', "La génération de scripts vidéo TikTok & visuels Instagram est réservée aux formules Pro et Premium. Passez à la formule Pro (15 000 FCFA) pour débloquer ces canaux !");
         }
 
@@ -84,7 +104,7 @@ class AdvertisingController extends Controller
         try {
             $ad = $this->aiAdvertisingService->generate($shop, $validated);
 
-            return redirect()->route('ads.show', $ad)->with('status', 'Votre campagne publicitaire et vos scripts ont été générés avec succès par l\'IA !');
+            return redirect()->route('ads.show', $ad)->with('status', 'Votre publicité vidéo 9:16 a été générée avec succès à partir de vos vraies données !');
 
         } catch (Exception $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -92,9 +112,9 @@ class AdvertisingController extends Controller
     }
 
     /**
-     * Régénère les textes et scripts de l'annonce avec l'IA adaptée au produit et à la boutique
+     * Régénère les textes et scripts de l'annonce avec l'IA adaptée
      */
-    public function regenerate(Request $request, Advertisement $ad): RedirectResponse
+    public function regenerate(Request $request, Advertisement $ad)
     {
         $shop = $request->user()->shop;
 
@@ -103,16 +123,61 @@ class AdvertisingController extends Controller
         }
 
         try {
-            $this->aiAdvertisingService->regenerateAd($ad, $shop);
+            $ad = $this->aiAdvertisingService->regenerateAd($ad, $shop, $request->all());
 
-            return redirect()->route('ads.show', $ad)->with('status', 'Vos scripts et textes publicitaires ont été régénérés et adaptés avec succès à votre produit et boutique !');
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Variation régénérée avec succès !',
+                    'scripts' => $ad->generated_scripts,
+                    'visual_config' => $ad->visual_config,
+                ]);
+            }
+
+            return redirect()->route('ads.show', $ad)->with('status', 'Votre publicité vidéo a été régénérée avec une nouvelle variation !');
         } catch (Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+            }
             return back()->with('error', 'Erreur lors de la régénération : ' . $e->getMessage());
         }
     }
 
     /**
-     * H-02, H-03, H-04 : Affichage des textes, scripts et visuels publicitaires & Studio Vidéo IA
+     * Met à jour en direct les produits sélectionnés dans le studio vidéo
+     */
+    public function updateProducts(Request $request, Advertisement $ad)
+    {
+        $shop = $request->user()->shop;
+
+        if ($ad->shop_id !== $shop->id) {
+            return response()->json(['error' => 'Non autorisé'], 403);
+        }
+
+        $validated = $request->validate([
+            'selected_product_ids' => ['nullable', 'array'],
+            'selected_product_ids.*' => ['integer'],
+            'angle' => ['nullable', 'string', 'in:promotions,nouveautes,bestsellers,coup_de_coeur,boutique'],
+            'tone' => ['nullable', 'string', 'in:dynamique,luxe,fun,urgent,chaleureux'],
+            'product_id' => ['nullable', 'integer'],
+        ]);
+
+        try {
+            $ad = $this->aiAdvertisingService->regenerateAd($ad, $shop, $validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Produits et vidéo mis à jour avec succès !',
+                'visual_config' => $ad->visual_config,
+                'scripts' => $ad->generated_scripts,
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * H-02, H-03, H-04 : Studio Vidéo Publicitaire IA 9:16
      */
     public function show(Request $request, Advertisement $ad)
     {
@@ -125,12 +190,36 @@ class AdvertisingController extends Controller
 
         $ad->load(['product.images', 'product.primaryImage']);
 
+        $vc = $ad->visual_config ?? [];
+        $videoAdGen = app(\App\Services\VideoAdGeneratorService::class);
+
+        // Si la publicité n'a pas encore le format multi-produits (anciennes annonces en base)
+        if (empty($vc['products'])) {
+            $angle = $vc['angle'] ?? ($ad->objective === 'promotion' ? 'promotions' : 'nouveautes');
+            $selected = $videoAdGen->selectProductsForAd($shop, $angle, $ad->product_id);
+            $vc['products'] = $videoAdGen->formatProductsPayload($selected, $shop, ($angle === 'boutique'));
+            $vc['shop_logo_url'] = $videoAdGen->resolveShopLogoUrl($shop);
+            $vc['shop_color'] = $shop->brand_color ?: '#6d3df2';
+            $vc['shop_name'] = $shop->name;
+            $vc['angle'] = $angle;
+            $vc['tone'] = $vc['tone'] ?? $ad->tone ?? 'dynamique';
+            $vc['is_store_presentation'] = ($angle === 'boutique');
+            $ad->update(['visual_config' => $vc]);
+        }
+
         $productImageUrl = $this->resolveProductImageForAd($ad, $shop);
 
-        // Pré-chauffage du cache audio TTS en arrière-plan pour zéro latence lors du rendu vidéo
+        // Pré-chauffage du cache audio TTS en arrière-plan pour zéro latence
         try {
             $scripts = $ad->generated_scripts ?? [];
-            if (! empty($scripts[0]['steps'])) {
+            if (! empty($scripts[0]['scenes'])) {
+                $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+                foreach ($scripts[0]['scenes'] as $sc) {
+                    if (! empty($sc['voiceover'])) {
+                        $mediaCtrl->warmTtsCache($sc['voiceover']);
+                    }
+                }
+            } elseif (! empty($scripts[0]['steps'])) {
                 $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
                 foreach ($scripts[0]['steps'] as $st) {
                     if (! empty($st['voiceover'])) {
@@ -139,16 +228,26 @@ class AdvertisingController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            // Ignorer silencieusement si hors connexion
+            // Silencieux si hors connexion
         }
 
-        // Résolution de l'avatar UGC pour le studio vidéo (Base64 zéro latence)
+        // Produits et catégories de la boutique pour la modal de modification
+        $shopProducts = $shop->products()
+            ->where('status', Product::STATUS_ACTIVE)
+            ->with(['primaryImage', 'images', 'categories'])
+            ->get();
+
+        $shopCategories = $shop->categories()
+            ->where('is_visible', true)
+            ->get();
+
+        // Résolution de l'avatar UGC pour le studio vidéo
         $ugcPath = public_path('images/brand/ugc_presenter.jpg');
         $ugcAvatarUrl = file_exists($ugcPath) && filesize($ugcPath) > 0
             ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($ugcPath))
             : asset('images/brand/ugc_presenter.jpg');
 
-        return view('advertising.show', compact('shop', 'ad', 'productImageUrl', 'ugcAvatarUrl'));
+        return view('advertising.show', compact('shop', 'ad', 'productImageUrl', 'ugcAvatarUrl', 'shopProducts', 'shopCategories'));
     }
 
     /**

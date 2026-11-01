@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/publicite/{ad}', [\App\Http\Controllers\AdvertisingController::class, 'show'])->name('ads.show');
     Route::post('/publicite/{ad}/log-video-export', [\App\Http\Controllers\AdvertisingController::class, 'logVideoExport'])->name('ads.log_video_export');
     Route::post('/publicite/{ad}/regenerate', [\App\Http\Controllers\AdvertisingController::class, 'regenerate'])->name('ads.regenerate');
+    Route::post('/publicite/{ad}/update-products', [\App\Http\Controllers\AdvertisingController::class, 'updateProducts'])->name('ads.update_products');
 
     // Module I - Statistiques & Performance (I-01 à I-03)
     Route::get('/statistiques', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics.index');
