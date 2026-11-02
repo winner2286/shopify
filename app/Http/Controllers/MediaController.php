@@ -361,16 +361,144 @@ SVG;
     }
 
     /**
+     * Convertit un nombre entier en toutes lettres en français (ex: 1000 -> "mille", 15500 -> "quinze mille cinq cents")
+     */
+    public function frenchNumberToWords(int $n): string
+    {
+        if ($n === 0) {
+            return 'zéro';
+        }
+
+        if (class_exists(\NumberFormatter::class)) {
+            $fmt = new \NumberFormatter('fr', \NumberFormatter::SPELLOUT);
+            $formatted = $fmt->format($n);
+            if ($formatted !== false) {
+                return $formatted;
+            }
+        }
+
+        return $this->fallbackFrenchSpellout($n);
+    }
+
+    /**
+     * Repli pur PHP pour la transcription des nombres en français
+     */
+    private function fallbackFrenchSpellout(int $n): string
+    {
+        if ($n === 0) {
+            return 'zéro';
+        }
+        if ($n < 0) {
+            return 'moins ' . $this->fallbackFrenchSpellout(-$n);
+        }
+
+        $units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+        $tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+
+        if ($n < 20) {
+            return $units[$n];
+        }
+        if ($n < 100) {
+            $t = intdiv($n, 10);
+            $u = $n % 10;
+            if ($t === 7) {
+                return $u === 1 ? 'soixante-et-onze' : 'soixante-' . $units[10 + $u];
+            }
+            if ($t === 9) {
+                return 'quatre-vingt-' . $units[10 + $u];
+            }
+            if ($t === 8 && $u === 0) {
+                return 'quatre-vingts';
+            }
+            if ($u === 0) {
+                return $tens[$t];
+            }
+            if ($u === 1 && $t < 8) {
+                return $tens[$t] . '-et-un';
+            }
+
+            return $tens[$t] . '-' . $units[$u];
+        }
+        if ($n < 1000) {
+            $h = intdiv($n, 100);
+            $rem = $n % 100;
+            $prefix = $h === 1 ? 'cent' : $units[$h] . ' cent' . ($rem === 0 ? 's' : '');
+
+            return $rem === 0 ? $prefix : $prefix . ' ' . $this->fallbackFrenchSpellout($rem);
+        }
+        if ($n < 1000000) {
+            $th = intdiv($n, 1000);
+            $rem = $n % 1000;
+            $prefix = $th === 1 ? 'mille' : $this->fallbackFrenchSpellout($th) . ' mille';
+
+            return $rem === 0 ? $prefix : $prefix . ' ' . $this->fallbackFrenchSpellout($rem);
+        }
+        $mil = intdiv($n, 1000000);
+        $rem = $n % 1000000;
+        $prefix = $mil === 1 ? 'un million' : $this->fallbackFrenchSpellout($mil) . ' millions';
+
+        return $rem === 0 ? $prefix : $prefix . ' ' . $this->fallbackFrenchSpellout($rem);
+    }
+
+    /**
+     * Normalise un texte pour la synthèse vocale :
+     * - Remplace les prix "1 000 FCFA" par "mille francs" (ne lit JAMAIS "un zéro zéro zéro")
+     * - Remplace "-20%" par "moins 20 pour cent"
+     * - Évite que les nombres avec séparateurs de milliers soient découpés chiffre par chiffre
+     */
+    public function normalizeSpeechText(string $text): string
+    {
+        if (empty($text)) {
+            return '';
+        }
+
+        // 1. Pourcentages
+        $text = preg_replace('/-(\d+)\s*%/u', 'moins $1 pour cent', $text);
+        $text = preg_replace('/(\d+)\s*%/u', '$1 pour cent', $text);
+
+        // 2. Prix avec devise explicite (ex: 1 000 FCFA, 15000 CFA, 2 500 F, 500 francs, etc.)
+        $currencyPattern = '/\b(\d[\d\s\xc2\xa0\x{202f}]*)\s*(FCFA|F\s*CFA|CFA|XOF|XAF|francs?|F)\b/iu';
+        $text = preg_replace_callback($currencyPattern, function ($m) {
+            $cleanDigits = preg_replace('/[\s\xc2\xa0\x{202f}]+/u', '', $m[1]);
+            if (! is_numeric($cleanDigits)) {
+                return $m[0];
+            }
+            $val = (int) $cleanDigits;
+            $words = $this->frenchNumberToWords($val);
+
+            // Formulation orale naturelle pour la voix-off publicitaire
+            return $words . ' francs';
+        }, $text);
+
+        // 3. Nombres isolés formatés avec séparateurs de milliers (ex: 1 000, 15 000, 100 000)
+        // Les numéros de téléphone (groupés par 2 ex: 90 12 34 56) ne sont PAS matchés
+        $thousandsPattern = '/\b(\d{1,3}(?:[\s\xc2\xa0\x{202f}]\d{3})+)\b/u';
+        $text = preg_replace_callback($thousandsPattern, function ($m) {
+            $cleanDigits = preg_replace('/[\s\xc2\xa0\x{202f}]+/u', '', $m[1]);
+            if (! is_numeric($cleanDigits)) {
+                return $m[0];
+            }
+
+            return $this->frenchNumberToWords((int) $cleanDigits);
+        }, $text);
+
+        // 4. Sigles monétaires orphelins (ex: "prix en FCFA")
+        $text = preg_replace('/(?<!francs\s)\b(?:FCFA|F\s*CFA)\b/iu', 'francs', $text);
+
+        return trim($text);
+    }
+
+    /**
      * Synthèse vocale IA en français avec mise en cache disque (/api/tts)
      */
     public function tts(Request $request): Response
     {
-        $text = trim((string) $request->input('text', ''));
-        if (empty($text)) {
+        $rawText = trim((string) $request->input('text', ''));
+        if (empty($rawText)) {
             return response('', 400);
         }
 
-        $cleanText = mb_substr(strip_tags($text), 0, 200);
+        $cleanText = $this->normalizeSpeechText(mb_substr(strip_tags($rawText), 0, 250));
 
         // Répertoire de cache pour les fichiers audio de voix-off
         $cacheDir = storage_path('app/tts');
@@ -399,10 +527,12 @@ SVG;
      */
     public function warmTtsCache(string $text): bool
     {
-        $cleanText = mb_substr(strip_tags(trim($text)), 0, 200);
-        if (empty($cleanText)) {
+        $rawText = trim($text);
+        if (empty($rawText)) {
             return false;
         }
+
+        $cleanText = $this->normalizeSpeechText(mb_substr(strip_tags($rawText), 0, 250));
 
         $cacheDir = storage_path('app/tts');
         if (! file_exists($cacheDir)) {

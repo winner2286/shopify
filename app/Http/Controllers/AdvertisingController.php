@@ -281,20 +281,29 @@ class AdvertisingController extends Controller
 
         try {
             $scripts = $ad->generated_scripts ?? [];
-            if (! empty($scripts[0]['scenes'])) {
-                $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
-                foreach ($scripts[0]['scenes'] as $sc) {
-                    if (! empty($sc['voiceover'])) {
-                        $mediaCtrl->warmTtsCache($sc['voiceover']);
+            $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+            $scriptsModified = false;
+
+            foreach ($scripts as &$scr) {
+                if (! empty($scr['scenes']) && is_array($scr['scenes'])) {
+                    foreach ($scr['scenes'] as &$sc) {
+                        if (! empty($sc['voiceover'])) {
+                            $normalized = $mediaCtrl->normalizeSpeechText($sc['voiceover']);
+                            if ($normalized !== $sc['voiceover']) {
+                                $sc['voiceover'] = $normalized;
+                                $scriptsModified = true;
+                            }
+                            $mediaCtrl->warmTtsCache($sc['voiceover']);
+                        }
                     }
+                    unset($sc);
+                    $scr['steps'] = $videoAdGen->convertScenesToSteps($scr['scenes']);
                 }
-            } elseif (! empty($scripts[0]['steps'])) {
-                $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
-                foreach ($scripts[0]['steps'] as $st) {
-                    if (! empty($st['voiceover'])) {
-                        $mediaCtrl->warmTtsCache($st['voiceover']);
-                    }
-                }
+            }
+            unset($scr);
+
+            if ($scriptsModified) {
+                $ad->update(['generated_scripts' => $scripts]);
             }
         } catch (\Throwable $e) {
             // Silencieux si hors connexion

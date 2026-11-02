@@ -614,6 +614,7 @@ STRUCTURE DU SCRIPT VIDÉO (SYNCHRONISÉE PLAN PAR PLAN) :
 
 RÈGLES CRITIQUES :
 - IMPORTANT TEMPS DE PAROLE : Chaque phrase doit être lue confortablement sans se presser. Les durées des plans doivent être de 4.0 à 5.5 secondes pour que la voix ne soit jamais coupée.
+- IMPORTANT PRONONCIATION DES PRIX (SYNTHÈSE VOCALE) : Dans les champs 'voiceover', écris TOUJOURS les prix en toutes lettres suivi de 'francs' (par exemple : 'mille francs', 'cinq mille francs', 'dix mille francs'). N'écris JAMAIS de chiffres avec des espaces comme '1 000' et n'écris JAMAIS 'FCFA' brut car la voix lirait 'un zéro zéro zéro'.
 - Phrases orales courtes, dynamiques, naturelles.
 - Pas de texte robotique, pas de faux superlatifs inventés.
 - Si Présentation boutique : parler des catégories, pas des prix.
@@ -700,7 +701,8 @@ PROMPT;
     }
 
     /**
-     * Ajuste dynamiquement la durée de chaque plan pour que la voix ne soit jamais coupée.
+     * Ajuste dynamiquement la durée de chaque plan pour que la voix ne soit jamais coupée,
+     * et normalise phonétiquement les prix pour éviter la lecture "un zéro zéro zéro".
      */
     private function sanitizeAiScriptsDuration(array $aiPayload): array
     {
@@ -708,9 +710,15 @@ PROMPT;
             return $aiPayload;
         }
 
+        $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+
         foreach ($aiPayload['scripts'] as &$scObj) {
             if (! empty($scObj['scenes']) && is_array($scObj['scenes'])) {
                 foreach ($scObj['scenes'] as &$scene) {
+                    if (! empty($scene['voiceover'])) {
+                        // Normalisation des prix et sigles pour la synthèse vocale
+                        $scene['voiceover'] = $mediaCtrl->normalizeSpeechText($scene['voiceover']);
+                    }
                     $voiceText = $scene['voiceover'] ?? '';
                     $scene['duration'] = $this->estimateSceneDuration($voiceText, 3.8, 6.2);
                 }
@@ -719,6 +727,24 @@ PROMPT;
         }
 
         return $aiPayload;
+    }
+
+    /**
+     * Formate un prix pour la voix-off orale en français (ex: 1000 -> "mille francs")
+     */
+    public function formatPriceForSpeech($rawPrice): string
+    {
+        $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+
+        if (is_numeric($rawPrice)) {
+            $val = (int) $rawPrice;
+            if ($val <= 0) {
+                return 'prix réduit';
+            }
+            return $mediaCtrl->frenchNumberToWords($val) . ' francs';
+        }
+
+        return $mediaCtrl->normalizeSpeechText((string) $rawPrice);
     }
 
     /**
@@ -823,7 +849,8 @@ PROMPT;
                     2 => "Ne manquez pas non plus",
                     default => "Et aussi"
                 };
-                $pVoiceover = "{$prefix} {$pTitle}, disponible pour seulement {$pPrice}.";
+                $pSpokenPrice = $this->formatPriceForSpeech($p['raw_price'] ?? $pPrice);
+                $pVoiceover = "{$prefix} {$pTitle}, disponible pour seulement {$pSpokenPrice}.";
                 $scenes1[] = [
                     'id' => count($scenes1),
                     'type' => 'product',
@@ -904,7 +931,8 @@ PROMPT;
                     'product_index' => $idx,
                 ];
             } else {
-                $pVoiceover2 = "Coup de projecteur sur {$pTitle}, disponible dès aujourd'hui à {$pPrice}.";
+                $pSpokenPrice2 = $this->formatPriceForSpeech($p['raw_price'] ?? $pPrice);
+                $pVoiceover2 = "Coup de projecteur sur {$pTitle}, disponible dès aujourd'hui à {$pSpokenPrice2}.";
                 $scenes2[] = [
                     'id' => count($scenes2),
                     'type' => 'product',

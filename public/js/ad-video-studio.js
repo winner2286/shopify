@@ -188,7 +188,7 @@
                     subtitle: isStore ? p.title : p.price,
                     voiceover: isStore
                         ? `Découvrez notre collection ${p.category}.`
-                        : `Voici ${p.title}, disponible à ${p.price}.`,
+                        : `Voici ${p.title}, disponible à ${this.formatPriceForSpeech(p.price || p.raw_price)}.`,
                     product_index: idx
                 });
             });
@@ -228,13 +228,92 @@
             return scenes;
         },
 
+        // --- CONVERSION DES PRIX ET NOMBRES EN FRANÇAIS NATUREL POUR LA VOIX-OFF ---
+        formatPriceForSpeech: function (price) {
+            if (!price) return 'prix abordable';
+            const digits = String(price).replace(/[^\d]/g, '');
+            if (!digits) return String(price);
+            const num = parseInt(digits, 10);
+            if (isNaN(num) || num <= 0) return String(price);
+
+            return this.numberToFrenchWords(num) + ' francs';
+        },
+
+        numberToFrenchWords: function (n) {
+            n = Math.floor(Math.abs(n));
+            if (n === 0) return 'zéro';
+            const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+            const tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+
+            if (n < 20) return units[n];
+            if (n < 100) {
+                const t = Math.floor(n / 10);
+                const u = n % 10;
+                if (t === 7) return u === 1 ? 'soixante-et-onze' : 'soixante-' + units[10 + u];
+                if (t === 9) return 'quatre-vingt-' + units[10 + u];
+                if (t === 8 && u === 0) return 'quatre-vingts';
+                if (u === 0) return tens[t];
+                if (u === 1 && t < 8) return tens[t] + '-et-un';
+                return tens[t] + '-' + units[u];
+            }
+            if (n < 1000) {
+                const h = Math.floor(n / 100);
+                const rem = n % 100;
+                const prefix = h === 1 ? 'cent' : units[h] + ' cent' + (rem === 0 ? 's' : '');
+                return rem === 0 ? prefix : prefix + ' ' + this.numberToFrenchWords(rem);
+            }
+            if (n < 1000000) {
+                const th = Math.floor(n / 1000);
+                const rem = n % 1000;
+                const prefix = th === 1 ? 'mille' : this.numberToFrenchWords(th) + ' mille';
+                return rem === 0 ? prefix : prefix + ' ' + this.numberToFrenchWords(rem);
+            }
+            const mil = Math.floor(n / 1000000);
+            const rem = n % 1000000;
+            const prefix = mil === 1 ? 'un million' : this.numberToFrenchWords(mil) + ' millions';
+            return rem === 0 ? prefix : prefix + ' ' + this.numberToFrenchWords(rem);
+        },
+
+        normalizeSpeechText: function (text) {
+            if (!text) return '';
+            let s = String(text);
+            // 1. Pourcentages
+            s = s.replace(/-(\d+)\s*%/g, 'moins $1 pour cent');
+            s = s.replace(/(\d+)\s*%/g, '$1 pour cent');
+
+            // 2. Prix avec devise explicite (1 000 FCFA, 15000 CFA, 500 francs, etc.)
+            const currencyRegex = /\b(\d[\d\s\u00a0\u202f]*)\s*(FCFA|F\s*CFA|CFA|XOF|XAF|francs?|F)\b/gi;
+            s = s.replace(currencyRegex, (match, digits) => {
+                const cleanDigits = digits.replace(/[\s\u00a0\u202f]+/g, '');
+                const val = parseInt(cleanDigits, 10);
+                if (isNaN(val)) return match;
+                return this.numberToFrenchWords(val) + ' francs';
+            });
+
+            // 3. Nombres isolés formatés avec séparateurs de milliers (1 000, 15 000)
+            const thousandsRegex = /\b(\d{1,3}(?:[\s\u00a0\u202f]\d{3})+)\b/g;
+            s = s.replace(thousandsRegex, (match, digits) => {
+                const cleanDigits = digits.replace(/[\s\u00a0\u202f]+/g, '');
+                const val = parseInt(cleanDigits, 10);
+                if (isNaN(val)) return match;
+                return this.numberToFrenchWords(val);
+            });
+
+            // 4. Sigles monétaires isolés
+            s = s.replace(/(?<!francs\s)\b(?:FCFA|F\s*CFA)\b/gi, 'francs');
+
+            return s.trim();
+        },
+
         buildTimelineFromActiveScript: function () {
             const scenes = this.getScenes();
             let accumulatedTime = 0;
             this.timelineScenes = [];
 
             scenes.forEach((s, idx) => {
-                const voiceText = (s.voiceover || '').trim();
+                const rawVoice = (s.voiceover || '').trim();
+                const voiceText = this.normalizeSpeechText(rawVoice);
+                s.voiceover = voiceText;
                 const words = voiceText ? voiceText.split(/\s+/).filter(Boolean).length : 0;
                 // Calcul du temps oral réel : ~2.1 mots / seconde + 1.2s de pause/respiration
                 const voiceMin = words > 0 ? (words / 2.1) + 1.2 : 4.0;
@@ -381,7 +460,8 @@
             if ('speechSynthesis' in window && !this.isRecording) {
                 try {
                     window.speechSynthesis.cancel();
-                    const utter = new SpeechSynthesisUtterance(sc.voiceover);
+                    const cleanVoice = this.normalizeSpeechText(sc.voiceover);
+                    const utter = new SpeechSynthesisUtterance(cleanVoice);
                     utter.lang = 'fr-FR';
                     utter.rate = this.tone === 'urgent' ? 1.15 : (this.tone === 'luxe' ? 0.95 : 1.05);
 
