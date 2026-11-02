@@ -14,7 +14,7 @@
                 <span class="badge badge-ok" style="font-size:.78rem">1 Clic</span>
             </div>
             <p style="margin:0;color:var(--text-soft)">
-                Générez instantanément des visuels promotionnels professionnels pour vos statuts WhatsApp, stories et catalogues.
+                Générez des visuels promotionnels professionnels pour vos statuts WhatsApp, stories et catalogues : pour un <strong>produit spécifique</strong> ou pour <strong>votre boutique en général</strong> !
             </p>
         </div>
 
@@ -61,6 +61,8 @@
         $shopLogo = $shop->logo_path
             ? asset('storage/' . $shop->logo_path)
             : '';
+        $shopUrl = $shop->public_url;
+        $defaultShopDescription = $shop->description ?: ($shop->business_category ? "Votre boutique spécialisée en {$shop->business_category} à Lomé." : "Votre référence shopping en ligne au Togo.");
     @endphp
 
     <!-- Grille Studio : Formulaire à Gauche / Preview Live à Droite -->
@@ -68,10 +70,35 @@
 
         <!-- COLONNE CONTRÔLES -->
         <div>
-            <!-- 1. Format de l'affiche -->
+            <!-- 1. TYPE D'AFFICHE (PRODUIT OU BOUTIQUE ENTIÈRE) -->
+            <div class="card" style="margin-bottom:1.5rem;border-left:4px solid var(--brand-1)">
+                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
+                    <span>🎯</span> Que souhaitez-vous promouvoir ?
+                </h3>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+                    <!-- Option Affiche Produit -->
+                    <label id="modeOptionProduct" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1rem;border:2px solid var(--brand-1);background:var(--bg-soft);border-radius:12px;cursor:pointer;transition:all .2s">
+                        <input type="radio" name="flyer_mode" value="product" checked onchange="setMode('product')" style="display:none">
+                        <span style="font-size:1.8rem">🛍️</span>
+                        <div style="font-weight:700;font-size:.92rem;text-align:center">Un Produit Spécifique</div>
+                        <span style="font-size:.75rem;color:var(--text-soft);text-align:center">Article, prix & réduction flash</span>
+                    </label>
+
+                    <!-- Option Affiche Boutique Complète -->
+                    <label id="modeOptionShop" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1rem;border:2px solid var(--border);background:var(--surface);border-radius:12px;cursor:pointer;transition:all .2s">
+                        <input type="radio" name="flyer_mode" value="shop" onchange="setMode('shop')" style="display:none">
+                        <span style="font-size:1.8rem">🏪</span>
+                        <div style="font-weight:700;font-size:.92rem;text-align:center">La Boutique Complète</div>
+                        <span style="font-size:.75rem;color:var(--text-soft);text-align:center">Logo, slogan, site web & WhatsApp</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 2. Format de diffusion -->
             <div class="card" style="margin-bottom:1.5rem">
                 <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                    <span>📐</span> Format de diffusion
+                    <span>📐</span> Format de l'affiche
                 </h3>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
@@ -91,14 +118,14 @@
                 </div>
             </div>
 
-            <!-- 2. Choix du produit -->
-            <div class="card" style="margin-bottom:1.5rem">
+            <!-- 3. CONFIGURATION MODE PRODUIT -->
+            <div id="cardProductConfig" class="card" style="margin-bottom:1.5rem">
                 <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                    <span>🛍️</span> Produit à mettre en avant
+                    <span>🛍️</span> Paramètres du produit
                 </h3>
 
                 @if ($products->isEmpty())
-                    <p style="font-size:.9rem;color:var(--text-soft)">Aucun produit actif disponible. Veuillez d'abord ajouter un produit.</p>
+                    <p style="font-size:.9rem;color:var(--text-soft)">Aucun produit actif disponible. Vous pouvez basculer sur l'affiche Boutique ci-dessus !</p>
                 @else
                     <div style="margin-bottom:1rem">
                         <label for="selectProduct" class="label" style="font-size:.85rem">Sélectionnez un produit de votre catalogue</label>
@@ -129,10 +156,53 @@
                 </div>
             </div>
 
-            <!-- 3. Thème & Style Graphique -->
+            <!-- 4. CONFIGURATION MODE BOUTIQUE (QUAND ON CHOISIT TOUTE LA BOUTIQUE) -->
+            <div id="cardShopConfig" class="card" style="margin-bottom:1.5rem;display:none">
+                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
+                    <span>🏪</span> Présentation de la Boutique
+                </h3>
+
+                <div style="margin-bottom:1rem">
+                    <label for="inputShopHeadline" class="label" style="font-size:.85rem">Titre d'accroche principal</label>
+                    <input type="text" id="inputShopHeadline" class="input" value="BIENVENUE CHEZ {{ strtoupper($shop->name) }}" placeholder="Ex. BIENVENUE DANS NOTRE BOUTIQUE" oninput="updateFlyer()">
+                </div>
+
+                <div style="margin-bottom:1rem">
+                    <label for="inputShopTagline" class="label" style="font-size:.85rem">Slogan ou description de votre boutique</label>
+                    <textarea id="inputShopTagline" class="input" rows="2" style="resize:vertical" oninput="updateFlyer()">{{ $defaultShopDescription }}</textarea>
+                </div>
+
+                <!-- 3 Points Forts / Avantages Boutique -->
+                <div style="margin-bottom:1rem">
+                    <label class="label" style="font-size:.85rem">3 Points forts mis en avant</label>
+                    <div style="display:flex;flex-direction:column;gap:.5rem">
+                        <input type="text" id="inputShopFeature1" class="input" value="🚚 Livraison rapide partout au Togo" oninput="updateFlyer()">
+                        <input type="text" id="inputShopFeature2" class="input" value="💵 Paiement sécurisé & à la livraison" oninput="updateFlyer()">
+                        <input type="text" id="inputShopFeature3" class="input" value="⭐ Produits de qualité 100% garantis" oninput="updateFlyer()">
+                    </div>
+                </div>
+
+                <!-- Image personnalisée ou Logo -->
+                <div style="margin-bottom:.5rem">
+                    <label class="label" style="font-size:.85rem">Visuel central de l'affiche</label>
+                    <div style="display:flex;align-items:center;gap:.75rem">
+                        <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:.4rem">
+                            <x-icon name="upload" size="14" />
+                            <span>Importer une photo (vitrine, showroom)</span>
+                            <input type="file" id="customShopImageInput" accept="image/*" onchange="handleCustomShopImage(event)" style="display:none">
+                        </label>
+                        <button type="button" onclick="resetToShopLogo()" class="btn btn-ghost btn-sm" style="font-size:.8rem;color:var(--text-soft)">
+                            Réinitialiser au logo
+                        </button>
+                    </div>
+                    <small style="color:var(--text-soft);font-size:.78rem;display:block;margin-top:.4rem">Par défaut, le logo de votre boutique est élégamment mis en valeur au centre.</small>
+                </div>
+            </div>
+
+            <!-- 5. Thème & Style Graphique -->
             <div class="card" style="margin-bottom:1.5rem">
                 <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                    <span>✨</span> Thème Visuel & Couleurs
+                    <span>✨</span> Thème Visuel & Ambiance
                 </h3>
 
                 <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:.6rem;margin-bottom:1.2rem">
@@ -173,10 +243,10 @@
                     </button>
                 </div>
 
-                <!-- 4. Badge Promo / Sticker -->
+                <!-- 6. Badge Promo / Sticker -->
                 <div style="margin-bottom:1rem">
                     <label class="label" style="font-size:.85rem">Badge accroche promotionnel</label>
-                    <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem">
+                    <div id="badgePresetsProduct" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem">
                         <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🔥 PROMO FLASH')">🔥 PROMO FLASH</button>
                         <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('⚡ NOUVEL ARRIVAGE')">⚡ NOUVEL ARRIVAGE</button>
                         <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('💥 OFFRE SPÉCIALE')">💥 OFFRE SPÉCIALE</button>
@@ -184,16 +254,24 @@
                         <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🎁 LIQUIDATION')">🎁 LIQUIDATION</button>
                         <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🚚 LIVRAISON GRATUITE')">🚚 LIVRAISON GRATUITE</button>
                     </div>
+                    <div id="badgePresetsShop" style="display:none;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem">
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🏪 BOUTIQUE EN LIGNE')">🏪 BOUTIQUE EN LIGNE</button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('✨ NOUVELLE COLLECTION')">✨ NOUVELLE COLLECTION</button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🚀 COMMANDEZ EN LIGNE')">🚀 COMMANDEZ EN LIGNE</button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('📍 DISPONIBLE À LOMÉ')">📍 DISPONIBLE À LOMÉ</button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🚚 EXPÉDITION PARTOUT')">🚚 EXPÉDITION PARTOUT</button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('⭐ SERVICE DE CONFIANCE')">⭐ SERVICE DE CONFIANCE</button>
+                    </div>
                     <input type="text" id="inputBadge" class="input" placeholder="Ou tapez votre propre badge..." oninput="updateFlyer()">
                 </div>
 
-                <!-- 5. Accroche / Slogan -->
+                <!-- 7. Accroche / Sous-titre -->
                 <div style="margin-bottom:1rem">
                     <label for="inputHook" class="label" style="font-size:.85rem">Phrase d'urgence ou sous-titre</label>
                     <input type="text" id="inputHook" class="input" value="Stock très limité — Faites vite ! ⏳" placeholder="Ex. Livraison rapide partout à Lomé" oninput="updateFlyer()">
                 </div>
 
-                <!-- 6. Appel à l'action WhatsApp -->
+                <!-- 8. Appel à l'action WhatsApp -->
                 <div>
                     <label for="inputCta" class="label" style="font-size:.85rem">Bouton de contact / WhatsApp</label>
                     <input type="text" id="inputCta" class="input" value="Commandez vite au {{ $shop->whatsapp ?: $shop->phone }}" placeholder="Ex. WhatsApp : 90123456" oninput="updateFlyer()">
@@ -238,17 +316,20 @@
 </div>
 
 <script>
-    // Données des produits injectées depuis Blade
+    // Données injectées
     const productsData = @json($productsJson);
     const shopName = @json($shop->name);
     const shopWhatsapp = @json($shop->whatsapp ?: $shop->phone ?: '');
     const shopLogoUrl = @json($shopLogo);
+    const shopUrl = @json($shopUrl);
 
+    let currentMode = 'product'; // 'product' ou 'shop'
     let currentFormat = 'story'; // 'story' (9:16) ou 'square' (1:1)
     let currentTheme = 'neon';
     let currentProduct = null;
     let loadedProductImg = null;
     let loadedLogoImg = null;
+    let customShopImg = null;
 
     // Palettes de thèmes
     const themes = {
@@ -350,23 +431,11 @@
             const initialId = @json($selectedProductId) || productsData[0].id;
             onProductSelect(initialId);
         } else {
-            // Produit démo si catalogue vide
-            currentProduct = {
-                id: 0,
-                title: 'Sneakers Streetwear Limited',
-                price: 25000,
-                compare_at_price: 35000,
-                image_url: '',
-                category: 'Tendance'
-            };
-            document.getElementById('inputProductTitle').value = currentProduct.title;
-            document.getElementById('inputPrice').value = currentProduct.price;
-            document.getElementById('inputOldPrice').value = currentProduct.compare_at_price;
-            document.getElementById('inputBadge').value = '🔥 PROMO FLASH';
-            updateFlyer();
+            // Si aucun produit, basculer par défaut sur l'affiche Boutique
+            setMode('shop');
         }
 
-        // Pré-chargement du logo
+        // Pré-chargement du logo officiel
         if (shopLogoUrl) {
             const img = new Image();
             img.crossOrigin = 'anonymous';
@@ -374,6 +443,48 @@
             img.src = shopLogoUrl;
         }
     });
+
+    // Basculement Mode Produit / Mode Boutique
+    function setMode(mode) {
+        currentMode = mode;
+        const optProd = document.getElementById('modeOptionProduct');
+        const optShop = document.getElementById('modeOptionShop');
+        const cardProd = document.getElementById('cardProductConfig');
+        const cardShop = document.getElementById('cardShopConfig');
+        const badgePresetsProd = document.getElementById('badgePresetsProduct');
+        const badgePresetsShop = document.getElementById('badgePresetsShop');
+
+        if (mode === 'product') {
+            optProd.style.borderColor = 'var(--brand-1)';
+            optProd.style.background = 'var(--bg-soft)';
+            optShop.style.borderColor = 'var(--border)';
+            optShop.style.background = 'var(--surface)';
+
+            cardProd.style.display = 'block';
+            cardShop.style.display = 'none';
+            badgePresetsProd.style.display = 'flex';
+            badgePresetsShop.style.display = 'none';
+
+            document.getElementById('inputBadge').value = '🔥 PROMO FLASH';
+            document.getElementById('inputHook').value = 'Stock très limité — Faites vite ! ⏳';
+            document.getElementById('inputCta').value = `Commandez vite au ${shopWhatsapp}`;
+        } else {
+            optShop.style.borderColor = 'var(--brand-1)';
+            optShop.style.background = 'var(--bg-soft)';
+            optProd.style.borderColor = 'var(--border)';
+            optProd.style.background = 'var(--surface)';
+
+            cardShop.style.display = 'block';
+            cardProd.style.display = 'none';
+            badgePresetsShop.style.display = 'flex';
+            badgePresetsProd.style.display = 'none';
+
+            document.getElementById('inputBadge').value = '🏪 BOUTIQUE EN LIGNE';
+            document.getElementById('inputHook').value = 'Découvrez tous nos articles et nouveautés en 1 clic !';
+            document.getElementById('inputCta').value = `Visiter la boutique • WhatsApp : ${shopWhatsapp}`;
+        }
+        updateFlyer();
+    }
 
     function setFormat(fmt) {
         currentFormat = fmt;
@@ -448,7 +559,30 @@
         }
     }
 
-    // Dessin en temps réel sur le canvas HTML5
+    // Gestion de l'import d'une image personnalisée pour l'affiche boutique
+    function handleCustomShopImage(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const img = new Image();
+            img.onload = function() {
+                customShopImg = img;
+                updateFlyer();
+            };
+            img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function resetToShopLogo() {
+        customShopImg = null;
+        document.getElementById('customShopImageInput').value = '';
+        updateFlyer();
+    }
+
+    // Moteur de rendu graphique Canvas
     function updateFlyer() {
         const canvas = document.getElementById('flyerCanvas');
         if (!canvas) return;
@@ -463,7 +597,32 @@
         const ctx = canvas.getContext('2d');
         const theme = themes[currentTheme] || themes.neon;
 
-        // Récupération des valeurs
+        // 1. Fond et Halos lumineux
+        ctx.fillStyle = theme.bgDark;
+        ctx.fillRect(0, 0, W, H);
+
+        const grad1 = ctx.createRadialGradient(W * 0.2, H * 0.2, 50, W * 0.2, H * 0.2, 650);
+        grad1.addColorStop(0, hexToRgba(theme.bgGlow, 0.45));
+        grad1.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad1;
+        ctx.fillRect(0, 0, W, H);
+
+        const grad2 = ctx.createRadialGradient(W * 0.8, H * 0.8, 80, W * 0.8, H * 0.8, 750);
+        grad2.addColorStop(0, hexToRgba(theme.bgGlow2, 0.4));
+        grad2.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad2;
+        ctx.fillRect(0, 0, W, H);
+
+        // Distinction selon le MODE :
+        if (currentMode === 'product') {
+            renderProductFlyer(ctx, W, H, isStory, theme);
+        } else {
+            renderShopFlyer(ctx, W, H, isStory, theme);
+        }
+    }
+
+    // RENDU MODE 1 : AFFICHE PRODUIT SPÉCIFIQUE
+    function renderProductFlyer(ctx, W, H, isStory, theme) {
         const title = document.getElementById('inputProductTitle').value || 'Article d\'exception';
         const price = parseInt(document.getElementById('inputPrice').value) || 0;
         const oldPrice = parseInt(document.getElementById('inputOldPrice').value) || 0;
@@ -471,24 +630,7 @@
         const hookText = document.getElementById('inputHook').value || 'Stock très limité — Faites vite ! ⏳';
         const ctaText = document.getElementById('inputCta').value || 'Commandez vite sur WhatsApp';
 
-        // 1. Fond
-        ctx.fillStyle = theme.bgDark;
-        ctx.fillRect(0, 0, W, H);
-
-        // Halos lumineux de fond
-        const grad1 = ctx.createRadialGradient(W * 0.2, H * 0.2, 50, W * 0.2, H * 0.2, 600);
-        grad1.addColorStop(0, hexToRgba(theme.bgGlow, 0.45));
-        grad1.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad1;
-        ctx.fillRect(0, 0, W, H);
-
-        const grad2 = ctx.createRadialGradient(W * 0.8, H * 0.8, 80, W * 0.8, H * 0.8, 700);
-        grad2.addColorStop(0, hexToRgba(theme.bgGlow2, 0.4));
-        grad2.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad2;
-        ctx.fillRect(0, 0, W, H);
-
-        // 2. En-tête : Boutique & Logo
+        // En-tête : Boutique & Logo
         const topY = isStory ? 90 : 60;
         ctx.save();
         ctx.fillStyle = theme.textColor;
@@ -501,7 +643,7 @@
         ctx.fillText('BOUTIQUE OFFICIELLE CERTIFIÉE', W / 2, topY + 80);
         ctx.restore();
 
-        // 3. Cadre Photo Produit
+        // Cadre Photo Produit
         let imgX, imgY, imgSize;
         if (isStory) {
             imgSize = 780;
@@ -513,7 +655,6 @@
             imgY = 170;
         }
 
-        // Ombre portée sous le produit
         ctx.save();
         ctx.shadowColor = hexToRgba(theme.bgGlow, 0.35);
         ctx.shadowBlur = 40;
@@ -523,18 +664,16 @@
         ctx.fill();
         ctx.restore();
 
-        // Bordure du cadre photo
         ctx.save();
         drawRoundedRect(ctx, imgX, imgY, imgSize, imgSize, 36);
         ctx.lineWidth = 3;
         ctx.strokeStyle = theme.cardBorder;
         ctx.stroke();
-        ctx.clip(); // Clip pour l'image
+        ctx.clip();
 
         if (loadedProductImg) {
             drawImageCover(ctx, loadedProductImg, imgX, imgY, imgSize, imgSize);
         } else {
-            // Placeholder stylisé si pas d'image
             ctx.fillStyle = '#1e293b';
             ctx.fillRect(imgX, imgY, imgSize, imgSize);
             ctx.fillStyle = '#94a3b8';
@@ -544,7 +683,7 @@
         }
         ctx.restore();
 
-        // 4. Badge Promo Flottant sur l'image (Ex: "-30%" ou "PROMO FLASH")
+        // Badge Promo Flottant sur l'image
         if (badgeText) {
             ctx.save();
             ctx.font = '800 28px "Plus Jakarta Sans", sans-serif';
@@ -566,7 +705,7 @@
             ctx.restore();
         }
 
-        // Calcul du pourcentage de réduction si dispo
+        // Pourcentage de réduction
         if (oldPrice > price && price > 0) {
             const discountPercent = Math.round(((oldPrice - price) / oldPrice) * 100);
             const discText = `-${discountPercent}%`;
@@ -589,10 +728,9 @@
             ctx.restore();
         }
 
-        // 5. Bloc Informations : Titre, Prix, Hook
+        // Bloc Titre & Prix
         let infoY = isStory ? imgY + imgSize + 60 : imgY + imgSize + 35;
 
-        // Titre du produit (avec retour à la ligne automatique)
         ctx.save();
         ctx.fillStyle = theme.textColor;
         ctx.font = '800 48px "Outfit", sans-serif';
@@ -600,7 +738,6 @@
         wrapText(ctx, title, W / 2, infoY, W - 140, 56);
         ctx.restore();
 
-        // Prix & Ancien Prix
         const priceY = isStory ? infoY + 140 : infoY + 105;
         const priceFormatted = formatCFA(price);
 
@@ -609,7 +746,6 @@
 
         if (oldPrice > price) {
             const oldFormatted = formatCFA(oldPrice);
-            // Affichage combiné Ancien prix barré + Nouveau prix
             ctx.font = '600 36px "Plus Jakarta Sans", sans-serif';
             ctx.fillStyle = theme.oldPriceColor;
             const oldWidth = ctx.measureText(oldFormatted).width;
@@ -621,14 +757,12 @@
             const totalW = oldWidth + newWidth + 40;
             const startX = (W - totalW) / 2;
 
-            // Ancien prix barré
             ctx.font = '600 36px "Plus Jakarta Sans", sans-serif';
             ctx.fillStyle = theme.oldPriceColor;
             ctx.textAlign = 'left';
             const oldX = startX;
             ctx.fillText(oldFormatted, oldX, priceY);
 
-            // Barre sur l'ancien prix
             ctx.lineWidth = 4;
             ctx.strokeStyle = '#ef4444';
             ctx.beginPath();
@@ -636,7 +770,6 @@
             ctx.lineTo(oldX + oldWidth + 6, priceY - 12);
             ctx.stroke();
 
-            // Nouveau prix éclatant
             ctx.font = '900 68px "Outfit", sans-serif';
             ctx.fillStyle = theme.priceColor;
             ctx.fillText(priceFormatted, oldX + oldWidth + 40, priceY + 8);
@@ -647,7 +780,7 @@
         }
         ctx.restore();
 
-        // Phrase d'accroche / Urgence
+        // Phrase d'accroche
         const hookY = isStory ? priceY + 85 : priceY + 65;
         if (hookText) {
             ctx.save();
@@ -658,7 +791,7 @@
             ctx.restore();
         }
 
-        // 6. Ruban Appel à l'action WhatsApp au bas de l'affiche
+        // Appel à l'action WhatsApp
         const ctaH = isStory ? 130 : 100;
         const ctaW = W - 140;
         const ctaX = 70;
@@ -679,13 +812,168 @@
         ctx.fillText('💬 ' + ctaText, W / 2, ctaY + ctaH / 2);
         ctx.restore();
 
-        // 7. Signature discrète Zanika en bas
+        // Signature bas
         const footY = isStory ? H - 45 : H - 20;
         ctx.save();
         ctx.fillStyle = hexToRgba(theme.textSub, 0.6);
         ctx.font = '600 20px "Plus Jakarta Sans", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Boutique en ligne propulsée par Zanika • Paiement & Livraison express', W / 2, footY);
+        ctx.restore();
+    }
+
+    // RENDU MODE 2 : AFFICHE BOUTIQUE & MARQUE COMPLÈTE
+    function renderShopFlyer(ctx, W, H, isStory, theme) {
+        const headline = document.getElementById('inputShopHeadline').value || `BIENVENUE CHEZ ${shopName.toUpperCase()}`;
+        const tagline = document.getElementById('inputShopTagline').value || 'Votre référence shopping en ligne au Togo.';
+        const feat1 = document.getElementById('inputShopFeature1').value || '🚚 Livraison rapide partout au Togo';
+        const feat2 = document.getElementById('inputShopFeature2').value || '💵 Paiement sécurisé & à la livraison';
+        const feat3 = document.getElementById('inputShopFeature3').value || '⭐ Produits de qualité garantis';
+        const badgeText = document.getElementById('inputBadge').value || '🏪 BOUTIQUE EN LIGNE';
+        const ctaText = document.getElementById('inputCta').value || `Visiter la boutique • WhatsApp : ${shopWhatsapp}`;
+
+        // 1. Badge haut
+        const badgeY = isStory ? 100 : 70;
+        if (badgeText) {
+            ctx.save();
+            ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
+            const badgeW = ctx.measureText(badgeText).width + 50;
+            const badgeH = 54;
+            const badgeX = (W - badgeW) / 2;
+
+            ctx.shadowColor = hexToRgba(theme.badgeBg, 0.4);
+            ctx.shadowBlur = 20;
+            drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 27);
+            ctx.fillStyle = theme.badgeBg;
+            ctx.fill();
+
+            ctx.fillStyle = theme.badgeText;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(badgeText, W / 2, badgeY + badgeH / 2);
+            ctx.restore();
+        }
+
+        // 2. Nom de la Boutique Géant
+        const titleY = isStory ? badgeY + 140 : badgeY + 110;
+        ctx.save();
+        ctx.fillStyle = theme.textColor;
+        ctx.font = '900 64px "Outfit", sans-serif';
+        ctx.textAlign = 'center';
+        wrapText(ctx, shopName.toUpperCase(), W / 2, titleY, W - 160, 72);
+        ctx.restore();
+
+        // 3. Grand Médaillon Central (Logo officiel ou Photo importée de la boutique)
+        let emblemY = isStory ? titleY + 120 : titleY + 90;
+        let emblemSize = isStory ? 440 : 320;
+        let emblemX = (W - emblemSize) / 2;
+
+        ctx.save();
+        ctx.shadowColor = hexToRgba(theme.bgGlow, 0.45);
+        ctx.shadowBlur = 40;
+        ctx.shadowOffsetY = 15;
+        drawRoundedRect(ctx, emblemX, emblemY, emblemSize, emblemSize, 40);
+        ctx.fillStyle = theme.cardBg;
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        drawRoundedRect(ctx, emblemX, emblemY, emblemSize, emblemSize, 40);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = theme.cardBorder;
+        ctx.stroke();
+        ctx.clip();
+
+        // Priorité à l'image importée personnalisée, sinon logo officiel, sinon monogramme
+        if (customShopImg) {
+            drawImageCover(ctx, customShopImg, emblemX, emblemY, emblemSize, emblemSize);
+        } else if (loadedLogoImg) {
+            drawImageCover(ctx, loadedLogoImg, emblemX, emblemY, emblemSize, emblemSize);
+        } else {
+            // Monogramme élégant avec initiale
+            ctx.fillStyle = hexToRgba(theme.bgGlow, 0.15);
+            ctx.fillRect(emblemX, emblemY, emblemSize, emblemSize);
+            ctx.fillStyle = theme.priceColor;
+            ctx.font = '900 160px "Outfit", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(shopName.substring(0, 1).toUpperCase(), emblemX + emblemSize / 2, emblemY + emblemSize / 2);
+        }
+        ctx.restore();
+
+        // 4. Slogan & Présentation
+        const sloganY = isStory ? emblemY + emblemSize + 80 : emblemY + emblemSize + 55;
+        ctx.save();
+        ctx.fillStyle = theme.textColor;
+        ctx.font = '600 34px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        wrapText(ctx, tagline, W / 2, sloganY, W - 180, 48);
+        ctx.restore();
+
+        // 5. 3 Puces de Réassurance / Avantages Boutique
+        const featsStartY = isStory ? sloganY + 140 : sloganY + 85;
+        const featsList = [feat1, feat2, feat3].filter(Boolean);
+        const featCardW = W - 160;
+        const featCardH = isStory ? 64 : 52;
+        const featGap = isStory ? 18 : 12;
+
+        featsList.forEach((feat, idx) => {
+            const fY = featsStartY + idx * (featCardH + featGap);
+            ctx.save();
+            drawRoundedRect(ctx, 80, fY, featCardW, featCardH, 16);
+            ctx.fillStyle = hexToRgba(theme.cardBg, 0.9);
+            ctx.fill();
+            ctx.strokeStyle = theme.cardBorder;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.fillStyle = theme.textColor;
+            ctx.font = isStory ? '700 28px "Plus Jakarta Sans", sans-serif' : '700 24px "Plus Jakarta Sans", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(feat, W / 2, fY + featCardH / 2);
+            ctx.restore();
+        });
+
+        // 6. Ruban Lien du Site Web
+        if (isStory) {
+            const linkY = featsStartY + (featsList.length * (featCardH + featGap)) + 25;
+            ctx.save();
+            ctx.fillStyle = theme.priceColor;
+            ctx.font = '700 28px "Outfit", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`🌐 Visitez notre boutique : ${shopUrl.replace(/^https?:\/\//, '')}`, W / 2, linkY);
+            ctx.restore();
+        }
+
+        // 7. Bouton Appel à l'action WhatsApp en bas
+        const ctaH = isStory ? 130 : 96;
+        const ctaW = W - 140;
+        const ctaX = 70;
+        const ctaY = isStory ? H - 210 : H - 135;
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(37, 211, 102, 0.45)';
+        ctx.shadowBlur = 30;
+        ctx.shadowOffsetY = 10;
+        drawRoundedRect(ctx, ctaX, ctaY, ctaW, ctaH, ctaH / 2);
+        ctx.fillStyle = theme.ctaBg;
+        ctx.fill();
+
+        ctx.fillStyle = theme.ctaText;
+        ctx.font = isStory ? '800 32px "Plus Jakarta Sans", sans-serif' : '800 28px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💬 ' + ctaText, W / 2, ctaY + ctaH / 2);
+        ctx.restore();
+
+        // 8. Signature bas
+        const footY = isStory ? H - 45 : H - 20;
+        ctx.save();
+        ctx.fillStyle = hexToRgba(theme.textSub, 0.6);
+        ctx.font = '600 20px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Boutique officielle propulsée par Zanika • Paiement sécurisé & Livraison express', W / 2, footY);
         ctx.restore();
     }
 
@@ -769,9 +1057,15 @@
         const canvas = document.getElementById('flyerCanvas');
         if (!canvas) return;
 
-        const title = (document.getElementById('inputProductTitle').value || 'Affiche-Promo').replace(/[^a-zA-Z0-9_-]/g, '_');
-        const filename = `Affiche_${title}_${currentFormat}.png`;
+        let namePrefix = 'Affiche';
+        if (currentMode === 'shop') {
+            namePrefix = `Boutique_${shopName.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        } else {
+            const title = (document.getElementById('inputProductTitle').value || 'Produit').replace(/[^a-zA-Z0-9_-]/g, '_');
+            namePrefix = `Produit_${title}`;
+        }
 
+        const filename = `${namePrefix}_${currentFormat}.png`;
         const link = document.createElement('a');
         link.download = filename;
         link.href = canvas.toDataURL('image/png', 1.0);
@@ -780,23 +1074,38 @@
 
     // Copie du texte promotionnel WhatsApp
     function copyWhatsAppPromoText() {
-        const title = document.getElementById('inputProductTitle').value || 'Notre sélection';
-        const price = formatCFA(document.getElementById('inputPrice').value);
-        const oldPriceVal = document.getElementById('inputOldPrice').value;
-        const oldPrice = oldPriceVal ? formatCFA(oldPriceVal) : null;
-        const badge = document.getElementById('inputBadge').value || 'PROMO';
+        let text = '';
 
-        let text = `${badge} chez *${shopName}* ! 🎉\n\n`
-            + `Découvrez *${title}* !\n`;
+        if (currentMode === 'shop') {
+            const tagline = document.getElementById('inputShopTagline').value || 'Votre référence shopping en ligne au Togo.';
+            const badge = document.getElementById('inputBadge').value || '🏪 NOUVELLE BOUTIQUE';
 
-        if (oldPrice) {
-            text += `💰 Prix promo : *${price}* (au lieu de ~${oldPrice}~)\n\n`;
+            text = `✨ *${badge} : ${shopName.toUpperCase()} !* ✨\n\n`
+                + `👋 ${tagline}\n\n`
+                + `🛍️ Visitez notre catalogue complet et commandez directement en ligne :\n`
+                + `👉 ${shopUrl}\n\n`
+                + `🚚 Livraison rapide partout à Lomé et au Togo\n`
+                + `💵 Paiement sécurisé à la livraison\n\n`
+                + `📲 Contact & Commandes WhatsApp : *${shopWhatsapp}*`;
         } else {
-            text += `💰 Prix : *${price}*\n\n`;
-        }
+            const title = document.getElementById('inputProductTitle').value || 'Notre sélection';
+            const price = formatCFA(document.getElementById('inputPrice').value);
+            const oldPriceVal = document.getElementById('inputOldPrice').value;
+            const oldPrice = oldPriceVal ? formatCFA(oldPriceVal) : null;
+            const badge = document.getElementById('inputBadge').value || 'PROMO';
 
-        text += `📲 Pour commander ou réserver tout de suite, écrivez-nous au : *${shopWhatsapp}*\n`
-            + `🚀 Quantités limitées, livraison rapide !`;
+            text = `${badge} chez *${shopName}* ! 🎉\n\n`
+                + `Découvrez *${title}* !\n`;
+
+            if (oldPrice) {
+                text += `💰 Prix promo : *${price}* (au lieu de ~${oldPrice}~)\n\n`;
+            } else {
+                text += `💰 Prix : *${price}*\n\n`;
+            }
+
+            text += `📲 Pour commander ou réserver tout de suite, écrivez-nous au : *${shopWhatsapp}*\n`
+                + `🚀 Quantités limitées, livraison rapide !`;
+        }
 
         navigator.clipboard.writeText(text).then(() => {
             alert("Texte d'annonce copié dans le presse-papier ! Vous pouvez le coller avec l'affiche dans votre statut WhatsApp.");
@@ -807,9 +1116,14 @@
 
     // Ouverture de WhatsApp
     function shareOnWhatsApp() {
-        const title = document.getElementById('inputProductTitle').value || 'Notre sélection';
-        const price = formatCFA(document.getElementById('inputPrice').value);
-        const msg = encodeURIComponent(`🔥 PROMO chez *${shopName}* : *${title}* à seulement *${price}* !`);
+        let msg = '';
+        if (currentMode === 'shop') {
+            msg = encodeURIComponent(`🏪 Découvrez la boutique en ligne *${shopName}* ! Visitez le catalogue ici : ${shopUrl}`);
+        } else {
+            const title = document.getElementById('inputProductTitle').value || 'Notre sélection';
+            const price = formatCFA(document.getElementById('inputPrice').value);
+            msg = encodeURIComponent(`🔥 PROMO chez *${shopName}* : *${title}* à seulement *${price}* !`);
+        }
         window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
     }
 </script>
