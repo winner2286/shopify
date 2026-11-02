@@ -281,13 +281,19 @@
             function toggleNavMoreMenu(e) {
                 if (e) e.stopPropagation();
                 var menu = document.getElementById('nav-more-menu');
-                if (menu) menu.classList.toggle('open');
+                var trigger = document.querySelector('.nav-more-trigger');
+                if (menu) {
+                    var isOpen = menu.classList.toggle('open');
+                    if (trigger) trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                }
             }
             document.addEventListener('click', function(e) {
                 var wrap = document.getElementById('nav-more-dropdown');
                 if (wrap && !wrap.contains(e.target)) {
                     var menu = document.getElementById('nav-more-menu');
+                    var trigger = document.querySelector('.nav-more-trigger');
                     if (menu) menu.classList.remove('open');
+                    if (trigger) trigger.setAttribute('aria-expanded', 'false');
                 }
             });
         </script>
