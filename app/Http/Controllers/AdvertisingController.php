@@ -447,4 +447,79 @@ class AdvertisingController extends Controller
             'message' => 'Export vidéo enregistré avec succès !',
         ]);
     }
+
+    /**
+     * Enregistre un fichier audio personnalisé (voix commerçant ou musique MP3)
+     */
+    public function uploadCustomAudio(Request $request, Advertisement $ad)
+    {
+        $shop = $request->user()->shop;
+
+        if ($ad->shop_id !== $shop->id) {
+            return response()->json(['error' => 'Non autorisé'], 403);
+        }
+
+        $request->validate([
+            'audio' => ['required', 'file', 'max:25600'], // max 25MB
+            'type' => ['required', 'string', 'in:voice,music'],
+        ]);
+
+        $file = $request->file('audio');
+        $type = $request->input('type');
+
+        $ext = $file->getClientOriginalExtension() ?: ($type === 'music' ? 'mp3' : 'webm');
+        $fileName = 'ad_' . $ad->id . '_' . $type . '_' . time() . '.' . $ext;
+        $path = $file->storeAs('ads/audio', $fileName, 'public');
+
+        $url = Storage::disk('public')->url($path);
+
+        $vc = $ad->visual_config ?? [];
+        if ($type === 'voice') {
+            $vc['custom_voice_url'] = $url;
+            $vc['voice_mode'] = 'custom';
+        } else {
+            $vc['custom_music_url'] = $url;
+            $vc['music_mode'] = 'custom';
+        }
+
+        $ad->update(['visual_config' => $vc]);
+
+        return response()->json([
+            'success' => true,
+            'url' => $url,
+            'type' => $type,
+            'message' => 'Fichier audio enregistré avec succès !',
+        ]);
+    }
+
+    /**
+     * Réinitialise l'audio personnalisé pour revenir aux presets / voix IA
+     */
+    public function resetCustomAudio(Request $request, Advertisement $ad)
+    {
+        $shop = $request->user()->shop;
+
+        if ($ad->shop_id !== $shop->id) {
+            return response()->json(['error' => 'Non autorisé'], 403);
+        }
+
+        $type = $request->input('type', 'voice');
+        $vc = $ad->visual_config ?? [];
+
+        if ($type === 'voice') {
+            unset($vc['custom_voice_url']);
+            $vc['voice_mode'] = 'ai';
+        } else {
+            unset($vc['custom_music_url']);
+            $vc['music_mode'] = 'preset';
+        }
+
+        $ad->update(['visual_config' => $vc]);
+
+        return response()->json([
+            'success' => true,
+            'type' => $type,
+            'message' => 'Configuration audio réinitialisée.',
+        ]);
+    }
 }

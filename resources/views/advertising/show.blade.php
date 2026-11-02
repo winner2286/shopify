@@ -18,6 +18,12 @@
                     $isStore = ! empty($vc['is_store_presentation']);
                     $productsCount = count($vc['products'] ?? []);
                     $shopPhone = $shop->phone ?: ($shop->whatsapp ?: '');
+                    $hasCustomVoice = ! empty($vc['custom_voice_url']);
+                    $customVoiceUrl = $vc['custom_voice_url'] ?? '';
+                    $hasCustomMusic = ! empty($vc['custom_music_url']);
+                    $customMusicUrl = $vc['custom_music_url'] ?? '';
+                    $musicTrack = $vc['music_track'] ?? 'afrobeat';
+                    $voiceMode = $vc['voice_mode'] ?? ($hasCustomVoice ? 'custom' : 'ai');
                 @endphp
                 <span class="badge badge-ok" style="text-transform:uppercase">{{ $angle }}</span>
                 <span class="badge badge-primary">{{ ucfirst($tone) }}</span>
@@ -214,6 +220,137 @@
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+                </div>
+
+                <!-- SECTION VOIX & AMBIANCE MUSICALE (NOUVELLE FONCTIONNALITÉ) -->
+                <div class="settings-box studio-audio-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;flex-wrap:wrap;gap:.4rem">
+                        <h3 class="settings-title" style="margin:0;display:flex;align-items:center;gap:.4rem">
+                            <span style="color:var(--brand-1)">🎙️</span>
+                            <span>Voix-Off & Musique de la Vidéo</span>
+                        </h3>
+                        <span id="ad-custom-audio-badge" class="badge {{ $hasCustomVoice ? 'badge-ok' : 'badge-draft' }}" style="font-size:.68rem">
+                            {{ $hasCustomVoice ? 'Voix commerçant active' : 'Voix IA active' }}
+                        </span>
+                    </div>
+                    <p class="settings-desc">
+                        Faites votre propre voix-off pour un impact maximal, ou laissez l'IA parler à votre place :
+                    </p>
+
+                    <!-- Sélecteur de mode de voix -->
+                    <div class="voice-mode-tabs" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem">
+                        <button type="button" id="btn-voice-mode-ai" class="btn-audio-tab {{ ! $hasCustomVoice ? 'active' : '' }}" onclick="switchVoiceMode('ai')">
+                            <div style="font-size:1.15rem;margin-bottom:.15rem">🤖</div>
+                            <strong style="font-size:.85rem;display:block">Voix-Off IA</strong>
+                            <small style="font-size:.7rem;opacity:.8">Synthèse automatique</small>
+                        </button>
+
+                        <button type="button" id="btn-voice-mode-custom" class="btn-audio-tab {{ $hasCustomVoice ? 'active' : '' }}" onclick="switchVoiceMode('custom')">
+                            <div style="font-size:1.15rem;margin-bottom:.15rem">🎙️</div>
+                            <strong style="font-size:.85rem;display:block">Ma Propre Voix</strong>
+                            <small style="font-size:.7rem;opacity:.8">Micro ou Note vocale</small>
+                        </button>
+                    </div>
+
+                    <!-- PANNEAU : MA PROPRE VOIX (ENREGISTREUR + IMPORT) -->
+                    <div id="panel-custom-voice" style="{{ ! $hasCustomVoice ? 'display:none;' : '' }};background:var(--bg-soft);padding:1rem;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:1rem">
+                        <!-- Enregistreur Micro Direct -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;margin-bottom:.85rem">
+                            <div>
+                                <strong style="font-size:.88rem;display:block;margin-bottom:.15rem">Parler au micro en direct :</strong>
+                                <span style="font-size:.75rem;color:var(--text-soft)">Appuyez pour enregistrer votre voix comme une note vocale</span>
+                            </div>
+                            
+                            <div style="display:flex;align-items:center;gap:.5rem">
+                                <button type="button" id="btn-record-mic" class="btn-record-voice" onclick="toggleVoiceRecording()">
+                                    <span class="record-dot"></span>
+                                    <span id="btn-record-label">Enregistrer</span>
+                                </button>
+                                <span id="record-timer" class="record-timer-text" style="display:none">00:00</span>
+                            </div>
+                        </div>
+
+                        <!-- Ligne de séparation ou -->
+                        <div style="display:flex;align-items:center;gap:.6rem;margin:.75rem 0;color:var(--text-soft);font-size:.75rem">
+                            <div style="flex:1;height:1px;background:var(--border)"></div>
+                            <span>OU</span>
+                            <div style="flex:1;height:1px;background:var(--border)"></div>
+                        </div>
+
+                        <!-- Import d'un fichier audio (WhatsApp, MP3, M4A) -->
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem">
+                            <div>
+                                <strong style="font-size:.88rem;display:block;margin-bottom:.15rem">Importer une note vocale / audio :</strong>
+                                <span style="font-size:.75rem;color:var(--text-soft)">WhatsApp, MP3, M4A, OGG, WAV jusqu'à 25 Mo</span>
+                            </div>
+
+                            <label class="btn btn-ghost btn-sm" style="cursor:pointer;border:1px solid var(--border);display:inline-flex;align-items:center;gap:.35rem">
+                                <x-icon name="upload" :size="14" />
+                                <span>Choisir un fichier</span>
+                                <input type="file" id="input-custom-voice-file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac,.opus" style="display:none" onchange="handleVoiceFileUpload(this)">
+                            </label>
+                        </div>
+
+                        <!-- Aperçu et statut de l'audio enregistré -->
+                        <div id="custom-voice-preview" style="{{ $hasCustomVoice ? 'display:flex;' : 'display:none;' }};align-items:center;justify-content:space-between;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);padding:.65rem .85rem;border-radius:8px;margin-top:.85rem;gap:.6rem;flex-wrap:wrap">
+                            <div style="display:flex;align-items:center;gap:.5rem">
+                                <button type="button" id="btn-play-voice-preview" class="btn btn-ghost btn-sm" style="padding:.25rem .5rem;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.2);color:#10b981;font-weight:700" onclick="toggleCustomVoicePlayback()">
+                                    ▶
+                                </button>
+                                <div>
+                                    <strong style="font-size:.82rem;color:#10b981;display:block">Voix synchronisée</strong>
+                                    <small id="custom-voice-duration-label" style="font-size:.72rem;color:var(--text-soft)">Durée synchronisée • Les plans s'adaptent automatiquement</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:.75rem;padding:.2rem .4rem" onclick="deleteCustomVoice()">
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PANNEAU : MUSIQUE DE FOND & DUCKING AUTOMATIQUE -->
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+                            <strong style="font-size:.88rem">🎵 Ambiance Musicale de Fond :</strong>
+                            <span class="badge badge-sm badge-draft" style="font-size:.65rem">Ducking auto actif</span>
+                        </div>
+                        <p style="font-size:.76rem;color:var(--text-soft);margin-bottom:.6rem;line-height:1.35">
+                            La musique baisse automatiquement son volume dès que vous parlez pour que votre voix soit parfaitement audible.
+                        </p>
+
+                        <div class="tone-buttons-grid" id="music-track-grid">
+                            <button type="button" class="btn-tone-chip {{ $musicTrack === 'afrobeat' ? 'selected' : '' }}" data-music-track="afrobeat" onclick="switchMusicTrack('afrobeat')">
+                                <span>⚡ Afrobeat</span>
+                                <small>Vendeur & Rythmé</small>
+                            </button>
+
+                            <button type="button" class="btn-tone-chip {{ $musicTrack === 'amapiano' ? 'selected' : '' }}" data-music-track="amapiano" onclick="switchMusicTrack('amapiano')">
+                                <span>💃 Amapiano</span>
+                                <small>Tendance & Dynamique</small>
+                            </button>
+
+                            <button type="button" class="btn-tone-chip {{ $musicTrack === 'luxe' ? 'selected' : '' }}" data-music-track="luxe" onclick="switchMusicTrack('luxe')">
+                                <span>✨ Luxe & Chic</span>
+                                <small>Élégant & Feutré</small>
+                            </button>
+
+                            <button type="button" class="btn-tone-chip {{ $musicTrack === 'urgent' ? 'selected' : '' }}" data-music-track="urgent" onclick="switchMusicTrack('urgent')">
+                                <span>⏳ Flash Promo</span>
+                                <small>Rythme pressant</small>
+                            </button>
+
+                            <button type="button" class="btn-tone-chip {{ $musicTrack === 'custom' ? 'selected' : '' }}" data-music-track="custom" id="btn-custom-music-chip" onclick="triggerCustomMusicUpload()">
+                                <span>📁 Mon MP3</span>
+                                <small id="custom-music-label">{{ $hasCustomMusic ? 'Son personnalisé' : 'Importer un son' }}</small>
+                            </button>
+
+                            <button type="button" class="btn-tone-chip {{ $musicTrack === 'none' ? 'selected' : '' }}" data-music-track="none" onclick="switchMusicTrack('none')">
+                                <span>🔇 Sans Musique</span>
+                                <small>Voix pure</small>
+                            </button>
+                        </div>
+                        <input type="file" id="input-custom-music-file" accept="audio/*,.mp3,.m4a,.wav" style="display:none" onchange="handleMusicFileUpload(this)">
                     </div>
                 </div>
 
@@ -1071,6 +1208,80 @@
             font-size: .8rem !important;
         }
     }
+
+    /* STYLES DU STUDIO AUDIO & ENREGISTREUR VOCAL */
+    .studio-audio-box {
+        border-color: rgba(158, 27, 50, 0.25) !important;
+        position: relative;
+    }
+    .btn-audio-tab {
+        background: var(--bg-soft);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: .75rem .6rem;
+        cursor: pointer;
+        text-align: center;
+        color: var(--text);
+        font-family: inherit;
+        transition: all .2s ease;
+    }
+    .btn-audio-tab:hover {
+        border-color: rgba(158, 27, 50, 0.4);
+    }
+    .btn-audio-tab.active {
+        border-color: var(--brand-1);
+        background: rgba(158, 27, 50, 0.08);
+        box-shadow: 0 4px 12px rgba(158, 27, 50, 0.15);
+    }
+    .btn-record-voice {
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
+        padding: .55rem 1.1rem;
+        background: #ef4444;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: .88rem;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        box-shadow: 0 3px 12px rgba(239, 68, 68, 0.35);
+        transition: all .2s ease;
+        font-family: inherit;
+    }
+    .btn-record-voice:hover {
+        background: #dc2626;
+        transform: scale(1.02);
+    }
+    .btn-record-voice.recording {
+        background: #b91c1c;
+        animation: recordPulse 1.2s infinite;
+    }
+    @keyframes recordPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+        50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    }
+    .record-dot {
+        width: 10px;
+        height: 10px;
+        background: #ffffff;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .btn-record-voice.recording .record-dot {
+        animation: blinkDot 0.8s infinite;
+    }
+    @keyframes blinkDot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.2; }
+    }
+    .record-timer-text {
+        font-size: .95rem;
+        font-weight: 800;
+        color: #ef4444;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: .5px;
+    }
 </style>
 
 <!-- MODAL SCRIPTS -->
@@ -1133,6 +1344,234 @@
             }
         });
     }
+
+    // GESTION DU MODE DE VOIX (IA vs COMMERÇANT)
+    function switchVoiceMode(mode) {
+        const btnAi = document.getElementById('btn-voice-mode-ai');
+        const btnCustom = document.getElementById('btn-voice-mode-custom');
+        const panelCustom = document.getElementById('panel-custom-voice');
+        const badge = document.getElementById('ad-custom-audio-badge');
+
+        if (mode === 'custom') {
+            if (btnCustom) btnCustom.classList.add('active');
+            if (btnAi) btnAi.classList.remove('active');
+            if (panelCustom) panelCustom.style.display = 'block';
+            if (badge) {
+                badge.textContent = 'Voix commerçant active';
+                badge.className = 'badge badge-ok';
+            }
+            if (window.AdVideoStudio) window.AdVideoStudio.setVoiceMode('custom');
+        } else {
+            if (btnAi) btnAi.classList.add('active');
+            if (btnCustom) btnCustom.classList.remove('active');
+            if (panelCustom) panelCustom.style.display = 'none';
+            if (badge) {
+                badge.textContent = 'Voix IA active';
+                badge.className = 'badge badge-draft';
+            }
+            if (window.AdVideoStudio) window.AdVideoStudio.setVoiceMode('ai');
+        }
+    }
+
+    // ENREGISTREMENT AU MICROPHONE EN DIRECT
+    let _mediaRecorder = null;
+    let _audioChunks = [];
+    let _recordStartTime = 0;
+    let _recordTimerInterval = null;
+    let _recordedBlob = null;
+
+    function toggleVoiceRecording() {
+        const btn = document.getElementById('btn-record-mic');
+        const label = document.getElementById('btn-record-label');
+        const timer = document.getElementById('record-timer');
+
+        if (_mediaRecorder && _mediaRecorder.state === 'recording') {
+            _mediaRecorder.stop();
+            return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("L'enregistrement vocal direct n'est pas supporté par votre navigateur. Vous pouvez importer un fichier audio à la place !");
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+            .then(stream => {
+                _audioChunks = [];
+                _mediaRecorder = new MediaRecorder(stream);
+
+                _mediaRecorder.ondataavailable = e => {
+                    if (e.data && e.data.size > 0) {
+                        _audioChunks.push(e.data);
+                    }
+                };
+
+                _mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(t => t.stop());
+
+                    clearInterval(_recordTimerInterval);
+                    if (btn) btn.classList.remove('recording');
+                    if (label) label.textContent = 'Enregistrer';
+                    if (timer) timer.style.display = 'none';
+
+                    _recordedBlob = new Blob(_audioChunks, { type: _mediaRecorder.mimeType || 'audio/webm' });
+                    processAndApplyVoiceBlob(_recordedBlob);
+                };
+
+                _mediaRecorder.start(100);
+                _recordStartTime = Date.now();
+                if (btn) btn.classList.add('recording');
+                if (label) label.textContent = 'Terminer';
+                if (timer) {
+                    timer.style.display = 'inline';
+                    timer.textContent = '00:00';
+                }
+
+                _recordTimerInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - _recordStartTime) / 1000);
+                    const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                    const secs = String(elapsed % 60).padStart(2, '0');
+                    if (timer) timer.textContent = `${mins}:${secs}`;
+
+                    if (elapsed >= 50 && _mediaRecorder && _mediaRecorder.state === 'recording') {
+                        _mediaRecorder.stop();
+                    }
+                }, 500);
+            })
+            .catch(err => {
+                console.error('Erreur accès micro:', err);
+                alert("Impossible d'accéder au micro. Veuillez autoriser l'accès au microphone dans les réglages de votre navigateur.");
+            });
+    }
+
+    function processAndApplyVoiceBlob(blob) {
+        const fileReader = new FileReader();
+        fileReader.onload = function(e) {
+            const arrayBuffer = e.target.result;
+            const audioCtx = (window.AdVideoStudio && window.AdVideoStudio.audioCtx) 
+                ? window.AdVideoStudio.audioCtx 
+                : new (window.AudioContext || window.webkitAudioContext)();
+
+            audioCtx.decodeAudioData(arrayBuffer.slice(0), decodedBuffer => {
+                const duration = decodedBuffer.duration;
+
+                const previewWrap = document.getElementById('custom-voice-preview');
+                const durLabel = document.getElementById('custom-voice-duration-label');
+                if (previewWrap) previewWrap.style.display = 'flex';
+                if (durLabel) durLabel.textContent = `Durée : ${Math.round(duration * 10) / 10}s • Timeline synchronisée`;
+
+                if (window.AdVideoStudio) {
+                    window.AdVideoStudio.setCustomVoiceBuffer(decodedBuffer, duration, blob);
+                }
+
+                uploadAudioToServer(blob, 'voice');
+            }, err => {
+                console.error('Erreur décodage audio:', err);
+                alert("Erreur lors de la lecture du fichier audio.");
+            });
+        };
+        fileReader.readAsArrayBuffer(blob);
+    }
+
+    function handleVoiceFileUpload(input) {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        processAndApplyVoiceBlob(file);
+    }
+
+    function toggleCustomVoicePlayback() {
+        if (!window.AdVideoStudio) return;
+        window.AdVideoStudio.togglePlay();
+    }
+
+    function deleteCustomVoice() {
+        if (!confirm("Voulez-vous supprimer votre voix personnalisée et revenir à la voix IA automatique ?")) return;
+
+        const previewWrap = document.getElementById('custom-voice-preview');
+        if (previewWrap) previewWrap.style.display = 'none';
+
+        if (window.AdVideoStudio) {
+            window.AdVideoStudio.resetCustomVoice();
+        }
+
+        switchVoiceMode('ai');
+
+        fetch(@json(route('ads.reset_custom_audio', $ad)), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': @json(csrf_token()),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ type: 'voice' })
+        }).catch(err => console.warn(err));
+    }
+
+    function switchMusicTrack(track) {
+        document.querySelectorAll('#music-track-grid .btn-tone-chip').forEach(b => {
+            b.classList.toggle('selected', b.getAttribute('data-music-track') === track);
+        });
+        if (window.AdVideoStudio) {
+            window.AdVideoStudio.setMusicTrack(track);
+        }
+    }
+
+    function triggerCustomMusicUpload() {
+        const input = document.getElementById('input-custom-music-file');
+        if (input) input.click();
+    }
+
+    function handleMusicFileUpload(input) {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+
+        const fileReader = new FileReader();
+        fileReader.onload = function(e) {
+            const arrayBuffer = e.target.result;
+            const audioCtx = (window.AdVideoStudio && window.AdVideoStudio.audioCtx) 
+                ? window.AdVideoStudio.audioCtx 
+                : new (window.AudioContext || window.webkitAudioContext)();
+
+            audioCtx.decodeAudioData(arrayBuffer.slice(0), decodedBuffer => {
+                const label = document.getElementById('custom-music-label');
+                if (label) label.textContent = file.name.substring(0, 15) + '...';
+
+                switchMusicTrack('custom');
+
+                if (window.AdVideoStudio) {
+                    window.AdVideoStudio.setCustomMusicBuffer(decodedBuffer, file);
+                }
+
+                uploadAudioToServer(file, 'music');
+            }, err => {
+                alert("Erreur lors de la lecture du fichier musique. Veuillez choisir un fichier MP3 valide.");
+            });
+        };
+        fileReader.readAsArrayBuffer(file);
+    }
+
+    function uploadAudioToServer(fileOrBlob, type) {
+        const formData = new FormData();
+        const ext = type === 'music' ? 'mp3' : 'webm';
+        formData.append('audio', fileOrBlob, `recording.${ext}`);
+        formData.append('type', type);
+
+        fetch(@json(route('ads.upload_custom_audio', $ad)), {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': @json(csrf_token()),
+                'Accept': 'application/json'
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.info('Audio uploadé et rattaché avec succès:', data);
+        })
+        .catch(err => {
+            console.warn('Erreur envoi audio serveur:', err);
+        });
+    }
 </script>
 
 <!-- INITIALISATION DU STUDIO VIDÉO PUBLICITAIRE IA -->
@@ -1162,6 +1601,12 @@
                 platformUpdateUrl: @json(route('ads.update_platform', $ad)),
                 exportUrl: @json(route('ads.log_video_export', $ad)),
                 csrfToken: @json(csrf_token()),
+                customVoiceUrl: @json($customVoiceUrl),
+                voiceMode: @json($voiceMode),
+                customMusicUrl: @json($customMusicUrl),
+                musicTrack: @json($musicTrack),
+                uploadAudioUrl: @json(route('ads.upload_custom_audio', $ad)),
+                resetAudioUrl: @json(route('ads.reset_custom_audio', $ad)),
             });
         }
     });

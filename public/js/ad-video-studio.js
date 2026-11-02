@@ -31,6 +31,12 @@
                 platformUpdateUrl: '',
                 exportUrl: '',
                 csrfToken: '',
+                customVoiceUrl: '',
+                voiceMode: 'ai',
+                customMusicUrl: '',
+                musicTrack: 'afrobeat',
+                uploadAudioUrl: '',
+                resetAudioUrl: '',
             }, config);
 
             this.canvas = document.getElementById(this.config.canvasId);
@@ -55,6 +61,17 @@
             this.activeVoiceSource = null;
             this.synthUtterance = null;
 
+            // Mode Voix Personnalisée (Micro ou Audio Commerçant)
+            this.voiceMode = this.config.voiceMode || (this.config.customVoiceUrl ? 'custom' : 'ai');
+            this.customVoiceBuffer = null;
+            this.customVoiceDuration = 0;
+            this.activeCustomVoiceSource = null;
+
+            // Ambiance Musicale & MP3 Personnalisé
+            this.musicTrack = this.config.musicTrack || 'afrobeat';
+            this.customMusicBuffer = null;
+            this.activeCustomMusicSource = null;
+
             // Cache des images préchargées (produits + logo)
             this.productImages = [];
             this.shopLogoImg = null;
@@ -65,6 +82,7 @@
             this.buildTimelineFromActiveScript();
             this.initEvents();
             this.loadVoiceoverAudio();
+            this.loadCustomAudio();
             this.render();
         },
 
@@ -420,6 +438,204 @@
             });
         },
 
+        // --- GESTION DES AUDIOS PERSONNALISÉS (VOIX COMMERÇANT & MUSIQUE) ---
+        loadCustomAudio: function () {
+            if (!this.audioCtx) return;
+
+            // 1. Voix personnalisée préexistante
+            if (this.config.customVoiceUrl) {
+                fetch(this.config.customVoiceUrl)
+                    .then(res => {
+                        if (!res.ok) throw new Error('Status ' + res.status);
+                        return res.arrayBuffer();
+                    })
+                    .then(buf => this.audioCtx.decodeAudioData(buf))
+                    .then(decoded => {
+                        this.customVoiceBuffer = decoded;
+                        this.customVoiceDuration = decoded.duration;
+                        if (this.voiceMode === 'custom') {
+                            this.applyCustomVoiceTimeline(decoded.duration);
+                        }
+                        const durLabel = document.getElementById('custom-voice-duration-label');
+                        if (durLabel) {
+                            durLabel.textContent = `Durée : ${Math.round(decoded.duration * 10) / 10}s • Timeline synchronisée`;
+                        }
+                    })
+                    .catch(err => {
+                        console.info('Audio personnalisé introuvable ou non décodable:', err);
+                    });
+            }
+
+            // 2. Musique personnalisée préexistante
+            if (this.config.customMusicUrl) {
+                fetch(this.config.customMusicUrl)
+                    .then(res => {
+                        if (!res.ok) throw new Error('Status ' + res.status);
+                        return res.arrayBuffer();
+                    })
+                    .then(buf => this.audioCtx.decodeAudioData(buf))
+                    .then(decoded => {
+                        this.customMusicBuffer = decoded;
+                        this.musicTrack = 'custom';
+                        const label = document.getElementById('custom-music-label');
+                        if (label) label.textContent = 'MP3 chargé';
+                    })
+                    .catch(err => {
+                        console.info('Musique personnalisée introuvable:', err);
+                    });
+            }
+        },
+
+        setVoiceMode: function (mode) {
+            this.voiceMode = mode;
+            this.stopCustomVoice();
+
+            if (mode === 'custom' && this.customVoiceBuffer) {
+                this.applyCustomVoiceTimeline(this.customVoiceDuration || this.customVoiceBuffer.duration);
+            } else {
+                this.buildTimelineFromActiveScript();
+                this.recalculateTimeline();
+            }
+            this.render();
+        },
+
+        setCustomVoiceBuffer: function (buffer, duration, fileOrBlob) {
+            this.customVoiceBuffer = buffer;
+            this.customVoiceDuration = duration || buffer.duration;
+            this.voiceMode = 'custom';
+            this.applyCustomVoiceTimeline(this.customVoiceDuration);
+            this.render();
+        },
+
+        resetCustomVoice: function () {
+            this.customVoiceBuffer = null;
+            this.customVoiceDuration = 0;
+            this.voiceMode = 'ai';
+            this.stopCustomVoice();
+            this.buildTimelineFromActiveScript();
+            this.recalculateTimeline();
+            this.render();
+        },
+
+        applyCustomVoiceTimeline: function (voiceDuration) {
+            if (!this.timelineScenes || this.timelineScenes.length === 0 || !voiceDuration || voiceDuration <= 0) return;
+
+            const originalDurations = this.timelineScenes.map(sc => {
+                if (sc.type === 'hook') return 3.5;
+                if (sc.type === 'cta') return 4.0;
+                return 4.2;
+            });
+            const totalOriginal = originalDurations.reduce((a, b) => a + b, 0);
+
+            let accumulated = 0;
+            this.timelineScenes.forEach((sc, idx) => {
+                const ratio = originalDurations[idx] / totalOriginal;
+                let d = Math.round((voiceDuration * ratio) * 10) / 10;
+                d = Math.max(d, 2.2);
+
+                sc.startTime = accumulated;
+                sc.duration = d;
+                sc.endTime = accumulated + d;
+                accumulated = sc.endTime;
+            });
+
+            // Ajustement du dernier plan pour coïncider exactement avec la fin de la voix
+            const last = this.timelineScenes[this.timelineScenes.length - 1];
+            last.endTime = Math.max(accumulated, Math.round(voiceDuration * 10) / 10);
+            last.duration = Math.round((last.endTime - last.startTime) * 10) / 10;
+
+            this.duration = Math.round(last.endTime * 10) / 10;
+            this.updateProgressUI();
+        },
+
+        startCustomVoice: function (offset) {
+            if (!this.customVoiceBuffer || !this.audioCtx || !this.soundEnabled) return;
+            this.stopCustomVoice();
+
+            try {
+                const source = this.audioCtx.createBufferSource();
+                source.buffer = this.customVoiceBuffer;
+                source.connect(this.voiceGain);
+
+                const now = this.audioCtx.currentTime;
+                const startOffset = Math.max(0, Math.min(offset || 0, this.customVoiceBuffer.duration));
+
+                source.start(now, startOffset);
+                this.activeCustomVoiceSource = source;
+
+                // Ducking automatique de la musique
+                if (this.beatGain) {
+                    const remain = this.customVoiceBuffer.duration - startOffset;
+                    this.beatGain.gain.cancelScheduledValues(now);
+                    this.beatGain.gain.setValueAtTime(0.09, now);
+                    if (remain > 0.3) {
+                        this.beatGain.gain.setValueAtTime(0.09, now + remain - 0.2);
+                        this.beatGain.gain.linearRampToValueAtTime(0.35, now + remain + 0.3);
+                    }
+                }
+
+                source.onended = () => {
+                    if (this.beatGain && this.audioCtx) {
+                        this.beatGain.gain.linearRampToValueAtTime(0.35, this.audioCtx.currentTime + 0.2);
+                    }
+                };
+            } catch (e) {
+                console.warn('Erreur startCustomVoice:', e);
+            }
+        },
+
+        stopCustomVoice: function () {
+            if (this.activeCustomVoiceSource) {
+                try { this.activeCustomVoiceSource.stop(); } catch (e) {}
+                this.activeCustomVoiceSource = null;
+            }
+        },
+
+        setMusicTrack: function (track) {
+            this.musicTrack = track;
+            this.stopCustomMusic();
+
+            if (track === 'custom' && this.isPlaying && this.customMusicBuffer) {
+                this.startCustomMusic(this.currentTime);
+            }
+        },
+
+        setCustomMusicBuffer: function (buffer, fileOrBlob) {
+            this.customMusicBuffer = buffer;
+            this.musicTrack = 'custom';
+            if (this.isPlaying) {
+                this.startCustomMusic(this.currentTime);
+            }
+        },
+
+        startCustomMusic: function (offset) {
+            if (!this.customMusicBuffer || !this.audioCtx || !this.soundEnabled) return;
+            this.stopCustomMusic();
+
+            try {
+                const source = this.audioCtx.createBufferSource();
+                source.buffer = this.customMusicBuffer;
+                source.loop = true;
+                source.connect(this.beatGain);
+
+                const now = this.audioCtx.currentTime;
+                const dur = this.customMusicBuffer.duration || 1;
+                const startOffset = (offset || 0) % dur;
+
+                source.start(now, startOffset);
+                this.activeCustomMusicSource = source;
+            } catch (e) {
+                console.warn('Erreur startCustomMusic:', e);
+            }
+        },
+
+        stopCustomMusic: function () {
+            if (this.activeCustomMusicSource) {
+                try { this.activeCustomMusicSource.stop(); } catch (e) {}
+                this.activeCustomMusicSource = null;
+            }
+        },
+
         playVoiceForScene: function (idx) {
             if (!this.voiceoverEnabled) return;
             const sc = this.timelineScenes ? this.timelineScenes[idx] : null;
@@ -483,14 +699,21 @@
         // --- GÉNÉRATION AUDIO DU FOND MUSICAL RYTHMÉ (BPM & ACCORDS PAR TON) ---
         playSynthBeat: function (time) {
             if (!this.soundEnabled || !this.audioCtx) return;
+            if (this.musicTrack === 'none' || this.musicTrack === 'custom') return;
 
-            // Définition du BPM et de l'ambiance selon le Ton
+            // Définition du BPM et de l'ambiance selon le style sélectionné
             let bpm = 118;
-            if (this.tone === 'dynamique') bpm = 124;
-            else if (this.tone === 'urgent') bpm = 128;
-            else if (this.tone === 'luxe') bpm = 94;
-            else if (this.tone === 'chaleureux') bpm = 104;
-            else if (this.tone === 'fun') bpm = 122;
+            if (this.musicTrack === 'afrobeat') bpm = 124;
+            else if (this.musicTrack === 'amapiano') bpm = 114;
+            else if (this.musicTrack === 'urgent') bpm = 128;
+            else if (this.musicTrack === 'luxe') bpm = 94;
+            else {
+                if (this.tone === 'dynamique') bpm = 124;
+                else if (this.tone === 'urgent') bpm = 128;
+                else if (this.tone === 'luxe') bpm = 94;
+                else if (this.tone === 'chaleureux') bpm = 104;
+                else if (this.tone === 'fun') bpm = 122;
+            }
 
             const beatDuration = 60 / bpm;
             const currentBeat = Math.floor(time / (beatDuration / 2)); // 8th notes
@@ -499,24 +722,43 @@
                 this.lastBeat = currentBeat;
                 const now = this.audioCtx.currentTime;
 
-                // Kick sur temps forts (sauf luxe feutré)
-                if (currentBeat % 2 === 0) {
-                    this.triggerKick(now, this.tone === 'luxe' ? 0.3 : 0.7);
+                // Kick
+                if (this.musicTrack === 'afrobeat') {
+                    // Kick syncopé afrobeat (1 et 3 avec relance)
+                    if (currentBeat % 4 === 0 || currentBeat % 8 === 6) {
+                        this.triggerKick(now, 0.7);
+                    }
+                } else if (this.musicTrack === 'amapiano') {
+                    // Log-drum bass kick
+                    if (currentBeat % 8 === 0 || currentBeat % 8 === 3 || currentBeat % 8 === 6) {
+                        this.triggerKick(now, 0.8);
+                    }
+                } else {
+                    if (currentBeat % 2 === 0) {
+                        this.triggerKick(now, this.tone === 'luxe' ? 0.3 : 0.7);
+                    }
                 }
 
-                // Snare / Clap
-                if (currentBeat % 4 === 2) {
-                    this.triggerSnare(now, this.tone === 'luxe' ? 0.15 : 0.35);
+                // Snare / Rimshot
+                if (this.musicTrack === 'afrobeat') {
+                    if (currentBeat % 4 === 2 || currentBeat % 8 === 5) {
+                        this.triggerSnare(now, 0.4);
+                    }
+                } else {
+                    if (currentBeat % 4 === 2) {
+                        this.triggerSnare(now, (this.tone === 'luxe' || this.musicTrack === 'luxe') ? 0.15 : 0.35);
+                    }
                 }
 
                 // Hi-Hat subtil
-                if (this.tone !== 'luxe' || currentBeat % 2 === 0) {
+                if (this.tone !== 'luxe' && this.musicTrack !== 'luxe' || currentBeat % 2 === 0) {
                     this.triggerHiHat(now);
                 }
 
                 // Accords riches selon le ton
                 if (currentBeat % 8 === 0) {
-                    const chords = this.tone === 'luxe' ? [
+                    const isLuxe = (this.tone === 'luxe' || this.musicTrack === 'luxe');
+                    const chords = isLuxe ? [
                         [220, 261.6, 329.6, 392],    // Am9 feutré
                         [174.6, 220, 261.6, 329.6],  // Fmaj7
                         [196, 246.9, 293.7, 349.2],  // G9
@@ -623,6 +865,15 @@
             this.lastFrameTime = performance.now();
             this.ensureAudioActive();
             this.updatePlayStateUI(true);
+
+            // Démarrage des flux audio personnalisés
+            if (this.voiceMode === 'custom' && this.customVoiceBuffer) {
+                this.startCustomVoice(this.currentTime);
+            }
+            if (this.musicTrack === 'custom' && this.customMusicBuffer) {
+                this.startCustomMusic(this.currentTime);
+            }
+
             this.loop();
         },
 
@@ -636,6 +887,8 @@
                 try { this.activeVoiceSource.stop(); } catch (e) {}
                 this.activeVoiceSource = null;
             }
+            this.stopCustomVoice();
+            this.stopCustomMusic();
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
@@ -664,11 +917,13 @@
 
             this.currentTime += delta;
 
-            // Beat audio
-            this.playSynthBeat(this.currentTime);
+            // Musique de fond
+            if (this.musicTrack !== 'none' && this.musicTrack !== 'custom') {
+                this.playSynthBeat(this.currentTime);
+            }
 
-            // Détection du plan actif et déclenchement de la voix
-            if (this.timelineScenes) {
+            // Détection du plan actif et déclenchement de la voix (mode IA)
+            if (this.voiceMode === 'ai' && this.timelineScenes) {
                 for (let i = 0; i < this.timelineScenes.length; i++) {
                     const sc = this.timelineScenes[i];
                     if (this.currentTime >= sc.startTime && this.currentTime < sc.endTime) {
@@ -1361,6 +1616,14 @@
                     if (this.timelineScenes) {
                         for (let i = 0; i < this.timelineScenes.length; i++) {
                             this.voicePlayed[i] = this.currentTime >= this.timelineScenes[i].endTime;
+                        }
+                    }
+                    if (this.isPlaying) {
+                        if (this.voiceMode === 'custom') {
+                            this.startCustomVoice(this.currentTime);
+                        }
+                        if (this.musicTrack === 'custom') {
+                            this.startCustomMusic(this.currentTime);
                         }
                     }
                     this.render();
