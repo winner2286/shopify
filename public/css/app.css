@@ -2475,6 +2475,7 @@ button.bottom-nav-item {
 .tab-text-short { display: none; }
 
 @media (max-width: 768px) {
+  .top-announcement { display: none !important; }
   #nav-register .btn-full-text { display: none; }
   #nav-register .btn-short-text { display: inline; }
 }
@@ -2500,7 +2501,6 @@ button.bottom-nav-item {
   .nav-actions .btn-sm { min-height: 34px; padding: .3rem .55rem; font-size: .8rem; }
   .theme-toggle-btn { width: 34px !important; height: 34px !important; min-height: 34px !important; }
   .theme-toggle-btn svg { width: 16px; height: 16px; }
-  .top-announcement { font-size: 0.75rem; padding: 0.4rem 0.65rem; line-height: 1.35; }
   .tab-text-full { display: none; }
   .tab-text-short { display: inline; }
 }
