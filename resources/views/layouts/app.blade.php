@@ -71,11 +71,11 @@
     @endguest
 
     <header class="nav">
-        <div class="container nav-inner">
-            <div style="display:flex;align-items:center;gap:2rem">
-                <a href="{{ auth()->check() ? (auth()->user()->isAdmin() ? route('admin.dashboard') : route('dashboard')) : route('home') }}" class="logo" aria-label="Accueil {{ config('platform.name') }}" style="display:inline-flex;align-items:center;gap:.65rem;text-decoration:none">
-                    <img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:34px;width:34px;border-radius:9px;object-fit:cover;box-shadow:0 2px 10px rgba(158,27,50,0.35)">
-                    <span class="logo-text" style="font-family:'Montserrat',var(--font-display),sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-0.02em;">ZANIKA</span>
+        <div class="nav-container nav-inner">
+            <div class="nav-brand-wrap" style="display:flex;align-items:center;gap:1.5rem;flex-shrink:0">
+                <a href="{{ auth()->check() ? (auth()->user()->isAdmin() ? route('admin.dashboard') : route('dashboard')) : route('home') }}" class="logo" aria-label="Accueil {{ config('platform.name') }}" style="display:inline-flex;align-items:center;gap:.65rem;text-decoration:none;flex-shrink:0">
+                    <img src="{{ asset('images/brand/02_icone_application.jpg') }}" alt="Zanika" style="height:34px;width:34px;border-radius:9px;object-fit:cover;box-shadow:0 2px 10px rgba(158,27,50,0.35);flex-shrink:0">
+                    <span class="logo-text" style="font-family:'Montserrat',var(--font-display),sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-0.02em;white-space:nowrap">ZANIKA</span>
                 </a>
 
                 @guest
@@ -92,26 +92,51 @@
             <nav class="nav-actions" aria-label="Navigation principale">
                 @auth
                     @if (auth()->user()->isAdmin())
-                        <a id="nav-admin" href="{{ route('admin.dashboard') }}" class="btn btn-sm {{ request()->routeIs('admin.*') ? 'mobile-hide-on-admin' : '' }}" style="background:linear-gradient(135deg, #ef4444, #dc2626);color:#ffffff;font-weight:700;display:inline-flex;align-items:center;gap:.35rem;border:none;box-shadow:0 2px 8px rgba(239, 68, 68, 0.4);margin-right:.25rem">
-                            <x-icon name="shield" :size="15" />
-                            <span class="nav-admin-full">⭐ Cockpit Super-Admin</span>
+                        <a id="nav-admin" href="{{ route('admin.dashboard') }}" class="btn btn-sm {{ request()->routeIs('admin.*') ? 'mobile-hide-on-admin' : '' }}" style="background:linear-gradient(135deg, #ef4444, #dc2626);color:#ffffff;font-weight:700;display:inline-flex;align-items:center;gap:.35rem;border:none;box-shadow:0 2px 8px rgba(239, 68, 68, 0.4);" title="Cockpit Super-Admin">
+                            <x-icon name="shield" :size="14" />
+                            <span class="nav-admin-full">⭐ Cockpit Admin</span>
                             <span class="nav-admin-short">⭐ Cockpit</span>
                         </a>
                     @endif
                     @if (auth()->user()->shop && auth()->user()->shop->subdomain)
                         <a id="nav-preview-store" href="{{ url('/b/' . auth()->user()->shop->subdomain) }}" target="_blank" class="btn btn-ghost btn-sm" style="color:var(--brand-1);display:inline-flex;align-items:center;gap:.35rem" title="Voir ma boutique en direct">
-                            <x-icon name="eye" :size="15" />
+                            <x-icon name="eye" :size="14" />
                             <span class="nav-btn-text">Ma boutique</span>
-                            <x-icon name="external-link" :size="12" />
+                            <x-icon name="external-link" :size="11" />
                         </a>
                     @endif
-                    <a id="nav-dashboard" href="{{ route('dashboard') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('dashboard') ? 'btn-primary' : '' }}">Boutique (Accueil)</a>
+                    <a id="nav-dashboard" href="{{ route('dashboard') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('dashboard') ? 'btn-primary' : '' }}">Accueil</a>
                     <a id="nav-orders" href="{{ route('orders.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('orders.*') ? 'btn-primary' : '' }}">Commandes</a>
                     <a id="nav-products" href="{{ route('products.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('products.*') ? 'btn-primary' : '' }}">Produits</a>
-                    <a id="nav-categories" href="{{ route('categories.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('categories.*') ? 'btn-primary' : '' }}">Catégories</a>
                     <a id="nav-ads" href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ads.*') ? 'btn-primary' : '' }}">Publicité</a>
-                    <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
-                    <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Paramètres</a>
+
+                    <!-- Liens secondaires (visibles directement sur écran large >= 1240px) -->
+                    <a id="nav-categories" href="{{ route('categories.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('categories.*') ? 'btn-primary' : '' }}">Catégories</a>
+                    <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
+                    <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Paramètres</a>
+
+                    <!-- Menu déroulant "Plus ▾" (actif sur écran compact 769px à 1239px) -->
+                    <div class="nav-more-dropdown" id="nav-more-dropdown">
+                        <button type="button" class="btn btn-ghost btn-sm nav-more-trigger {{ (request()->routeIs('categories.*') || request()->routeIs('analytics.*') || request()->routeIs('shop.*')) ? 'active-section' : '' }}" aria-haspopup="true" aria-expanded="false" onclick="toggleNavMoreMenu(event)">
+                            <span>Plus</span>
+                            <x-icon name="chevron-down" :size="12" />
+                        </button>
+                        <div class="nav-more-menu" id="nav-more-menu">
+                            <a href="{{ route('categories.index') }}" class="nav-more-item {{ request()->routeIs('categories.*') ? 'active' : '' }}">
+                                <x-icon name="folder" :size="15" />
+                                <span>Catégories</span>
+                            </a>
+                            <a href="{{ route('analytics.index') }}" class="nav-more-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}">
+                                <x-icon name="trending-up" :size="15" />
+                                <span>Statistiques</span>
+                            </a>
+                            <a href="{{ route('shop.settings') }}" class="nav-more-item {{ request()->routeIs('shop.*') ? 'active' : '' }}">
+                                <x-icon name="settings" :size="15" />
+                                <span>Paramètres</span>
+                            </a>
+                        </div>
+                    </div>
+
                     <form method="POST" action="{{ route('logout') }}" style="display:inline;margin:0">@csrf
                         <button id="nav-logout" class="btn btn-ghost btn-sm" type="submit" title="Déconnexion" aria-label="Déconnexion">
                             <span class="logout-text">Déconnexion</span>
@@ -252,6 +277,19 @@
                 var s = document.getElementById('mobile-plus-sheet');
                 if (s && s.classList.contains('open')) { closeMobilePlusMenu(); } else { openMobilePlusMenu(e); }
             }
+
+            function toggleNavMoreMenu(e) {
+                if (e) e.stopPropagation();
+                var menu = document.getElementById('nav-more-menu');
+                if (menu) menu.classList.toggle('open');
+            }
+            document.addEventListener('click', function(e) {
+                var wrap = document.getElementById('nav-more-dropdown');
+                if (wrap && !wrap.contains(e.target)) {
+                    var menu = document.getElementById('nav-more-menu');
+                    if (menu) menu.classList.remove('open');
+                }
+            });
         </script>
     @endauth
 
