@@ -60,9 +60,11 @@
                             <span style="font-family:monospace;font-size:.8rem;color:var(--text-soft)">slug: {{ $p->slug }}</span>
                         </div>
                         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.35rem">
-                            <span class="badge {{ $p->active ? 'badge-ok' : 'badge-danger' }}" style="font-size:.78rem">
-                                {{ $p->active ? '🟢 Active' : '🔴 Désactivée' }}
-                            </span>
+                            @if (! $p->active)
+                                <span class="badge badge-danger" style="font-size:.78rem">
+                                    🔴 Désactivée
+                                </span>
+                            @endif
                             <span class="badge" style="font-size:.72rem;background:var(--bg-soft);color:var(--text-soft)">
                                 {{ $p->subscriptions_count }} boutique(s)
                             </span>
