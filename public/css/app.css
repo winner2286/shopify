@@ -2968,6 +2968,21 @@ button.bottom-nav-item {
   color: #fff;
 }
 
+.toast-chaching-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  animation: badgeBeat 2s infinite;
+}
+
 /* Pastille dynamique animée sur le menu Commandes */
 .order-pulse-badge {
   display: inline-flex;
