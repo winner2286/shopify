@@ -24,7 +24,9 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=3">
     <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=3">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#07080C" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-title" content="Zanika">
     <!-- Preload Splash Screen Assets pour fluidité maximale sans saccade -->
     <link rel="preload" as="image" href="{{ asset('images/brand/splash_icon.webp') }}" type="image/webp">
@@ -36,7 +38,9 @@
         <script src="{{ asset('js/order-notifications.js') }}?v={{ file_exists(public_path('js/order-notifications.js')) ? filemtime(public_path('js/order-notifications.js')) : '1.1' }}" defer></script>
     @endauth
 <body class="@auth has-bottom-nav @endauth">
-    @include('partials.splash-screen')
+    @guest
+        @include('partials.splash-screen')
+    @endguest
     <div id="scroll-progress-bar" class="scroll-progress-bar" aria-hidden="true"></div>
     @if (app()->isDownForMaintenance())
         <div style="background:linear-gradient(90deg, #dc2626, #991b1b);color:#ffffff;padding:.55rem 1rem;font-size:.88rem;font-weight:700;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:99998;box-shadow:0 4px 12px rgba(0,0,0,0.3);flex-wrap:wrap;gap:.5rem">

@@ -45,36 +45,23 @@
     return chaChingAudio;
   }
 
-  // Déverrouillage automatique dès la 1ère interaction de l'utilisateur (requis par iOS & navigateurs modernes)
+  // Déverrouillage automatique silencieux du contexte Web Audio dès la 1ère interaction
   function unlockAudio() {
     if (isAudioUnlocked) return;
     var ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume();
+    }
     if (ctx && ctx.state === 'running') {
       isAudioUnlocked = true;
-    }
-    var a = getChaChingAudio();
-    if (a) {
-      try {
-        a.muted = true;
-        var p = a.play();
-        if (p && typeof p.then === 'function') {
-          p.then(function () {
-            a.pause();
-            a.currentTime = 0;
-            a.muted = false;
-          }).catch(function () {});
-        }
-      } catch (e) {}
-    }
-    if (isAudioUnlocked) {
       document.removeEventListener('click', unlockAudio);
       document.removeEventListener('keydown', unlockAudio);
       document.removeEventListener('touchstart', unlockAudio);
     }
   }
-  document.addEventListener('click', unlockAudio);
-  document.addEventListener('keydown', unlockAudio);
-  document.addEventListener('touchstart', unlockAudio);
+  document.addEventListener('click', unlockAudio, { passive: true });
+  document.addEventListener('keydown', unlockAudio, { passive: true });
+  document.addEventListener('touchstart', unlockAudio, { passive: true });
 
   /**
    * Synthèse Web Audio pure du son de caisse enregistreuse « Cha-ching ! »
@@ -379,29 +366,17 @@
         try { localStorage.setItem('zanika_sound_muted', 'false'); } catch (err) {}
         btn.classList.remove('is-muted');
         btn.innerHTML = '<span class="icon">' + bellSvg + '</span> <span class="sound-label">Cha-ching !</span>';
-        btn.title = 'Sonnerie Cha-ching active (Cliquer pour tester ou couper)';
-        btn.setAttribute('aria-label', 'Sonnerie Cha-ching active');
-        playChaChingSound();
-        showMiniFeedback('🔔 Sonnerie activée ! « Cha-ching ! » joué.');
+        btn.title = 'Sonnerie active (Cliquer pour couper)';
+        btn.setAttribute('aria-label', 'Sonnerie active');
+        showMiniFeedback('Sonnerie activée.');
       } else {
-        // Teste le son si on clique alors qu'il est actif
-        playChaChingSound();
-        showMiniFeedback('💰 Test « Cha-ching ! » joué (Recliquez vite pour couper)');
-        
-        // Timer de bascule mute si re-cliqué rapidement
-        if (btn.dataset.primed === 'true') {
-          isMuted = true;
-          try { localStorage.setItem('zanika_sound_muted', 'true'); } catch (err) {}
-          btn.classList.add('is-muted');
-          btn.innerHTML = '<span class="icon">' + bellOffSvg + '</span> <span class="sound-label">Son muet</span>';
-          btn.title = 'Sonnerie coupée (Cliquer pour réactiver)';
-          btn.setAttribute('aria-label', 'Sonnerie coupée');
-          delete btn.dataset.primed;
-          showMiniFeedback('🔇 Sonnerie désactivée.');
-        } else {
-          btn.dataset.primed = 'true';
-          setTimeout(function () { delete btn.dataset.primed; }, 2500);
-        }
+        isMuted = true;
+        try { localStorage.setItem('zanika_sound_muted', 'true'); } catch (err) {}
+        btn.classList.add('is-muted');
+        btn.innerHTML = '<span class="icon">' + bellOffSvg + '</span> <span class="sound-label">Son muet</span>';
+        btn.title = 'Sonnerie coupée (Cliquer pour réactiver)';
+        btn.setAttribute('aria-label', 'Sonnerie coupée');
+        showMiniFeedback('Sonnerie coupée.');
       }
 
       requestBrowserNotificationPermission();

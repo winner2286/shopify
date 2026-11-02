@@ -11,10 +11,6 @@
         </div>
 
         <div class="header-actions">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="if(window.ZanikaSound) window.ZanikaSound.test()" title="Tester la sonnerie de caisse Cha-ching" style="display:inline-flex;align-items:center;gap:.35rem">
-                <x-icon name="bell" :size="15" />
-                <span>Tester « Cha-ching ! »</span>
-            </button>
             <a href="{{ route('orders.export_csv') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
                 <x-icon name="download" size="16" /> Exporter en CSV
             </a>
