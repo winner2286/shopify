@@ -204,8 +204,10 @@
         <!-- Menu Plus Mobile (Slide-Up Sheet pour Statistiques, Paramètres, Clients, Livraisons, etc.) -->
         <div id="mobile-plus-backdrop" class="mobile-plus-backdrop" onclick="closeMobilePlusMenu()" aria-hidden="true"></div>
         <div id="mobile-plus-sheet" class="mobile-plus-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-plus-title">
-            <div class="mobile-plus-handle" onclick="closeMobilePlusMenu()"></div>
-            <div class="mobile-plus-head">
+            <div class="mobile-plus-handle-wrap" id="mobile-plus-handle-wrap" onclick="closeMobilePlusMenu()" title="Glisser vers le bas pour fermer">
+                <div class="mobile-plus-handle"></div>
+            </div>
+            <div class="mobile-plus-head" id="mobile-plus-head">
                 <h3 id="mobile-plus-title" style="margin:0;font-size:1.05rem;font-weight:700">Outils & Gestion</h3>
                 <button type="button" class="mobile-plus-close" onclick="closeMobilePlusMenu()" aria-label="Fermer le menu">✕</button>
             </div>
@@ -276,6 +278,10 @@
                 var s = document.getElementById('mobile-plus-sheet');
                 var b = document.getElementById('mobile-plus-backdrop');
                 if (s && b) {
+                    s.style.transform = '';
+                    s.style.transition = '';
+                    b.style.opacity = '';
+                    b.style.transition = '';
                     _mobilePlusScrollPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
                     document.body.style.position = 'fixed';
                     document.body.style.top = -_mobilePlusScrollPos + 'px';
@@ -294,6 +300,10 @@
                 if (s && b) {
                     s.classList.remove('open');
                     b.classList.remove('open');
+                    s.style.transform = '';
+                    s.style.transition = '';
+                    b.style.opacity = '';
+                    b.style.transition = '';
                     document.body.style.position = '';
                     document.body.style.top = '';
                     document.body.style.left = '';
@@ -311,9 +321,103 @@
 
             document.addEventListener('DOMContentLoaded', function() {
                 var b = document.getElementById('mobile-plus-backdrop');
+                var sheet = document.getElementById('mobile-plus-sheet');
+                var handleWrap = document.getElementById('mobile-plus-handle-wrap');
+                var head = document.getElementById('mobile-plus-head');
+
                 if (b) {
                     b.addEventListener('touchmove', function(ev) { ev.preventDefault(); }, { passive: false });
                 }
+
+                if (!sheet) return;
+
+                var startY = 0;
+                var currentY = 0;
+                var deltaY = 0;
+                var isDragging = false;
+                var startTime = 0;
+
+                function handleTouchStart(e) {
+                    if (!sheet.classList.contains('open')) return;
+                    var touch = e.touches[0];
+                    startY = touch.clientY;
+                    currentY = startY;
+                    deltaY = 0;
+                    startTime = Date.now();
+
+                    // Si le geste commence sur la poignée (handle) ou l'en-tête (head)
+                    if ((handleWrap && (handleWrap.contains(e.target) || e.target === handleWrap)) ||
+                        (head && (head.contains(e.target) || e.target === head))) {
+                        isDragging = true;
+                        sheet.style.transition = 'none';
+                        if (b) b.style.transition = 'none';
+                    } else {
+                        isDragging = false;
+                    }
+                }
+
+                function handleTouchMove(e) {
+                    if (!sheet.classList.contains('open')) return;
+                    var touch = e.touches[0];
+                    currentY = touch.clientY;
+                    var moveY = currentY - startY;
+
+                    // Si on est en haut du défilement interne et qu'on tire vers le bas
+                    if (!isDragging && sheet.scrollTop <= 0 && moveY > 10) {
+                        isDragging = true;
+                        startY = currentY;
+                        deltaY = 0;
+                        sheet.style.transition = 'none';
+                        if (b) b.style.transition = 'none';
+                    }
+
+                    if (isDragging) {
+                        deltaY = currentY - startY;
+                        if (deltaY > 0) {
+                            if (e.cancelable) e.preventDefault();
+                            sheet.style.transform = 'translateY(' + deltaY + 'px)';
+                            if (b) {
+                                var opacity = Math.max(0, 1 - (deltaY / 320));
+                                b.style.opacity = opacity;
+                            }
+                        } else {
+                            sheet.style.transform = 'translateY(0)';
+                        }
+                    }
+                }
+
+                function handleTouchEnd(e) {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    var elapsed = Date.now() - startTime;
+                    var velocity = deltaY / Math.max(1, elapsed);
+
+                    sheet.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+                    if (b) b.style.transition = 'opacity 0.25s ease';
+
+                    // Si tiré vers le bas de plus de 80px ou swipe dynamique rapide vers le bas
+                    if (deltaY > 80 || (deltaY > 35 && velocity > 0.4)) {
+                        sheet.style.transform = 'translateY(105%)';
+                        if (b) b.style.opacity = '0';
+                        setTimeout(function() {
+                            closeMobilePlusMenu();
+                        }, 250);
+                    } else {
+                        // Rebond propre à la position ouverte
+                        sheet.style.transform = 'translateY(0)';
+                        if (b) b.style.opacity = '1';
+                        setTimeout(function() {
+                            sheet.style.transform = '';
+                            sheet.style.transition = '';
+                            if (b) { b.style.opacity = ''; b.style.transition = ''; }
+                        }, 250);
+                    }
+                }
+
+                sheet.addEventListener('touchstart', handleTouchStart, { passive: true });
+                sheet.addEventListener('touchmove', handleTouchMove, { passive: false });
+                sheet.addEventListener('touchend', handleTouchEnd, { passive: true });
+                sheet.addEventListener('touchcancel', handleTouchEnd, { passive: true });
             });
 
             function toggleNavMoreMenu(e) {
