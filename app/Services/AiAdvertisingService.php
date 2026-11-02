@@ -56,6 +56,7 @@ class AiAdvertisingService
             'product_id' => ! empty($data['product_id']) ? (int) $data['product_id'] : null,
             'category_ids' => (array) ($data['category_ids'] ?? []),
             'selected_product_ids' => (array) ($data['selected_product_ids'] ?? []),
+            'platform' => $channel,
         ];
 
         // Génération complète (produits, timeline de scènes, scripts synchronisés, textes)
@@ -136,6 +137,7 @@ class AiAdvertisingService
             'product_id' => ! empty($overrides['product_id']) ? (int) $overrides['product_id'] : $ad->product_id,
             'category_ids' => (array) ($overrides['category_ids'] ?? $vc['category_ids'] ?? []),
             'selected_product_ids' => (array) ($overrides['selected_product_ids'] ?? []),
+            'platform' => $overrides['platform'] ?? $vc['platform'] ?? $ad->channel,
         ];
 
         $campaign = $videoAdGen->generateVideoCampaign($shop, $campaignData);

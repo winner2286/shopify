@@ -18,6 +18,8 @@
                 shopCity: '',
                 angle: 'promotions',
                 tone: 'dynamique',
+                platform: 'tiktok',
+                shopUrl: '',
                 voice: 'femme',
                 targetDuration: 20,
                 isStorePresentation: false,
@@ -25,6 +27,8 @@
                 assetPhrase: '',
                 products: [],
                 scripts: [],
+                ctaPack: {},
+                platformUpdateUrl: '',
                 exportUrl: '',
                 csrfToken: '',
             }, config);
@@ -38,6 +42,7 @@
             this.isRecording = false;
             this.currentScriptIndex = 0;
             this.tone = this.config.tone || 'dynamique';
+            this.platform = this.config.platform || 'tiktok';
             this.soundEnabled = true;
             this.voiceoverEnabled = true;
             this.selectedFormat = 'mp4';
@@ -199,14 +204,24 @@
                 product_index: null
             });
 
-            // Plan CTA (4.5s)
+            // Plan CTA (5.0s) adapté à la plateforme (boutique en ligne + WhatsApp + lien)
+            const ctaVoice = (this.config.ctaPack && this.config.ctaPack[this.platform] && this.config.ctaPack[this.platform].voices)
+                ? this.config.ctaPack[this.platform].voices[0]
+                : (this.config.shopPhone
+                    ? `Commandez sur notre boutique en ligne, le lien est dans la bio, ou écrivez-nous sur WhatsApp !`
+                    : `Commandez en quelques clics sur notre boutique en ligne, le lien est dans la bio !`);
+
+            const ctaHint = (this.config.ctaPack && this.config.ctaPack[this.platform] && this.config.ctaPack[this.platform].hint)
+                ? this.config.ctaPack[this.platform].hint
+                : (this.platform === 'tiktok' || this.platform === 'instagram' ? 'Lien dans la bio' : 'Lien de la boutique');
+
             scenes.push({
                 id: scenes.length,
                 type: 'cta',
-                duration: 4.5,
-                title: 'COMMANDEZ EN 1 CLIC',
-                subtitle: this.config.shopName,
-                voiceover: `Écrivez-nous vite sur WhatsApp pour commander !`,
+                duration: 5.2,
+                title: 'COMMANDEZ EN LIGNE',
+                subtitle: ctaHint,
+                voiceover: ctaVoice,
                 product_index: null
             });
 
@@ -1033,29 +1048,60 @@
             ctx.restore();
         },
 
-        // PLAN CALL TO ACTION FINAL (4.0s - 5.0s)
+        getPlatformLinkHint: function () {
+            const plat = (this.platform || 'tiktok').toLowerCase();
+            if (this.config.ctaPack && this.config.ctaPack[plat] && this.config.ctaPack[plat].hint) {
+                return this.config.ctaPack[plat].hint;
+            }
+            switch (plat) {
+                case 'tiktok':
+                    return '👉 Lien disponible dans la bio 👈';
+                case 'instagram':
+                    return '👉 Lien disponible dans la bio 👈';
+                case 'facebook':
+                    return '👉 Lien dans la publication 👈';
+                case 'whatsapp':
+                    return '👉 Cliquez sur le lien pour commander 👈';
+                default:
+                    return '👉 Accédez à la boutique via le lien 👈';
+            }
+        },
+
+        // PLAN CALL TO ACTION FINAL (4.0s - 5.5s)
         drawCtaScene: function (ctx, w, h, elapsed, progress, scene) {
             ctx.save();
             const alpha = Math.min(elapsed / 0.35, 1);
             ctx.globalAlpha = alpha;
 
-            const centerY = 420;
+            const centerY = 410;
 
             // Grand logo de la boutique
             if (this.shopLogoLoaded && this.shopLogoImg) {
-                const logoSize = 180;
+                const logoSize = 160;
                 ctx.save();
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                ctx.shadowBlur = 35;
-                this.roundRect(ctx, (w - logoSize) / 2, centerY - 180, logoSize, logoSize, 32);
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                ctx.shadowBlur = 30;
+                this.roundRect(ctx, (w - logoSize) / 2, centerY - 170, logoSize, logoSize, 30);
                 ctx.clip();
-                ctx.drawImage(this.shopLogoImg, (w - logoSize) / 2, centerY - 180, logoSize, logoSize);
+                ctx.drawImage(this.shopLogoImg, (w - logoSize) / 2, centerY - 170, logoSize, logoSize);
                 ctx.restore();
+
+                // Liseré blanc fin
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+                ctx.lineWidth = 3;
+                this.roundRect(ctx, (w - logoSize) / 2, centerY - 170, logoSize, logoSize, 30);
+                ctx.stroke();
             } else {
                 ctx.fillStyle = this.config.shopColor || '#6d3df2';
                 ctx.beginPath();
-                ctx.arc(w / 2, centerY - 90, 80, 0, Math.PI * 2);
+                ctx.arc(w / 2, centerY - 90, 75, 0, Math.PI * 2);
                 ctx.fill();
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(w / 2, centerY - 90, 75, 0, Math.PI * 2);
+                ctx.stroke();
 
                 ctx.fillStyle = '#ffffff';
                 ctx.font = '900 64px -apple-system, sans-serif';
@@ -1066,36 +1112,96 @@
 
             // Nom de la boutique en très grand
             ctx.fillStyle = '#ffffff';
-            ctx.font = '900 46px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.font = '900 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            this.drawTruncatedText(ctx, this.config.shopName, w / 2, centerY + 80, 640);
+            this.drawTruncatedText(ctx, this.config.shopName, w / 2, centerY + 65, 620);
 
-            // Bouton de commande avec pulsation
-            const pulse = 1.0 + 0.04 * Math.sin(elapsed * 7);
+            // Slogan / Sous-titre
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            ctx.font = '600 20px -apple-system, sans-serif';
+            const subtitleText = this.config.shopCity ? `${this.config.shopCity} • Boutique en ligne officielle` : 'Boutique officielle en ligne';
+            ctx.fillText(subtitleText, w / 2, centerY + 110);
+
+            // 1. Bouton Principal : COMMANDER EN LIGNE (avec pulsation)
+            const pulse = 1.0 + 0.035 * Math.sin(elapsed * 6);
             ctx.save();
-            ctx.translate(w / 2, centerY + 185);
+            ctx.translate(w / 2, centerY + 195);
             ctx.scale(pulse, pulse);
 
-            const btnW = 440;
-            const btnH = 76;
-            ctx.fillStyle = '#25D366'; // Vert WhatsApp haute conversion
-            this.roundRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 38);
+            const btnW = 500;
+            const btnH = 74;
+            const btnGrad = ctx.createLinearGradient(-btnW / 2, 0, btnW / 2, 0);
+            btnGrad.addColorStop(0, this.config.shopColor || '#6d3df2');
+            btnGrad.addColorStop(1, '#8b5cf6');
+
+            ctx.shadowColor = 'rgba(109, 61, 242, 0.5)';
+            ctx.shadowBlur = 25;
+            ctx.fillStyle = btnGrad;
+            this.roundRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 37);
             ctx.fill();
 
+            ctx.shadowBlur = 0;
             ctx.fillStyle = '#ffffff';
             ctx.font = '900 24px -apple-system, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('COMMANDER SUR WHATSAPP', 0, 0);
+            ctx.fillText('🌐 COMMANDER EN LIGNE', 0, 0);
             ctx.restore();
 
-            // Numéro ou lien sous le bouton
-            const contactText = this.config.shopPhone ? `WhatsApp : ${this.config.shopPhone}` : 'Lien en bio / Cliquez ici';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-            ctx.font = '600 20px -apple-system, sans-serif';
+            // 2. Pilule d'indication du lien selon la plateforme (TikTok = bio, FB = publication, etc.)
+            const linkHint = this.getPlatformLinkHint();
+            const hintY = centerY + 275;
+            ctx.font = '800 20px -apple-system, sans-serif';
+            const hintTextW = ctx.measureText(linkHint).width;
+            const hintW = Math.min(Math.max(hintTextW + 48, 420), 620);
+            const hintH = 46;
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+            this.roundRect(ctx, (w - hintW) / 2, hintY - hintH / 2, hintW, hintH, 23);
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+            ctx.lineWidth = 1.5;
+            this.roundRect(ctx, (w - hintW) / 2, hintY - hintH / 2, hintW, hintH, 23);
+            ctx.stroke();
+
+            ctx.fillStyle = '#fef08a'; // Jaune éclatant haute visibilité
             ctx.textAlign = 'center';
-            ctx.fillText(contactText, w / 2, centerY + 270);
+            ctx.textBaseline = 'middle';
+            ctx.fillText(linkHint, w / 2, hintY);
+
+            // 3. Option WhatsApp : Deuxième canal de commande rapide
+            if (this.config.shopPhone) {
+                const waY = centerY + 345;
+                const waText = `💬 Ou sur WhatsApp : ${this.config.shopPhone}`;
+                ctx.font = '700 19px -apple-system, sans-serif';
+                const waTextW = ctx.measureText(waText).width;
+                const waW = Math.min(Math.max(waTextW + 44, 400), 580);
+                const waH = 44;
+
+                ctx.fillStyle = 'rgba(37, 211, 102, 0.16)';
+                this.roundRect(ctx, (w - waW) / 2, waY - waH / 2, waW, waH, 22);
+                ctx.fill();
+
+                ctx.strokeStyle = 'rgba(37, 211, 102, 0.6)';
+                ctx.lineWidth = 1.5;
+                this.roundRect(ctx, (w - waW) / 2, waY - waH / 2, waW, waH, 22);
+                ctx.stroke();
+
+                ctx.fillStyle = '#25D366';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(waText, w / 2, waY);
+            }
+
+            // 4. Mention réassurance en bas
+            const trustY = this.config.shopPhone ? centerY + 410 : centerY + 345;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.font = '600 17px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⚡ Commande simple & rapide • Service garanti', w / 2, trustY);
 
             ctx.restore();
         },
@@ -1237,6 +1343,15 @@
                 });
             });
 
+            // Changement dynamique de la destination / plateforme (TikTok, Instagram, WhatsApp, Facebook, Général)
+            document.querySelectorAll('[data-studio-platform]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const newPlat = el.getAttribute('data-studio-platform');
+                    if (!newPlat || newPlat === this.platform) return;
+                    this.updatePlatform(newPlat);
+                });
+            });
+
             // Sélecteur de variation de script
             document.querySelectorAll('[data-script-choice]').forEach(el => {
                 el.addEventListener('click', () => {
@@ -1260,6 +1375,84 @@
             const regenBtn = document.getElementById('ad-btn-regenerate');
             if (regenBtn) {
                 regenBtn.addEventListener('click', () => this.regenerateVariation());
+            }
+        },
+
+        // --- MISE À JOUR DYNAMIQUE DE LA DESTINATION & DU CALL TO ACTION ---
+        updatePlatform: function (newPlat) {
+            this.platform = newPlat;
+
+            // 1. Boutons UI et badge
+            document.querySelectorAll('[data-studio-platform]').forEach(b => {
+                b.classList.toggle('selected', b.getAttribute('data-studio-platform') === newPlat);
+            });
+
+            const badge = document.getElementById('ad-platform-badge');
+            if (badge) {
+                badge.textContent = newPlat;
+            }
+
+            // 2. Mise à jour des phrases CTA en direct
+            const ctaInfo = (this.config.ctaPack && this.config.ctaPack[newPlat]) ? this.config.ctaPack[newPlat] : null;
+            const voices = (ctaInfo && ctaInfo.voices) ? ctaInfo.voices : [
+                this.config.shopPhone
+                    ? `Commandez sur notre boutique en ligne, le lien est dans la bio, ou écrivez-nous sur WhatsApp !`
+                    : `Commandez en quelques clics sur notre boutique en ligne, le lien est dans la bio !`,
+                `Visitez la boutique en ligne ${this.config.shopName} et commandez en quelques clics !`
+            ];
+            const hint = (ctaInfo && ctaInfo.hint) ? ctaInfo.hint : this.getPlatformLinkHint();
+
+            if (Array.isArray(this.config.scripts)) {
+                this.config.scripts.forEach((scr, sIdx) => {
+                    if (Array.isArray(scr.scenes)) {
+                        const vLine = voices[sIdx % voices.length];
+                        scr.scenes.forEach(sc => {
+                            if (sc.type === 'cta') {
+                                sc.voiceover = vLine;
+                                sc.subtitle = hint;
+                            }
+                        });
+                    }
+                });
+            }
+
+            if (Array.isArray(this.timelineScenes)) {
+                const activeVoice = voices[this.currentScriptIndex % voices.length];
+                this.timelineScenes.forEach((sc, idx) => {
+                    if (sc.type === 'cta') {
+                        sc.voiceover = activeVoice;
+                        sc.subtitle = hint;
+                        if (this.voiceBuffers) {
+                            this.voiceBuffers[idx] = null;
+                        }
+                        if (this.voicePlayed) {
+                            this.voicePlayed[idx] = false;
+                        }
+                    }
+                });
+            }
+
+            this.recalculateTimeline();
+            this.loadVoiceoverAudio();
+            this.render();
+
+            // 3. Sauvegarde asynchrone côté serveur
+            if (this.config.platformUpdateUrl) {
+                fetch(this.config.platformUpdateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': this.config.csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ platform: newPlat })
+                }).then(res => res.json()).then(data => {
+                    if (data && data.scripts) {
+                        this.config.scripts = data.scripts;
+                    }
+                }).catch(err => {
+                    console.info('Destination sauvegardée en local');
+                });
             }
         },
 

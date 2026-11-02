@@ -265,8 +265,74 @@
                 </div>
             </div>
 
-            <!-- Canal principal de diffusion -->
-            <input type="hidden" name="channel" value="tiktok">
+            <!-- ======================================================== -->
+            <!-- 6. OÙ ALLEZ-VOUS DIFFUSER CETTE VIDÉO ? -->
+            <!-- ======================================================== -->
+            <div style="margin-bottom:2rem">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.6rem;flex-wrap:wrap;gap:.4rem">
+                    <label class="label" style="font-size:1.05rem;font-weight:700;margin:0">
+                        6. Où allez-vous diffuser cette vidéo ? *
+                    </label>
+                    <span style="font-size:.8rem;color:var(--text-soft)">La voix indiquera où trouver le lien de la boutique (bio, publication, WhatsApp)</span>
+                </div>
+
+                <div class="platform-choice-grid">
+                    <label class="platform-card">
+                        <input type="radio" name="channel" value="tiktok" {{ old('channel', 'tiktok') === 'tiktok' ? 'checked' : '' }}>
+                        <div class="platform-card-body">
+                            <div class="platform-icon">🎵</div>
+                            <div class="platform-info">
+                                <strong class="platform-name">TikTok</strong>
+                                <small class="platform-hint">La voix dit : « Le lien est dans la bio »</small>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="platform-card">
+                        <input type="radio" name="channel" value="instagram" {{ old('channel') === 'instagram' ? 'checked' : '' }}>
+                        <div class="platform-card-body">
+                            <div class="platform-icon">📸</div>
+                            <div class="platform-info">
+                                <strong class="platform-name">Instagram Reels</strong>
+                                <small class="platform-hint">La voix dit : « Le lien est dans la bio »</small>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="platform-card">
+                        <input type="radio" name="channel" value="whatsapp" {{ old('channel') === 'whatsapp' ? 'checked' : '' }}>
+                        <div class="platform-card-body">
+                            <div class="platform-icon">💬</div>
+                            <div class="platform-info">
+                                <strong class="platform-name">Statut WhatsApp</strong>
+                                <small class="platform-hint">Commande en ligne ou sur WhatsApp</small>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="platform-card">
+                        <input type="radio" name="channel" value="facebook" {{ old('channel') === 'facebook' ? 'checked' : '' }}>
+                        <div class="platform-card-body">
+                            <div class="platform-icon">👥</div>
+                            <div class="platform-info">
+                                <strong class="platform-name">Facebook</strong>
+                                <small class="platform-hint">La voix dit : « Le lien est dans la publication »</small>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="platform-card">
+                        <input type="radio" name="channel" value="general" {{ old('channel') === 'general' ? 'checked' : '' }}>
+                        <div class="platform-card-body">
+                            <div class="platform-icon">🌐</div>
+                            <div class="platform-info">
+                                <strong class="platform-name">Tous Réseaux</strong>
+                                <small class="platform-hint">Formulation universelle pour commander en ligne</small>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
 
             <div class="ad-submit-actions">
                 <a href="{{ route('ads.index') }}" class="btn btn-ghost">Annuler</a>
@@ -374,10 +440,58 @@
         color: var(--text);
         margin-bottom: .25rem;
     }
-    .tone-desc {
-        font-size: .74rem;
+    .platform-choice-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: .75rem;
+    }
+    .platform-card {
+        display: block;
+        position: relative;
+        cursor: pointer;
+        margin: 0;
+    }
+    .platform-card input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .platform-card-body {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .85rem .95rem;
+        background: var(--bg-soft);
+        border: 2px solid var(--border);
+        border-radius: var(--radius-sm);
+        transition: all .2s ease;
+        height: 100%;
+        box-sizing: border-box;
+    }
+    .platform-card input:checked + .platform-card-body {
+        border-color: var(--brand-1);
+        background: rgba(109, 61, 242, 0.05);
+        box-shadow: 0 4px 12px rgba(109, 61, 242, 0.12);
+    }
+    .platform-icon {
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+    .platform-info {
+        min-width: 0;
+    }
+    .platform-name {
+        font-size: .88rem;
+        font-weight: 700;
+        color: var(--text);
+        display: block;
+        margin-bottom: .15rem;
+    }
+    .platform-hint {
+        font-size: .72rem;
         color: var(--text-soft);
-        line-height: 1.3;
+        display: block;
+        line-height: 1.25;
     }
 
     .ad-submit-actions {

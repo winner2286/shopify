@@ -78,7 +78,7 @@ class AdvertisingController extends Controller
             'category_ids.*' => ['integer'],
             'selected_product_ids' => ['nullable', 'array'],
             'selected_product_ids.*' => ['integer'],
-            'channel' => ['nullable', 'string', 'in:whatsapp,tiktok,sms,instagram'],
+            'channel' => ['nullable', 'string', 'in:whatsapp,tiktok,sms,instagram,facebook,general'],
             'objective' => ['nullable', 'string'],
             'promo_price' => ['nullable', 'integer', 'min:0'],
         ]);
@@ -93,7 +93,8 @@ class AdvertisingController extends Controller
         $channel = $validated['channel'] ?? 'tiktok';
 
         // Séparation des fonctionnalités publicitaires IA selon la formule
-        if (in_array($channel, ['tiktok', 'instagram'], true) && ! $shop->canUseFeature('tiktok_ads')) {
+        // (toutes les publicités générées ici sont des vidéos 9:16 : même règle quelle que soit la plateforme de diffusion)
+        if (! $shop->canUseFeature('tiktok_ads')) {
             return back()->withInput()->with('error', "La génération de scripts vidéo TikTok & visuels Instagram est réservée aux formules Pro et Premium. Passez à la formule Pro (15 000 FCFA) pour débloquer ces canaux !");
         }
 
@@ -144,6 +145,60 @@ class AdvertisingController extends Controller
     }
 
     /**
+     * Change la plateforme de diffusion (TikTok, Instagram, WhatsApp, Facebook, Général) :
+     * la phrase finale de la voix indique où trouver le lien de la boutique.
+     */
+    public function updatePlatform(Request $request, Advertisement $ad)
+    {
+        $shop = $request->user()->shop;
+
+        if ($ad->shop_id !== $shop->id) {
+            return response()->json(['error' => 'Non autorisé'], 403);
+        }
+
+        $validated = $request->validate([
+            'platform' => ['required', 'string', 'in:tiktok,instagram,whatsapp,facebook,general'],
+        ]);
+
+        $videoAdGen = app(\App\Services\VideoAdGeneratorService::class);
+        $platform = $videoAdGen->normalizePlatform($validated['platform']);
+
+        $vc = $ad->visual_config ?? [];
+        $vc['platform'] = $platform;
+        $vc['shop_url'] = $shop->public_url;
+
+        $scripts = $videoAdGen->applyPlatformCta($ad->generated_scripts ?? [], $shop, $platform);
+
+        $ad->update([
+            'channel' => $platform,
+            'visual_config' => $vc,
+            'generated_scripts' => $scripts,
+        ]);
+
+        $ctaPack = $videoAdGen->buildPlatformCtaPack($shop);
+
+        // Pré-chauffer le cache TTS pour la nouvelle voix en tâche de fond
+        try {
+            $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+            if (! empty($ctaPack[$platform]['voices'])) {
+                foreach ($ctaPack[$platform]['voices'] as $voiceLine) {
+                    $mediaCtrl->warmTtsCache($voiceLine);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silencieux si hors ligne
+        }
+
+        return response()->json([
+            'success' => true,
+            'platform' => $platform,
+            'scripts' => $ad->generated_scripts,
+            'cta_pack' => $ctaPack,
+            'message' => 'Destination et appel à l’action mis à jour !',
+        ]);
+    }
+
+    /**
      * Met à jour en direct les produits sélectionnés dans le studio vidéo
      */
     public function updateProducts(Request $request, Advertisement $ad)
@@ -175,6 +230,7 @@ class AdvertisingController extends Controller
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
+
 
     /**
      * H-02, H-03, H-04 : Studio Vidéo Publicitaire IA 9:16
@@ -209,7 +265,20 @@ class AdvertisingController extends Controller
 
         $productImageUrl = $this->resolveProductImageForAd($ad, $shop);
 
+        // Plateforme de diffusion + phrases finales (boutique en ligne / WhatsApp / où est le lien)
+        $platform = $videoAdGen->normalizePlatform($vc['platform'] ?? $ad->channel);
+        $ctaPack = $videoAdGen->buildPlatformCtaPack($shop);
+
         // Pré-chauffage du cache audio TTS en arrière-plan pour zéro latence
+        try {
+            $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+            foreach ($ctaPack[$platform]['voices'] as $ctaVoice) {
+                $mediaCtrl->warmTtsCache($ctaVoice);
+            }
+        } catch (\Throwable $e) {
+            // Silencieux si hors connexion
+        }
+
         try {
             $scripts = $ad->generated_scripts ?? [];
             if (! empty($scripts[0]['scenes'])) {
@@ -247,7 +316,7 @@ class AdvertisingController extends Controller
             ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($ugcPath))
             : asset('images/brand/ugc_presenter.jpg');
 
-        return view('advertising.show', compact('shop', 'ad', 'productImageUrl', 'ugcAvatarUrl', 'shopProducts', 'shopCategories'));
+        return view('advertising.show', compact('shop', 'ad', 'productImageUrl', 'ugcAvatarUrl', 'shopProducts', 'shopCategories', 'platform', 'ctaPack'));
     }
 
     /**

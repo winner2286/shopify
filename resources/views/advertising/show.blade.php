@@ -256,12 +256,51 @@
                     </div>
                 </div>
 
-                <!-- 3. Produits actuellement présentés -->
+                <!-- 3. Destination & Appel à l'action (Où est le lien ?) -->
+                <div class="settings-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+                        <h3 class="settings-title" style="margin:0">
+                            <x-icon name="share-2" :size="16" style="color:var(--brand-2)" />
+                            <span>3. Destination & Appel à l'action</span>
+                        </h3>
+                        <span id="ad-platform-badge" class="badge badge-primary" style="font-size:.7rem;text-transform:uppercase">{{ $platform }}</span>
+                    </div>
+                    <p class="settings-desc">La voix indique où trouver le lien de la boutique (bio, publication ou lien direct) et invite à commander en ligne ou sur WhatsApp :</p>
+
+                    <div class="tone-buttons-grid">
+                        <button type="button" class="btn-tone-chip {{ $platform === 'tiktok' ? 'selected' : '' }}" data-studio-platform="tiktok">
+                            <span>🎵 TikTok</span>
+                            <small>« Lien dans la bio »</small>
+                        </button>
+
+                        <button type="button" class="btn-tone-chip {{ $platform === 'instagram' ? 'selected' : '' }}" data-studio-platform="instagram">
+                            <span>📸 Instagram</span>
+                            <small>« Lien dans la bio »</small>
+                        </button>
+
+                        <button type="button" class="btn-tone-chip {{ $platform === 'whatsapp' ? 'selected' : '' }}" data-studio-platform="whatsapp">
+                            <span>💬 WhatsApp</span>
+                            <small>« En ligne ou WhatsApp »</small>
+                        </button>
+
+                        <button type="button" class="btn-tone-chip {{ $platform === 'facebook' ? 'selected' : '' }}" data-studio-platform="facebook">
+                            <span>👥 Facebook</span>
+                            <small>« Lien en publication »</small>
+                        </button>
+
+                        <button type="button" class="btn-tone-chip {{ $platform === 'general' ? 'selected' : '' }}" data-studio-platform="general">
+                            <span>🌐 Tous Réseaux</span>
+                            <small>« Lien boutique »</small>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Produits actuellement présentés -->
                 <div class="settings-box">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
                         <h3 class="settings-title" style="margin:0">
                             <x-icon name="package" :size="16" style="color:var(--brand-1)" />
-                            <span>3. Produits dans cette vidéo ({{ count($vc['products'] ?? []) }})</span>
+                            <span>4. Produits dans cette vidéo ({{ count($vc['products'] ?? []) }})</span>
                         </h3>
                         <button type="button" onclick="openProductEditModal()" class="btn btn-ghost btn-sm" style="font-size:.78rem;padding:.2rem .6rem">
                             Modifier
@@ -1117,6 +1156,10 @@
                 assetPhrase: @json($vc['asset_phrase'] ?? ''),
                 products: @json($vc['products'] ?? []),
                 scripts: @json($ad->generated_scripts ?: []),
+                platform: @json($platform),
+                shopUrl: @json($shop->public_url),
+                ctaPack: @json($ctaPack),
+                platformUpdateUrl: @json(route('ads.update_platform', $ad)),
                 exportUrl: @json(route('ads.log_video_export', $ad)),
                 csrfToken: @json(csrf_token()),
             });

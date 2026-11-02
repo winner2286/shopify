@@ -25,6 +25,21 @@ class VideoAdGeneratorService
     public const TONE_URGENT = 'urgent';
     public const TONE_CHALEUREUX = 'chaleureux';
 
+    /** Plateformes de diffusion : elles changent la phrase finale (où trouver le lien). */
+    public const PLATFORM_TIKTOK = 'tiktok';
+    public const PLATFORM_INSTAGRAM = 'instagram';
+    public const PLATFORM_WHATSAPP = 'whatsapp';
+    public const PLATFORM_FACEBOOK = 'facebook';
+    public const PLATFORM_GENERAL = 'general';
+
+    public const PLATFORMS = [
+        self::PLATFORM_TIKTOK,
+        self::PLATFORM_INSTAGRAM,
+        self::PLATFORM_WHATSAPP,
+        self::PLATFORM_FACEBOOK,
+        self::PLATFORM_GENERAL,
+    ];
+
     /**
      * Sélectionne intelligemment 1 à 5 produits du catalogue selon l'angle choisi.
      * Respecte rigoureusement les données réelles (aucun prix ni rabais inventé).
@@ -311,6 +326,7 @@ class VideoAdGeneratorService
         $targetDuration = (int) ($data['target_duration'] ?? 20);
         $customMessage = trim((string) ($data['custom_message'] ?? ''));
         $isStorePresentation = ($angle === self::ANGLE_BOUTIQUE);
+        $platform = $this->normalizePlatform($data['platform'] ?? self::PLATFORM_TIKTOK);
 
         // Sélection des produits selon l'angle
         $products = $this->selectProductsForAd(
@@ -354,6 +370,9 @@ class VideoAdGeneratorService
                 $isStorePresentation
             );
 
+        // Phrase finale garantie : boutique en ligne + WhatsApp + où trouver le lien selon la plateforme
+        $scripts = $this->applyPlatformCta($scripts, $shop, $platform);
+
         $texts = (! empty($aiPayload['texts']))
             ? $aiPayload['texts']
             : $this->generateSocialPostTexts(
@@ -383,6 +402,8 @@ class VideoAdGeneratorService
             'shop_logo_url' => $this->resolveShopLogoUrl($shop),
             'products' => $formattedProducts,
             'products_count' => count($formattedProducts),
+            'platform' => $platform,
+            'shop_url' => $shop->public_url,
         ];
 
         return [
@@ -391,6 +412,128 @@ class VideoAdGeneratorService
             'visual_config' => $visualConfig,
             'products' => $formattedProducts,
         ];
+    }
+
+    /**
+     * Normalise la plateforme de diffusion choisie par le commerçant.
+     */
+    public function normalizePlatform(?string $platform): string
+    {
+        $platform = strtolower(trim((string) $platform));
+
+        return in_array($platform, self::PLATFORMS, true) ? $platform : self::PLATFORM_TIKTOK;
+    }
+
+    /**
+     * Phrases d'appel à l'action finales, par plateforme (2 variantes chacune) + indice visuel du lien.
+     * La voix rappelle toujours qu'on peut commander sur la boutique en ligne (et sur WhatsApp si dispo)
+     * et indique où se trouve le lien : bio (TikTok/Instagram), publication (Facebook), lien (WhatsApp).
+     */
+    public function buildPlatformCtaPack(Shop $shop): array
+    {
+        $name = $shop->name;
+        $hasWhatsapp = ! empty($shop->whatsapp) || ! empty($shop->phone);
+
+        $voices = $hasWhatsapp ? [
+            self::PLATFORM_TIKTOK => [
+                "Commandez sur notre boutique en ligne, le lien est dans la bio, ou écrivez-nous sur WhatsApp !",
+                "Le lien de la boutique {$name} est dans la bio : commandez en ligne ou sur WhatsApp !",
+            ],
+            self::PLATFORM_INSTAGRAM => [
+                "Commandez sur notre boutique en ligne, le lien est dans la bio, ou écrivez-nous sur WhatsApp !",
+                "Le lien de la boutique {$name} est dans la bio : commandez en ligne ou sur WhatsApp !",
+            ],
+            self::PLATFORM_WHATSAPP => [
+                "Commandez en ligne grâce au lien de notre boutique, ou répondez-nous directement ici sur WhatsApp !",
+                "Cliquez sur le lien pour visiter la boutique {$name}, ou écrivez-nous ici sur WhatsApp !",
+            ],
+            self::PLATFORM_FACEBOOK => [
+                "Commandez sur notre boutique en ligne, le lien est dans la publication, ou écrivez-nous sur WhatsApp !",
+                "Le lien de la boutique {$name} est dans la publication : commandez en ligne ou sur WhatsApp !",
+            ],
+            self::PLATFORM_GENERAL => [
+                "Commandez sur notre boutique en ligne ou directement sur WhatsApp, le lien est juste ici !",
+                "Visitez la boutique en ligne {$name} et commandez en quelques clics, ou sur WhatsApp !",
+            ],
+        ] : [
+            self::PLATFORM_TIKTOK => [
+                "Commandez en quelques clics sur notre boutique en ligne, le lien est dans la bio !",
+                "Le lien de la boutique {$name} est dans la bio, commandez en ligne dès maintenant !",
+            ],
+            self::PLATFORM_INSTAGRAM => [
+                "Commandez en quelques clics sur notre boutique en ligne, le lien est dans la bio !",
+                "Le lien de la boutique {$name} est dans la bio, commandez en ligne dès maintenant !",
+            ],
+            self::PLATFORM_WHATSAPP => [
+                "Cliquez sur le lien pour commander directement sur notre boutique en ligne !",
+                "Visitez la boutique {$name} grâce au lien et commandez en ligne !",
+            ],
+            self::PLATFORM_FACEBOOK => [
+                "Commandez sur notre boutique en ligne, le lien est dans la publication !",
+                "Le lien de la boutique {$name} est dans la publication, commandez en ligne !",
+            ],
+            self::PLATFORM_GENERAL => [
+                "Commandez dès maintenant sur notre boutique en ligne, le lien est juste ici !",
+                "Visitez la boutique en ligne {$name} et commandez en quelques clics !",
+            ],
+        ];
+
+        $hints = [
+            self::PLATFORM_TIKTOK => 'Lien dans la bio',
+            self::PLATFORM_INSTAGRAM => 'Lien dans la bio',
+            self::PLATFORM_WHATSAPP => 'Cliquez sur le lien',
+            self::PLATFORM_FACEBOOK => 'Lien dans la publication',
+            self::PLATFORM_GENERAL => 'Lien de la boutique',
+        ];
+
+        $pack = [];
+        foreach (self::PLATFORMS as $p) {
+            $pack[$p] = ['voices' => $voices[$p], 'hint' => $hints[$p]];
+        }
+
+        return $pack;
+    }
+
+    /**
+     * Remplace (ou ajoute) le plan final CTA de chaque script par la phrase adaptée à la plateforme.
+     */
+    public function applyPlatformCta(array $scripts, Shop $shop, string $platform): array
+    {
+        $platform = $this->normalizePlatform($platform);
+        $pack = $this->buildPlatformCtaPack($shop)[$platform];
+
+        foreach ($scripts as $i => &$script) {
+            if (empty($script['scenes']) || ! is_array($script['scenes'])) {
+                continue;
+            }
+
+            $voice = $pack['voices'][$i % 2];
+
+            $ctaIndex = null;
+            foreach ($script['scenes'] as $k => $scene) {
+                if (($scene['type'] ?? '') === 'cta') {
+                    $ctaIndex = $k;
+                }
+            }
+
+            if ($ctaIndex === null) {
+                $script['scenes'][] = [
+                    'id' => count($script['scenes']),
+                    'type' => 'cta',
+                    'title' => 'COMMANDEZ EN LIGNE',
+                    'product_index' => null,
+                ];
+                $ctaIndex = array_key_last($script['scenes']);
+            }
+
+            $script['scenes'][$ctaIndex]['voiceover'] = $voice;
+            $script['scenes'][$ctaIndex]['subtitle'] = $pack['hint'];
+            $script['scenes'][$ctaIndex]['duration'] = $this->estimateSceneDuration($voice, 4.5, 7.5);
+            $script['steps'] = $this->convertScenesToSteps($script['scenes']);
+        }
+        unset($script);
+
+        return $scripts;
     }
 
     /**

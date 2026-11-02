@@ -20,6 +20,8 @@ class Advertisement extends Model
     public const CHANNEL_TIKTOK = 'tiktok';
     public const CHANNEL_SMS = 'sms';
     public const CHANNEL_INSTAGRAM = 'instagram';
+    public const CHANNEL_FACEBOOK = 'facebook';
+    public const CHANNEL_GENERAL = 'general';
 
     public const OBJECTIVE_NOUVEAUTE = 'nouveaute';
     public const OBJECTIVE_PROMOTION = 'promotion';
@@ -58,6 +60,8 @@ class Advertisement extends Model
             self::CHANNEL_TIKTOK => 'TikTok & Reels',
             self::CHANNEL_SMS => 'Campagne SMS',
             self::CHANNEL_INSTAGRAM => 'Instagram',
+            self::CHANNEL_FACEBOOK => 'Facebook',
+            self::CHANNEL_GENERAL => 'Tous réseaux',
             default => ucfirst($this->channel),
         };
     }
