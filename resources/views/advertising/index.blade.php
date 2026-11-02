@@ -3,26 +3,92 @@
 @section('title', 'Bibliothèque de Publicités : '.config('platform.name'))
 
 @section('content')
+<style>
+.ads-header-btn-row {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+.btn-flyer-cta {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+}
+.btn-video-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    white-space: nowrap;
+    text-decoration: none;
+}
+@media (max-width: 640px) {
+    .ads-header-wrap {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: .85rem !important;
+    }
+    .ads-header-btn-row {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: .5rem !important;
+        width: 100% !important;
+    }
+    .ads-header-btn-row .btn {
+        width: 100%;
+        padding: .6rem .35rem !important;
+        font-size: .8rem !important;
+        text-align: center;
+        justify-content: center;
+    }
+}
+.ads-tabs-row {
+    display: flex;
+    gap: .5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+    padding-bottom: .5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.ads-tabs-row::-webkit-scrollbar {
+    display: none;
+}
+.ads-tabs-row .btn {
+    flex-shrink: 0;
+}
+</style>
+
 <div class="container" style="max-width:960px;padding:2rem 1rem">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
+    <div class="ads-header-wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
         <div>
             <h1 style="font-size:1.8rem;margin:0">Studio Publicité & Visuels</h1>
             <p style="margin:0;color:var(--text-soft)">Créez et diffusez vos vidéos IA et affiches promotionnelles pour WhatsApp & réseaux sociaux.</p>
         </div>
 
-        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-            <a href="{{ route('ads.flyers') }}" class="btn btn-sm" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#fff;border:none;display:inline-flex;align-items:center;gap:.35rem;font-weight:600">
-                <span>🎨 + Affiche Promo 1-Clic</span>
+        <div class="ads-header-btn-row">
+            <a href="{{ route('ads.flyers') }}" class="btn btn-sm btn-flyer-cta">
+                <span>🎨 + Affiche Promo</span>
             </a>
-            <a href="{{ route('ads.create') }}" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
+            <a href="{{ route('ads.create') }}" class="btn btn-primary btn-sm btn-video-cta">
                 <x-icon name="sparkles" :size="15" />
-                <span>+ Nouvelle vidéo IA</span>
+                <span>+ Vidéo IA</span>
             </a>
         </div>
     </div>
 
-    <!-- Onglets Studio -->
-    <div style="display:flex;gap:.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem;padding-bottom:.5rem">
+    <!-- Onglets Studio avec défilement horizontal fluide -->
+    <div class="ads-tabs-row">
         <a href="{{ route('ads.index') }}" class="btn btn-sm btn-primary" style="display:inline-flex;align-items:center;gap:.4rem">
             <span>🎬 Bibliothèque Vidéos IA</span>
         </a>

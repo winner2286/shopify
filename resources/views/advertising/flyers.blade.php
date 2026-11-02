@@ -3,10 +3,57 @@
 @section('title', 'Générateur d\'Affiches Promo & Statuts WhatsApp : '.config('platform.name'))
 
 @section('content')
+<style>
+.ads-header-btn-row {
+    display: flex;
+    gap: .5rem;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+@media (max-width: 640px) {
+    .ads-header-wrap {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: .85rem !important;
+    }
+    .ads-header-btn-row {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: .5rem !important;
+        width: 100% !important;
+    }
+    .ads-header-btn-row .btn {
+        width: 100%;
+        padding: .6rem .35rem !important;
+        font-size: .8rem !important;
+        text-align: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+}
+.ads-tabs-row {
+    display: flex;
+    gap: .5rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+    padding-bottom: .5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.ads-tabs-row::-webkit-scrollbar {
+    display: none;
+}
+.ads-tabs-row .btn {
+    flex-shrink: 0;
+}
+</style>
+
 <div class="container" style="max-width:1160px;padding:2rem 1rem">
 
     <!-- En-tête & Onglets de navigation Publicité -->
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
+    <div class="ads-header-wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
         <div>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
                 <span style="font-size:1.8rem">🎨</span>
@@ -18,19 +65,19 @@
             </p>
         </div>
 
-        <div style="display:flex;gap:.5rem;align-items:center">
+        <div class="ads-header-btn-row">
             <a href="{{ route('ads.create') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
                 <x-icon name="sparkles" :size="15" />
-                <span>Créer une vidéo IA</span>
+                <span>+ Vidéo IA</span>
             </a>
             <a href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm">
-                <span>Bibliothèque Vidéos</span>
+                <span>Mes Vidéos</span>
             </a>
         </div>
     </div>
 
     <!-- Sélecteur d'onglets Publicité -->
-    <div style="display:flex;gap:.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem;padding-bottom:.5rem">
+    <div class="ads-tabs-row">
         <a href="{{ route('ads.flyers') }}" class="btn btn-sm btn-primary" style="display:inline-flex;align-items:center;gap:.4rem">
             <span>🎨 Affiches & Statuts WhatsApp</span>
         </a>
