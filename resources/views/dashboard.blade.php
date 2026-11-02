@@ -130,7 +130,7 @@
         </section>
 
         <section class="card panel reveal" aria-labelledby="orders-title">
-            <h3 id="orders-title">Activité & Commandes (Module E)</h3>
+            <h3 id="orders-title">Activité & Commandes</h3>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0">
                 <div style="background:var(--bg-soft);padding:1rem;border-radius:12px;text-align:center">
                     <strong style="font-size:1.8rem;display:block;color:{{ $pendingOrdersCount > 0 ? 'var(--warn)' : 'var(--text)' }}">

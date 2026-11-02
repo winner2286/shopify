@@ -3167,14 +3167,37 @@ button.bottom-nav-item {
 }
 
 /* Onglets et conteneurs horizontaux défilables sans barre grise disgracieuse */
-.tabs-scroll,
+.tabs-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 4px 6px 8px 6px;
+  margin-left: -6px;
+  margin-right: -6px;
+  scroll-snap-type: x proximity;
+  scroll-padding: 0 6px;
+  overscroll-behavior-x: contain;
+}
+.tabs-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.tabs-scroll > * {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  scroll-snap-align: start;
+}
 .hide-scrollbar {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.tabs-scroll::-webkit-scrollbar,
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
   width: 0;
@@ -4635,7 +4658,7 @@ button.bottom-nav-item {
 /* 5. Conteneur & Toasts Modernes */
 .boutiq-toast-container {
   position: fixed;
-  top: 1.5rem;
+  top: calc(env(safe-area-inset-top, 20px) + 14px);
   right: 1.5rem;
   z-index: 100000;
   display: flex;
@@ -4646,13 +4669,24 @@ button.bottom-nav-item {
   pointer-events: none;
 }
 
+@media (max-width: 600px) {
+  .boutiq-toast-container {
+    top: calc(env(safe-area-inset-top, 24px) + 12px) !important;
+    left: 14px !important;
+    right: 14px !important;
+    width: auto !important;
+    max-width: none !important;
+    align-items: stretch !important;
+  }
+}
+
 .boutiq-toast {
   pointer-events: auto;
-  background: rgba(18, 15, 28, 0.94);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #141724;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   padding: 0.9rem 1.1rem;
   display: flex;
@@ -4672,9 +4706,11 @@ button.bottom-nav-item {
 }
 
 [data-theme='light'] .boutiq-toast {
-  background: rgba(255, 255, 255, 0.96);
+  background: #ffffff;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: 1px solid rgba(15, 23, 42, 0.12);
-  box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
   color: #0f172a;
 }
 

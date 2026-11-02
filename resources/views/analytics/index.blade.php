@@ -6,7 +6,7 @@
 <div class="container" style="max-width:1120px;padding:2rem 1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
         <div>
-            <h1 style="font-size:1.8rem;margin:0">Statistiques & Performance (Module I)</h1>
+            <h1 style="font-size:1.8rem;margin:0">Statistiques & Performance</h1>
             <p style="margin:0;color:var(--text-soft)">Suivez l'évolution de votre chiffre d'affaires, vos meilleures ventes et l'état des stocks.</p>
         </div>
 

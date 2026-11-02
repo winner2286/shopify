@@ -7,7 +7,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
         <div>
             <h1 style="font-size:1.8rem;margin:0">Gestion des Commandes</h1>
-            <p style="margin:0;color:var(--text-soft)">Suivez, traitez et expédiez les commandes de vos clients en temps réel (Module E).</p>
+            <p style="margin:0;color:var(--text-soft)">Suivez, traitez et expédiez les commandes de vos clients en temps réel.</p>
         </div>
 
         <div class="header-actions">
@@ -34,7 +34,7 @@
     @endif
 
     <!-- Onglets de statut (CDC E-01) -->
-    <div class="tabs-scroll" style="display:flex;gap:.5rem;padding-bottom:.5rem;margin-bottom:1.5rem">
+    <div class="tabs-scroll" style="margin-bottom:1.5rem">
         <a href="{{ route('orders.index') }}" class="btn btn-sm {{ ! $status ? 'btn-primary' : 'btn-ghost' }}">
             Toutes ({{ $counts['all'] }})
         </a>

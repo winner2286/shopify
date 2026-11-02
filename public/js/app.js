@@ -945,5 +945,26 @@
       }
     });
   }
+
+  // 13. Auto-alignement et positionnement fluide des onglets défilables (.tabs-scroll)
+  function initTabsScroll() {
+    var tabsContainers = document.querySelectorAll('.tabs-scroll');
+    tabsContainers.forEach(function (container) {
+      var activeTab = container.querySelector('.btn-primary, .active');
+      if (activeTab) {
+        if (activeTab === container.firstElementChild) {
+          container.scrollLeft = 0;
+        } else {
+          var targetScroll = activeTab.offsetLeft - (container.clientWidth / 2) + (activeTab.clientWidth / 2);
+          container.scrollTo({ left: Math.max(0, targetScroll), behavior: 'smooth' });
+        }
+      } else {
+        container.scrollLeft = 0;
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initTabsScroll);
+  window.addEventListener('pageshow', initTabsScroll);
 })();
 
