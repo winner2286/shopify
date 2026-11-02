@@ -3,7 +3,7 @@
 @section('title', 'Créer une Publicité Vidéo IA : ' . config('platform.name'))
 
 @section('content')
-<div class="container" style="max-width:880px;padding:2rem 1rem">
+<div class="container ad-form-container" style="max-width:880px;padding:2rem 1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
         <div>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
@@ -35,7 +35,7 @@
         </div>
     @endif
 
-    <div class="card" style="padding:1.8rem;border-radius:var(--radius-md)">
+    <div class="card ad-form-card" style="padding:1.8rem;border-radius:var(--radius-md)">
         <form method="POST" action="{{ route('ads.store') }}" id="video-ad-form">
             @csrf
 
@@ -105,9 +105,9 @@
                         <div class="angle-card-body">
                             <div class="angle-icon" style="background:#ecfdf5;color:#059669">🏪</div>
                             <div class="angle-info">
-                                <div style="display:flex;align-items:center;gap:.5rem">
+                                <div class="angle-title-wrap">
                                     <span class="angle-title">Présentation de la boutique</span>
-                                    <span class="badge badge-ok" style="font-size:.68rem">Sans prix par défaut</span>
+                                    <span class="badge badge-ok badge-sm">Sans prix par défaut</span>
                                 </div>
                                 <div class="angle-desc">Mettez en avant votre marque, votre logo, vos univers de catégories et vos atouts réels.</div>
                             </div>
@@ -134,9 +134,9 @@
 
             <!-- PANNEAU CONDITIONNEL 2 : PARAMÈTRES SPÉCIAUX DE LA PRÉSENTATION BOUTIQUE -->
             <div id="panel-boutique" class="conditional-panel" style="display:none;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.4rem;margin-bottom:2rem">
-                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.8rem">
-                    <x-icon name="info" :size="18" style="color:var(--brand-1)" />
-                    <strong style="font-size:.95rem">Paramètres spécifiques au mode Présentation Boutique :</strong>
+                <div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.8rem">
+                    <span style="color:var(--brand-1);flex-shrink:0;margin-top:2px"><x-icon name="info" :size="18" /></span>
+                    <strong style="font-size:.95rem;line-height:1.35">Paramètres spécifiques au mode Présentation Boutique :</strong>
                 </div>
 
                 <div style="margin-bottom:1.2rem">
@@ -152,7 +152,7 @@
                 @if ($categories->isNotEmpty())
                     <div>
                         <label class="label" style="font-size:.88rem;margin-bottom:.4rem">Catégories à illustrer (3 à 4 recommandées) :</label>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:.6rem">
+                        <div class="category-checkbox-grid">
                             @foreach ($categories as $cat)
                                 <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;background:var(--bg);padding:.6rem .8rem;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer">
                                     <input type="checkbox" name="category_ids[]" value="{{ $cat->id }}" checked style="accent-color:var(--brand-1)">
@@ -222,7 +222,7 @@
             <!-- ======================================================== -->
             <!-- 3. SECTEUR DE LA BOUTIQUE & PARAMÈTRES AUDIO -->
             <!-- ======================================================== -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:1.4rem;margin-bottom:2rem">
+            <div class="ad-config-grid" style="margin-bottom:2rem">
                 <!-- Secteur d'activité -->
                 <div>
                     <label for="business_type" class="label" style="font-weight:700">3. Secteur de la boutique</label>
@@ -357,6 +357,8 @@
         position: relative;
         cursor: pointer;
         margin: 0;
+        overflow: hidden;
+        border-radius: var(--radius-sm);
     }
     .angle-card input[type="radio"] {
         position: absolute;
@@ -374,11 +376,12 @@
         transition: all .2s ease;
         height: 100%;
         box-sizing: border-box;
+        overflow: hidden;
     }
     .angle-card input:checked + .angle-card-body {
         border-color: var(--brand-1);
-        background: rgba(109, 61, 242, 0.05);
-        box-shadow: 0 4px 14px rgba(109, 61, 242, 0.12);
+        background: rgba(158, 27, 50, 0.05);
+        box-shadow: 0 4px 14px rgba(158, 27, 50, 0.12);
     }
     .angle-icon {
         font-size: 1.35rem;
@@ -390,16 +393,39 @@
         justify-content: center;
         flex-shrink: 0;
     }
+    .angle-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .angle-title-wrap {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: .35rem .5rem;
+        margin-bottom: .25rem;
+    }
     .angle-title {
         font-size: .95rem;
         font-weight: 700;
         color: var(--text);
-        margin-bottom: .25rem;
+        margin-bottom: 0;
+        line-height: 1.25;
+        word-break: break-word;
+    }
+    .angle-title-wrap .badge-sm {
+        font-size: .68rem !important;
+        padding: .2rem .55rem !important;
+        white-space: normal !important;
+        line-height: 1.2;
+        max-width: 100%;
+        box-sizing: border-box;
+        display: inline-block;
     }
     .angle-desc {
         font-size: .78rem;
         color: var(--text-soft);
         line-height: 1.35;
+        word-break: break-word;
     }
     .angle-card-special .angle-card-body {
         border-style: dashed;
@@ -415,6 +441,8 @@
         position: relative;
         cursor: pointer;
         margin: 0;
+        overflow: hidden;
+        border-radius: var(--radius-sm);
     }
     .tone-card input[type="radio"] {
         position: absolute;
@@ -429,17 +457,27 @@
         transition: all .2s ease;
         height: 100%;
         box-sizing: border-box;
+        overflow: hidden;
     }
     .tone-card input:checked + .tone-card-body {
         border-color: var(--brand-1);
-        background: rgba(109, 61, 242, 0.05);
+        background: rgba(158, 27, 50, 0.05);
+        box-shadow: 0 4px 12px rgba(158, 27, 50, 0.12);
     }
     .tone-header {
         font-size: .88rem;
         font-weight: 700;
         color: var(--text);
         margin-bottom: .25rem;
+        word-break: break-word;
     }
+    .tone-desc {
+        font-size: .75rem;
+        color: var(--text-soft);
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
     .platform-choice-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -450,6 +488,8 @@
         position: relative;
         cursor: pointer;
         margin: 0;
+        overflow: hidden;
+        border-radius: var(--radius-sm);
     }
     .platform-card input[type="radio"] {
         position: absolute;
@@ -467,11 +507,12 @@
         transition: all .2s ease;
         height: 100%;
         box-sizing: border-box;
+        overflow: hidden;
     }
     .platform-card input:checked + .platform-card-body {
         border-color: var(--brand-1);
-        background: rgba(109, 61, 242, 0.05);
-        box-shadow: 0 4px 12px rgba(109, 61, 242, 0.12);
+        background: rgba(158, 27, 50, 0.05);
+        box-shadow: 0 4px 12px rgba(158, 27, 50, 0.12);
     }
     .platform-icon {
         font-size: 1.4rem;
@@ -479,6 +520,7 @@
     }
     .platform-info {
         min-width: 0;
+        flex: 1;
     }
     .platform-name {
         font-size: .88rem;
@@ -486,12 +528,26 @@
         color: var(--text);
         display: block;
         margin-bottom: .15rem;
+        word-break: break-word;
     }
     .platform-hint {
         font-size: .72rem;
         color: var(--text-soft);
         display: block;
         line-height: 1.25;
+        word-break: break-word;
+    }
+
+    .ad-config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.4rem;
+    }
+
+    .category-checkbox-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: .6rem;
     }
 
     .ad-submit-actions {
@@ -514,6 +570,45 @@
     .btn-submit-ad .btn-short-text { display: none; }
 
     @media (max-width: 640px) {
+        .ad-form-container {
+            padding: 1rem .65rem 3rem !important;
+        }
+        .ad-form-card {
+            padding: 1.15rem .85rem !important;
+            border-radius: var(--radius-sm) !important;
+        }
+        .conditional-panel {
+            padding: 1rem .85rem !important;
+        }
+        .angle-choice-grid {
+            grid-template-columns: 1fr !important;
+            gap: .65rem !important;
+        }
+        .angle-card-body {
+            padding: .85rem !important;
+            gap: .75rem !important;
+        }
+        .angle-icon {
+            width: 38px !important;
+            height: 38px !important;
+            font-size: 1.2rem !important;
+        }
+        .tone-choice-grid {
+            grid-template-columns: 1fr !important;
+            gap: .55rem !important;
+        }
+        .platform-choice-grid {
+            grid-template-columns: 1fr !important;
+            gap: .55rem !important;
+        }
+        .ad-config-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1rem !important;
+        }
+        .category-checkbox-grid {
+            grid-template-columns: 1fr !important;
+            gap: .5rem !important;
+        }
         .ad-submit-actions {
             flex-direction: column-reverse;
             width: 100%;
