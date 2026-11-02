@@ -770,4 +770,180 @@
       });
     });
   });
+
+  // 12. Export CSV Sécurisé Anti-Blocage iOS QuickLook & PWA Standalone
+  window.exportCsvSafe = async function (e, url, filename) {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    var btn = e ? (e.currentTarget || (e.target && e.target.closest ? e.target.closest('a, button') : null)) : null;
+    var originalHtml = btn ? btn.innerHTML : '';
+
+    try {
+      if (btn) {
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.75';
+        btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:exportSpin .6s linear infinite;vertical-align:middle;margin-right:6px"></span> Exportation...';
+      }
+
+      var res = await fetch(url, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'text/csv, text/plain, */*'
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('Erreur HTTP ' + res.status);
+      }
+
+      var blob = await res.blob();
+      var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var isStandalone = window.navigator.standalone === true ||
+                         window.matchMedia('(display-mode: standalone)').matches;
+
+      // Fichier pour le partage natif (Web Share API Level 2)
+      var file = null;
+      var canShareFiles = false;
+      try {
+        file = new File([blob], filename, { type: 'text/csv;charset=utf-8' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          canShareFiles = true;
+        }
+      } catch (errFile) {
+        canShareFiles = false;
+      }
+
+      // Cas 1 : Mobile / iOS avec Web Share supporté
+      // Ouvre la feuille native iOS (WhatsApp, Fichiers, Excel, etc.) avec bouton "Annuler" / "Fermer".
+      // L'utilisateur reste 100% sur sa page Zanika sans être piégé dans QuickLook !
+      if (canShareFiles && (isIOS || isStandalone || /Mobi|Android/i.test(navigator.userAgent))) {
+        try {
+          await navigator.share({
+            title: filename,
+            files: [file]
+          });
+          if (window.BoutiqToast) {
+            window.BoutiqToast('Fichier CSV partagé avec succès !', 'success');
+          }
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') {
+            // L'utilisateur a simplement fermé la feuille de partage : retour transparent sans rechargement
+            return;
+          }
+          console.warn('Share API threw error, falling back:', shareErr);
+        }
+      }
+
+      // Cas 2 : iOS en mode PWA Standalone sans Web Share
+      // Évite formellement la redirection plein écran QuickLook sans bouton retour
+      if (isIOS && isStandalone) {
+        var textData = await blob.text();
+        showCsvInAppModal(textData, filename);
+        return;
+      }
+
+      // Cas 3 : Navigateurs Desktop PC / Mac et Android standards (Téléchargement direct)
+      var blobUrl = window.URL.createObjectURL(blob);
+      var tempLink = document.createElement('a');
+      tempLink.href = blobUrl;
+      tempLink.download = filename;
+      tempLink.style.display = 'none';
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      document.body.removeChild(tempLink);
+      setTimeout(function () {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 1500);
+
+      if (window.BoutiqToast) {
+        window.BoutiqToast('Téléchargement du fichier CSV lancé !', 'success');
+      }
+    } catch (err) {
+      console.error('Erreur exportCsvSafe:', err);
+      if (window.BoutiqToast) {
+        window.BoutiqToast('Impossible d\'exporter le fichier CSV : ' + (err.message || 'erreur réseau'), 'error');
+      } else {
+        alert('Erreur lors de l\'exportation CSV.');
+      }
+    } finally {
+      if (btn) {
+        btn.style.pointerEvents = '';
+        btn.style.opacity = '';
+        btn.innerHTML = originalHtml;
+      }
+    }
+  };
+
+  function showCsvInAppModal(textData, filename) {
+    var existingModal = document.getElementById('csv-export-modal');
+    if (existingModal) existingModal.remove();
+
+    var lines = textData.trim().split('\n').slice(0, 5).join('\n');
+    var totalLines = textData.trim().split('\n').length;
+
+    var modal = document.createElement('div');
+    modal.id = 'csv-export-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);z-index:999999;display:flex;align-items:flex-end;justify-content:center;padding:1rem;';
+
+    modal.innerHTML = 
+      '<div style="background:var(--bg-card, #141721);border:1px solid var(--border, #2a2e3d);border-radius:20px;max-width:500px;width:100%;padding:1.5rem;box-shadow:0 20px 50px rgba(0,0,0,0.6);margin-bottom:env(safe-area-inset-bottom, 1rem);">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">' +
+          '<div style="display:flex;align-items:center;gap:.6rem">' +
+            '<div style="width:38px;height:38px;border-radius:10px;background:rgba(16,185,129,0.15);color:#10b981;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.75rem">CSV</div>' +
+            '<div>' +
+              '<div style="font-weight:700;font-size:1rem;color:var(--text, #fff)">' + filename + '</div>' +
+              '<div style="font-size:0.78rem;color:var(--text-soft, #94a3b8)">' + totalLines + ' lignes prêtes à l\'emploi</div>' +
+            '</div>' +
+          '</div>' +
+          '<button type="button" id="close-csv-modal-btn" style="background:transparent;border:none;color:var(--text-soft, #94a3b8);cursor:pointer;padding:6px;font-size:1.4rem;line-height:1">&times;</button>' +
+        '</div>' +
+        '<div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:.75rem;font-family:monospace;font-size:.75rem;color:var(--text-soft, #cbd5e1);max-height:120px;overflow:auto;white-space:pre;margin-bottom:1.2rem">' +
+          lines + (totalLines > 5 ? '\n...' : '') +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:.6rem">' +
+          '<button type="button" id="copy-csv-btn" class="btn btn-primary" style="width:100%;padding:.75rem;font-weight:600;display:flex;align-items:center;justify-content:center;gap:.5rem">' +
+            '📋 Copier les données CSV' +
+          '</button>' +
+          '<button type="button" id="dismiss-csv-btn" class="btn btn-ghost" style="width:100%;padding:.65rem;border:1px solid var(--border, #333)">' +
+            'Fermer' +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    var closeModal = function() {
+      modal.remove();
+    };
+
+    modal.querySelector('#close-csv-modal-btn').addEventListener('click', closeModal);
+    modal.querySelector('#dismiss-csv-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', function(ev) {
+      if (ev.target === modal) closeModal();
+    });
+
+    modal.querySelector('#copy-csv-btn').addEventListener('click', function() {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textData).then(function() {
+          if (window.BoutiqToast) window.BoutiqToast('Données CSV copiées dans le presse-papier !', 'success');
+          closeModal();
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = textData;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (window.BoutiqToast) window.BoutiqToast('Données CSV copiées !', 'success');
+        closeModal();
+      }
+    });
+  }
 })();
+

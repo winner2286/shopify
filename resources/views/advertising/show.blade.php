@@ -8,7 +8,7 @@
         <div>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
                 <span class="svg-icon" style="color:var(--brand-2)"><x-icon name="sparkles" :size="26" /></span>
-                <h1 style="font-size:1.85rem;margin:0;font-weight:800">Studio Vidéo Publicitaire 9:16</h1>
+                <h1 style="font-size:1.85rem;margin:0;font-weight:800">Studio Vidéo &amp; Publicité IA 9:16</h1>
             </div>
             <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
                 @php
@@ -200,7 +200,7 @@
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
                         <h3 class="settings-title" style="margin:0">
                             <x-icon name="sparkles" :size="16" style="color:var(--brand-2)" />
-                            <span>1. Déroulé du Script Synchronisé</span>
+                            <span>1. Idées & Scripts de Vidéos TikTok</span>
                         </h3>
                         <span id="ad-voice-status" class="badge badge-ok" style="font-size:.68rem">Voix prête</span>
                     </div>

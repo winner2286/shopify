@@ -10,7 +10,7 @@
                 <span class="svg-icon" style="color:var(--brand-2)"><x-icon name="sparkles" :size="26" /></span>
                 <h1 style="font-size:1.85rem;margin:0;font-weight:800">Studio Publicitaire Vidéo 9:16</h1>
             </div>
-            <p style="margin:0;color:var(--text-soft)">Générez une vraie vidéo publicitaire verticale adaptée à votre boutique, vos produits réels et votre univers.</p>
+            <p style="margin:0;color:var(--text-soft)">Assistant Publicitaire IA &bull; Générez une vraie vidéo publicitaire verticale adaptée à votre boutique, vos produits réels et votre univers.</p>
         </div>
 
         <a href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">

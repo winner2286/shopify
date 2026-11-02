@@ -212,7 +212,7 @@ class VideoAdGeneratorService
      */
     public function formatProductsPayload(Collection $products, Shop $shop, bool $hidePrices = false): array
     {
-        $currency = $shop->currency ?: 'FCFA';
+        $currency = ($shop->currency === 'XOF' || empty($shop->currency)) ? 'FCFA' : $shop->currency;
 
         return $products->map(function (Product $p) use ($shop, $currency, $hidePrices) {
             $imageUrl = $this->resolveProductImageUrl($p, $shop);
@@ -1024,6 +1024,10 @@ PROMPT;
                 "POV : Tu découvres la boutique *{$shopName}* et tu trouves exactement ce que tu cherchais 😍\n\n" .
                 "Large choix, qualité et service attentionné !\n" .
                 "📲 Commandes ouvertes sur WhatsApp : {$url}",
+
+                "🛍️ Envie de nouveautés ? *{$shopName}* vous ouvre ses portes !\n\n" .
+                "Commandez en ligne ou directement via WhatsApp en toute sécurité.\n" .
+                "👉 Accédez à la vitrine complète : {$url}",
             ];
         }
 
@@ -1043,6 +1047,10 @@ PROMPT;
             "Stop au scrolling 🛑 Ne manquez pas les incontournables du jour chez *{$shopName}* !\n\n" .
             $summaryText . "\n\n" .
             "📲 Commandez dès maintenant via le lien en bio ou sur WhatsApp !",
+
+            "✨ Coup de projecteur sur la sélection *{$shopName}* !\n\n" .
+            $summaryText . "\n\n" .
+            "🛒 Quantités limitées. Cliquez pour commander en toute sécurité : {$url}",
         ];
     }
 }

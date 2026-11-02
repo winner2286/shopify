@@ -11,7 +11,11 @@
         </div>
 
         <div class="header-actions">
-            <a href="{{ route('orders.export_csv') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
+            <a href="{{ route('orders.export_csv') }}" 
+               onclick="exportCsvSafe(event, '{{ route('orders.export_csv') }}', 'commandes-{{ date('Y-m-d') }}.csv')"
+               class="btn btn-ghost btn-sm" 
+               style="display:inline-flex;align-items:center;gap:.3rem"
+               title="Exporter vos commandes au format CSV">
                 <x-icon name="download" size="16" /> Exporter en CSV
             </a>
             <a href="{{ route('shipping.index') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">

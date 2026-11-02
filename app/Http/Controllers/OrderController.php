@@ -366,7 +366,7 @@ class OrderController extends Controller
     public function exportCsv(Request $request): StreamedResponse
     {
         $shop = $request->user()->shop;
-        $orders = Order::with(['items'])->latest()->get();
+        $orders = $shop->orders()->with(['items'])->latest()->get();
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',

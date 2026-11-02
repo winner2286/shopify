@@ -114,8 +114,7 @@ class AdvertisingController extends Controller
         $channel = $validated['channel'] ?? 'tiktok';
 
         // Séparation des fonctionnalités publicitaires IA selon la formule
-        // (toutes les publicités générées ici sont des vidéos 9:16 : même règle quelle que soit la plateforme de diffusion)
-        if (! $shop->canUseFeature('tiktok_ads')) {
+        if (in_array($channel, ['tiktok', 'instagram'], true) && ! $shop->canUseFeature('tiktok_ads')) {
             return back()->withInput()->with('error', "La génération de scripts vidéo TikTok & visuels Instagram est réservée aux formules Pro et Premium. Passez à la formule Pro (15 000 FCFA) pour débloquer ces canaux !");
         }
 
