@@ -87,9 +87,45 @@
                         <li><a href="{{ route('home') }}#faq">FAQ</a></li>
                     </ul>
                 @endguest
+
+                @auth
+                    <nav class="nav-primary-links" aria-label="Navigation principale">
+                        <a id="nav-dashboard" href="{{ route('dashboard') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('dashboard') ? 'btn-primary' : '' }}">Accueil</a>
+                        <a id="nav-orders" href="{{ route('orders.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('orders.*') ? 'btn-primary' : '' }}">Commandes</a>
+                        <a id="nav-products" href="{{ route('products.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('products.*') ? 'btn-primary' : '' }}">Produits</a>
+                        <a id="nav-ads" href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ads.*') ? 'btn-primary' : '' }}">Publicité</a>
+
+                        <!-- Liens secondaires (visibles directement sur écran large >= 1240px) -->
+                        <a id="nav-categories" href="{{ route('categories.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('categories.*') ? 'btn-primary' : '' }}">Catégories</a>
+                        <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
+                        <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Paramètres</a>
+
+                        <!-- Menu déroulant "Plus ▾" (actif sur écran compact 769px à 1239px) -->
+                        <div class="nav-more-dropdown" id="nav-more-dropdown">
+                            <button type="button" class="btn btn-ghost btn-sm nav-more-trigger {{ (request()->routeIs('categories.*') || request()->routeIs('analytics.*') || request()->routeIs('shop.*')) ? 'active-section' : '' }}" aria-haspopup="true" aria-expanded="false" onclick="toggleNavMoreMenu(event)">
+                                <span>Plus</span>
+                                <x-icon name="chevron-down" :size="12" />
+                            </button>
+                            <div class="nav-more-menu" id="nav-more-menu">
+                                <a href="{{ route('categories.index') }}" class="nav-more-item {{ request()->routeIs('categories.*') ? 'active' : '' }}">
+                                    <x-icon name="folder" :size="15" />
+                                    <span>Catégories</span>
+                                </a>
+                                <a href="{{ route('analytics.index') }}" class="nav-more-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}">
+                                    <x-icon name="trending-up" :size="15" />
+                                    <span>Statistiques</span>
+                                </a>
+                                <a href="{{ route('shop.settings') }}" class="nav-more-item {{ request()->routeIs('shop.*') ? 'active' : '' }}">
+                                    <x-icon name="settings" :size="15" />
+                                    <span>Paramètres</span>
+                                </a>
+                            </div>
+                        </div>
+                    </nav>
+                @endauth
             </div>
 
-            <nav class="nav-actions" aria-label="Navigation principale">
+            <nav class="nav-actions" aria-label="Outils et profil">
                 @auth
                     @if (auth()->user()->isAdmin())
                         <a id="nav-admin" href="{{ route('admin.dashboard') }}" class="btn btn-sm {{ request()->routeIs('admin.*') ? 'mobile-hide-on-admin' : '' }}" style="background:linear-gradient(135deg, #ef4444, #dc2626);color:#ffffff;font-weight:700;display:inline-flex;align-items:center;gap:.35rem;border:none;box-shadow:0 2px 8px rgba(239, 68, 68, 0.4);" title="Cockpit Super-Admin">
@@ -105,37 +141,6 @@
                             <x-icon name="external-link" :size="11" />
                         </a>
                     @endif
-                    <a id="nav-dashboard" href="{{ route('dashboard') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('dashboard') ? 'btn-primary' : '' }}">Accueil</a>
-                    <a id="nav-orders" href="{{ route('orders.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('orders.*') ? 'btn-primary' : '' }}">Commandes</a>
-                    <a id="nav-products" href="{{ route('products.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('products.*') ? 'btn-primary' : '' }}">Produits</a>
-                    <a id="nav-ads" href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ads.*') ? 'btn-primary' : '' }}">Publicité</a>
-
-                    <!-- Liens secondaires (visibles directement sur écran large >= 1240px) -->
-                    <a id="nav-categories" href="{{ route('categories.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('categories.*') ? 'btn-primary' : '' }}">Catégories</a>
-                    <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
-                    <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Paramètres</a>
-
-                    <!-- Menu déroulant "Plus ▾" (actif sur écran compact 769px à 1239px) -->
-                    <div class="nav-more-dropdown" id="nav-more-dropdown">
-                        <button type="button" class="btn btn-ghost btn-sm nav-more-trigger {{ (request()->routeIs('categories.*') || request()->routeIs('analytics.*') || request()->routeIs('shop.*')) ? 'active-section' : '' }}" aria-haspopup="true" aria-expanded="false" onclick="toggleNavMoreMenu(event)">
-                            <span>Plus</span>
-                            <x-icon name="chevron-down" :size="12" />
-                        </button>
-                        <div class="nav-more-menu" id="nav-more-menu">
-                            <a href="{{ route('categories.index') }}" class="nav-more-item {{ request()->routeIs('categories.*') ? 'active' : '' }}">
-                                <x-icon name="folder" :size="15" />
-                                <span>Catégories</span>
-                            </a>
-                            <a href="{{ route('analytics.index') }}" class="nav-more-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}">
-                                <x-icon name="trending-up" :size="15" />
-                                <span>Statistiques</span>
-                            </a>
-                            <a href="{{ route('shop.settings') }}" class="nav-more-item {{ request()->routeIs('shop.*') ? 'active' : '' }}">
-                                <x-icon name="settings" :size="15" />
-                                <span>Paramètres</span>
-                            </a>
-                        </div>
-                    </div>
 
                     <form method="POST" action="{{ route('logout') }}" style="display:inline;margin:0">@csrf
                         <button id="nav-logout" class="btn btn-ghost btn-sm" type="submit" title="Déconnexion" aria-label="Déconnexion">
