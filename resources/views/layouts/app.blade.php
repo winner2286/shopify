@@ -267,21 +267,54 @@
             </div>
         </div>
         <script>
+            var _mobilePlusScrollPos = 0;
             function openMobilePlusMenu(e) {
-                if (e) e.preventDefault();
+                if (e) {
+                    if (e.preventDefault) e.preventDefault();
+                    if (e.stopPropagation) e.stopPropagation();
+                }
                 var s = document.getElementById('mobile-plus-sheet');
                 var b = document.getElementById('mobile-plus-backdrop');
-                if (s && b) { s.classList.add('open'); b.classList.add('open'); document.body.style.overflow = 'hidden'; }
+                if (s && b) {
+                    _mobilePlusScrollPos = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+                    document.body.style.position = 'fixed';
+                    document.body.style.top = -_mobilePlusScrollPos + 'px';
+                    document.body.style.left = '0';
+                    document.body.style.right = '0';
+                    document.body.style.width = '100%';
+                    document.body.style.overflow = 'hidden';
+                    document.documentElement.style.overflow = 'hidden';
+                    s.classList.add('open');
+                    b.classList.add('open');
+                }
             }
             function closeMobilePlusMenu() {
                 var s = document.getElementById('mobile-plus-sheet');
                 var b = document.getElementById('mobile-plus-backdrop');
-                if (s && b) { s.classList.remove('open'); b.classList.remove('open'); document.body.style.overflow = ''; }
+                if (s && b) {
+                    s.classList.remove('open');
+                    b.classList.remove('open');
+                    document.body.style.position = '';
+                    document.body.style.top = '';
+                    document.body.style.left = '';
+                    document.body.style.right = '';
+                    document.body.style.width = '';
+                    document.body.style.overflow = '';
+                    document.documentElement.style.overflow = '';
+                    window.scrollTo(0, _mobilePlusScrollPos);
+                }
             }
             function toggleMobilePlusMenu(e) {
                 var s = document.getElementById('mobile-plus-sheet');
                 if (s && s.classList.contains('open')) { closeMobilePlusMenu(); } else { openMobilePlusMenu(e); }
             }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                var b = document.getElementById('mobile-plus-backdrop');
+                if (b) {
+                    b.addEventListener('touchmove', function(ev) { ev.preventDefault(); }, { passive: false });
+                }
+            });
 
             function toggleNavMoreMenu(e) {
                 if (e) e.stopPropagation();
