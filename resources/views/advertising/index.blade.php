@@ -4,15 +4,33 @@
 
 @section('content')
 <div class="container" style="max-width:960px;padding:2rem 1rem">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
         <div>
-            <h1 style="font-size:1.8rem;margin:0">Bibliothèque de Publicités (H-05)</h1>
-            <p style="margin:0;color:var(--text-soft)">Retrouvez et réutilisez à tout moment vos annonces et scripts vidéo générés.</p>
+            <h1 style="font-size:1.8rem;margin:0">Studio Publicité & Visuels</h1>
+            <p style="margin:0;color:var(--text-soft)">Créez et diffusez vos vidéos IA et affiches promotionnelles pour WhatsApp & réseaux sociaux.</p>
         </div>
 
-        <a href="{{ route('ads.create') }}" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
-            <x-icon name="sparkles" :size="15" />
-            <span>+ Nouvelle publicité IA</span>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <a href="{{ route('ads.flyers') }}" class="btn btn-sm" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#fff;border:none;display:inline-flex;align-items:center;gap:.35rem;font-weight:600">
+                <span>🎨 + Affiche Promo 1-Clic</span>
+            </a>
+            <a href="{{ route('ads.create') }}" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
+                <x-icon name="sparkles" :size="15" />
+                <span>+ Nouvelle vidéo IA</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Onglets Studio -->
+    <div style="display:flex;gap:.5rem;border-bottom:1px solid var(--border);margin-bottom:2rem;padding-bottom:.5rem">
+        <a href="{{ route('ads.index') }}" class="btn btn-sm btn-primary" style="display:inline-flex;align-items:center;gap:.4rem">
+            <span>🎬 Bibliothèque Vidéos IA</span>
+        </a>
+        <a href="{{ route('ads.flyers') }}" class="btn btn-sm btn-ghost" style="display:inline-flex;align-items:center;gap:.4rem">
+            <span>🎨 Affiches & Statuts WhatsApp</span>
+        </a>
+        <a href="{{ route('ads.create') }}" class="btn btn-sm btn-ghost" style="display:inline-flex;align-items:center;gap:.4rem">
+            <span>✨ Nouvelle Vidéo IA</span>
         </a>
     </div>
 

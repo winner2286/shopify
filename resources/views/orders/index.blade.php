@@ -107,9 +107,14 @@
                             </div>
                             <small style="font-size:.74rem;color:var(--text-soft)">{{ $order->payment_method_label }} ({{ $order->payment_status_label }})</small>
                         </div>
-                        <a href="{{ route('orders.show', $order) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem">
-                            Gérer <x-icon name="arrow-right" size="14" />
-                        </a>
+                        <div style="display:flex;gap:.4rem;align-items:center">
+                            <a href="{{ route('orders.receipt', $order) }}" class="btn btn-ghost btn-sm" title="Reçu / Facture" style="padding:.3rem .5rem">
+                                <x-icon name="file-text" size="14" />
+                            </a>
+                            <a href="{{ route('orders.show', $order) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem">
+                                Gérer <x-icon name="arrow-right" size="14" />
+                            </a>
+                        </div>
                     </div>
                 </div>
             @endforeach
@@ -163,9 +168,14 @@
                                 </span>
                             </td>
                             <td style="padding:1rem;text-align:right">
-                                <a href="{{ route('orders.show', $order) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
-                                    Gérer <x-icon name="arrow-right" size="14" />
-                                </a>
+                                <div style="display:inline-flex;gap:.4rem;align-items:center">
+                                    <a href="{{ route('orders.receipt', $order) }}" class="btn btn-ghost btn-sm" title="Voir le Reçu / Facture" style="display:inline-flex;align-items:center;gap:.3rem;padding:.35rem .6rem">
+                                        <x-icon name="file-text" size="14" /> Reçu
+                                    </a>
+                                    <a href="{{ route('orders.show', $order) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem;padding:.35rem .7rem">
+                                        Gérer <x-icon name="arrow-right" size="14" />
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

@@ -109,10 +109,168 @@ class WhatsAppNotificationService
     }
 
     /**
-     * Envoie automatiquement l'alerte WhatsApp au commerçant via l'API/Webhook configuré ou journalise l'envoi.
+     * Formate la fiche de mission de livraison transmise au livreur (moto / Zémidjan).
      *
-     * @return array{success: bool, mode: string, phone: ?string, error: ?string}
+     * @param array{driver_phone?: ?string, courier_fee?: ?int, notes?: ?string} $custom
      */
+    public function formatDeliveryMission(Order $order, array $custom = []): string
+    {
+        $shop = $order->shop;
+        $dateStr = $order->created_at ? $order->created_at->format('d/m/Y à H:i') : date('d/m/Y à H:i');
+
+        // Articles
+        $itemsText = '';
+        foreach ($order->items as $item) {
+            $itemsText .= "• {$item->quantity}x *{$item->product_title}*\n";
+        }
+
+        // Point de retrait
+        $shopAddress = $shop->address ?: 'Non précisée (contacter la boutique)';
+        $shopPhone = $shop->phone ?: ($shop->whatsapp ?: 'N/A');
+
+        // Point de livraison
+        $deliveryZone = $order->delivery_zone_name ?: 'Zone non définie';
+        $deliveryAddress = $order->delivery_address ?: 'Adresse standard';
+        $customerNotes = $order->delivery_notes ? "\n💬 *Note client :* {$order->delivery_notes}" : '';
+        $driverNotes = ! empty($custom['notes']) ? "\n⚠️ *Consigne commerçant :* {$custom['notes']}" : '';
+
+        // Détection de lien Google Maps dans l'adresse
+        $mapsLink = '';
+        if (preg_match('/https?:\/\/(?:www\.)?(?:google\.com\/maps|maps\.google\.com|maps\.app\.goo\.gl)[^\s\)]+/', $deliveryAddress, $matches)) {
+            $mapsLink = "\n🗺️ *GPS Client :* {$matches[0]}";
+        }
+
+        // Gestion de l'encaissement
+        $totalFormatted = number_format($order->total, 0, ',', ' ');
+        if ($order->payment_status === Order::PAYMENT_STATUS_PAID) {
+            $paymentSection = "✅ *COMMANDE DÉJÀ PAYÉE EN LIGNE*\n"
+                . "👉 *Ne rien encaisser au client pour la marchandise.*";
+        } else {
+            $paymentSection = "💵 *MONTANT À ENCAISSER DU CLIENT : {$totalFormatted} FCFA*\n"
+                . "👉 *À reverser intégralement à la boutique lors du retour.*";
+        }
+
+        // Frais de course livreur
+        $courierFee = isset($custom['courier_fee']) && $custom['courier_fee'] !== null
+            ? (int) $custom['courier_fee']
+            : (int) $order->shipping_cost;
+        $courierFeeText = $courierFee > 0 ? number_format($courierFee, 0, ',', ' ') . ' FCFA' : 'À convenir avec la boutique';
+
+        return "🛵 *MISSION DE LIVRAISON — {$shop->name}*\n"
+            . "━━━━━━━━━━━━━━━━━━━━\n"
+            . "🔖 Commande : *#{$order->order_number}*\n"
+            . "📅 Date : {$dateStr}\n\n"
+            . "📍 *POINT DE RETRAIT (Boutique) :*\n"
+            . "• Boutique : *{$shop->name}*\n"
+            . "• Adresse : {$shopAddress}\n"
+            . "• Contact boutique : *{$shopPhone}*\n\n"
+            . "🏁 *POINT DE LIVRAISON (Client) :*\n"
+            . "• Destinataire : *{$order->customer_name}*\n"
+            . "• Téléphone : *{$order->customer_phone}* 📲\n"
+            . "• Quartier / Zone : *{$deliveryZone}*\n"
+            . "• Adresse : {$deliveryAddress}"
+            . "{$mapsLink}"
+            . "{$customerNotes}"
+            . "{$driverNotes}\n\n"
+            . "📦 *COLIS :*\n"
+            . "{$itemsText}\n"
+            . "💰 *ENCAISSEMENT :*\n"
+            . "{$paymentSection}\n"
+            . "🛵 *Frais de course livreur :* {$courierFeeText}\n"
+            . "━━━━━━━━━━━━━━━━━━━━\n"
+            . "⚠️ *Consigne :* Vérifiez le colis au départ et appelez le client avant d'arriver à destination ! Merci 🙏";
+    }
+
+    /**
+     * Génère le lien WhatsApp direct vers le livreur avec la fiche de mission pré-remplie.
+     */
+    public function getDeliveryDispatchWhatsAppUrl(Order $order, ?string $driverPhone = null, array $custom = []): string
+    {
+        $message = $this->formatDeliveryMission($order, $custom);
+        $encodedMessage = urlencode($message);
+
+        $digits = null;
+        if ($driverPhone) {
+            $digits = preg_replace('/\D+/', '', $driverPhone);
+            if (str_starts_with($digits, '00')) {
+                $digits = substr($digits, 2);
+            }
+            if (strlen($digits) === 8) {
+                $digits = '228' . $digits;
+            }
+        }
+
+        if ($digits) {
+            return "https://wa.me/{$digits}?text={$encodedMessage}";
+        }
+
+        return "https://api.whatsapp.com/send?text={$encodedMessage}";
+    }
+
+    /**
+     * Formate le reçu / facture envoyé au client sur WhatsApp.
+     */
+    public function formatCustomerInvoiceWhatsApp(Order $order): string
+    {
+        $shop = $order->shop;
+        $dateStr = $order->created_at ? $order->created_at->format('d/m/Y') : date('d/m/Y');
+        $totalFormatted = number_format($order->total, 0, ',', ' ');
+        $subtotal = number_format($order->subtotal, 0, ',', ' ');
+        $shipping = $order->shipping_cost === 0 ? 'Offerte' : number_format($order->shipping_cost, 0, ',', ' ') . ' FCFA';
+
+        $itemsText = '';
+        foreach ($order->items as $item) {
+            $unitPrice = number_format($item->unit_price, 0, ',', ' ');
+            $totalPrice = number_format($item->total_price, 0, ',', ' ');
+            $itemsText .= "• {$item->quantity}x *{$item->product_title}* : {$totalPrice} FCFA\n";
+        }
+
+        $paymentStatus = $order->payment_status === Order::PAYMENT_STATUS_PAID
+            ? "✅ *RÉGLÉ (Payé)*"
+            : "⏳ *À PAYER À LA LIVRAISON*";
+
+        $receiptUrl = route('orders.public_receipt', $order->order_number);
+
+        return "🧾 *REÇU DE COMMANDE — {$shop->name}*\n"
+            . "━━━━━━━━━━━━━━━━━━━━\n"
+            . "🔖 N° Reçu : *#REC-{$order->order_number}*\n"
+            . "📅 Date : {$dateStr}\n"
+            . "👤 Client : *{$order->customer_name}*\n\n"
+            . "📦 *DÉTAIL DES ACHATS :*\n"
+            . "{$itemsText}\n"
+            . "💰 Sous-total : {$subtotal} FCFA\n"
+            . "🚚 Livraison ({$order->delivery_zone_name}) : {$shipping}\n"
+            . "────────────────────\n"
+            . "💵 *TOTAL NET : {$totalFormatted} FCFA*\n"
+            . "💳 Mode : {$order->payment_method_label}\n"
+            . "📌 Statut : {$paymentStatus}\n"
+            . "━━━━━━━━━━━━━━━━━━━━\n"
+            . "👉 *Consulter et télécharger votre reçu officiel certifié :*\n"
+            . "{$receiptUrl}\n\n"
+            . "Merci pour votre achat chez *{$shop->name}* ! À très bientôt ! ✨";
+    }
+
+    /**
+     * Génère l'URL WhatsApp pour transmettre le reçu au client.
+     */
+    public function getCustomerInvoiceWhatsAppUrl(Order $order): ?string
+    {
+        $phoneDigits = preg_replace('/\D+/', '', $order->customer_phone);
+        if (str_starts_with($phoneDigits, '00')) {
+            $phoneDigits = substr($phoneDigits, 2);
+        }
+        if (strlen($phoneDigits) === 8) {
+            $phoneDigits = '228' . $phoneDigits;
+        }
+
+        $message = $this->formatCustomerInvoiceWhatsApp($order);
+
+        if ($phoneDigits) {
+            return "https://wa.me/{$phoneDigits}?text=" . urlencode($message);
+        }
+
+        return "https://api.whatsapp.com/send?text=" . urlencode($message);
+    }
     public function sendOrderAlertToMerchant(Order $order): array
     {
         $shop = $order->shop;

@@ -157,7 +157,121 @@ class OrderController extends Controller
         $merchantWaUrl = $this->whatsAppService->getMerchantWhatsAppUrl($order);
         $orderAlertText = $this->whatsAppService->formatMerchantAlert($order);
 
-        return view('orders.show', compact('shop', 'order', 'customerWaUrl', 'merchantWaUrl', 'orderAlertText'));
+        // Option 3 : Fiche et lien de dispatch livreur
+        $deliveryMissionText = $this->whatsAppService->formatDeliveryMission($order);
+        $deliveryDispatchWaUrl = $this->whatsAppService->getDeliveryDispatchWhatsAppUrl($order);
+
+        // Option 2 : Reçu / Facture WhatsApp & URL publique vérifiable
+        $publicReceiptUrl = route('orders.public_receipt', $order->order_number);
+        $customerInvoiceWaUrl = $this->whatsAppService->getCustomerInvoiceWhatsAppUrl($order);
+
+        return view('orders.show', compact(
+            'shop',
+            'order',
+            'customerWaUrl',
+            'merchantWaUrl',
+            'orderAlertText',
+            'deliveryMissionText',
+            'deliveryDispatchWaUrl',
+            'publicReceiptUrl',
+            'customerInvoiceWaUrl'
+        ));
+    }
+
+    /**
+     * Option 3 : Transmission de la mission au livreur (Zémidjan / Moto)
+     */
+    public function dispatchToDriver(Request $request, Order $order)
+    {
+        $shop = $request->user()->shop;
+        if ($order->shop_id !== $shop->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'driver_phone' => ['nullable', 'string', 'max:30'],
+            'courier_fee' => ['nullable', 'integer', 'min:0'],
+            'driver_notes' => ['nullable', 'string', 'max:500'],
+            'mark_shipped' => ['nullable', 'boolean'],
+        ]);
+
+        $markShipped = $request->boolean('mark_shipped', true);
+        if ($markShipped && in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_CONFIRMED], true)) {
+            $driverMention = ! empty($validated['driver_phone']) ? " (Livreur : {$validated['driver_phone']})" : '';
+            $order->recordStatusChange(
+                Order::STATUS_SHIPPED,
+                'merchant',
+                $request->user()->id,
+                "Mission de livraison transmise au livreur{$driverMention} via WhatsApp."
+            );
+        }
+
+        $custom = [
+            'driver_phone' => $validated['driver_phone'] ?? null,
+            'courier_fee' => isset($validated['courier_fee']) ? (int) $validated['courier_fee'] : null,
+            'notes' => $validated['driver_notes'] ?? null,
+        ];
+
+        $whatsappUrl = $this->whatsAppService->getDeliveryDispatchWhatsAppUrl($order, $custom['driver_phone'], $custom);
+        $missionText = $this->whatsAppService->formatDeliveryMission($order, $custom);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'whatsapp_url' => $whatsappUrl,
+                'mission_text' => $missionText,
+                'status' => $order->fresh()->status,
+                'status_label' => $order->fresh()->status_label,
+            ]);
+        }
+
+        return redirect()->away($whatsappUrl);
+    }
+
+    /**
+     * Option 2 : Reçu / Facture officiel pour le commerçant (avec actions d'impression & export)
+     */
+    public function receipt(Request $request, Order $order)
+    {
+        $shop = $request->user()->shop;
+        if ($order->shop_id !== $shop->id) {
+            abort(403);
+        }
+
+        $order->load(['items.product', 'customer', 'payments', 'shippingZone']);
+
+        $publicReceiptUrl = route('orders.public_receipt', $order->order_number);
+        $customerInvoiceWaUrl = $this->whatsAppService->getCustomerInvoiceWhatsAppUrl($order);
+
+        return view('orders.receipt', [
+            'shop' => $shop,
+            'order' => $order,
+            'isMerchant' => true,
+            'publicReceiptUrl' => $publicReceiptUrl,
+            'customerInvoiceWaUrl' => $customerInvoiceWaUrl,
+        ]);
+    }
+
+    /**
+     * Option 2 : Reçu / Facture public en ligne certifié accessible par le client ou via scan QR Code
+     */
+    public function publicReceipt(string $orderNumber)
+    {
+        $order = Order::withoutGlobalScopes()
+            ->where('order_number', $orderNumber)
+            ->with(['shop', 'items.product', 'payments', 'shippingZone'])
+            ->firstOrFail();
+
+        $shop = $order->shop;
+        $publicReceiptUrl = route('orders.public_receipt', $order->order_number);
+
+        return view('orders.receipt', [
+            'shop' => $shop,
+            'order' => $order,
+            'isMerchant' => false,
+            'publicReceiptUrl' => $publicReceiptUrl,
+            'customerInvoiceWaUrl' => null,
+        ]);
     }
 
     /**

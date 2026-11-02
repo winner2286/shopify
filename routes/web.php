@@ -15,6 +15,7 @@ use App\Http\Controllers\StorefrontController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/recu/{orderNumber}', [\App\Http\Controllers\OrderController::class, 'publicReceipt'])->name('orders.public_receipt');
 
 Route::middleware('guest')->group(function () {
     Route::get('/inscription', [RegisterController::class, 'create'])->name('register');
@@ -79,6 +80,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/commandes/notifications/check', [\App\Http\Controllers\OrderController::class, 'checkNewOrders'])->name('orders.notifications.check');
     Route::get('/commandes/exporter', [\App\Http\Controllers\OrderController::class, 'exportCsv'])->name('orders.export_csv');
     Route::get('/commandes/{order}', [\App\Http\Controllers\OrderController::class, 'show'])->name('orders.show');
+    Route::get('/commandes/{order}/recu', [\App\Http\Controllers\OrderController::class, 'receipt'])->name('orders.receipt');
+    Route::post('/commandes/{order}/livreur', [\App\Http\Controllers\OrderController::class, 'dispatchToDriver'])->name('orders.dispatch_driver');
     Route::post('/commandes/{order}/statut', [\App\Http\Controllers\OrderController::class, 'updateStatus'])->name('orders.update_status');
     Route::post('/commandes/{order}/encaisser', [\App\Http\Controllers\OrderController::class, 'markAsPaid'])->name('orders.mark_paid');
     Route::post('/commandes/{order}/annuler', [\App\Http\Controllers\OrderController::class, 'cancel'])->name('orders.cancel');
@@ -91,8 +94,9 @@ Route::middleware('auth')->group(function () {
         ->except(['create', 'show', 'edit'])
         ->names('shipping');
 
-    // Module H - Publicité par l'IA (H-01 à H-05)
+    // Module H - Publicité & Studio Affiches Promo (H-01 à H-05)
     Route::get('/publicite', [\App\Http\Controllers\AdvertisingController::class, 'index'])->name('ads.index');
+    Route::get('/publicite/affiches', [\App\Http\Controllers\AdvertisingController::class, 'flyers'])->name('ads.flyers');
     Route::get('/publicite/creer', [\App\Http\Controllers\AdvertisingController::class, 'create'])->name('ads.create');
     Route::post('/publicite', [\App\Http\Controllers\AdvertisingController::class, 'store'])->name('ads.store');
     Route::get('/publicite/{ad}', [\App\Http\Controllers\AdvertisingController::class, 'show'])->name('ads.show');

@@ -34,6 +34,27 @@ class AdvertisingController extends Controller
     }
 
     /**
+     * Option 4 : Générateur d'Affiches Promo & Statuts WhatsApp 1-Clic
+     */
+    public function flyers(Request $request)
+    {
+        $shop = $request->user()->shop;
+
+        if (! $shop) {
+            return redirect()->route('dashboard');
+        }
+
+        $products = $shop->products()
+            ->where('status', Product::STATUS_ACTIVE)
+            ->with(['primaryImage', 'images', 'categories'])
+            ->get();
+
+        $selectedProductId = (int) $request->query('produit_id');
+
+        return view('advertising.flyers', compact('shop', 'products', 'selectedProductId'));
+    }
+
+    /**
      * H-01 : Formulaire de création de publicité vidéo par l'IA
      */
     public function create(Request $request)
