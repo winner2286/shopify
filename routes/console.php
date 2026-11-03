@@ -283,4 +283,30 @@ Artisan::command('admin:maintenance {action=status : on, off ou status} {--messa
     ->name('send-trial-expiring-reminders')
     ->withoutOverlapping();
 
+// Commande et planification des Automatisations IA (Module 10)
+Artisan::command('ai:run-automations', function (\App\Services\Ai\AiMarketingAutomationService $service) {
+    $this->info("Exécution des règles d'automatisation IA ECOM pour toutes les boutiques...");
+    $shops = \App\Models\Shop::where('is_active', true)->get();
+    $totalTriggered = 0;
+
+    foreach ($shops as $shop) {
+        $result = $service->runPendingAutomations($shop);
+        $triggered = array_filter($result['reports'] ?? [], fn($r) => ($r['status'] ?? '') === 'triggered');
+        $count = count($triggered);
+        if ($count > 0) {
+            $totalTriggered += $count;
+            $this->line("• Boutique '{$shop->name}' : {$count} règle(s) déclenchée(s)");
+        }
+    }
+
+    $this->info("Exécution terminée avec succès. Total règles déclenchées : {$totalTriggered}.");
+    return 0;
+})->purpose('Exécute les règles d\'automatisation proactive IA (stocks critiques, relances COD, briefing)');
+
+\Illuminate\Support\Facades\Schedule::command('ai:run-automations')
+    ->hourly()
+    ->name('ai-run-hourly-automations')
+    ->withoutOverlapping();
+
+
 

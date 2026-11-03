@@ -15,6 +15,7 @@ use App\Services\Ai\Tools\SearchProductsTool;
 use App\Services\Ai\Tools\AnalyzeCodRiskTool;
 use App\Services\Ai\Tools\AnswerCustomerInquiryTool;
 use App\Services\Ai\Tools\CompareSalesPeriodsTool;
+use App\Services\Ai\Tools\GenerateMarketingCopyTool;
 use App\Services\Ai\Tools\GetBusinessRecommendationsTool;
 use App\Services\Ai\Tools\GetPendingCodReviewTool;
 use App\Services\Ai\Tools\UpdateProductStockOrPriceTool;
@@ -42,6 +43,7 @@ class ToolRegistry
             new GetSalesAnalyticsTool(),
             new CompareSalesPeriodsTool(),
             new GetBusinessRecommendationsTool(),
+            new GenerateMarketingCopyTool(),
             new GetInventoryAlertsTool(),
             new DraftCustomerMessageTool(),
             new UpdateProductStockOrPriceTool(),

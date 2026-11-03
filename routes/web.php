@@ -131,6 +131,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/assistant-ia/commandes/revue-cod', [\App\Http\Controllers\AiOrderController::class, 'codReview'])->name('ai.orders.cod_review');
     Route::post('/assistant-ia/relation-client/repondre', [\App\Http\Controllers\AiOrderController::class, 'answerCustomer'])->name('ai.customer.answer');
 
+    // AI Marketing & Automations (Module 9 & 10)
+    Route::get('/assistant-ia/marketing', [\App\Http\Controllers\AiMarketingController::class, 'index'])->name('ai.marketing');
+    Route::post('/assistant-ia/marketing/generer', [\App\Http\Controllers\AiMarketingController::class, 'generate'])->name('ai.marketing.generate');
+    Route::get('/assistant-ia/automatisations', [\App\Http\Controllers\AiMarketingController::class, 'automations'])->name('ai.automations');
+    Route::post('/assistant-ia/automatisations/{automation}/basculer', [\App\Http\Controllers\AiMarketingController::class, 'toggleAutomation'])->name('ai.automations.toggle');
+    Route::post('/assistant-ia/automatisations/executer-maintenant', [\App\Http\Controllers\AiMarketingController::class, 'runAutomationsNow'])->name('ai.automations.run_now');
+
     // Module J - Super-Administration de la Plateforme (J-01 à J-08)
     Route::prefix('admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'dashboard'])->name('admin.dashboard');

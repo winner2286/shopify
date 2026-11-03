@@ -45,6 +45,26 @@
                 </div>
             </div>
 
+            <!-- Raccourcis Modules IA Spécialisés -->
+            <div style="padding:.6rem 1rem;display:flex;flex-direction:column;gap:.4rem;border-bottom:1px solid var(--border)">
+                <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-soft);margin-bottom:.2rem">Modules Métier IA</div>
+                <a href="{{ route('ai.studio') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
+                    <x-icon name="image" size="14" /> Studio Visuel IA
+                </a>
+                <a href="{{ route('ai.marketing') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
+                    <x-icon name="edit-3" size="14" /> Studio Marketing & Pubs
+                </a>
+                <a href="{{ route('ai.automations') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
+                    <x-icon name="zap" size="14" /> Automatisations
+                </a>
+                <a href="{{ route('analytics.advisor') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
+                    <x-icon name="bar-chart-2" size="14" /> Conseiller d'Affaires
+                </a>
+                <a href="{{ route('ai.orders.cod_review') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
+                    <x-icon name="truck" size="14" /> Revue COD Intelligente
+                </a>
+            </div>
+
             <!-- Liste des conversations -->
             <div class="ai-history-section">
                 <div class="ai-history-header">Historique des échanges</div>
@@ -95,8 +115,8 @@
                     <span class="ai-model-pill" title="Moteur de raisonnement multimodal">
                         <span class="ai-model-dot"></span> Gemini 2.5 Flash / Claude
                     </span>
-                    <span class="ai-tools-pill" title="8 outils backend connectés">
-                        <x-icon name="shield" :size="12" /> Outils Métier Actifs
+                    <span class="ai-tools-pill" title="14 outils backend connectés">
+                        <x-icon name="shield" :size="12" /> 14 Outils Métier Actifs
                     </span>
                 </div>
             </header>
