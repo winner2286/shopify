@@ -71,6 +71,52 @@
         grid-template-columns: 1fr !important;
     }
 }
+.studio-choice-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .5rem;
+    padding: 1rem .75rem;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+}
+.studio-choice-card.active,
+.studio-choice-card:has(input:checked) {
+    border-color: var(--brand-1) !important;
+    background: var(--bg-soft) !important;
+}
+.studio-choice-card .choice-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--bg-soft);
+    color: var(--text-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: .25rem;
+    transition: all .2s;
+}
+.studio-choice-card.active .choice-icon-wrap,
+.studio-choice-card:has(input:checked) .choice-icon-wrap {
+    background: rgba(158, 27, 50, 0.12);
+    color: var(--brand-1);
+}
+.studio-section-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(158, 27, 50, 0.1);
+    color: var(--brand-1);
+    flex-shrink: 0;
+}
 </style>
 
 <div class="container" style="max-width:1160px;padding:2rem 1rem">
@@ -78,9 +124,11 @@
     <!-- En-tête & Onglets de navigation Publicité -->
     <div class="ads-header-wrap" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
         <div>
-            <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
-                <span style="font-size:1.8rem">🎨</span>
-                <h1 style="font-size:1.8rem;margin:0">Studio Affiches Promo & Statuts WhatsApp</h1>
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.3rem">
+                <div style="width:38px;height:38px;border-radius:10px;background:rgba(158, 27, 50, 0.1);color:var(--brand-1);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <x-icon name="palette" :size="20" />
+                </div>
+                <h1 style="font-size:1.65rem;margin:0">Studio Affiches Promo & Statuts WhatsApp</h1>
                 <span class="badge badge-ok" style="font-size:.78rem">1 Clic</span>
             </div>
             <p style="margin:0;color:var(--text-soft)">
@@ -102,13 +150,16 @@
     <!-- Sélecteur d'onglets Publicité -->
     <div class="ads-tabs-row">
         <a href="{{ route('ads.flyers') }}" class="btn btn-sm btn-primary" style="display:inline-flex;align-items:center;gap:.4rem">
-            <span>🎨 Affiches & Statuts WhatsApp</span>
+            <x-icon name="palette" :size="15" />
+            <span>Affiches & Statuts WhatsApp</span>
         </a>
         <a href="{{ route('ads.index') }}" class="btn btn-sm btn-ghost" style="display:inline-flex;align-items:center;gap:.4rem">
-            <span>🎬 Bibliothèque Vidéos IA</span>
+            <x-icon name="video" :size="15" />
+            <span>Bibliothèque Vidéos IA</span>
         </a>
         <a href="{{ route('ads.create') }}" class="btn btn-sm btn-ghost" style="display:inline-flex;align-items:center;gap:.4rem">
-            <span>✨ Nouvelle Vidéo IA</span>
+            <x-icon name="sparkles" :size="15" />
+            <span>Nouvelle Vidéo IA</span>
         </a>
     </div>
 
@@ -142,23 +193,30 @@
         <div>
             <!-- 1. TYPE D'AFFICHE (PRODUIT OU BOUTIQUE ENTIÈRE) -->
             <div class="card" style="margin-bottom:1.5rem;border-left:4px solid var(--brand-1)">
-                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                    <span>🎯</span> Que souhaitez-vous promouvoir ?
+                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.6rem;line-height:1.3">
+                    <span class="studio-section-icon">
+                        <x-icon name="target" :size="16" />
+                    </span>
+                    <span>Que souhaitez-vous promouvoir&nbsp;?</span>
                 </h3>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
                     <!-- Option Affiche Produit -->
-                    <label id="modeOptionProduct" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1rem;border:2px solid var(--brand-1);background:var(--bg-soft);border-radius:12px;cursor:pointer;transition:all .2s">
+                    <label id="modeOptionProduct" class="studio-choice-card active">
                         <input type="radio" name="flyer_mode" value="product" checked onchange="setMode('product')" style="display:none">
-                        <span style="font-size:1.8rem">🛍️</span>
+                        <div class="choice-icon-wrap">
+                            <x-icon name="shopping-bag" :size="24" />
+                        </div>
                         <div style="font-weight:700;font-size:.92rem;text-align:center">Un Produit Spécifique</div>
                         <span style="font-size:.75rem;color:var(--text-soft);text-align:center">Article, prix & réduction flash</span>
                     </label>
 
                     <!-- Option Affiche Boutique Complète -->
-                    <label id="modeOptionShop" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1rem;border:2px solid var(--border);background:var(--surface);border-radius:12px;cursor:pointer;transition:all .2s">
+                    <label id="modeOptionShop" class="studio-choice-card">
                         <input type="radio" name="flyer_mode" value="shop" onchange="setMode('shop')" style="display:none">
-                        <span style="font-size:1.8rem">🏪</span>
+                        <div class="choice-icon-wrap">
+                            <x-icon name="store" :size="24" />
+                        </div>
                         <div style="font-weight:700;font-size:.92rem;text-align:center">La Boutique Complète</div>
                         <span style="font-size:.75rem;color:var(--text-soft);text-align:center">Logo, slogan, site web & WhatsApp</span>
                     </label>
@@ -167,31 +225,41 @@
 
             <!-- 2. Format de diffusion -->
             <div class="card" style="margin-bottom:1.5rem">
-                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                    <span>📐</span> Format de l'affiche
+                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.6rem;line-height:1.3">
+                    <span class="studio-section-icon">
+                        <x-icon name="aspect-ratio" :size="16" />
+                    </span>
+                    <span>Format de l'affiche</span>
                 </h3>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-                    <label id="formatOptionStory" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1rem;border:2px solid var(--brand-1);background:var(--bg-soft);border-radius:12px;cursor:pointer;transition:all .2s">
+                    <label id="formatOptionStory" class="studio-choice-card active">
                         <input type="radio" name="flyer_format" value="story" checked onchange="setFormat('story')" style="display:none">
-                        <span style="font-size:1.8rem">📱</span>
+                        <div class="choice-icon-wrap">
+                            <x-icon name="smartphone" :size="24" />
+                        </div>
                         <div style="font-weight:700;font-size:.92rem;text-align:center">Story & Statut</div>
-                        <span style="font-size:.75rem;color:var(--text-soft)">WhatsApp / Insta (9:16)</span>
+                        <span style="font-size:.75rem;color:var(--text-soft);text-align:center">WhatsApp / Insta (9:16)</span>
                     </label>
 
-                    <label id="formatOptionSquare" style="display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:1rem;border:2px solid var(--border);background:var(--surface);border-radius:12px;cursor:pointer;transition:all .2s">
+                    <label id="formatOptionSquare" class="studio-choice-card">
                         <input type="radio" name="flyer_format" value="square" onchange="setFormat('square')" style="display:none">
-                        <span style="font-size:1.8rem">⏹️</span>
+                        <div class="choice-icon-wrap">
+                            <x-icon name="square" :size="24" />
+                        </div>
                         <div style="font-weight:700;font-size:.92rem;text-align:center">Post Carré</div>
-                        <span style="font-size:.75rem;color:var(--text-soft)">Catalogue / Feed (1:1)</span>
+                        <span style="font-size:.75rem;color:var(--text-soft);text-align:center">Catalogue / Feed (1:1)</span>
                     </label>
                 </div>
             </div>
 
             <!-- 3. CONFIGURATION MODE PRODUIT -->
             <div id="cardProductConfig" class="card" style="margin-bottom:1.5rem">
-                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                    <span>🛍️</span> Paramètres du produit
+                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.6rem;line-height:1.3">
+                    <span class="studio-section-icon">
+                        <x-icon name="shopping-bag" :size="16" />
+                    </span>
+                    <span>Paramètres du produit</span>
                 </h3>
 
                 @if ($products->isEmpty())
@@ -228,8 +296,11 @@
 
             <!-- 4. CONFIGURATION MODE BOUTIQUE (QUAND ON CHOISIT TOUTE LA BOUTIQUE) -->
             <div id="cardShopConfig" class="card" style="margin-bottom:1.5rem;display:none">
-                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                    <span>🏪</span> Présentation de la Boutique
+                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.6rem;line-height:1.3">
+                    <span class="studio-section-icon">
+                        <x-icon name="store" :size="16" />
+                    </span>
+                    <span>Présentation de la Boutique</span>
                 </h3>
 
                 <div style="margin-bottom:1rem">
@@ -271,8 +342,11 @@
 
             <!-- 5. Thème & Style Graphique -->
             <div class="card" style="margin-bottom:1.5rem">
-                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                    <span>✨</span> Thème Visuel & Ambiance
+                <h3 style="margin-top:0;font-size:1.1rem;display:flex;align-items:center;gap:.6rem;line-height:1.3">
+                    <span class="studio-section-icon">
+                        <x-icon name="sparkles" :size="16" />
+                    </span>
+                    <span>Thème Visuel & Ambiance</span>
                 </h3>
 
                 <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:.6rem;margin-bottom:1.2rem">
@@ -532,6 +606,8 @@
         const badgePresetsShop = document.getElementById('badgePresetsShop');
 
         if (mode === 'product') {
+            optProd.classList.add('active');
+            optShop.classList.remove('active');
             optProd.style.borderColor = 'var(--brand-1)';
             optProd.style.background = 'var(--bg-soft)';
             optShop.style.borderColor = 'var(--border)';
@@ -546,6 +622,8 @@
             document.getElementById('inputHook').value = 'Stock très limité — Faites vite ! ⏳';
             document.getElementById('inputCta').value = `Commandez vite au ${shopWhatsapp}`;
         } else {
+            optShop.classList.add('active');
+            optProd.classList.remove('active');
             optShop.style.borderColor = 'var(--brand-1)';
             optShop.style.background = 'var(--bg-soft)';
             optProd.style.borderColor = 'var(--border)';
@@ -572,6 +650,8 @@
         const optSquare = document.getElementById('formatOptionSquare');
 
         if (fmt === 'story') {
+            optStory.classList.add('active');
+            optSquare.classList.remove('active');
             container.style.aspectRatio = '9/16';
             dimLabel.innerText = '1080 x 1920 px (Story / Statut)';
             optStory.style.borderColor = 'var(--brand-1)';
@@ -579,6 +659,8 @@
             optSquare.style.borderColor = 'var(--border)';
             optSquare.style.background = 'var(--surface)';
         } else {
+            optSquare.classList.add('active');
+            optStory.classList.remove('active');
             container.style.aspectRatio = '1/1';
             dimLabel.innerText = '1080 x 1080 px (Post Carré)';
             optSquare.style.borderColor = 'var(--brand-1)';
@@ -1460,14 +1542,20 @@
 <div id="flyerDownloadModal" class="boutiq-modal-backdrop" onclick="if(event.target===this)closeFlyerModal()" style="display:none;align-items:center;justify-content:center;z-index:100002;padding:1rem;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px)">
     <div class="card" style="max-width:440px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.25rem;border-radius:18px;background:var(--surface);box-shadow:0 24px 60px rgba(0,0,0,0.6);border:1px solid var(--border)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
-            <h3 style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:.4rem">
-                <span>📸</span> Votre Affiche HD
+            <h3 style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:.5rem">
+                <span class="studio-section-icon" style="width:26px;height:26px">
+                    <x-icon name="image" :size="15" />
+                </span>
+                <span>Votre Affiche HD</span>
             </h3>
             <button type="button" class="btn btn-ghost btn-sm" onclick="closeFlyerModal()" style="padding:.2rem .5rem">✕</button>
         </div>
         
-        <div style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:.65rem .85rem;border-radius:10px;font-size:.82rem;margin-bottom:1rem;line-height:1.4">
-            📱 <strong>Astuce Mobile / iPhone :</strong> Maintenez votre doigt appuyé sur l'affiche ci-dessous puis touchez <strong>« Enregistrer dans Photos »</strong> ou <strong>« Partager »</strong>.
+        <div style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:.65rem .85rem;border-radius:10px;font-size:.82rem;margin-bottom:1rem;line-height:1.4;display:flex;align-items:flex-start;gap:.45rem">
+            <x-icon name="smartphone" :size="16" style="flex-shrink:0;margin-top:2px" />
+            <div>
+                <strong>Astuce Mobile / iPhone :</strong> Maintenez votre doigt appuyé sur l'affiche ci-dessous puis touchez <strong>« Enregistrer dans Photos »</strong> ou <strong>« Partager »</strong>.
+            </div>
         </div>
 
         <div style="overflow:auto;text-align:center;flex:1;margin-bottom:1rem;background:#000;border-radius:12px;padding:.5rem">
