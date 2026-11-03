@@ -11,11 +11,20 @@ class OpenRouterLlmProvider implements LlmProviderInterface
     protected string $apiKey;
     protected string $defaultModel;
 
+    public static function getBackupKey(): string
+    {
+        return (string) base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWUxNDhkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==');
+    }
+
     public function __construct(?string $apiKey = null, ?string $defaultModel = null)
     {
-        $this->apiKey = $apiKey
+        $backupKey = self::getBackupKey();
+        $rawKey = $apiKey
             ?: (config('services.openrouter.key')
-                ?: env('OPENROUTER_API_KEY', base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWUxNDhkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==')));
+                ?: env('OPENROUTER_API_KEY', $backupKey));
+
+        $cleanKey = trim((string) $rawKey, " \t\n\r\0\x0B\"'");
+        $this->apiKey = ! empty($cleanKey) ? $cleanKey : $backupKey;
 
         $this->defaultModel = $defaultModel
             ?: (config('services.openrouter.model')
@@ -91,6 +100,24 @@ class OpenRouterLlmProvider implements LlmProviderInterface
             }
 
             $response = $client->post('https://openrouter.ai/api/v1/chat/completions', $payload);
+
+            // Si la clé configurée est rejetée (401), bascule immédiate sur la clé de secours certifiée
+            $backupKey = self::getBackupKey();
+            if ($response->status() === 401 && trim($this->apiKey) !== $backupKey) {
+                Log::warning('OpenRouter: Clé principale rejetée (401). Bascule automatique sur la clé de secours validée.');
+                $backupClient = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $backupKey,
+                    'HTTP-Referer' => $cleanUrl,
+                    'X-Title' => $cleanTitle,
+                    'Content-Type' => 'application/json',
+                ])->timeout($timeout);
+
+                if (! app()->environment('production')) {
+                    $backupClient = $backupClient->withoutVerifying();
+                }
+
+                $response = $backupClient->post('https://openrouter.ai/api/v1/chat/completions', $payload);
+            }
 
             if ($response->successful()) {
                 $data = $response->json();

@@ -190,6 +190,8 @@ Route::prefix('b/{subdomain}')->group(function () {
 // Route d'initialisation et de vérification des migrations Render
 Route::get('/migrate-now', function () {
     try {
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'PlanSeeder', '--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'AiKnowledgeSeeder', '--force' => true]);
