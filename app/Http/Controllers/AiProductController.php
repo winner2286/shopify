@@ -25,7 +25,8 @@ class AiProductController extends Controller
             'user_hint' => 'nullable|string|max:200',
         ]);
 
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
@@ -112,11 +113,12 @@ class AiProductController extends Controller
     /**
      * Espace Studio Visuel IA pour les affiches, bannières et mises en situation.
      */
-    public function studio(Request $request): View
+    public function studio(Request $request): View|\Illuminate\Http\RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
         if (! $shop) {
-            abort(403);
+            return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
         }
 
         $products = $shop->products()->where('status', Product::STATUS_ACTIVE)->get(['id', 'title', 'price']);
@@ -147,7 +149,8 @@ class AiProductController extends Controller
             'product_id' => 'nullable|integer',
         ]);
 
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }

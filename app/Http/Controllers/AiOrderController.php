@@ -16,8 +16,9 @@ class AiOrderController extends Controller
      */
     public function analyzeRisk(Request $request, Order $order, AiOrderIntelligenceService $orderAiService): JsonResponse
     {
-        $shop = $request->user()->shop;
-        if (! $shop || $order->shop_id !== $shop->id) {
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        if (! $shop || (! $user->isAdmin() && $order->shop_id !== $shop->id)) {
             return response()->json(['error' => 'Non autorisé.'], 403);
         }
 
@@ -32,11 +33,12 @@ class AiOrderController extends Controller
     /**
      * Revue globale intelligente des commandes Cash on Delivery (COD) et tournées de livraison.
      */
-    public function codReview(Request $request, AiOrderIntelligenceService $orderAiService): View|JsonResponse
+    public function codReview(Request $request, AiOrderIntelligenceService $orderAiService): View|JsonResponse|\Illuminate\Http\RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
         if (! $shop) {
-            abort(403);
+            return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
         }
 
         $dashboard = $orderAiService->getPendingCodDashboard($shop);

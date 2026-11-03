@@ -21,12 +21,13 @@ class AiMarketingController extends Controller
     /**
      * Studio de Rédaction Marketing & Publicitaire IA (Module 9).
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|\Illuminate\Http\RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
 
         if (! $shop) {
-            abort(403, "Boutique requise.");
+            return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
         }
 
         $products = Product::where('shop_id', $shop->id)
@@ -44,7 +45,8 @@ class AiMarketingController extends Controller
      */
     public function generate(Request $request): JsonResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
 
         if (! $shop) {
             return response()->json(['status' => 'error', 'message' => "Boutique introuvable."], 403);
@@ -80,12 +82,13 @@ class AiMarketingController extends Controller
     /**
      * Centre de Contrôle des Automatisations IA (Module 10).
      */
-    public function automations(Request $request): View
+    public function automations(Request $request): View|\Illuminate\Http\RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
 
         if (! $shop) {
-            abort(403, "Boutique requise.");
+            return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
         }
 
         $this->marketingService->syncDefaultAutomations($shop);
@@ -102,9 +105,10 @@ class AiMarketingController extends Controller
      */
     public function toggleAutomation(Request $request, AiAutomation $automation): JsonResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
 
-        if (! $shop || $automation->shop_id !== $shop->id) {
+        if (! $shop || (! $user->isAdmin() && $automation->shop_id !== $shop->id)) {
             return response()->json(['status' => 'error', 'message' => "Action non autorisée."], 403);
         }
 
@@ -123,7 +127,8 @@ class AiMarketingController extends Controller
      */
     public function runAutomationsNow(Request $request): JsonResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
 
         if (! $shop) {
             return response()->json(['status' => 'error', 'message' => "Boutique requise."], 403);

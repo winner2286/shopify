@@ -84,7 +84,7 @@
                             </div>
                             <div class="ai-conv-info">
                                 <div class="ai-conv-title">{{ $conv->title }}</div>
-                                <div class="ai-conv-date">{{ $conv->updated_at->diffForHumans() }}</div>
+                                <div class="ai-conv-date">{{ $conv->updated_at ? $conv->updated_at->diffForHumans() : '' }}</div>
                             </div>
                             <button type="button" class="ai-conv-delete-btn" title="Supprimer" onclick="deleteConversation(event, {{ $conv->id }})">
                                 <x-icon name="trash" :size="13" />
@@ -178,7 +178,7 @@
                             <div class="ai-message-row user-row">
                                 <div class="ai-bubble user-bubble">
                                     <div class="ai-bubble-content">{{ $msg->content }}</div>
-                                    <div class="ai-bubble-time">{{ $msg->created_at->format('H:i') }}</div>
+                                    <div class="ai-bubble-time">{{ $msg->created_at ? $msg->created_at->format('H:i') : '' }}</div>
                                 </div>
                             </div>
                         @elseif($msg->role === 'assistant')

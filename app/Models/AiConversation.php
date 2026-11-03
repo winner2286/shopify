@@ -45,6 +45,6 @@ class AiConversation extends Model
 
     public function latestMessage()
     {
-        return $this->hasOne(AiMessage::class)->latestOfMany();
+        return $this->hasOne(AiMessage::class)->latestOfMany('id');
     }
 }

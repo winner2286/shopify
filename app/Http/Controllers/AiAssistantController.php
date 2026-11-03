@@ -14,13 +14,22 @@ class AiAssistantController extends Controller
     /**
      * Affiche l'espace ECOM AI ASSISTANT pour le commerçant.
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|\Illuminate\Http\RedirectResponse
     {
         $user = $request->user();
-        $shop = $user->shop;
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
 
         if (! $shop) {
-            abort(403, "Vous devez posséder une boutique pour accéder à l'assistant IA.");
+            if ($user->isMerchant()) {
+                $shop = \App\Models\Shop::create([
+                    'user_id' => $user->id,
+                    'name' => 'Ma Boutique ' . ($user->name ?? ''),
+                    'subdomain' => \App\Models\Shop::generateUniqueSubdomain($user->name ?: 'boutique'),
+                    'status' => \App\Models\Shop::DRAFT,
+                ]);
+            } else {
+                return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
+            }
         }
 
         $conversations = $shop->aiConversations()
@@ -63,8 +72,9 @@ class AiAssistantController extends Controller
      */
     public function showConversation(Request $request, AiConversation $conversation): JsonResponse
     {
-        $shop = $request->user()->shop;
-        if (! $shop || $conversation->shop_id !== $shop->id) {
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        if (! $shop || (! $user->isAdmin() && $conversation->shop_id !== $shop->id)) {
             return response()->json(['error' => 'Non autorisé.'], 403);
         }
 
@@ -99,12 +109,12 @@ class AiAssistantController extends Controller
             'conversation_id' => 'nullable|integer',
         ]);
 
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
-        $user = $request->user();
         $messageText = trim($request->input('message'));
         $conversationId = $request->input('conversation_id');
 
@@ -123,12 +133,12 @@ class AiAssistantController extends Controller
             'approved' => 'required|boolean',
         ]);
 
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
-        $user = $request->user();
         $messageId = (int) $request->input('message_id');
         $approved = (bool) $request->input('approved');
 
@@ -142,8 +152,9 @@ class AiAssistantController extends Controller
      */
     public function destroyConversation(Request $request, AiConversation $conversation)
     {
-        $shop = $request->user()->shop;
-        if (! $shop || $conversation->shop_id !== $shop->id) {
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        if (! $shop || (! $user->isAdmin() && $conversation->shop_id !== $shop->id)) {
             abort(403);
         }
 

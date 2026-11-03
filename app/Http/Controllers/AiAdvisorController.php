@@ -19,12 +19,13 @@ class AiAdvisorController extends Controller
     /**
      * Espace Conseiller IA & Diagnostics Stratégiques de Ventes.
      */
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): View|JsonResponse|\Illuminate\Http\RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
 
         if (! $shop) {
-            abort(403, "Boutique requise.");
+            return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
         }
 
         $period = $request->query('period', '7d');
@@ -51,10 +52,11 @@ class AiAdvisorController extends Controller
      */
     public function generateBriefing(Request $request): JsonResponse
     {
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
 
         if (! $shop) {
-            return response()->json(['status' => 'error', 'message' => "Boutique introuvable."], 403);
+            return response()->json(['status' => 'error', 'message' => 'Boutique introuvable.'], 403);
         }
 
         if ($shop->aiCreditsRemaining() <= 0) {
