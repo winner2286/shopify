@@ -103,6 +103,10 @@ class Shop extends Model
 
     public function aiCreditsRemaining(): int
     {
+        if ($this->owner?->isAdmin()) {
+            return 9999;
+        }
+
         return max(0, $this->aiCreditsMonthly() - $this->aiCreditsUsedThisMonth());
     }
 

@@ -42,9 +42,10 @@ class AiOrchestrator
     {
         $startTime = microtime(true);
 
-        // 1. Vérification des crédits IA de la boutique
-        $remainingCredits = $shop->aiCreditsRemaining();
-        if ($remainingCredits <= 0) {
+        // 1. Vérification des crédits IA de la boutique (Illimité pour le Super-Admin)
+        $isAdmin = $user->isAdmin();
+        $remainingCredits = $isAdmin ? 9999 : $shop->aiCreditsRemaining();
+        if (! $isAdmin && $remainingCredits <= 0) {
             return [
                 'status' => 'quota_exceeded',
                 'message' => "Votre forfait actuel ne dispose plus de crédits IA disponibles pour ce mois. Veuillez passer à un forfait supérieur pour continuer à utiliser votre assistant ECOM AI.",
