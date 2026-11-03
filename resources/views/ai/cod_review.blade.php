@@ -3,7 +3,7 @@
 @section('title', 'Radar IA Commandes COD & Relation Client | ' . config('platform.name'))
 
 @section('content')
-<div class="container dash">
+<div class="container dash cod-review-container">
     <div class="dash-head">
         <div>
             <p style="margin:0"><a href="{{ route('orders.index') }}" style="color:var(--brand-1);text-decoration:none">← Retour aux Commandes</a></p>
@@ -61,7 +61,7 @@
     </div>
 
     <!-- ONGLETS : 1. RADAR COD & LIVRAISONS | 2. ASSISTANT RELATION CLIENT -->
-    <div style="display:flex;gap:.75rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem">
+    <div class="ai-tabs-bar" style="display:flex;gap:.75rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem">
         <button type="button" class="ai-tab-btn active" id="tab-btn-orders" onclick="switchCodTab('orders')">
             <x-icon name="orders" :size="16" />
             <span>Audit & Sécurisation des Commandes COD ({{ count($dashboard['orders'] ?? []) }})</span>
@@ -222,6 +222,7 @@
     gap: 0.45rem;
     border-bottom: 3px solid transparent;
     transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .ai-tab-btn:hover {
@@ -231,6 +232,20 @@
 .ai-tab-btn.active {
     color: #10b981;
     border-bottom-color: #10b981;
+}
+
+@media (max-width: 768px) {
+    .cod-review-container {
+        padding-bottom: 85px !important;
+    }
+    .ai-tabs-bar {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .ai-tabs-bar::-webkit-scrollbar {
+        display: none;
+    }
 }
 </style>
 

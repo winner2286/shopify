@@ -6,6 +6,9 @@
 <div class="ai-assistant-wrapper">
     <div class="ai-container">
         
+        <!-- Backdrop mobile pour fermer le volet d'un simple toucher -->
+        <div class="ai-sidebar-backdrop" id="ai-sidebar-backdrop" onclick="toggleAiSidebar()"></div>
+
         <!-- SIDEBAR : Historique des conversations & Profil IA -->
         <aside class="ai-sidebar" id="ai-sidebar">
             <div class="ai-sidebar-header">
@@ -21,10 +24,13 @@
                         </div>
                     </div>
                 </div>
-                <button type="button" class="ai-new-chat-btn" id="new-chat-btn" onclick="startNewConversation()">
-                    <x-icon name="plus" :size="16" />
-                    <span>Nouvelle session</span>
-                </button>
+                <div style="display:flex;align-items:center;gap:.4rem">
+                    <button type="button" class="ai-new-chat-btn" id="new-chat-btn" onclick="startNewConversation()">
+                        <x-icon name="plus" :size="16" />
+                        <span>Nouveau</span>
+                    </button>
+                    <button type="button" class="ai-sidebar-close-mobile" onclick="toggleAiSidebar()" aria-label="Fermer le volet">✕</button>
+                </div>
             </div>
 
             <!-- Jauge des crédits IA de la boutique -->
@@ -1033,15 +1039,48 @@
     text-align: center;
 }
 
-/* RESPONSIVE */
+/* RESPONSIVE MOBILE ULTRA FLUIDE */
+.ai-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 998;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.ai-sidebar-backdrop.open {
+    display: block;
+    opacity: 1;
+}
+
+.ai-sidebar-close-mobile {
+    display: none;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    align-items: center;
+    justify-content: center;
+}
+
 @media (max-width: 991px) {
     .ai-sidebar {
-        position: absolute;
+        position: fixed;
         top: 0;
         bottom: 0;
         left: 0;
+        width: 82%;
+        max-width: 330px;
         transform: translateX(-100%);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+        z-index: 999;
     }
 
     .ai-sidebar.open {
@@ -1052,8 +1091,51 @@
         display: inline-flex;
     }
 
+    .ai-sidebar-close-mobile {
+        display: inline-flex;
+    }
+
     .ai-messages-scroll {
-        padding: 1rem;
+        padding: 1rem 0.85rem;
+    }
+
+    .ai-bubble {
+        max-width: 94%;
+        font-size: 0.88rem;
+    }
+
+    .ai-suggestions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .ai-assistant-wrapper {
+        min-height: calc(100dvh - 58px);
+    }
+
+    .ai-container {
+        height: calc(100dvh - 58px - 76px) !important;
+    }
+
+    .ai-chat-header {
+        padding: 0.65rem 0.85rem;
+    }
+
+    .ai-chat-title {
+        font-size: 0.98rem;
+    }
+
+    .ai-chat-subtitle {
+        font-size: 0.72rem;
+    }
+
+    .ai-chat-input-wrapper {
+        padding: 0.6rem 0.75rem;
+    }
+
+    .ai-input-hint {
+        display: none;
     }
 }
 </style>
@@ -1078,7 +1160,11 @@ function handleTextareaKeydown(e) {
 
 function toggleAiSidebar() {
     const sidebar = document.getElementById('ai-sidebar');
+    const backdrop = document.getElementById('ai-sidebar-backdrop');
     sidebar.classList.toggle('open');
+    if (backdrop) {
+        backdrop.classList.toggle('open');
+    }
 }
 
 function applySuggestion(text) {

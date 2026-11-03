@@ -3,7 +3,7 @@
 @section('title', 'Studio Marketing IA : '.config('platform.name'))
 
 @section('content')
-<div class="container" style="max-width:1160px;padding:2rem 1rem">
+<div class="container marketing-page-container" style="max-width:1160px;padding:2rem 1rem">
     
     <!-- En-tête -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1.5rem;margin-bottom:2rem">
@@ -30,7 +30,7 @@
         </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:360px 1fr;gap:2rem;align-items:start">
+    <div class="marketing-studio-grid">
         
         <!-- FORMULAIRE DE PARAMÉTRAGE -->
         <div class="card" style="padding:1.6rem">
@@ -235,6 +235,23 @@ function escapeHtml(text) {
 }
 </script>
 <style>
+.marketing-studio-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+@media (max-width: 900px) {
+    .marketing-studio-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+@media (max-width: 768px) {
+    .marketing-page-container {
+        padding-bottom: 85px !important;
+    }
+}
 @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-8px); }

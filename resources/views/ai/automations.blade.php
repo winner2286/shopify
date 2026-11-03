@@ -3,7 +3,7 @@
 @section('title', 'Automatisations IA : '.config('platform.name'))
 
 @section('content')
-<div class="container" style="max-width:1160px;padding:2rem 1rem">
+<div class="container automations-page-container" style="max-width:1160px;padding:2rem 1rem">
     
     <!-- En-tête -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1.5rem;margin-bottom:2rem">
@@ -247,6 +247,11 @@ function escapeHtml(text) {
 }
 </script>
 <style>
+@media (max-width: 768px) {
+    .automations-page-container {
+        padding-bottom: 85px !important;
+    }
+}
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 @endsection
