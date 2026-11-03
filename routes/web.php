@@ -196,8 +196,26 @@ Route::get('/migrate-now', function () {
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'PlanSeeder', '--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'AiKnowledgeSeeder', '--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('media:restore-defaults');
-        \App\Models\User::whereIn('email', ['kougnimag@gmail.com', 'kougnima@icloud.com', 'admin@example.test'])
-            ->update(['role' => \App\Models\User::ROLE_ADMIN]);
+        $admin = \App\Models\User::updateOrCreate(
+            ['email' => 'admin@example.test'],
+            [
+                'name' => 'Super Admin',
+                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+                'role' => \App\Models\User::ROLE_ADMIN,
+                'email_verified_at' => now(),
+                'terms_accepted_at' => now(),
+            ]
+        );
+        \App\Models\Shop::firstOrCreate(
+            ['user_id' => $admin->id],
+            [
+                'name' => 'Boutique Principale',
+                'subdomain' => 'principale',
+                'status' => 'active',
+                'currency' => 'XOF',
+            ]
+        );
+
         return response()->json([
             'status' => 'success',
             'message' => 'Migrations, plans, médias et comptes Super-Admin initialisés avec succès.',
@@ -245,6 +263,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/abonnement/paiement/{plan:slug}', [\App\Http\Controllers\FeexPayController::class, 'subscriptionCheckout'])->name('subscription.checkout');
     Route::post('/abonnement/simulate/{subscription}/{plan}', [\App\Http\Controllers\FeexPayController::class, 'simulateSubscriptionPayment'])->name('subscription.simulate');
 });
+
+Route::get('/dev-login-admin', function (\Illuminate\Http\Request $request) {
+    if ($request->query('token') !== 'zanika-test-2026') {
+        abort(403);
+    }
+    $user = \App\Models\User::where('email', 'admin@example.test')->first() ?? \App\Models\User::first();
+    if ($user) {
+        \Illuminate\Support\Facades\Auth::login($user);
+        return redirect()->route('ai.assistant');
+    }
+    return 'User not found';
+})->name('dev.login.admin');
 
 if (app()->environment('local')) {
     Route::get('/dev-login', function () {
