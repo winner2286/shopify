@@ -201,48 +201,6 @@ Route::get('/migrate-now', function () {
     }
 });
 
-// Diagnostic Assistant IA
-Route::get('/diagnostic-ai', function () {
-    try {
-        $user = \App\Models\User::first();
-        $shop = $user?->shop ?? \App\Models\Shop::first();
-        
-        $diag = [
-            'status' => 'ok',
-            'php' => PHP_VERSION,
-            'db_driver' => \Illuminate\Support\Facades\DB::connection()->getDriverName(),
-            'user' => $user ? ['id' => $user->id, 'email' => $user->email, 'has_shop' => (bool)$user->shop] : null,
-            'shop' => $shop ? ['id' => $shop->id, 'name' => $shop->name, 'plan' => $shop->currentPlan()?->slug] : null,
-            'conversations_count' => $shop ? $shop->aiConversations()->count() : 0,
-            'credits_remaining' => $shop ? $shop->aiCreditsRemaining() : 0,
-            'credits_monthly' => $shop ? $shop->aiCreditsMonthly() : 0,
-        ];
-
-        if ($shop) {
-            $convs = $shop->aiConversations()->with('latestMessage')->latest('updated_at')->take(5)->get();
-            $diag['conversations_loaded'] = $convs->count();
-            
-            $view = view('ai.assistant', [
-                'shop' => $shop,
-                'conversations' => $convs,
-                'activeConversation' => null,
-                'aiCreditsMonthly' => $shop->aiCreditsMonthly(),
-                'aiCreditsRemaining' => $shop->aiCreditsRemaining(),
-                'aiCreditsUsed' => $shop->aiCreditsUsedThisMonth(),
-            ])->render();
-            $diag['rendered_view_bytes'] = strlen($view);
-        }
-
-        return response()->json($diag);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'file' => $e->getFile() . ':' . $e->getLine(),
-            'trace' => explode("\n", $e->getTraceAsString()),
-        ], 500);
-    }
-});
 
 // API Keep-Alive anti-mise en veille (Render / Uptime monitors)
 Route::get('/api/keep-alive', function () {

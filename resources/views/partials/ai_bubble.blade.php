@@ -1,0 +1,910 @@
+@auth
+@if(!request()->routeIs('ai.assistant'))
+@php
+    $bubbleUser = auth()->user();
+    $bubbleShop = $bubbleUser->shop ?? ($bubbleUser->isAdmin() ? \App\Models\Shop::first() : null);
+    $bubbleCreditsRemaining = $bubbleShop ? $bubbleShop->aiCreditsRemaining() : 80;
+    $bubbleCreditsMonthly = $bubbleShop ? $bubbleShop->aiCreditsMonthly() : 80;
+    $bubbleShopName = $bubbleShop?->name ?: 'Votre boutique';
+@endphp
+
+<!-- ============================================================== -->
+<!-- ECOM AI ASSISTANT : BUBBLE DE CHAT FLOTTANT (STYLE SHAFRIK)   -->
+<!-- ============================================================== -->
+
+<!-- Backdrop d'occultation sur mobile -->
+<div id="ai-bubble-backdrop" class="ai-bubble-backdrop" onclick="closeAiChatBubble()"></div>
+
+<!-- Bouton flottant (Bubble Trigger) -->
+<div id="ai-bubble-launcher" class="ai-bubble-launcher" onclick="toggleAiChatBubble()" role="button" aria-label="Ouvrir l'assistant IA" title="Copilote Commercial IA">
+    <div class="ai-bubble-halo"></div>
+    <div class="ai-bubble-avatar-wrap">
+        <img src="{{ asset('images/brand/ai_bubble_avatar.jpg') }}" alt="Assistant IA" class="ai-bubble-avatar-img" />
+    </div>
+    <!-- Badge étoile scintillante -->
+    <div class="ai-bubble-sparkle-badge" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
+        </svg>
+    </div>
+    <!-- Badge notification ou pulsation active -->
+    <span class="ai-bubble-pulse-dot"></span>
+</div>
+
+<!-- Fenêtre de Chat Flottante (Drawer / Popup) -->
+<aside id="ai-chat-window" class="ai-chat-window" role="dialog" aria-labelledby="ai-chat-window-title" aria-modal="true" style="display:none;">
+    <!-- En-tête du Chat Flottant -->
+    <header class="ai-window-header">
+        <div class="ai-header-lead">
+            <div class="ai-header-avatar">
+                <img src="{{ asset('images/brand/ai_bubble_avatar.jpg') }}" alt="Mascotte IA" />
+                <span class="ai-online-status"></span>
+            </div>
+            <div>
+                <div class="ai-header-title-row">
+                    <span id="ai-chat-window-title" class="ai-window-title">ECOM AI ASSISTANT</span>
+                    <span class="ai-chip-pill">PRO</span>
+                </div>
+                <div class="ai-window-subtitle">Connecté à <strong>{{ Str::limit($bubbleShopName, 18) }}</strong></div>
+            </div>
+        </div>
+
+        <div class="ai-header-actions">
+            <!-- Solde de crédits -->
+            <div class="ai-bubble-credits" title="Crédits IA restants ce mois-ci">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+                <span id="ai-bubble-credits-val">{{ $bubbleCreditsRemaining }}</span>
+            </div>
+
+            <!-- Ouvrir en pleine page -->
+            <a href="{{ route('ai.assistant') }}" class="ai-btn-icon" title="Ouvrir en plein écran" aria-label="Plein écran">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            </a>
+
+            <!-- Réinitialiser / Nouvelle discussion -->
+            <button type="button" class="ai-btn-icon" onclick="resetAiBubbleChat()" title="Nouvelle discussion" aria-label="Nouveau chat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            </button>
+
+            <!-- Fermer -->
+            <button type="button" class="ai-btn-icon ai-close-btn" onclick="closeAiChatBubble()" title="Fermer" aria-label="Fermer">✕</button>
+        </div>
+    </header>
+
+    <!-- Zone de défilement des messages -->
+    <div class="ai-window-body" id="ai-bubble-messages">
+        <!-- Message de bienvenue si nouveau chat -->
+        <div class="ai-welcome-box" id="ai-bubble-welcome">
+            <div class="ai-welcome-avatar">
+                <img src="{{ asset('images/brand/ai_bubble_avatar.jpg') }}" alt="Assistant IA" />
+            </div>
+            <h4>Bonjour, comment puis-je vous aider ?</h4>
+            <p>Je suis votre copilote commercial connecté à vos produits, stocks, commandes et livraisons.</p>
+
+            <div class="ai-quick-prompts">
+                <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Fais-moi un point rapide sur mes stocks et les ruptures.')">
+                    <span>📦</span> État des stocks & ruptures
+                </button>
+                <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Combien de commandes COD sont en attente de confirmation ?')">
+                    <span>🛵</span> Commandes COD en attente
+                </button>
+                <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Donne-moi le bilan des ventes et mes 2 meilleures actions du jour.')">
+                    <span>📊</span> Bilan des ventes & opportunités
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicateur de saisie / réflexion IA -->
+    <div class="ai-typing-indicator" id="ai-bubble-typing" style="display:none;">
+        <span class="ai-typing-dot"></span>
+        <span class="ai-typing-dot"></span>
+        <span class="ai-typing-dot"></span>
+        <span style="font-size:0.75rem;color:var(--text-soft);margin-left:4px">Réflexion et analyse...</span>
+    </div>
+
+    <!-- Pied de page avec champ de saisie -->
+    <footer class="ai-window-footer">
+        <form id="ai-bubble-form" onsubmit="handleAiBubbleSubmit(event)" class="ai-bubble-input-form">
+            <input 
+                type="text" 
+                id="ai-bubble-input" 
+                class="ai-bubble-input-field" 
+                placeholder="Posez une question à votre copilote..." 
+                autocomplete="off" 
+                maxlength="1000"
+            />
+            <button type="submit" id="ai-bubble-send-btn" class="ai-bubble-send-btn" aria-label="Envoyer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </form>
+    </footer>
+</aside>
+
+<!-- ============================================================== -->
+<!-- STYLES CSS DU BUBBLE DE CHAT FLOTTANT                           -->
+<!-- ============================================================== -->
+<style>
+/* 1. Bouton Déclencheur Flottant (Bubble) */
+.ai-bubble-launcher {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 99990;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    box-shadow: 0 10px 28px -4px rgba(139, 92, 246, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.95), 0 0 20px rgba(168, 85, 247, 0.35);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+    .ai-bubble-launcher {
+        /* Positionné juste au-dessus de la bottom-nav mobile (~60px) pour être accessible sous le pouce */
+        bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+        right: 16px;
+        width: 58px;
+        height: 58px;
+    }
+}
+
+.ai-bubble-launcher:hover {
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 14px 35px -4px rgba(139, 92, 246, 0.65), 0 0 0 3px #ffffff, 0 0 28px rgba(168, 85, 247, 0.5);
+}
+
+.ai-bubble-launcher:active {
+    transform: scale(0.95);
+}
+
+.ai-bubble-avatar-wrap {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-bubble-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Badge étincelle violette */
+.ai-bubble-sparkle-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #a855f7, #6366f1);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.6);
+    border: 2px solid #ffffff;
+    animation: aiSparkleSpin 4s ease-in-out infinite;
+}
+
+@keyframes aiSparkleSpin {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.15) rotate(15deg); }
+}
+
+.ai-bubble-pulse-dot {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: #10b981;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+}
+
+/* Halo doux animé autour du bubble */
+.ai-bubble-halo {
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, transparent 70%);
+    z-index: -1;
+    animation: aiHaloPulse 3s ease-in-out infinite;
+}
+
+@keyframes aiHaloPulse {
+    0%, 100% { transform: scale(0.95); opacity: 0.5; }
+    50% { transform: scale(1.15); opacity: 0.9; }
+}
+
+/* 2. Fenêtre de Chat Flottante (Drawer / Popup) */
+.ai-chat-window {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    width: 390px;
+    height: 580px;
+    max-height: calc(100vh - 120px);
+    background: var(--bg-card, #101423);
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    border-radius: 20px;
+    box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.6), 0 0 35px rgba(139, 92, 246, 0.2);
+    display: flex;
+    flex-direction: column;
+    z-index: 99995;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    animation: aiWindowPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes aiWindowPop {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 768px) {
+    .ai-chat-window {
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+        right: 10px;
+        left: 10px;
+        width: calc(100vw - 20px);
+        max-width: 440px;
+        height: 74vh;
+        max-height: 560px;
+        margin: 0 auto;
+        border-radius: 20px;
+    }
+
+    .ai-bubble-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 99992;
+    }
+
+    .ai-bubble-backdrop.active {
+        display: block;
+    }
+}
+
+/* En-tête */
+.ai-window-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ai-header-lead {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.ai-header-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+    flex-shrink: 0;
+}
+
+.ai-header-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ai-online-status {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 9px;
+    height: 9px;
+    background: #10b981;
+    border-radius: 50%;
+    border: 1.5px solid #ffffff;
+}
+
+.ai-header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.ai-window-title {
+    font-size: 0.88rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--text-primary, #ffffff);
+}
+
+.ai-chip-pill {
+    font-size: 0.62rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #e11d48, #8b5cf6);
+    color: #ffffff;
+    padding: 1px 5px;
+    border-radius: 6px;
+    letter-spacing: 0.4px;
+}
+
+.ai-window-subtitle {
+    font-size: 0.72rem;
+    color: var(--text-soft, #94a3b8);
+}
+
+.ai-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.ai-bubble-credits {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #c084fc;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.ai-btn-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-soft, #94a3b8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.ai-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary, #ffffff);
+}
+
+.ai-close-btn {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* Corps du chat & messages */
+.ai-window-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    background: var(--bg-primary, #090c16);
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Accueil & suggestions */
+.ai-welcome-box {
+    text-align: center;
+    padding: 1.5rem 0.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ai-welcome-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    margin-bottom: 0.75rem;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+    overflow: hidden;
+}
+
+.ai-welcome-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ai-welcome-box h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    color: var(--text-primary, #ffffff);
+}
+
+.ai-welcome-box p {
+    font-size: 0.78rem;
+    color: var(--text-soft, #94a3b8);
+    line-height: 1.4;
+    max-width: 280px;
+    margin-bottom: 1rem;
+}
+
+.ai-quick-prompts {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.ai-prompt-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.55rem 0.8rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    color: var(--text-primary, #ffffff);
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.ai-prompt-btn:hover {
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.3);
+    color: #c084fc;
+    transform: translateX(2px);
+}
+
+/* Lignes de messages */
+.ai-bubble-msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 86%;
+    animation: aiMsgIn 0.2s ease-out;
+}
+
+@keyframes aiMsgIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ai-bubble-msg.user {
+    align-self: flex-end;
+}
+
+.ai-bubble-msg.assistant {
+    align-self: flex-start;
+}
+
+.ai-msg-bubble {
+    padding: 0.65rem 0.85rem;
+    border-radius: 16px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.ai-bubble-msg.user .ai-msg-bubble {
+    background: linear-gradient(135deg, #7c3aed, #6366f1);
+    color: #ffffff;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.ai-bubble-msg.assistant .ai-msg-bubble {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary, #f1f5f9);
+    border-bottom-left-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ai-msg-time {
+    font-size: 0.65rem;
+    color: var(--text-soft, #64748b);
+    margin-top: 3px;
+    padding: 0 4px;
+}
+
+.ai-bubble-msg.user .ai-msg-time {
+    align-self: flex-end;
+}
+
+/* Cartes d'action sensible */
+.ai-bubble-action-box {
+    margin-top: 0.5rem;
+    padding: 0.65rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 12px;
+    font-size: 0.78rem;
+}
+
+.ai-bubble-action-box strong {
+    color: #fbbf24;
+    display: block;
+    margin-bottom: 0.35rem;
+}
+
+.ai-bubble-action-btns {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+}
+
+.ai-action-btn-yes {
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ai-action-btn-no {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-soft, #94a3b8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+
+/* Indicateur de saisie */
+.ai-typing-indicator {
+    padding: 0.4rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.ai-typing-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #a855f7;
+    animation: aiTypingBounce 1.2s infinite ease-in-out;
+}
+
+.ai-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes aiTypingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* Pied de page et barre d'envoi */
+.ai-window-footer {
+    padding: 0.75rem 0.85rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ai-bubble-input-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 0.3rem 0.4rem 0.3rem 0.9rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ai-bubble-input-form:focus-within {
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+.ai-bubble-input-field {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary, #ffffff);
+    font-size: 0.82rem;
+    font-family: inherit;
+}
+
+.ai-bubble-input-field::placeholder {
+    color: var(--text-soft, #64748b);
+}
+
+.ai-bubble-send-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: #ffffff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ai-bubble-send-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.5);
+}
+
+.ai-bubble-send-btn:active {
+    transform: scale(0.95);
+}
+
+.ai-bubble-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+
+<!-- ============================================================== -->
+<!-- LOGIQUE JAVASCRIPT DU BUBBLE & CHAT EN TEMPS RÉEL              -->
+<!-- ============================================================== -->
+<script>
+(function() {
+    let currentConversationId = null;
+    let isSending = false;
+
+    // Bascule ouverture/fermeture du widget
+    window.toggleAiChatBubble = function() {
+        const win = document.getElementById('ai-chat-window');
+        const backdrop = document.getElementById('ai-bubble-backdrop');
+        if (!win) return;
+
+        if (win.style.display === 'none' || !win.style.display) {
+            win.style.display = 'flex';
+            if (backdrop) backdrop.classList.add('active');
+            setTimeout(() => {
+                const input = document.getElementById('ai-bubble-input');
+                if (input && window.innerWidth > 768) input.focus();
+                scrollAiBubbleToBottom();
+            }, 80);
+        } else {
+            win.style.display = 'none';
+            if (backdrop) backdrop.classList.remove('active');
+        }
+    };
+
+    window.closeAiChatBubble = function() {
+        const win = document.getElementById('ai-chat-window');
+        const backdrop = document.getElementById('ai-bubble-backdrop');
+        if (win) win.style.display = 'none';
+        if (backdrop) backdrop.classList.remove('active');
+    };
+
+    window.resetAiBubbleChat = function() {
+        currentConversationId = null;
+        const msgContainer = document.getElementById('ai-bubble-messages');
+        if (!msgContainer) return;
+        msgContainer.innerHTML = `
+            <div class="ai-welcome-box" id="ai-bubble-welcome">
+                <div class="ai-welcome-avatar">
+                    <img src="{{ asset('images/brand/ai_bubble_avatar.jpg') }}" alt="Assistant IA" />
+                </div>
+                <h4>Nouvelle discussion initialisée</h4>
+                <p>Que souhaitez-vous demander ou analyser aujourd'hui ?</p>
+                <div class="ai-quick-prompts">
+                    <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Fais-moi un point rapide sur mes stocks et les ruptures.')">
+                        <span>📦</span> État des stocks & ruptures
+                    </button>
+                    <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Combien de commandes COD sont en attente de confirmation ?')">
+                        <span>🛵</span> Commandes COD en attente
+                    </button>
+                    <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Donne-moi le bilan des ventes et mes 2 meilleures actions du jour.')">
+                        <span>📊</span> Bilan des ventes & opportunités
+                    </button>
+                </div>
+            </div>
+        `;
+    };
+
+    window.sendAiBubblePrompt = function(promptText) {
+        const input = document.getElementById('ai-bubble-input');
+        if (!input) return;
+        input.value = promptText;
+        handleAiBubbleSubmit(new Event('submit'));
+    };
+
+    window.handleAiBubbleSubmit = async function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (isSending) return;
+
+        const input = document.getElementById('ai-bubble-input');
+        const text = input ? input.value.trim() : '';
+        if (!text) return;
+
+        input.value = '';
+        input.focus();
+
+        // Masquer l'écran d'accueil s'il est encore présent
+        const welcome = document.getElementById('ai-bubble-welcome');
+        if (welcome) welcome.style.display = 'none';
+
+        // 1. Ajouter le message utilisateur dans le flux
+        appendAiBubbleMessage('user', text);
+        scrollAiBubbleToBottom();
+
+        // 2. Afficher l'indicateur de saisie
+        const typing = document.getElementById('ai-bubble-typing');
+        if (typing) typing.style.display = 'flex';
+        scrollAiBubbleToBottom();
+
+        isSending = true;
+
+        try {
+            const response = await fetch("{{ route('ai.message.send') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: text,
+                    conversation_id: currentConversationId
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                currentConversationId = data.conversation_id;
+
+                // Mettre à jour les crédits dans l'en-tête
+                if (data.credits_remaining !== undefined) {
+                    const credEl = document.getElementById('ai-bubble-credits-val');
+                    if (credEl) credEl.textContent = data.credits_remaining;
+                }
+
+                // Afficher la réponse de l'assistant
+                appendAiBubbleMessage('assistant', data.response, data.action_required);
+            } else {
+                appendAiBubbleMessage('assistant', data.message || "Désolé, une erreur est survenue lors de l'échange.");
+            }
+        } catch (err) {
+            console.error('Erreur bubble IA:', err);
+            appendAiBubbleMessage('assistant', "Impossible de contacter l'assistant IA pour le moment. Veuillez vérifier votre connexion.");
+        } finally {
+            if (typing) typing.style.display = 'none';
+            isSending = false;
+            scrollAiBubbleToBottom();
+        }
+    };
+
+    function appendAiBubbleMessage(role, content, actionRequired = null) {
+        const msgContainer = document.getElementById('ai-bubble-messages');
+        if (!msgContainer) return;
+
+        const now = new Date();
+        const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+        const row = document.createElement('div');
+        row.className = `ai-bubble-msg ${role}`;
+
+        let actionHtml = '';
+        if (actionRequired && actionRequired.status === 'pending') {
+            actionHtml = `
+                <div class="ai-bubble-action-box" id="bubble-act-${actionRequired.message_id}">
+                    <strong>⚠️ Action requise : ${escapeHtml(actionRequired.title || 'Confirmation')}</strong>
+                    <div>${escapeHtml(actionRequired.description || '')}</div>
+                    <div class="ai-bubble-action-btns">
+                        <button type="button" class="ai-action-btn-yes" onclick="approveAiBubbleAction(${actionRequired.message_id}, true)">Approuver</button>
+                        <button type="button" class="ai-action-btn-no" onclick="approveAiBubbleAction(${actionRequired.message_id}, false)">Refuser</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        row.innerHTML = `
+            <div class="ai-msg-bubble">
+                <div class="ai-bubble-text">${formatSimpleMarkdown(content)}</div>
+                ${actionHtml}
+            </div>
+            <div class="ai-msg-time">${timeStr}</div>
+        `;
+
+        msgContainer.appendChild(row);
+    }
+
+    window.approveAiBubbleAction = async function(messageId, approved) {
+        const box = document.getElementById(`bubble-act-${messageId}`);
+        if (box) {
+            box.innerHTML = `<span style="color:#fbbf24">Traitement de votre décision...</span>`;
+        }
+
+        try {
+            const resp = await fetch("{{ route('ai.action.approve') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ message_id: messageId, approved: approved })
+            });
+            const res = await resp.json();
+            if (box) {
+                box.innerHTML = `<span style="color:${approved ? '#10b981' : '#ef4444'};font-weight:700">${approved ? '✓ Action approuvée & exécutée' : '✕ Action refusée'}</span>`;
+            }
+            if (res.response) {
+                appendAiBubbleMessage('assistant', res.response);
+                scrollAiBubbleToBottom();
+            }
+        } catch (e) {
+            if (box) box.innerHTML = `<span style="color:#ef4444">Erreur lors de la validation.</span>`;
+        }
+    };
+
+    function scrollAiBubbleToBottom() {
+        const body = document.getElementById('ai-bubble-messages');
+        if (body) {
+            body.scrollTop = body.scrollHeight;
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function formatSimpleMarkdown(text) {
+        if (!text) return '';
+        let safe = escapeHtml(text);
+        // Gras **text**
+        safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Puces - text
+        safe = safe.replace(/(?:^|\n)-\s+(.*?)(?=\n|$)/g, '<br>• $1');
+        // Retours à la ligne
+        safe = safe.replace(/\n/g, '<br>');
+        return safe;
+    }
+})();
+</script>
+@endif
+@endauth

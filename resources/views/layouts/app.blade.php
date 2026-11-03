@@ -671,6 +671,7 @@
                 }
             });
         </script>
+        @include('partials.ai_bubble')
     @endauth
 
     @hasSection('footer')
