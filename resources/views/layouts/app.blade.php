@@ -98,6 +98,11 @@
                         <a id="nav-orders" href="{{ route('orders.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('orders.*') ? 'btn-primary' : '' }}">Commandes</a>
                         <a id="nav-products" href="{{ route('products.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('products.*') ? 'btn-primary' : '' }}">Produits</a>
                         <a id="nav-ads" href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ads.*') ? 'btn-primary' : '' }}">Publicité</a>
+                        <a id="nav-ai-assistant" href="{{ route('ai.assistant') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ai.*') ? 'btn-primary' : '' }}" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="sparkles" :size="14" />
+                            <span>Assistant IA</span>
+                            <span style="font-size:0.65rem;background:linear-gradient(135deg, #e11d48, #7c3aed);color:#ffffff;padding:1px 5px;border-radius:6px;font-weight:700">PRO</span>
+                        </a>
 
                         <!-- Liens secondaires (visibles directement sur écran large >= 1240px) -->
                         <a id="nav-categories" href="{{ route('categories.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('categories.*') ? 'btn-primary' : '' }}">Catégories</a>
@@ -221,6 +226,16 @@
                 <button type="button" class="mobile-plus-close" onclick="closeMobilePlusMenu()" aria-label="Fermer le menu">✕</button>
             </div>
             <div class="mobile-plus-grid">
+                <a href="{{ route('ai.assistant') }}" class="mobile-plus-item {{ request()->routeIs('ai.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                    <div class="mobile-plus-icon" style="background:linear-gradient(135deg, rgba(225, 29, 72, 0.15), rgba(124, 58, 237, 0.15));color:#e11d48">
+                        <x-icon name="sparkles" :size="22" />
+                    </div>
+                    <div class="mobile-plus-info">
+                        <strong>Assistant IA Commercial <span style="font-size:0.65rem;background:linear-gradient(135deg, #e11d48, #7c3aed);color:#ffffff;padding:1px 5px;border-radius:6px;font-weight:700;margin-left:4px">PRO</span></strong>
+                        <span>Copilote intelligent connecté à vos ventes & stocks</span>
+                    </div>
+                    <x-icon name="arrow-right" :size="16" />
+                </a>
                 <a href="{{ route('analytics.index') }}" class="mobile-plus-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
                     <div class="mobile-plus-icon" style="background:rgba(158, 27, 50, 0.12);color:var(--brand-1)">
                         <x-icon name="analytics" :size="22" />

@@ -111,6 +111,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/statistiques', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/statistiques/exporter', [\App\Http\Controllers\AnalyticsController::class, 'exportCsv'])->name('analytics.export_csv');
 
+    // ECOM AI ASSISTANT - Copilote Commercial & Opérationnel
+    Route::get('/assistant-ia', [\App\Http\Controllers\AiAssistantController::class, 'index'])->name('ai.assistant');
+    Route::get('/assistant-ia/conversations/{conversation}', [\App\Http\Controllers\AiAssistantController::class, 'showConversation'])->name('ai.conversations.show');
+    Route::post('/assistant-ia/message', [\App\Http\Controllers\AiAssistantController::class, 'sendMessage'])->name('ai.message.send');
+    Route::post('/assistant-ia/action/approve', [\App\Http\Controllers\AiAssistantController::class, 'approveAction'])->name('ai.action.approve');
+    Route::delete('/assistant-ia/conversations/{conversation}', [\App\Http\Controllers\AiAssistantController::class, 'destroyConversation'])->name('ai.conversations.destroy');
+
     // Module J - Super-Administration de la Plateforme (J-01 à J-08)
     Route::prefix('admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'dashboard'])->name('admin.dashboard');

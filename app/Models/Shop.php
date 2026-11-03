@@ -125,6 +125,16 @@ class Shop extends Model
         return $this->hasMany(AiGeneration::class);
     }
 
+    public function aiConversations(): HasMany
+    {
+        return $this->hasMany(AiConversation::class)->latest('updated_at');
+    }
+
+    public function aiAutomations(): HasMany
+    {
+        return $this->hasMany(AiAutomation::class);
+    }
+
     public function activeProducts(): HasMany
     {
         return $this->hasMany(Product::class)->where('status', Product::STATUS_ACTIVE);
