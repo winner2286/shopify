@@ -34,7 +34,7 @@ class OpenRouterLlmProvider implements LlmProviderInterface
     public function chat(array $messages, array $tools = [], array $options = []): array
     {
         $model = $options['model'] ?? $this->defaultModel;
-        $temperature = $options['temperature'] ?? 0.4;
+        $temperature = $options['temperature'] ?? 0.6;
         $maxTokens = $options['max_tokens'] ?? 2000;
         $timeout = $options['timeout'] ?? 30;
 
@@ -55,6 +55,8 @@ class OpenRouterLlmProvider implements LlmProviderInterface
             'messages' => $messages,
             'temperature' => $temperature,
             'max_tokens' => $maxTokens,
+            'frequency_penalty' => $options['frequency_penalty'] ?? 0.3,
+            'presence_penalty' => $options['presence_penalty'] ?? 0.2,
         ];
 
         // Déclaration des outils (Tool Calling standardisé)

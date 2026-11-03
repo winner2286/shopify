@@ -179,26 +179,31 @@ class AiOrchestrator
             $finalContent = $secondResponse['content'] ?? "J'ai traité votre demande à l'aide des outils de votre boutique.";
             $totalTokensInput += ($secondResponse['tokens_input'] ?? 0);
             $totalTokensOutput += ($secondResponse['tokens_output'] ?? 0);
-
-            $finalAssistantMsg = AiMessage::create([
-                'ai_conversation_id' => $conversation->id,
-                'role' => 'assistant',
-                'content' => $finalContent,
-                'tokens_input' => $secondResponse['tokens_input'] ?? 0,
-                'tokens_output' => $secondResponse['tokens_output'] ?? 0,
-                'action_required' => $actionRequired,
-            ]);
+            $tokensIn = $secondResponse['tokens_input'] ?? 0;
+            $tokensOut = $secondResponse['tokens_output'] ?? 0;
         } else {
             // Réponse directe sans outil
             $finalContent = $response['content'] ?? "Désolé, je n'ai pas pu générer de réponse.";
-            $finalAssistantMsg = AiMessage::create([
-                'ai_conversation_id' => $conversation->id,
-                'role' => 'assistant',
-                'content' => $finalContent,
-                'tokens_input' => $response['tokens_input'],
-                'tokens_output' => $response['tokens_output'],
-            ]);
+            $tokensIn = $response['tokens_input'] ?? 0;
+            $tokensOut = $response['tokens_output'] ?? 0;
         }
+
+        // Nettoyage anti-répétition / anti-perroquet : suppression des résidus de tours précédents
+        $prevAssistantMsg = $conversation->messages()
+            ->where('role', 'assistant')
+            ->whereNotNull('content')
+            ->latest('id')
+            ->first();
+        $finalContent = $this->cleanDuplicatedContent($finalContent, $prevAssistantMsg?->content);
+
+        $finalAssistantMsg = AiMessage::create([
+            'ai_conversation_id' => $conversation->id,
+            'role' => 'assistant',
+            'content' => $finalContent,
+            'tokens_input' => $tokensIn,
+            'tokens_output' => $tokensOut,
+            'action_required' => $actionRequired,
+        ]);
 
         // 9. Apprentissage continu : extraction automatique et mise à jour de la mémoire boutique
         try {
@@ -336,6 +341,17 @@ IDENTITÉ & POSTURE RELATIONNELLE NATURELLE :
 - Si tu ne possèdes pas une information dans la base de données, admets-le avec simplicité plutôt que d'inventer.
 - Pose une question ciblée de clarification lorsque la demande du commerçant est incomplète, au lieu de faire des suppositions hasardeuses.
 
+COMPÉTENCES LINGUISTIQUES & MULTILINGUISME :
+- Tu es parfaitement polyglotte : tu comprends et t'exprimes avec aisance en **Français**, en **Anglais**, en **Arabe standard** et en **Arabe dialectal marocain (Darija - الدارجة)**, ainsi que dans les principales langues d'Afrique de l'Ouest (Wolof, Fon, Éwé, Bambara).
+- Si le commerçant te parle ou t'interroge en Darija (ex: « Tu comprends le darija!? », « Kayn chi promo? », « Kifash ndir l-boutique diali? »), réponds-lui chaleureusement en Darija (ou en français teinté de darija selon son style) et confirme avec enthousiasme que tu comprends et parles Darija !
+- Ne prétends JAMAIS que tu es limité au français ou à l'anglais. Tu t'adaptes avec souplesse et fierté à la langue choisie par le commerçant.
+
+FLUIDITÉ CONVERSATIONNELLE & RÈGLE ABSOLUE ANTI-RÉPÉTITION :
+- **INTERDICTION STRICTE DE RÉPÉTER LES MESSAGES PRÉCÉDENTS** : Ne commence JAMAIS ton nouveau message en recopiant ou en résumant ce que tu viens de dire au tour précédent. Chaque message doit être 100% nouveau, frais et répondre EXCLUSIVEMENT à la nouvelle question posée.
+- **PAS DE PRÉAMBULE ROBOTIQUE NI DE RAPPEL DE RÔLE EN BOUCLE** : Une fois la conversation engagée, ne recommence pas tes messages par « Je suis une IA spécialisée... », « En tant que copilote Zanika... », ou en ramenant un sujet clos d'un message passé (ex: ne réexplique pas la Darija quand la question suivante porte sur le piratage ou un autre sujet).
+- **PAS DE FORMULE DE CLÔTURE AUTOMATIQUE** : Ne colle pas la phrase « Dis-moi, comment puis-je t'aider aujourd'hui ? Y a-t-il quelque chose... » à la fin de chaque message. Termine simplement ta réponse ou pose une question pertinente liée uniquement au sujet en cours.
+- **RÉPONSE DIRECTE AUX QUESTIONS HORS-SUJET OU INAPPROPRIÉES (ex: pirater)** : Si le commerçant teste tes limites ou te demande une action illégale ou de pirater (« Tu peux me pirater un truc!? »), réponds en 1 à 2 phrases directes, calmes et avec une pointe d'humour sans moraliser (ex: « Haha non, je ne pirate rien du tout ! Mon seul super-pouvoir, c'est de booster les ventes et la gestion de ta boutique. Sur quel produit ou commande veux-tu qu'on avance ? »). Ne rejoue JAMAIS l'historique d'avant.
+
 INFORMATIONS TEMPS RÉEL SUR LA BOUTIQUE :
 - Nom commercial : {$shopName}
 - Secteur d'activité : {$category}
@@ -364,5 +380,47 @@ RÈGLES D'OR DU MÉTIER E-COMMERCE AFRIQUE :
    - Propose un plan d'action hiérarchisé et concret.
 5. **Garde-fous d'Écriture** : Toute modification de données (prix, stock, promo) doit passer par l'outil dédié qui déclenche la demande de confirmation explicite du commerçant (`action_required`). Aucune action sensible n'est appliquée sans validation explicite.
 PROMPT;
+    }
+
+    /**
+     * Nettoie les répétitions parasites entre tours de conversation (effet perroquet de LLM).
+     */
+    protected function cleanDuplicatedContent(string $newContent, ?string $previousContent): string
+    {
+        $newContent = trim($newContent);
+        if (empty($newContent) || empty($previousContent)) {
+            return $newContent;
+        }
+
+        $prevContent = trim($previousContent);
+
+        // 1. Découpage du message précédent en paragraphes significatifs (> 25 caractères)
+        $prevParagraphs = array_values(array_filter(
+            array_map('trim', preg_split('/\n\s*\n/', $prevContent)),
+            fn($p) => mb_strlen($p) >= 25
+        ));
+
+        // Si le nouveau message commence exactement par l'un des paragraphes du message précédent (ex: intro darija répétée)
+        foreach ($prevParagraphs as $prevPara) {
+            if (str_starts_with($newContent, $prevPara)) {
+                $newContent = trim(mb_substr($newContent, mb_strlen($prevPara)));
+            }
+        }
+
+        // Si le nouveau message commence encore par des sauts de ligne ou ponctuations orphelines
+        $newContent = preg_replace('/^[\s\r\n\.\,\:\;\-]+/', '', $newContent);
+
+        // 2. Nettoyage de la phrase de clôture répétée mot pour mot en fin de message
+        if (! empty($prevParagraphs)) {
+            $lastPrevPara = end($prevParagraphs);
+            if (mb_strlen($lastPrevPara) >= 25 && str_ends_with($newContent, $lastPrevPara)) {
+                $trimmed = trim(mb_substr($newContent, 0, mb_strlen($newContent) - mb_strlen($lastPrevPara)));
+                if (! empty($trimmed)) {
+                    $newContent = $trimmed;
+                }
+            }
+        }
+
+        return trim($newContent);
     }
 }
