@@ -388,10 +388,22 @@
     }
 
     .ai-bubble-backdrop {
-        display: none !important;
+        display: none;
+        position: fixed !important;
+        inset: 0 !important;
+        background: #090c16 !important;
+        z-index: 99994 !important;
+    }
+
+    .ai-bubble-backdrop.active {
+        display: block !important;
     }
 
     /* Mode clair sur mobile */
+    [data-theme='light'] .ai-bubble-backdrop {
+        background: #ffffff !important;
+    }
+
     [data-theme='light'] .ai-chat-window {
         background: #ffffff !important;
     }
@@ -425,8 +437,11 @@
     }
 }
 
-/* Verrouillage du scroll en arrière-plan lorsque la bulle est ouverte sur mobile */
+/* Verrouillage strict et absolu du scroll en arrière-plan lorsque la bulle est ouverte sur mobile */
 body.ai-chat-open {
+    position: fixed !important;
+    width: 100% !important;
+    height: 100% !important;
     overflow: hidden !important;
     touch-action: none !important;
 }
@@ -918,6 +933,28 @@ body.ai-chat-open {
     let currentConversationId = null;
     let isSending = false;
 
+    let savedScrollY = 0;
+
+    function syncWithVisualViewport() {
+        if (window.innerWidth > 768) return;
+        const win = document.getElementById('ai-chat-window');
+        if (!win || win.style.display === 'none') return;
+
+        if (window.visualViewport) {
+            const vh = window.visualViewport.height;
+            const vtop = window.visualViewport.offsetTop;
+            win.style.height = `${vh}px`;
+            win.style.top = `${vtop}px`;
+            win.style.bottom = 'auto';
+            scrollAiBubbleToBottom();
+        }
+    }
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncWithVisualViewport);
+        window.visualViewport.addEventListener('scroll', syncWithVisualViewport);
+    }
+
     // Bascule ouverture/fermeture du widget
     window.toggleAiChatBubble = function() {
         const win = document.getElementById('ai-chat-window');
@@ -927,16 +964,20 @@ body.ai-chat-open {
 
         const isClosed = win.style.display === 'none' || !win.style.display;
         if (isClosed) {
+            savedScrollY = window.scrollY || window.pageYOffset || 0;
             win.style.display = 'flex';
             if (backdrop) backdrop.classList.add('active');
             if (window.innerWidth <= 768) {
+                document.body.style.top = `-${savedScrollY}px`;
                 document.body.classList.add('ai-chat-open');
                 if (launcher) launcher.style.display = 'none';
+                syncWithVisualViewport();
             }
             setTimeout(() => {
                 const input = document.getElementById('ai-bubble-input');
                 if (input && window.innerWidth > 768) input.focus();
                 scrollAiBubbleToBottom();
+                syncWithVisualViewport();
             }, 80);
         } else {
             closeAiChatBubble();
@@ -947,16 +988,39 @@ body.ai-chat-open {
         const win = document.getElementById('ai-chat-window');
         const backdrop = document.getElementById('ai-bubble-backdrop');
         const launcher = document.getElementById('ai-bubble-launcher');
-        if (win) win.style.display = 'none';
+        if (win) {
+            win.style.display = 'none';
+            win.style.height = '';
+            win.style.top = '';
+            win.style.bottom = '';
+        }
         if (backdrop) backdrop.classList.remove('active');
         if (launcher) launcher.style.display = 'flex';
+
         document.body.classList.remove('ai-chat-open');
+        document.body.style.top = '';
+        if (savedScrollY) {
+            window.scrollTo(0, savedScrollY);
+        }
 
         // Dissiper le focus pour fermer le clavier iOS et garantir le maintien du zoom 1:1
         if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
             document.activeElement.blur();
         }
     };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('ai-bubble-input');
+        if (input) {
+            input.addEventListener('focus', function() {
+                setTimeout(syncWithVisualViewport, 50);
+                setTimeout(syncWithVisualViewport, 250);
+            });
+            input.addEventListener('blur', function() {
+                setTimeout(syncWithVisualViewport, 100);
+            });
+        }
+    });
 
     // Fermeture propre avec la touche Échap
     document.addEventListener('keydown', function(e) {
