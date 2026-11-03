@@ -107,9 +107,10 @@ PROMPT;
         ];
 
         try {
+            $cleanUrl = trim(preg_replace('/[\r\n\t]+/', '', (string) config('app.url', 'https://zanika.shop')));
             $client = Http::withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
-                'HTTP-Referer' => config('app.url', 'https://zanika.shop'),
+                'HTTP-Referer' => $cleanUrl ?: 'https://zanika.shop',
                 'X-Title' => 'Zanika AI Vision',
                 'Content-Type' => 'application/json',
             ])->timeout(30);

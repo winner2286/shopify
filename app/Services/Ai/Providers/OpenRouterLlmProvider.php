@@ -72,10 +72,17 @@ class OpenRouterLlmProvider implements LlmProviderInterface
         }
 
         try {
+            $rawUrl = config('app.url', 'https://zanika.shop');
+            $cleanUrl = trim(preg_replace('/[\r\n\t]+/', '', (string) $rawUrl));
+            if (empty($cleanUrl) || ! str_starts_with($cleanUrl, 'http')) {
+                $cleanUrl = 'https://zanika.shop';
+            }
+            $cleanTitle = trim(preg_replace('/[\r\n\t]+/', '', (string) config('platform.name', 'Zanika'))) . ' AI Assistant';
+
             $client = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
-                'HTTP-Referer' => config('app.url', 'https://zanika.shop'),
-                'X-Title' => config('platform.name', 'Zanika') . ' AI Assistant',
+                'Authorization' => 'Bearer ' . trim($this->apiKey),
+                'HTTP-Referer' => $cleanUrl,
+                'X-Title' => $cleanTitle,
                 'Content-Type' => 'application/json',
             ])->timeout($timeout);
 

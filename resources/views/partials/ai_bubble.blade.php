@@ -680,6 +680,94 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* ==============================================================
+   MODE CLAIR : FENÊTRE & BULLE FLOTTANTE IA
+   ============================================================== */
+[data-theme='light'] .ai-chat-window {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.18), 0 0 35px rgba(139, 92, 246, 0.15);
+}
+
+[data-theme='light'] .ai-window-header {
+    background: #f8fafc;
+    border-bottom-color: #e2e8f0;
+}
+
+[data-theme='light'] .ai-window-title {
+    color: #0f172a;
+}
+
+[data-theme='light'] .ai-window-subtitle {
+    color: #64748b;
+}
+
+[data-theme='light'] .ai-btn-icon {
+    color: #64748b;
+}
+
+[data-theme='light'] .ai-btn-icon:hover {
+    background: #edf2f7;
+    color: #0f172a;
+}
+
+[data-theme='light'] .ai-window-body {
+    background: #ffffff;
+}
+
+[data-theme='light'] .ai-welcome-box h4 {
+    color: #0f172a;
+}
+
+[data-theme='light'] .ai-welcome-box p {
+    color: #64748b;
+}
+
+[data-theme='light'] .ai-prompt-btn {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+[data-theme='light'] .ai-prompt-btn:hover {
+    background: rgba(139, 92, 246, 0.08);
+    border-color: rgba(139, 92, 246, 0.3);
+    color: #7c3aed;
+}
+
+[data-theme='light'] .ai-bubble-msg.assistant .ai-msg-bubble {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #0f172a;
+}
+
+[data-theme='light'] .ai-msg-time {
+    color: #94a3b8;
+}
+
+[data-theme='light'] .ai-window-footer {
+    background: #f8fafc;
+    border-top-color: #e2e8f0;
+}
+
+[data-theme='light'] .ai-bubble-input-form {
+    background: #ffffff;
+    border-color: #cbd5e1;
+}
+
+[data-theme='light'] .ai-bubble-input-form:focus-within {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+}
+
+[data-theme='light'] .ai-bubble-input-field {
+    color: #0f172a;
+}
+
+[data-theme='light'] .ai-bubble-input-field::placeholder {
+    color: #94a3b8;
+}
 </style>
 
 <!-- ============================================================== -->

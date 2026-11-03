@@ -644,9 +644,10 @@ PROMPT;
         if (! empty($openrouterKey)) {
             try {
                 $model = config('services.openrouter.model') ?: env('OPENROUTER_MODEL', 'google/gemini-2.5-flash');
+                $cleanUrl = trim(preg_replace('/[\r\n\t]+/', '', (string) config('app.url', 'https://zanika.shop')));
                 $response = Http::withHeaders([
                     'Authorization' => 'Bearer ' . $openrouterKey,
-                    'HTTP-Referer' => config('app.url'),
+                    'HTTP-Referer' => $cleanUrl ?: 'https://zanika.shop',
                     'X-Title' => config('platform.name', 'Zanika E-Commerce'),
                 ])->timeout(7)->post('https://openrouter.ai/api/v1/chat/completions', [
                     'model' => $model,
