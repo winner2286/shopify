@@ -208,7 +208,10 @@ class AiOrchestrator
 
         // 10. Journalisation de la consommation dans ai_generations (pour décompte des crédits)
         $durationMs = (int) round((microtime(true) - $startTime) * 1000);
-        $costEstimatedFcfa = (int) ceil(($totalTokensInput * 0.0003 + $totalTokensOutput * 0.001) * 600);
+        // Coût réel Gemini Flash / OpenRouter : ~0.15$ / 1M tokens entrée et ~0.60$ / 1M tokens sortie (1 USD ≈ 650 FCFA)
+        $costInputUsd = ($totalTokensInput / 1000000) * 0.15;
+        $costOutputUsd = ($totalTokensOutput / 1000000) * 0.60;
+        $costEstimatedFcfa = max(1, (int) round(($costInputUsd + $costOutputUsd) * 650));
 
         AiGeneration::create([
             'shop_id' => $shop->id,

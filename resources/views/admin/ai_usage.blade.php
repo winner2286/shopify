@@ -40,11 +40,11 @@
         </div>
 
         <div class="card" style="padding:1.4rem">
-            <div style="font-size:.85rem;color:var(--text-soft)">Coût Total Estimé</div>
+            <div style="font-size:.85rem;color:var(--text-soft)">Coût API Fournisseur Estimé</div>
             <div style="font-size:1.8rem;font-weight:700;font-family:var(--font-display)" class="gradient-text">
                 {{ number_format($totalCostFcfa, 0, ',', ' ') }} FCFA
             </div>
-            <div style="font-size:.8rem;color:var(--ok)">Marge plateforme respectée</div>
+            <div style="font-size:.8rem;color:var(--ok)">Estimation technique • Purement indicatif</div>
         </div>
 
         <div class="card" style="padding:1.4rem">
