@@ -57,7 +57,7 @@
             </div>
 
             <!-- Ouvrir en pleine page -->
-            <a href="{{ route('ai.assistant') }}" class="ai-btn-icon" title="Ouvrir en plein écran" aria-label="Plein écran">
+            <a href="{{ route('ai.assistant') }}" class="ai-btn-icon ai-btn-expand" title="Ouvrir en plein écran" aria-label="Plein écran">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
             </a>
 
@@ -267,30 +267,168 @@
 
 @media (max-width: 768px) {
     .ai-chat-window {
-        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-        right: 10px;
-        left: 10px;
-        width: calc(100vw - 20px);
-        max-width: 440px;
-        height: 74vh;
-        max-height: 560px;
-        margin: 0 auto;
-        border-radius: 20px;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        z-index: 99999 !important;
+        display: flex;
+        flex-direction: column;
+        animation: aiDrawerSlideUpMobile 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        background: #0d111d;
+    }
+
+    @keyframes aiDrawerSlideUpMobile {
+        from {
+            transform: translateY(100%);
+            opacity: 0.9;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .ai-window-header {
+        padding-top: max(0.85rem, env(safe-area-inset-top, 0px)) !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        padding-bottom: 0.75rem !important;
+        background: rgba(16, 20, 35, 0.98) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        flex-shrink: 0;
+    }
+
+    .ai-btn-expand {
+        display: none !important;
+    }
+
+    .ai-btn-icon {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 10px !important;
+    }
+
+    .ai-btn-icon.ai-close-btn {
+        width: 36px !important;
+        height: 36px !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border-radius: 10px !important;
+        font-size: 1.15rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .ai-window-body {
+        padding: 1.25rem 1rem !important;
+        background: #090c16 !important;
+    }
+
+    .ai-welcome-box {
+        padding: 1.25rem 0.5rem 0.5rem !important;
+    }
+
+    .ai-welcome-avatar {
+        width: 64px !important;
+        height: 64px !important;
+    }
+
+    .ai-welcome-box h4 {
+        font-size: 1.05rem !important;
+    }
+
+    .ai-welcome-box p {
+        font-size: 0.85rem !important;
+        max-width: 320px !important;
+    }
+
+    .ai-prompt-btn {
+        padding: 0.75rem 1rem !important;
+        font-size: 0.86rem !important;
+        min-height: 46px !important;
+        border-radius: 14px !important;
+    }
+
+    .ai-window-footer {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+        padding-top: 0.75rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        background: rgba(16, 20, 35, 0.98) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        flex-shrink: 0;
+    }
+
+    .ai-bubble-input-form {
+        min-height: 48px !important;
+        padding: 0.35rem 0.45rem 0.35rem 1rem !important;
+    }
+
+    .ai-bubble-input-field,
+    input#ai-bubble-input {
+        font-size: 16px !important; /* EMPÊCHE L'AUTO-ZOOM SUR IOS SAFARI */
+        touch-action: manipulation !important;
+        -webkit-text-size-adjust: 100% !important;
+    }
+
+    .ai-bubble-send-btn {
+        width: 38px !important;
+        height: 38px !important;
     }
 
     .ai-bubble-backdrop {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.45);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        z-index: 99992;
+        display: none !important;
     }
 
-    .ai-bubble-backdrop.active {
-        display: block;
+    /* Mode clair sur mobile */
+    [data-theme='light'] .ai-chat-window {
+        background: #ffffff !important;
     }
+
+    [data-theme='light'] .ai-window-header {
+        background: #ffffff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    [data-theme='light'] .ai-btn-icon.ai-close-btn {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+    }
+
+    [data-theme='light'] .ai-window-body {
+        background: #f8fafc !important;
+    }
+
+    [data-theme='light'] .ai-window-footer {
+        background: #ffffff !important;
+        border-top: 1px solid #e2e8f0 !important;
+    }
+
+    [data-theme='light'] .ai-bubble-input-form {
+        background: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    [data-theme='light'] .ai-bubble-input-field {
+        color: #0f172a !important;
+    }
+}
+
+/* Verrouillage du scroll en arrière-plan lorsque la bulle est ouverte sur mobile */
+body.ai-chat-open {
+    overflow: hidden !important;
+    touch-action: none !important;
 }
 
 /* En-tête */
@@ -644,8 +782,10 @@
     border: none;
     outline: none;
     color: var(--text-primary, #ffffff);
-    font-size: 0.82rem;
+    font-size: 16px !important; /* STRICTEMENT 16px pour éliminer tout auto-zoom sur iOS */
     font-family: inherit;
+    line-height: 1.4;
+    padding: 6px 0;
 }
 
 .ai-bubble-input-field::placeholder {
@@ -782,28 +922,51 @@
     window.toggleAiChatBubble = function() {
         const win = document.getElementById('ai-chat-window');
         const backdrop = document.getElementById('ai-bubble-backdrop');
+        const launcher = document.getElementById('ai-bubble-launcher');
         if (!win) return;
 
-        if (win.style.display === 'none' || !win.style.display) {
+        const isClosed = win.style.display === 'none' || !win.style.display;
+        if (isClosed) {
             win.style.display = 'flex';
             if (backdrop) backdrop.classList.add('active');
+            if (window.innerWidth <= 768) {
+                document.body.classList.add('ai-chat-open');
+                if (launcher) launcher.style.display = 'none';
+            }
             setTimeout(() => {
                 const input = document.getElementById('ai-bubble-input');
                 if (input && window.innerWidth > 768) input.focus();
                 scrollAiBubbleToBottom();
             }, 80);
         } else {
-            win.style.display = 'none';
-            if (backdrop) backdrop.classList.remove('active');
+            closeAiChatBubble();
         }
     };
 
     window.closeAiChatBubble = function() {
         const win = document.getElementById('ai-chat-window');
         const backdrop = document.getElementById('ai-bubble-backdrop');
+        const launcher = document.getElementById('ai-bubble-launcher');
         if (win) win.style.display = 'none';
         if (backdrop) backdrop.classList.remove('active');
+        if (launcher) launcher.style.display = 'flex';
+        document.body.classList.remove('ai-chat-open');
+
+        // Dissiper le focus pour fermer le clavier iOS et garantir le maintien du zoom 1:1
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+            document.activeElement.blur();
+        }
     };
+
+    // Fermeture propre avec la touche Échap
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const win = document.getElementById('ai-chat-window');
+            if (win && win.style.display === 'flex') {
+                closeAiChatBubble();
+            }
+        }
+    });
 
     window.resetAiBubbleChat = function() {
         currentConversationId = null;

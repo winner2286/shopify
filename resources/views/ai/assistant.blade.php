@@ -998,7 +998,7 @@
     outline: none;
     resize: none;
     color: #ffffff;
-    font-size: 0.92rem;
+    font-size: 16px; /* Empêche le zoom automatique sur iOS */
     font-family: inherit;
     line-height: 1.5;
     max-height: 160px;
