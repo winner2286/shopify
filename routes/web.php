@@ -118,6 +118,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/assistant-ia/action/approve', [\App\Http\Controllers\AiAssistantController::class, 'approveAction'])->name('ai.action.approve');
     Route::delete('/assistant-ia/conversations/{conversation}', [\App\Http\Controllers\AiAssistantController::class, 'destroyConversation'])->name('ai.conversations.destroy');
 
+    // AI Products & Studio Visuel IA (Module 4 & 5)
+    Route::post('/assistant-ia/produits/analyser-photo', [\App\Http\Controllers\AiProductController::class, 'analyzePhoto'])->name('ai.products.analyze_photo');
+    Route::post('/assistant-ia/produits/{product}/optimiser', [\App\Http\Controllers\AiProductController::class, 'optimizeProduct'])->name('ai.products.optimize');
+    Route::get('/assistant-ia/studio', [\App\Http\Controllers\AiProductController::class, 'studio'])->name('ai.studio');
+    Route::post('/assistant-ia/studio/generer', [\App\Http\Controllers\AiProductController::class, 'generateVisual'])->name('ai.studio.generate');
+
     // Module J - Super-Administration de la Plateforme (J-01 à J-08)
     Route::prefix('admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'dashboard'])->name('admin.dashboard');

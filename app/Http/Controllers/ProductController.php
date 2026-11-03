@@ -174,6 +174,15 @@ class ProductController extends Controller
                     'image_data' => $processed['image_data'] ?? null,
                 ]);
             }
+        } elseif ($request->filled('ai_temp_photo_path')) {
+            $tempPath = $request->input('ai_temp_photo_path');
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($tempPath)) {
+                $product->images()->create([
+                    'path' => $tempPath,
+                    'sort_order' => 0,
+                    'size_bytes' => \Illuminate\Support\Facades\Storage::disk('public')->size($tempPath),
+                ]);
+            }
         }
 
         return redirect()->route('products.index')->with('status', 'Produit créé avec succès !');

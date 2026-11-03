@@ -23,6 +23,50 @@
 
     <form method="POST" action="{{ route('products.store') }}" enctype="multipart/form-data" data-once>
         @csrf
+        <input type="hidden" name="ai_temp_photo_path" id="ai_temp_photo_path" value="">
+
+        <!-- BANNIÈRE IA : GÉNÉRATION AUTOMATIQUE DE FICHE DEPUIS UNE PHOTO (MODULE 4 & 5) -->
+        <div class="ai-product-vision-card" style="background:linear-gradient(135deg, rgba(225, 29, 72, 0.08), rgba(124, 58, 237, 0.08));border:1px solid rgba(225, 29, 72, 0.35);border-radius:14px;padding:1.25rem;margin-bottom:1.5rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                <div style="display:flex;align-items:center;gap:.75rem">
+                    <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#e11d48,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px rgba(225,29,72,0.35);flex-shrink:0">
+                        <x-icon name="sparkles" :size="22" />
+                    </div>
+                    <div>
+                        <strong style="font-size:1.05rem;color:var(--text);display:block">Remplir automatiquement depuis une photo avec l'IA ✨</strong>
+                        <span style="font-size:.85rem;color:var(--text-soft)">Déposez la photo d'un article : l'IA identifie le produit, rédige le titre et la description, suggère la catégorie et calcule le prix en FCFA.</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm" onclick="toggleAiVisionDropzone()" style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-weight:700;border:none;padding:.5rem 1.1rem;border-radius:8px;cursor:pointer">
+                    ✨ Déposer une photo
+                </button>
+            </div>
+
+            <!-- Dropzone escamotable -->
+            <div id="ai-vision-dropzone-wrap" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid rgba(255,255,255,0.08)">
+                <div style="display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start">
+                    <div>
+                        <div class="field" style="margin-bottom:.75rem">
+                            <label style="font-size:.85rem;font-weight:600">Photo du produit (format JPG, PNG ou WebP)</label>
+                            <input type="file" id="ai-photo-input" accept="image/*" class="input" style="padding:.5rem" onchange="previewAiPhoto(this)">
+                        </div>
+                        <div class="field" style="margin-bottom:0">
+                            <input type="text" id="ai-user-hint" class="input" placeholder="Indication facultative (ex: Robe de soirée en tissu pagne wax)..." style="font-size:.85rem">
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:.5rem;align-items:center;justify-content:center">
+                        <div id="ai-photo-thumb-preview" style="width:80px;height:80px;border-radius:8px;border:1px dashed var(--border);display:grid;place-items:center;overflow:hidden;background:rgba(0,0,0,0.2)">
+                            <span style="font-size:.7rem;color:var(--text-soft)">Aperçu</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" id="ai-analyze-submit-btn" onclick="runAiVisionAnalysis()" style="width:100%">
+                            Analyser avec l'IA
+                        </button>
+                    </div>
+                </div>
+                <div id="ai-vision-status-msg" style="display:none;margin-top:.75rem;font-size:.85rem;color:#10b981"></div>
+            </div>
+        </div>
+
         <div class="product-form-grid">
             
             <!-- Informations principales -->
@@ -483,6 +527,100 @@ document.addEventListener('DOMContentLoaded', function() {
             previewGrid.appendChild(item);
         });
     }
+});
+
+// ==========================================================================
+// AI PHOTO-TO-PRODUCT VISION LOGIC
+// ==========================================================================
+function toggleAiVisionDropzone() {
+    const wrap = document.getElementById('ai-vision-dropzone-wrap');
+    wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+}
+
+function previewAiPhoto(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const thumb = document.getElementById('ai-photo-thumb-preview');
+            thumb.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function runAiVisionAnalysis() {
+    const input = document.getElementById('ai-photo-input');
+    if (!input.files || !input.files[0]) {
+        alert('Veuillez sélectionner une photo avant de lancer l\'analyse.');
+        return;
+    }
+
+    const btn = document.getElementById('ai-analyze-submit-btn');
+    const statusMsg = document.getElementById('ai-vision-status-msg');
+    btn.disabled = true;
+    btn.innerText = 'Analyse en cours (3s)...';
+    statusMsg.style.display = 'block';
+    statusMsg.style.color = '#38bdf8';
+    statusMsg.innerText = 'L\'IA examine la matière, la coupe, la couleur et le style de l\'article...';
+
+    const formData = new FormData();
+    formData.append('photo', input.files[0]);
+    formData.append('user_hint', document.getElementById('ai-user-hint').value);
+
+    try {
+        const res = await fetch('{{ route('ai.products.analyze_photo') }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'success' && data.analysis) {
+            const a = data.analysis;
+            
+            // Pré-remplissage automatique des champs du formulaire
+            if (a.title) document.getElementById('title').value = a.title;
+            if (a.description) document.getElementById('description').value = a.description;
+            if (a.price_fcfa) document.getElementById('price').value = a.price_fcfa;
+            if (a.compare_at_price_fcfa) document.getElementById('compare_at_price').value = a.compare_at_price_fcfa;
+
+            // Sélection automatique de la catégorie correspondante si trouvée
+            if (data.matched_category_id) {
+                const catCheckbox = document.querySelector(`input[name="category_ids[]"][value="${data.matched_category_id}"]`);
+                if (catCheckbox) catCheckbox.checked = true;
+            }
+
+            // Mémorisation de la photo analysée pour association automatique
+            if (data.temp_photo_path) {
+                document.getElementById('ai_temp_photo_path').value = data.temp_photo_path;
+            }
+
+            statusMsg.style.color = '#10b981';
+            statusMsg.innerHTML = `✅ <strong>Fiche produit complétée avec succès !</strong> Titre, description, caractéristiques et prix suggéré (${formatNumber(a.price_fcfa)} FCFA) ont été injectés. Vous pouvez ajuster les champs librement.`;
+
+            // Scroll fluide vers le formulaire complété
+            document.getElementById('title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            statusMsg.style.color = '#ef4444';
+            statusMsg.innerText = 'Erreur lors de l\'analyse de la photo. Veuillez réessayer.';
+        }
+    } catch (err) {
+        statusMsg.style.color = '#ef4444';
+        statusMsg.innerText = 'Erreur de connexion au serveur IA.';
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Analyser avec l\'IA';
+    }
+}
+
+function formatNumber(num) {
+    return new Intl.NumberFormat('fr-FR').format(num || 0);
+}
 });
 </script>
 @endsection

@@ -40,7 +40,23 @@
             <div style="display:flex;flex-direction:column;gap:1.5rem">
                 <!-- Détails produit -->
                 <section class="card panel">
-                    <h3>Détails du produit</h3>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+                        <h3 style="margin:0">Détails du produit</h3>
+                        <button type="button" class="btn btn-sm" onclick="runAiProductOptimize()" id="ai-optimize-btn" style="background:linear-gradient(135deg, #e11d48, #7c3aed);color:#fff;font-weight:700;border:none;padding:.35rem .85rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(225,29,72,0.3)">
+                            <x-icon name="sparkles" :size="14" />
+                            <span>Optimiser avec l'IA ✨</span>
+                        </button>
+                    </div>
+                    
+                    <div id="ai-optimize-banner" style="display:none;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.35);border-radius:10px;padding:.85rem;margin-bottom:1.25rem">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+                            <strong style="color:#e11d48;font-size:.9rem">✨ Suggestions d'optimisation IA prêtes</strong>
+                            <button type="button" onclick="applyAiOptimizations()" class="btn btn-sm btn-primary" style="padding:.25rem .75rem;font-size:.78rem">
+                                Appliquer à la fiche
+                            </button>
+                        </div>
+                        <div id="ai-optimize-preview" style="font-size:.82rem;color:var(--text-soft);line-height:1.4"></div>
+                    </div>
                     
                     <div class="field">
                         <label for="title">Titre du produit <span style="color:var(--danger)">*</span></label>
@@ -539,4 +555,78 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endif
+
+<script>
+// ==========================================================================
+// AI PRODUCT OPTIMIZATION SCRIPT
+// ==========================================================================
+let lastAiOptimization = null;
+
+async function runAiProductOptimize() {
+    const btn = document.getElementById('ai-optimize-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span>Optimisation en cours (3s)...</span>';
+
+    try {
+        const res = await fetch('{{ route('ai.products.optimize', $product) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            lastAiOptimization = data;
+            const banner = document.getElementById('ai-optimize-banner');
+            const preview = document.getElementById('ai-optimize-preview');
+
+            let sellingPointsHtml = '';
+            if (data.selling_points && data.selling_points.length) {
+                sellingPointsHtml = `<ul style="margin:.3rem 0;padding-left:1.2rem">${data.selling_points.map(p => `<li>${p}</li>`).join('')}</ul>`;
+            }
+
+            preview.innerHTML = `
+                <div><strong>Titre suggéré :</strong> ${data.optimized_title || ''}</div>
+                ${sellingPointsHtml}
+                ${data.suggested_compare_price ? `<div><strong>Prix barré recommandé :</strong> ${new Intl.NumberFormat('fr-FR').format(data.suggested_compare_price)} FCFA</div>` : ''}
+            `;
+            banner.style.display = 'block';
+        } else {
+            alert(data.message || 'Impossible d\'optimiser ce produit pour le moment.');
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert('Erreur de communication avec le service IA.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+function applyAiOptimizations() {
+    if (!lastAiOptimization) return;
+
+    if (lastAiOptimization.optimized_title) {
+        document.getElementById('title').value = lastAiOptimization.optimized_title;
+    }
+    if (lastAiOptimization.optimized_description) {
+        document.getElementById('description').value = lastAiOptimization.optimized_description;
+    }
+    if (lastAiOptimization.suggested_compare_price) {
+        const compareInput = document.getElementById('compare_at_price');
+        if (compareInput) compareInput.value = lastAiOptimization.suggested_compare_price;
+    }
+
+    const banner = document.getElementById('ai-optimize-banner');
+    banner.style.background = 'rgba(16, 185, 129, 0.12)';
+    banner.style.borderColor = '#10b981';
+    banner.innerHTML = `<span style="color:#10b981;font-weight:700">✓ Suggestions appliquées au formulaire avec succès ! Cliquez sur "Enregistrer les modifications" pour publier.</span>`;
+}
+</script>
 @endsection
