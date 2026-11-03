@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'user_id', 'name', 'subdomain', 'status', 'onboarding_step', 'onboarding_data',
     'locale', 'currency', 'description', 'business_category', 'theme', 'contact',
-    'logo_path', 'brand_color', 'visual_style', 'target_audience',
+    'logo_path', 'brand_color', 'visual_style', 'target_audience', 'ai_credits_used',
 ])]
 class Shop extends Model
 {
@@ -28,6 +28,7 @@ class Shop extends Model
             'contact' => 'array',
             'onboarding_data' => 'array',
             'onboarding_step' => 'integer',
+            'ai_credits_used' => 'integer',
         ];
     }
 

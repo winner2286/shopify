@@ -122,10 +122,9 @@ class PlatformAdminController extends Controller
         $totalAutomations = \App\Models\AiAutomation::withoutGlobalScopes()->where('is_active', true)->count();
 
         // Top boutiques consommatrices
-        $topConsumerShops = Shop::withoutGlobalScopes()
-            ->orderByDesc('ai_credits_used')
-            ->take(10)
-            ->get();
+        $topConsumerShops = \Illuminate\Support\Facades\Schema::hasColumn('shops', 'ai_credits_used')
+            ? Shop::withoutGlobalScopes()->orderByDesc('ai_credits_used')->take(10)->get()
+            : Shop::withoutGlobalScopes()->latest()->take(10)->get();
 
         $generations = AiGeneration::withoutGlobalScopes()
             ->with('shop')
