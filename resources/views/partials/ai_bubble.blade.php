@@ -16,12 +16,12 @@
 <div id="ai-bubble-backdrop" class="ai-bubble-backdrop" onclick="closeAiChatBubble()"></div>
 
 <!-- Bouton flottant (Bubble Trigger) -->
-<div id="ai-bubble-launcher" class="ai-bubble-launcher" onclick="toggleAiChatBubble()" role="button" aria-label="Ouvrir l'assistant IA" title="Copilote Commercial IA">
+<div id="ai-bubble-launcher" class="ai-bubble-launcher" onclick="toggleAiChatBubble()" role="button" aria-label="Ouvrir le copilote Zanika IA" title="Zanika Copilote IA">
     <div class="ai-bubble-halo"></div>
     <div class="ai-bubble-avatar-wrap">
-        <img src="{{ asset('images/brand/ai_bubble_avatar.jpg') }}" alt="Assistant IA" class="ai-bubble-avatar-img" />
+        <img src="{{ asset('images/brand/02_icone_application.png') }}" alt="Zanika IA" class="ai-bubble-avatar-img" />
     </div>
-    <!-- Badge étoile scintillante -->
+    <!-- Badge étoile scintillante Zanika -->
     <div class="ai-bubble-sparkle-badge" aria-hidden="true">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
             <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
@@ -37,13 +37,13 @@
     <header class="ai-window-header">
         <div class="ai-header-lead">
             <div class="ai-header-avatar">
-                <img src="{{ asset('images/brand/ai_bubble_avatar.jpg') }}" alt="Mascotte IA" />
+                <img src="{{ asset('images/brand/02_icone_application.png') }}" alt="Zanika IA" />
                 <span class="ai-online-status"></span>
             </div>
             <div>
                 <div class="ai-header-title-row">
-                    <span id="ai-chat-window-title" class="ai-window-title">ECOM AI ASSISTANT</span>
-                    <span class="ai-chip-pill">PRO</span>
+                    <span id="ai-chat-window-title" class="ai-window-title">ZANIKA AI</span>
+                    <span class="ai-chip-pill">COPILOTE</span>
                 </div>
                 <div class="ai-window-subtitle">Connecté à <strong>{{ Str::limit($bubbleShopName, 18) }}</strong></div>
             </div>
@@ -76,10 +76,10 @@
         <!-- Message de bienvenue si nouveau chat -->
         <div class="ai-welcome-box" id="ai-bubble-welcome">
             <div class="ai-welcome-avatar">
-                <img src="{{ asset('images/brand/ai_bubble_avatar.jpg') }}" alt="Assistant IA" />
+                <img src="{{ asset('images/brand/02_icone_application.png') }}" alt="Zanika Copilote" />
             </div>
             <h4>Bonjour, comment puis-je vous aider ?</h4>
-            <p>Je suis votre copilote commercial connecté à vos produits, stocks, commandes et livraisons.</p>
+            <p>Je suis votre copilote commercial Zanika, connecté à vos produits, stocks, commandes et livraisons.</p>
 
             <div class="ai-quick-prompts">
                 <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Fais-moi un point rapide sur mes stocks et les ruptures.')">
@@ -141,11 +141,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
-    box-shadow: 0 10px 28px -4px rgba(139, 92, 246, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.95), 0 0 20px rgba(168, 85, 247, 0.35);
+    background: #090c15;
+    border: 2px solid rgba(255, 45, 109, 0.45);
+    box-shadow: 0 10px 28px -4px rgba(225, 29, 72, 0.5), 0 0 0 2.5px rgba(255, 255, 255, 0.95), 0 0 22px rgba(255, 45, 109, 0.35);
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+}
+
+[data-theme='dark'] .ai-bubble-launcher {
+    box-shadow: 0 10px 28px -4px rgba(225, 29, 72, 0.5), 0 0 0 2.5px rgba(255, 255, 255, 0.15), 0 0 22px rgba(255, 45, 109, 0.35);
 }
 
 @media (max-width: 768px) {
@@ -160,7 +165,7 @@
 
 .ai-bubble-launcher:hover {
     transform: scale(1.08) translateY(-2px);
-    box-shadow: 0 14px 35px -4px rgba(139, 92, 246, 0.65), 0 0 0 3px #ffffff, 0 0 28px rgba(168, 85, 247, 0.5);
+    box-shadow: 0 14px 35px -4px rgba(225, 29, 72, 0.65), 0 0 0 2.5px #ffffff, 0 0 28px rgba(255, 45, 109, 0.5);
 }
 
 .ai-bubble-launcher:active {
@@ -175,6 +180,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #090c15;
 }
 
 .ai-bubble-avatar-img {
@@ -184,20 +190,20 @@
     display: block;
 }
 
-/* Badge étincelle violette */
+/* Badge étincelle rose/crimson Zanika */
 .ai-bubble-sparkle-badge {
     position: absolute;
     top: -2px;
     right: -2px;
     width: 20px;
     height: 20px;
-    background: linear-gradient(135deg, #a855f7, #6366f1);
+    background: linear-gradient(135deg, #FF2D6D, #BE123C);
     color: #ffffff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.6);
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.6);
     border: 2px solid #ffffff;
     animation: aiSparkleSpin 4s ease-in-out infinite;
 }
@@ -218,12 +224,12 @@
     border: 2px solid #ffffff;
 }
 
-/* Halo doux animé autour du bubble */
+/* Halo doux animé aux couleurs Zanika autour du bubble */
 .ai-bubble-halo {
     position: absolute;
     inset: -6px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 45, 109, 0.32) 0%, transparent 70%);
     z-index: -1;
     animation: aiHaloPulse 3s ease-in-out infinite;
 }
@@ -242,9 +248,9 @@
     height: 580px;
     max-height: calc(100vh - 120px);
     background: var(--bg-card, #101423);
-    border: 1px solid rgba(139, 92, 246, 0.25);
+    border: 1px solid rgba(255, 45, 109, 0.25);
     border-radius: 20px;
-    box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.6), 0 0 35px rgba(139, 92, 246, 0.2);
+    box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.6), 0 0 35px rgba(255, 45, 109, 0.18);
     display: flex;
     flex-direction: column;
     z-index: 99995;
@@ -465,11 +471,12 @@ body.ai-chat-open {
 .ai-header-avatar {
     width: 36px;
     height: 36px;
-    border-radius: 50%;
+    border-radius: 8px;
     position: relative;
     overflow: hidden;
-    background: #ffffff;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+    background: #090c15;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.35);
+    border: 1.5px solid rgba(255, 45, 109, 0.35);
     flex-shrink: 0;
 }
 
@@ -506,11 +513,12 @@ body.ai-chat-open {
 .ai-chip-pill {
     font-size: 0.62rem;
     font-weight: 800;
-    background: linear-gradient(135deg, #e11d48, #8b5cf6);
+    background: linear-gradient(135deg, #FF2D6D, #BE123C);
     color: #ffffff;
-    padding: 1px 5px;
+    padding: 1px 6px;
     border-radius: 6px;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(225, 29, 72, 0.35);
 }
 
 .ai-window-subtitle {
@@ -529,9 +537,9 @@ body.ai-chat-open {
     align-items: center;
     gap: 0.25rem;
     padding: 0.2rem 0.5rem;
-    background: rgba(139, 92, 246, 0.15);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    color: #c084fc;
+    background: rgba(255, 45, 109, 0.12);
+    border: 1px solid rgba(255, 45, 109, 0.3);
+    color: #FF2D6D;
     border-radius: 9999px;
     font-size: 0.72rem;
     font-weight: 700;
@@ -586,10 +594,11 @@ body.ai-chat-open {
 .ai-welcome-avatar {
     width: 58px;
     height: 58px;
-    border-radius: 50%;
+    border-radius: 14px;
     margin-bottom: 0.75rem;
-    background: #ffffff;
-    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+    background: #090c15;
+    box-shadow: 0 8px 24px rgba(225, 29, 72, 0.35);
+    border: 2px solid rgba(255, 45, 109, 0.35);
     overflow: hidden;
 }
 
@@ -640,9 +649,9 @@ body.ai-chat-open {
 }
 
 .ai-prompt-btn:hover {
-    background: rgba(139, 92, 246, 0.12);
-    border-color: rgba(139, 92, 246, 0.3);
-    color: #c084fc;
+    background: rgba(255, 45, 109, 0.1);
+    border-color: rgba(255, 45, 109, 0.35);
+    color: #FF2D6D;
     transform: translateX(2px);
 }
 
@@ -676,10 +685,10 @@ body.ai-chat-open {
 }
 
 .ai-bubble-msg.user .ai-msg-bubble {
-    background: linear-gradient(135deg, #7c3aed, #6366f1);
+    background: linear-gradient(135deg, #E11D48, #9F1239);
     color: #ffffff;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3);
 }
 
 .ai-bubble-msg.assistant .ai-msg-bubble {
@@ -756,7 +765,7 @@ body.ai-chat-open {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #a855f7;
+    background: #FF2D6D;
     animation: aiTypingBounce 1.2s infinite ease-in-out;
 }
 
@@ -787,8 +796,8 @@ body.ai-chat-open {
 }
 
 .ai-bubble-input-form:focus-within {
-    border-color: rgba(139, 92, 246, 0.6);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    border-color: rgba(255, 45, 109, 0.6);
+    box-shadow: 0 0 0 3px rgba(255, 45, 109, 0.18);
 }
 
 .ai-bubble-input-field {
@@ -811,7 +820,7 @@ body.ai-chat-open {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    background: linear-gradient(135deg, #FF2D6D, #BE123C);
     color: #ffffff;
     border: none;
     display: flex;
@@ -824,7 +833,7 @@ body.ai-chat-open {
 
 .ai-bubble-send-btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.5);
+    box-shadow: 0 2px 10px rgba(225, 29, 72, 0.5);
 }
 
 .ai-bubble-send-btn:active {
@@ -842,7 +851,7 @@ body.ai-chat-open {
 [data-theme='light'] .ai-chat-window {
     background: #ffffff;
     border-color: #e2e8f0;
-    box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.18), 0 0 35px rgba(139, 92, 246, 0.15);
+    box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.15), 0 0 30px rgba(255, 45, 109, 0.12);
 }
 
 [data-theme='light'] .ai-window-header {
@@ -886,9 +895,9 @@ body.ai-chat-open {
 }
 
 [data-theme='light'] .ai-prompt-btn:hover {
-    background: rgba(139, 92, 246, 0.08);
-    border-color: rgba(139, 92, 246, 0.3);
-    color: #7c3aed;
+    background: rgba(255, 45, 109, 0.08);
+    border-color: rgba(255, 45, 109, 0.3);
+    color: #BE123C;
 }
 
 [data-theme='light'] .ai-bubble-msg.assistant .ai-msg-bubble {
@@ -912,8 +921,8 @@ body.ai-chat-open {
 }
 
 [data-theme='light'] .ai-bubble-input-form:focus-within {
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+    border-color: #E11D48;
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.18);
 }
 
 [data-theme='light'] .ai-bubble-input-field {
@@ -1049,7 +1058,7 @@ body.ai-chat-open {
         msgContainer.innerHTML = `
             <div class="ai-welcome-box" id="ai-bubble-welcome">
                 <div class="ai-welcome-avatar">
-                    <img src="{{ asset('images/brand/ai_bubble_avatar.jpg') }}" alt="Assistant IA" />
+                    <img src="{{ asset('images/brand/02_icone_application.png') }}" alt="Zanika IA" />
                 </div>
                 <h4>Nouvelle discussion initialisée</h4>
                 <p>Que souhaitez-vous demander ou analyser aujourd'hui ?</p>
