@@ -48,6 +48,29 @@
 .ads-tabs-row .btn {
     flex-shrink: 0;
 }
+.flyer-action-btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .5rem;
+    width: 100%;
+}
+.flyer-action-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: .35rem !important;
+    white-space: normal !important;
+    line-height: 1.25 !important;
+    padding: .65rem .45rem !important;
+    text-align: center !important;
+    font-size: .84rem !important;
+    min-height: 44px !important;
+}
+@media (max-width: 440px) {
+    .flyer-action-btn-row {
+        grid-template-columns: 1fr !important;
+    }
+}
 </style>
 
 <div class="container" style="max-width:1160px;padding:2rem 1rem">
@@ -341,17 +364,17 @@
 
                 <!-- Actions de Téléchargement & Partage -->
                 <div style="display:flex;flex-direction:column;gap:.65rem">
-                    <button type="button" onclick="downloadFlyerPNG()" class="btn btn-primary btn-block" style="background:linear-gradient(135deg, var(--brand-1), #ec4899);border:none;font-size:1rem;font-weight:700;padding:.85rem 1rem;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;box-shadow:0 8px 24px rgba(109,61,242,0.35);cursor:pointer">
+                    <button type="button" id="btnDownloadFlyer" onclick="downloadFlyerPNG()" class="btn btn-primary btn-block" style="background:linear-gradient(135deg, var(--brand-1), #ec4899);border:none;font-size:1rem;font-weight:700;padding:.85rem 1rem;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;box-shadow:0 8px 24px rgba(109,61,242,0.35);cursor:pointer;white-space:normal;line-height:1.3;text-align:center">
                         <x-icon name="download" size="18" />
-                        <span>Télécharger l'Affiche en PNG (HD)</span>
+                        <span id="btnDownloadFlyerText">Télécharger l'Affiche en PNG (HD)</span>
                     </button>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-                        <button type="button" onclick="copyWhatsAppPromoText()" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;justify-content:center;gap:.35rem">
+                    <div class="flyer-action-btn-row">
+                        <button type="button" onclick="copyWhatsAppPromoText()" class="btn btn-ghost btn-sm flyer-action-btn">
                             <x-icon name="copy" size="14" />
                             <span>Copier texte WhatsApp</span>
                         </button>
-                        <button type="button" onclick="shareOnWhatsApp()" class="btn btn-ghost btn-sm" style="color:#25D366;border-color:rgba(37,211,102,0.3);display:inline-flex;align-items:center;justify-content:center;gap:.35rem">
+                        <button type="button" onclick="shareOnWhatsApp()" class="btn btn-ghost btn-sm flyer-action-btn" style="color:#25D366;border-color:rgba(37,211,102,0.3)">
                             <x-icon name="whatsapp" size="14" />
                             <span>Ouvrir WhatsApp</span>
                         </button>
@@ -482,11 +505,18 @@
             setMode('shop');
         }
 
-        // Pré-chargement du logo officiel
+        // Pré-chargement sécurisé du logo officiel
         if (shopLogoUrl) {
             const img = new Image();
-            img.crossOrigin = 'anonymous';
+            if (!/^data:/i.test(shopLogoUrl)) {
+                img.crossOrigin = 'anonymous';
+            }
             img.onload = () => { loadedLogoImg = img; updateFlyer(); };
+            img.onerror = () => {
+                const img2 = new Image();
+                img2.onload = () => { loadedLogoImg = img2; updateFlyer(); };
+                img2.src = shopLogoUrl;
+            };
             img.src = shopLogoUrl;
         }
     });
@@ -590,14 +620,24 @@
 
         if (p.image_url) {
             const img = new Image();
-            img.crossOrigin = 'anonymous';
+            if (!/^data:/i.test(p.image_url)) {
+                img.crossOrigin = 'anonymous';
+            }
             img.onload = () => {
                 loadedProductImg = img;
                 updateFlyer();
             };
             img.onerror = () => {
-                loadedProductImg = null;
-                updateFlyer();
+                const img2 = new Image();
+                img2.onload = () => {
+                    loadedProductImg = img2;
+                    updateFlyer();
+                };
+                img2.onerror = () => {
+                    loadedProductImg = null;
+                    updateFlyer();
+                };
+                img2.src = p.image_url;
             };
             img.src = p.image_url;
         } else {
@@ -730,18 +770,26 @@
         }
         ctx.restore();
 
-        // Badge Promo Flottant sur l'image
+        // Badge Promo Flottant sur l'image avec auto-ajustement de taille
         if (badgeText) {
             ctx.save();
-            ctx.font = '800 28px "Plus Jakarta Sans", sans-serif';
-            const badgeW = ctx.measureText(badgeText).width + 50;
-            const badgeH = 58;
-            const badgeX = imgX + 30;
-            const badgeY = imgY + 30;
+            let badgeFontSize = isStory ? 28 : 22;
+            ctx.font = `800 ${badgeFontSize}px "Plus Jakarta Sans", sans-serif`;
+            const maxBadgeW = (oldPrice > price && price > 0) ? (imgSize - 180) : (imgSize - 60);
+
+            while (ctx.measureText(badgeText).width + 46 > maxBadgeW && badgeFontSize > 16) {
+                badgeFontSize -= 2;
+                ctx.font = `800 ${badgeFontSize}px "Plus Jakarta Sans", sans-serif`;
+            }
+
+            const badgeW = Math.min(ctx.measureText(badgeText).width + 44, maxBadgeW);
+            const badgeH = isStory ? 58 : 46;
+            const badgeX = imgX + 24;
+            const badgeY = imgY + 24;
 
             ctx.shadowColor = 'rgba(0,0,0,0.4)';
             ctx.shadowBlur = 15;
-            drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 29);
+            drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2);
             ctx.fillStyle = theme.badgeBg;
             ctx.fill();
 
@@ -760,11 +808,11 @@
             ctx.save();
             ctx.font = '900 32px "Outfit", sans-serif';
             const discW = 120;
-            const discH = 58;
-            const discX = imgX + imgSize - discW - 30;
-            const discY = imgY + 30;
+            const discH = isStory ? 58 : 46;
+            const discX = imgX + imgSize - discW - 24;
+            const discY = imgY + 24;
 
-            drawRoundedRect(ctx, discX, discY, discW, discH, 29);
+            drawRoundedRect(ctx, discX, discY, discW, discH, discH / 2);
             ctx.fillStyle = '#ef4444';
             ctx.fill();
 
@@ -775,17 +823,20 @@
             ctx.restore();
         }
 
-        // Bloc Titre & Prix
-        let infoY = isStory ? imgY + imgSize + 60 : imgY + imgSize + 35;
+        // Bloc Titre & Prix dynamique (évite tout chevauchement et débordement)
+        let infoY = isStory ? imgY + imgSize + 55 : imgY + imgSize + 30;
 
+        let titleFontSize = isStory ? (title.length > 35 ? 36 : (title.length > 25 ? 42 : 48)) : (title.length > 30 ? 30 : 36);
+        let titleLineHeight = titleFontSize + 8;
         ctx.save();
         ctx.fillStyle = theme.textColor;
-        ctx.font = '800 48px "Outfit", sans-serif';
+        ctx.font = `800 ${titleFontSize}px "Outfit", sans-serif`;
         ctx.textAlign = 'center';
-        wrapText(ctx, title, W / 2, infoY, W - 140, 56);
+        const titleLinesDrawn = wrapText(ctx, title, W / 2, infoY, W - 140, titleLineHeight, 2);
         ctx.restore();
 
-        const priceY = isStory ? infoY + 140 : infoY + 105;
+        // Position du prix calculée DYNAMIQUEMENT selon la hauteur réelle du titre
+        const priceY = infoY + (titleLinesDrawn * titleLineHeight) + (isStory ? 45 : 30);
         const priceFormatted = formatCFA(price);
 
         ctx.save();
@@ -793,56 +844,82 @@
 
         if (oldPrice > price) {
             const oldFormatted = formatCFA(oldPrice);
-            ctx.font = '600 36px "Plus Jakarta Sans", sans-serif';
-            ctx.fillStyle = theme.oldPriceColor;
-            const oldWidth = ctx.measureText(oldFormatted).width;
+            let oldFontSize = isStory ? 36 : 28;
+            let newFontSize = isStory ? 68 : 52;
+            ctx.font = `600 ${oldFontSize}px "Plus Jakarta Sans", sans-serif`;
+            let oldWidth = ctx.measureText(oldFormatted).width;
+            ctx.font = `900 ${newFontSize}px "Outfit", sans-serif`;
+            let newWidth = ctx.measureText(priceFormatted).width;
 
-            ctx.font = '900 68px "Outfit", sans-serif';
-            ctx.fillStyle = theme.priceColor;
-            const newWidth = ctx.measureText(priceFormatted).width;
+            let totalW = oldWidth + newWidth + 35;
+            const maxPriceW = W - 120;
+            if (totalW > maxPriceW) {
+                const scale = maxPriceW / totalW;
+                oldFontSize = Math.max(20, Math.floor(oldFontSize * scale));
+                newFontSize = Math.max(32, Math.floor(newFontSize * scale));
+                ctx.font = `600 ${oldFontSize}px "Plus Jakarta Sans", sans-serif`;
+                oldWidth = ctx.measureText(oldFormatted).width;
+                ctx.font = `900 ${newFontSize}px "Outfit", sans-serif`;
+                newWidth = ctx.measureText(priceFormatted).width;
+                totalW = oldWidth + newWidth + 25;
+            }
 
-            const totalW = oldWidth + newWidth + 40;
             const startX = (W - totalW) / 2;
-
-            ctx.font = '600 36px "Plus Jakarta Sans", sans-serif';
             ctx.fillStyle = theme.oldPriceColor;
+            ctx.font = `600 ${oldFontSize}px "Plus Jakarta Sans", sans-serif`;
             ctx.textAlign = 'left';
-            const oldX = startX;
-            ctx.fillText(oldFormatted, oldX, priceY);
+            ctx.fillText(oldFormatted, startX, priceY);
 
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 3.5;
             ctx.strokeStyle = '#ef4444';
             ctx.beginPath();
-            ctx.moveTo(oldX - 6, priceY - 12);
-            ctx.lineTo(oldX + oldWidth + 6, priceY - 12);
+            ctx.moveTo(startX - 4, priceY - (oldFontSize / 3));
+            ctx.lineTo(startX + oldWidth + 4, priceY - (oldFontSize / 3));
             ctx.stroke();
 
-            ctx.font = '900 68px "Outfit", sans-serif';
+            ctx.font = `900 ${newFontSize}px "Outfit", sans-serif`;
             ctx.fillStyle = theme.priceColor;
-            ctx.fillText(priceFormatted, oldX + oldWidth + 40, priceY + 8);
+            ctx.fillText(priceFormatted, startX + oldWidth + 25, priceY + 6);
         } else {
-            ctx.font = '900 74px "Outfit", sans-serif';
+            let singlePriceFontSize = isStory ? 74 : 58;
+            ctx.font = `900 ${singlePriceFontSize}px "Outfit", sans-serif`;
+            while (ctx.measureText(priceFormatted).width > W - 140 && singlePriceFontSize > 36) {
+                singlePriceFontSize -= 4;
+                ctx.font = `900 ${singlePriceFontSize}px "Outfit", sans-serif`;
+            }
             ctx.fillStyle = theme.priceColor;
             ctx.fillText(priceFormatted, W / 2, priceY);
         }
         ctx.restore();
 
-        // Phrase d'accroche
-        const hookY = isStory ? priceY + 85 : priceY + 65;
+        // Phrase d'accroche avec auto-adaptation de largeur
+        const hookY = isStory ? priceY + 80 : priceY + 60;
         if (hookText) {
             ctx.save();
             ctx.fillStyle = theme.textSub;
-            ctx.font = '600 30px "Plus Jakarta Sans", sans-serif';
+            let hookFontSize = isStory ? 30 : 24;
+            ctx.font = `600 ${hookFontSize}px "Plus Jakarta Sans", sans-serif`;
             ctx.textAlign = 'center';
-            ctx.fillText(hookText, W / 2, hookY);
+
+            const maxHookW = W - 160;
+            while (ctx.measureText(hookText).width > maxHookW && hookFontSize > 20) {
+                hookFontSize -= 2;
+                ctx.font = `600 ${hookFontSize}px "Plus Jakarta Sans", sans-serif`;
+            }
+
+            if (ctx.measureText(hookText).width > maxHookW) {
+                wrapText(ctx, hookText, W / 2, hookY - 14, maxHookW, hookFontSize + 6, 2);
+            } else {
+                ctx.fillText(hookText, W / 2, hookY);
+            }
             ctx.restore();
         }
 
-        // Appel à l'action WhatsApp
-        const ctaH = isStory ? 130 : 100;
+        // Appel à l'action WhatsApp avec texte auto-dimensionné
+        const ctaH = isStory ? 120 : 96;
         const ctaW = W - 140;
         const ctaX = 70;
-        const ctaY = isStory ? H - 210 : H - 140;
+        const ctaY = isStory ? H - 200 : H - 135;
 
         ctx.save();
         ctx.shadowColor = 'rgba(37, 211, 102, 0.45)';
@@ -853,17 +930,34 @@
         ctx.fill();
 
         ctx.fillStyle = theme.ctaText;
-        ctx.font = '800 34px "Plus Jakarta Sans", sans-serif';
+        let ctaFontSize = isStory ? 34 : 28;
+        ctx.font = `800 ${ctaFontSize}px "Plus Jakarta Sans", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('💬 ' + ctaText, W / 2, ctaY + ctaH / 2);
+
+        const fullCta = '💬 ' + ctaText;
+        const maxCtaW = ctaW - 50;
+        while (ctx.measureText(fullCta).width > maxCtaW && ctaFontSize > 18) {
+            ctaFontSize -= 2;
+            ctx.font = `800 ${ctaFontSize}px "Plus Jakarta Sans", sans-serif`;
+        }
+
+        let finalCta = fullCta;
+        if (ctx.measureText(finalCta).width > maxCtaW) {
+            while (ctx.measureText(finalCta + '...').width > maxCtaW && finalCta.length > 6) {
+                finalCta = finalCta.substring(0, finalCta.length - 1);
+            }
+            finalCta += '...';
+        }
+
+        ctx.fillText(finalCta, W / 2, ctaY + ctaH / 2);
         ctx.restore();
 
         // Signature bas
         const footY = isStory ? H - 45 : H - 20;
         ctx.save();
         ctx.fillStyle = hexToRgba(theme.textSub, 0.6);
-        ctx.font = '600 20px "Plus Jakarta Sans", sans-serif';
+        ctx.font = isStory ? '600 20px "Plus Jakarta Sans", sans-serif' : '600 17px "Plus Jakarta Sans", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Boutique en ligne propulsée par Zanika • Paiement & Livraison express', W / 2, footY);
         ctx.restore();
@@ -952,13 +1046,14 @@
         const sloganY = isStory ? emblemY + emblemSize + 80 : emblemY + emblemSize + 55;
         ctx.save();
         ctx.fillStyle = theme.textColor;
-        ctx.font = '600 34px "Plus Jakarta Sans", sans-serif';
+        let taglineFontSize = isStory ? (tagline.length > 50 ? 28 : 34) : (tagline.length > 40 ? 22 : 28);
+        ctx.font = `600 ${taglineFontSize}px "Plus Jakarta Sans", sans-serif`;
         ctx.textAlign = 'center';
-        wrapText(ctx, tagline, W / 2, sloganY, W - 180, 48);
+        const taglineLines = wrapText(ctx, tagline, W / 2, sloganY, W - 180, taglineFontSize + 10, 2);
         ctx.restore();
 
         // 5. 3 Puces de Réassurance / Avantages Boutique
-        const featsStartY = isStory ? sloganY + 140 : sloganY + 85;
+        const featsStartY = isStory ? sloganY + (taglineLines * (taglineFontSize + 10)) + 60 : sloganY + (taglineLines * (taglineFontSize + 10)) + 35;
         const featsList = [feat1, feat2, feat3].filter(Boolean);
         const featCardW = W - 160;
         const featCardH = isStory ? 64 : 52;
@@ -975,7 +1070,14 @@
             ctx.stroke();
 
             ctx.fillStyle = theme.textColor;
-            ctx.font = isStory ? '700 28px "Plus Jakarta Sans", sans-serif' : '700 24px "Plus Jakarta Sans", sans-serif';
+            let featFontSize = isStory ? 28 : 22;
+            ctx.font = `700 ${featFontSize}px "Plus Jakarta Sans", sans-serif`;
+            const maxFeatW = featCardW - 40;
+            while (ctx.measureText(feat).width > maxFeatW && featFontSize > 16) {
+                featFontSize -= 1.5;
+                ctx.font = `700 ${featFontSize}px "Plus Jakarta Sans", sans-serif`;
+            }
+
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(feat, W / 2, fY + featCardH / 2);
@@ -984,20 +1086,26 @@
 
         // 6. Ruban Lien du Site Web
         if (isStory) {
-            const linkY = featsStartY + (featsList.length * (featCardH + featGap)) + 25;
+            const linkY = featsStartY + (featsList.length * (featCardH + featGap)) + 30;
             ctx.save();
             ctx.fillStyle = theme.priceColor;
-            ctx.font = '700 28px "Outfit", sans-serif';
+            let linkFontSize = 28;
+            const cleanUrl = `🌐 Visitez notre boutique : ${shopUrl.replace(/^https?:\/\//, '')}`;
+            ctx.font = `700 ${linkFontSize}px "Outfit", sans-serif`;
+            while (ctx.measureText(cleanUrl).width > W - 140 && linkFontSize > 18) {
+                linkFontSize -= 2;
+                ctx.font = `700 ${linkFontSize}px "Outfit", sans-serif`;
+            }
             ctx.textAlign = 'center';
-            ctx.fillText(`🌐 Visitez notre boutique : ${shopUrl.replace(/^https?:\/\//, '')}`, W / 2, linkY);
+            ctx.fillText(cleanUrl, W / 2, linkY);
             ctx.restore();
         }
 
         // 7. Bouton Appel à l'action WhatsApp en bas
-        const ctaH = isStory ? 130 : 96;
+        const ctaH = isStory ? 120 : 96;
         const ctaW = W - 140;
         const ctaX = 70;
-        const ctaY = isStory ? H - 210 : H - 135;
+        const ctaY = isStory ? H - 200 : H - 135;
 
         ctx.save();
         ctx.shadowColor = 'rgba(37, 211, 102, 0.45)';
@@ -1008,17 +1116,34 @@
         ctx.fill();
 
         ctx.fillStyle = theme.ctaText;
-        ctx.font = isStory ? '800 32px "Plus Jakarta Sans", sans-serif' : '800 28px "Plus Jakarta Sans", sans-serif';
+        let ctaFontSize = isStory ? 32 : 26;
+        ctx.font = `800 ${ctaFontSize}px "Plus Jakarta Sans", sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('💬 ' + ctaText, W / 2, ctaY + ctaH / 2);
+
+        const fullCta = '💬 ' + ctaText;
+        const maxCtaW = ctaW - 50;
+        while (ctx.measureText(fullCta).width > maxCtaW && ctaFontSize > 18) {
+            ctaFontSize -= 2;
+            ctx.font = `800 ${ctaFontSize}px "Plus Jakarta Sans", sans-serif`;
+        }
+
+        let finalCta = fullCta;
+        if (ctx.measureText(finalCta).width > maxCtaW) {
+            while (ctx.measureText(finalCta + '...').width > maxCtaW && finalCta.length > 6) {
+                finalCta = finalCta.substring(0, finalCta.length - 1);
+            }
+            finalCta += '...';
+        }
+
+        ctx.fillText(finalCta, W / 2, ctaY + ctaH / 2);
         ctx.restore();
 
         // 8. Signature bas
         const footY = isStory ? H - 45 : H - 20;
         ctx.save();
         ctx.fillStyle = hexToRgba(theme.textSub, 0.6);
-        ctx.font = '600 20px "Plus Jakarta Sans", sans-serif';
+        ctx.font = isStory ? '600 20px "Plus Jakarta Sans", sans-serif' : '600 17px "Plus Jakarta Sans", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Boutique officielle propulsée par Zanika • Paiement sécurisé & Livraison express', W / 2, footY);
         ctx.restore();
@@ -1073,50 +1198,184 @@
         ctx.drawImage(img, sx, sy, sWidth, sHeight, x, y, w, h);
     }
 
-    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-        const words = text.split(' ');
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+        maxLines = maxLines || 3;
+        const words = String(text || '').trim().split(/\s+/);
         let line = '';
         let currentY = y;
         let linesCount = 0;
 
         for (let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
+            const testLine = line ? (line + ' ' + words[n]) : words[n];
             const metrics = ctx.measureText(testLine);
-            const testWidth = metrics.width;
-            if (testWidth > maxWidth && n > 0) {
+            if (metrics.width > maxWidth && n > 0) {
                 ctx.fillText(line, x, currentY);
-                line = words[n] + ' ';
-                currentY += lineHeight;
                 linesCount++;
-                if (linesCount >= 2) {
-                    line = line.trim() + '...';
+                currentY += lineHeight;
+                line = words[n];
+                if (linesCount >= maxLines - 1 && n < words.length - 1) {
+                    let remaining = words.slice(n).join(' ');
+                    while (ctx.measureText(remaining + '...').width > maxWidth && remaining.length > 4) {
+                        remaining = remaining.substring(0, remaining.lastIndexOf(' ') > 0 ? remaining.lastIndexOf(' ') : remaining.length - 1);
+                    }
+                    line = remaining + '...';
                     break;
                 }
             } else {
                 line = testLine;
             }
         }
-        ctx.fillText(line, x, currentY);
+        if (line) {
+            ctx.fillText(line, x, currentY);
+            linesCount++;
+        }
+        return Math.max(1, linesCount);
     }
 
-    // Téléchargement immédiat de l'affiche en PNG
-    function downloadFlyerPNG() {
+    // Téléchargement sécurisé & universel de l'affiche (Anti-blocage Safari / iOS / Android / Desktop)
+    async function downloadFlyerPNG() {
         const canvas = document.getElementById('flyerCanvas');
         if (!canvas) return;
 
-        let namePrefix = 'Affiche';
-        if (currentMode === 'shop') {
-            namePrefix = `Boutique_${shopName.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-        } else {
-            const title = (document.getElementById('inputProductTitle').value || 'Produit').replace(/[^a-zA-Z0-9_-]/g, '_');
-            namePrefix = `Produit_${title}`;
+        const btn = document.getElementById('btnDownloadFlyer');
+        const textSpan = document.getElementById('btnDownloadFlyerText');
+        const originalText = textSpan ? textSpan.innerText : 'Télécharger l\'Affiche en PNG (HD)';
+
+        try {
+            if (btn) {
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.75';
+                if (textSpan) textSpan.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:exportSpin .6s linear infinite;vertical-align:middle;margin-right:6px"></span> Préparation HD...';
+            }
+
+            let namePrefix = 'Affiche';
+            if (currentMode === 'shop') {
+                namePrefix = `Affiche_${(shopName || 'Boutique').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            } else {
+                const title = (document.getElementById('inputProductTitle').value || 'Produit').replace(/[^a-zA-Z0-9_-]/g, '_');
+                namePrefix = `Affiche_${title}`;
+            }
+
+            const filename = `${namePrefix}_${currentFormat}.png`;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+            // Obtention du Blob PNG
+            canvas.toBlob(async function(blob) {
+                if (!blob) {
+                    // Fallback DataURL immédiat
+                    try {
+                        const dataUrl = canvas.toDataURL('image/png', 1.0);
+                        showFlyerModal(dataUrl, filename);
+                    } catch (e) {
+                        console.error('Canvas export error:', e);
+                        if (window.BoutiqToast) {
+                            window.BoutiqToast("Erreur lors de l'export de l'image. Veuillez recharger la page.", "error");
+                        }
+                    }
+                    restoreBtn();
+                    return;
+                }
+
+                // Cas 1 : Mobile / iOS avec Web Share API (Partage direct avec image PNG : Photos, WhatsApp, etc.)
+                if (navigator.canShare) {
+                    try {
+                        const file = new File([blob], filename, { type: 'image/png' });
+                        if (navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                                title: filename,
+                                text: `Affiche promotionnelle : ${shopName}`,
+                                files: [file]
+                            });
+                            if (window.BoutiqToast) window.BoutiqToast('Affiche partagée avec succès !', 'success');
+                            restoreBtn();
+                            return;
+                        }
+                    } catch (shareErr) {
+                        if (shareErr.name === 'AbortError') {
+                            // L'utilisateur a simplement fermé la feuille de partage
+                            restoreBtn();
+                            return;
+                        }
+                        console.warn('Web Share failed, fallback to direct download:', shareErr);
+                    }
+                }
+
+                // Cas 2 : Téléchargement direct (Desktop Mac/PC & Android standards)
+                if (!isIOS) {
+                    try {
+                        const blobUrl = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.style.display = 'none';
+                        link.href = blobUrl;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        setTimeout(function() {
+                            if (link.parentNode) link.parentNode.removeChild(link);
+                            URL.revokeObjectURL(blobUrl);
+                        }, 2500);
+                        if (window.BoutiqToast) window.BoutiqToast('Téléchargement de votre affiche HD lancé !', 'success');
+                        restoreBtn();
+                        return;
+                    } catch (dlErr) {
+                        console.warn('Blob URL download failed:', dlErr);
+                    }
+                }
+
+                // Cas 3 : iOS Safari / PWA Standalone (Modale visuelle haute fidélité)
+                // Permet à l'utilisateur d'enregistrer l'affiche d'un appui long sans être bloqué
+                try {
+                    const dataUrl = canvas.toDataURL('image/png', 1.0);
+                    showFlyerModal(dataUrl, filename);
+                } catch (e) {
+                    const blobUrl = URL.createObjectURL(blob);
+                    showFlyerModal(blobUrl, filename);
+                }
+                restoreBtn();
+
+            }, 'image/png', 1.0);
+
+        } catch (err) {
+            console.error('downloadFlyerPNG fatal error:', err);
+            if (window.BoutiqToast) {
+                window.BoutiqToast("Impossible d'exporter l'affiche : " + (err.message || 'erreur'), 'error');
+            }
+            restoreBtn();
         }
 
-        const filename = `${namePrefix}_${currentFormat}.png`;
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = canvas.toDataURL('image/png', 1.0);
-        link.click();
+        function restoreBtn() {
+            if (btn) {
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+                if (textSpan) textSpan.innerText = originalText;
+            }
+        }
+    }
+
+    // Modale de prévisualisation et d'enregistrement de l'affiche
+    function showFlyerModal(imageUrl, filename) {
+        const modal = document.getElementById('flyerDownloadModal');
+        const img = document.getElementById('modalFlyerImg');
+        const link = document.getElementById('modalFlyerDownloadLink');
+
+        if (img) img.src = imageUrl;
+        if (link) {
+            link.href = imageUrl;
+            link.download = filename;
+        }
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeFlyerModal() {
+        const modal = document.getElementById('flyerDownloadModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
     }
 
     // Copie du texte promotionnel WhatsApp
@@ -1154,11 +1413,33 @@
                 + `🚀 Quantités limitées, livraison rapide !`;
         }
 
-        navigator.clipboard.writeText(text).then(() => {
-            alert("Texte d'annonce copié dans le presse-papier ! Vous pouvez le coller avec l'affiche dans votre statut WhatsApp.");
-        }).catch(() => {
-            alert("Impossible de copier automatiquement.");
-        });
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                if (window.BoutiqToast) {
+                    window.BoutiqToast("Texte d'annonce copié ! Prêt à coller dans votre statut WhatsApp.", "success");
+                } else {
+                    alert("Texte copié dans le presse-papier !");
+                }
+            }).catch(() => {
+                fallbackCopyText(text);
+            });
+        } else {
+            fallbackCopyText(text);
+        }
+
+        function fallbackCopyText(t) {
+            const ta = document.createElement('textarea');
+            ta.value = t;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (window.BoutiqToast) {
+                window.BoutiqToast("Texte d'annonce copié dans le presse-papier !", "success");
+            } else {
+                alert("Texte copié !");
+            }
+        }
     }
 
     // Ouverture de WhatsApp
@@ -1174,4 +1455,34 @@
         window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
     }
 </script>
+
+<!-- Modale de Sauvegarde Affiche (Anti-blocage Safari / iOS) -->
+<div id="flyerDownloadModal" class="boutiq-modal-backdrop" onclick="if(event.target===this)closeFlyerModal()" style="display:none;align-items:center;justify-content:center;z-index:100002;padding:1rem;position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px)">
+    <div class="card" style="max-width:440px;width:100%;max-height:90vh;display:flex;flex-direction:column;padding:1.25rem;border-radius:18px;background:var(--surface);box-shadow:0 24px 60px rgba(0,0,0,0.6);border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+            <h3 style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:.4rem">
+                <span>📸</span> Votre Affiche HD
+            </h3>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeFlyerModal()" style="padding:.2rem .5rem">✕</button>
+        </div>
+        
+        <div style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:.65rem .85rem;border-radius:10px;font-size:.82rem;margin-bottom:1rem;line-height:1.4">
+            📱 <strong>Astuce Mobile / iPhone :</strong> Maintenez votre doigt appuyé sur l'affiche ci-dessous puis touchez <strong>« Enregistrer dans Photos »</strong> ou <strong>« Partager »</strong>.
+        </div>
+
+        <div style="overflow:auto;text-align:center;flex:1;margin-bottom:1rem;background:#000;border-radius:12px;padding:.5rem">
+            <img id="modalFlyerImg" src="" alt="Affiche générée" style="max-width:100%;max-height:55vh;object-fit:contain;border-radius:8px;display:inline-block">
+        </div>
+
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+            <a id="modalFlyerDownloadLink" href="#" download="" class="btn btn-primary" style="flex:1;justify-content:center;text-decoration:none;font-size:.88rem">
+                <x-icon name="download" size="16" />
+                <span>Télécharger</span>
+            </a>
+            <button type="button" class="btn btn-ghost" onclick="closeFlyerModal()" style="font-size:.88rem">
+                Fermer
+            </button>
+        </div>
+    </div>
+</div>
 @endsection
