@@ -119,15 +119,6 @@
                         </p>
                     </div>
                 </div>
-
-                <div class="ai-header-badges">
-                    <span class="ai-model-pill" title="Moteur de raisonnement multimodal">
-                        <span class="ai-model-dot"></span> Gemini 2.5 Flash / Claude
-                    </span>
-                    <span class="ai-tools-pill" title="14 outils backend connectés">
-                        <x-icon name="shield" :size="12" /> 14 Outils Métier Actifs
-                    </span>
-                </div>
             </header>
 
             <!-- Flux des messages -->
