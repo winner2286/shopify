@@ -62,14 +62,25 @@ class OpenRouterLlmProvider implements LlmProviderInterface
             $formattedTools = [];
             foreach ($tools as $tool) {
                 if (isset($tool['type']) && $tool['type'] === 'function') {
-                    $formattedTools[] = $tool;
+                    $fn = $tool['function'] ?? [];
+                    if (isset($fn['parameters']['properties']) && is_array($fn['parameters']['properties']) && empty($fn['parameters']['properties'])) {
+                        $fn['parameters']['properties'] = (object) [];
+                    }
+                    $formattedTools[] = [
+                        'type' => 'function',
+                        'function' => $fn,
+                    ];
                 } elseif (isset($tool['name'])) {
+                    $params = $tool['parameters'] ?? ['type' => 'object', 'properties' => (object) []];
+                    if (isset($params['properties']) && is_array($params['properties']) && empty($params['properties'])) {
+                        $params['properties'] = (object) [];
+                    }
                     $formattedTools[] = [
                         'type' => 'function',
                         'function' => [
                             'name' => $tool['name'],
                             'description' => $tool['description'] ?? '',
-                            'parameters' => $tool['parameters'] ?? ['type' => 'object', 'properties' => (object) []],
+                            'parameters' => $params,
                         ],
                     ];
                 }

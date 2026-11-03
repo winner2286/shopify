@@ -87,12 +87,16 @@ class ToolRegistry
     {
         $schemas = [];
         foreach ($this->tools as $tool) {
+            $params = $tool->parametersSchema();
+            if (isset($params['properties']) && is_array($params['properties']) && empty($params['properties'])) {
+                $params['properties'] = (object) [];
+            }
             $schemas[] = [
                 'type' => 'function',
                 'function' => [
                     'name' => $tool->name(),
                     'description' => $tool->description(),
-                    'parameters' => $tool->parametersSchema(),
+                    'parameters' => $params,
                 ],
             ];
         }

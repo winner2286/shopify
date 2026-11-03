@@ -26,7 +26,7 @@ class GetWeeklySalesReportTool implements AiToolInterface
     {
         return [
             'type' => 'object',
-            'properties' => [],
+            'properties' => (object) [],
         ];
     }
 
