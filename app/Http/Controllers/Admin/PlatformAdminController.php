@@ -111,6 +111,16 @@ class PlatformAdminController extends Controller
     {
         $this->checkAdmin($request);
 
+        // Recalibration automatique et sécurisée des coûts historiques (correction de l'erreur d'échelle 1000x)
+        if (AiGeneration::withoutGlobalScopes()->where('cost_estimated_fcfa', '>', 50)->exists()) {
+            foreach (AiGeneration::withoutGlobalScopes()->where('cost_estimated_fcfa', '>', 50)->get() as $g) {
+                $costInputUsd = (($g->prompt_tokens ?? 0) / 1000000) * 0.15;
+                $costOutputUsd = (($g->completion_tokens ?? 0) / 1000000) * 0.60;
+                $g->cost_estimated_fcfa = max(1, (int) round(($costInputUsd + $costOutputUsd) * 650));
+                $g->saveQuietly();
+            }
+        }
+
         $totalCalls = AiGeneration::withoutGlobalScopes()->count();
         $totalCostFcfa = (int) AiGeneration::withoutGlobalScopes()->sum('cost_estimated_fcfa');
         $totalPromptTokens = (int) AiGeneration::withoutGlobalScopes()->sum('prompt_tokens');

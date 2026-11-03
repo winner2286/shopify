@@ -1,7 +1,7 @@
 <?php
 
+use App\Models\AiGeneration;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -10,14 +10,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Corrige les coûts surévalués de 1000x suite à la coquille de formule par million de tokens
-        DB::statement("
-            UPDATE ai_generations
-            SET cost_estimated_fcfa = GREATEST(1, ROUND(
-                ((COALESCE(prompt_tokens, 0) / 1000000.0) * 0.15 + (COALESCE(completion_tokens, 0) / 1000000.0) * 0.60) * 650
-            ))
-            WHERE type = 'ai_assistant_chat' OR cost_estimated_fcfa > 50
-        ");
+        // Corrige les coûts surévalués de 1000x de manière agnostique (SQLite, MySQL, PostgreSQL)
+        if (\Illuminate\Support\Facades\Schema::hasTable('ai_generations')) {
+            AiGeneration::withoutGlobalScopes()
+                ->where('cost_estimated_fcfa', '>', 50)
+                ->chunkById(100, function ($generations) {
+                    foreach ($generations as $g) {
+                        $costInputUsd = (($g->prompt_tokens ?? 0) / 1000000) * 0.15;
+                        $costOutputUsd = (($g->completion_tokens ?? 0) / 1000000) * 0.60;
+                        $g->cost_estimated_fcfa = max(1, (int) round(($costInputUsd + $costOutputUsd) * 650));
+                        $g->saveQuietly();
+                    }
+                });
+        }
     }
 
     /**
