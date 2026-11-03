@@ -126,6 +126,52 @@
 
         <!-- Colonne 2 : Client, Paiement et Actions -->
         <div>
+            @php
+                $orderAi = app(\App\Services\Ai\AiOrderIntelligenceService::class)->analyzeOrderRisk($order);
+                $riskColor = match($orderAi['risk_level']) {
+                    'faible' => '#10b981',
+                    'modéré' => '#f59e0b',
+                    default => '#ef4444',
+                };
+                $riskBg = match($orderAi['risk_level']) {
+                    'faible' => 'rgba(16,185,129,0.08)',
+                    'modéré' => 'rgba(245,158,11,0.08)',
+                    default => 'rgba(239,68,68,0.08)',
+                };
+            @endphp
+
+            <!-- CARTE DIAGNOSTIC IA & RISQUE COD (MODULE 6 & 7) -->
+            <div class="card" style="margin-bottom:1.5rem;border:1px solid {{ $riskColor }};background:{{ $riskBg }};padding:1.25rem">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem">
+                    <div style="display:flex;align-items:center;gap:.5rem">
+                        <x-icon name="shield" :size="18" style="color:{{ $riskColor }}" />
+                        <strong style="color:var(--text);font-size:.95rem">Radar Risque COD & Fiabilité Client (IA)</strong>
+                    </div>
+                    <span style="font-size:.78rem;font-weight:700;padding:3px 9px;border-radius:99px;background:{{ $riskColor }};color:#fff;text-transform:uppercase">
+                        Risque {{ $orderAi['risk_level'] }} ({{ $orderAi['risk_score'] }}/100)
+                    </span>
+                </div>
+
+                <p style="margin:0 0 .75rem;font-size:.85rem;line-height:1.4">
+                    <strong>Recommandation :</strong> {{ $orderAi['recommended_action'] }}
+                </p>
+
+                @if(!empty($orderAi['risk_factors']))
+                    <ul style="margin:0 0 .75rem;padding-left:1.2rem;font-size:.8rem;color:#ef4444">
+                        @foreach($orderAi['risk_factors'] as $factor)
+                            <li>{{ $factor }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                @if($orderAi['whatsapp_click_url'])
+                    <a href="{{ $orderAi['whatsapp_click_url'] }}" target="_blank" class="btn btn-sm" style="background:#25D366;color:#fff;border:none;font-weight:700;display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;border-radius:6px;width:100%;justify-content:center">
+                        <x-icon name="whatsapp" :size="15" />
+                        <span>Envoyer confirmation de livraison WhatsApp</span>
+                    </a>
+                @endif
+            </div>
+
             <!-- Client & Livraison -->
             <div class="card" style="margin-bottom:1.5rem">
                 <h3 style="margin-top:0;font-size:1.15rem;border-bottom:1px solid var(--border);padding-bottom:.8rem">

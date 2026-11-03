@@ -18,6 +18,10 @@
                title="Exporter vos commandes au format CSV">
                 <x-icon name="download" size="16" /> Exporter en CSV
             </a>
+            <a href="{{ route('ai.orders.cod_review') }}" class="btn btn-sm" style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.15));border:1px solid rgba(16,185,129,0.35);color:#10b981;font-weight:700;display:inline-flex;align-items:center;gap:.35rem">
+                <x-icon name="shield" :size="15" />
+                <span>Radar IA COD & Livraisons</span>
+            </a>
             <a href="{{ route('shipping.index') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
                 <x-icon name="truck" size="16" /> Frais livraison
             </a>

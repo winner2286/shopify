@@ -12,6 +12,9 @@ use App\Services\Ai\Tools\GetOrderDetailsTool;
 use App\Services\Ai\Tools\GetOrdersSummaryTool;
 use App\Services\Ai\Tools\GetSalesAnalyticsTool;
 use App\Services\Ai\Tools\SearchProductsTool;
+use App\Services\Ai\Tools\AnalyzeCodRiskTool;
+use App\Services\Ai\Tools\AnswerCustomerInquiryTool;
+use App\Services\Ai\Tools\GetPendingCodReviewTool;
 use App\Services\Ai\Tools\UpdateProductStockOrPriceTool;
 use Illuminate\Support\Facades\Log;
 
@@ -38,6 +41,9 @@ class ToolRegistry
             new GetInventoryAlertsTool(),
             new DraftCustomerMessageTool(),
             new UpdateProductStockOrPriceTool(),
+            new AnalyzeCodRiskTool(),
+            new GetPendingCodReviewTool(),
+            new AnswerCustomerInquiryTool(),
         ];
 
         foreach ($defaultTools as $tool) {

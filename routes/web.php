@@ -124,6 +124,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/assistant-ia/studio', [\App\Http\Controllers\AiProductController::class, 'studio'])->name('ai.studio');
     Route::post('/assistant-ia/studio/generer', [\App\Http\Controllers\AiProductController::class, 'generateVisual'])->name('ai.studio.generate');
 
+    // AI Orders & AI Customer (Module 6 & 7)
+    Route::get('/assistant-ia/commandes/{order}/analyse-risque', [\App\Http\Controllers\AiOrderController::class, 'analyzeRisk'])->name('ai.orders.analyze_risk');
+    Route::get('/assistant-ia/commandes/revue-cod', [\App\Http\Controllers\AiOrderController::class, 'codReview'])->name('ai.orders.cod_review');
+    Route::post('/assistant-ia/relation-client/repondre', [\App\Http\Controllers\AiOrderController::class, 'answerCustomer'])->name('ai.customer.answer');
+
     // Module J - Super-Administration de la Plateforme (J-01 à J-08)
     Route::prefix('admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'dashboard'])->name('admin.dashboard');
