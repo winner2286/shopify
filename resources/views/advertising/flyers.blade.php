@@ -316,10 +316,27 @@
                 <!-- 3 Points Forts / Avantages Boutique -->
                 <div style="margin-bottom:1rem">
                     <label class="label" style="font-size:.85rem">3 Points forts mis en avant</label>
-                    <div style="display:flex;flex-direction:column;gap:.5rem">
-                        <input type="text" id="inputShopFeature1" class="input" value="🚚 Livraison rapide partout au Togo" oninput="updateFlyer()">
-                        <input type="text" id="inputShopFeature2" class="input" value="💵 Paiement sécurisé & à la livraison" oninput="updateFlyer()">
-                        <input type="text" id="inputShopFeature3" class="input" value="⭐ Produits de qualité 100% garantis" oninput="updateFlyer()">
+                    <div style="display:flex;flex-direction:column;gap:.55rem">
+                        <div style="display:flex;align-items:center;position:relative">
+                            <span style="position:absolute;left:.75rem;color:var(--brand-1);pointer-events:none;display:flex;align-items:center">
+                                <x-icon name="truck" :size="16" />
+                            </span>
+                            <input type="text" id="inputShopFeature1" class="input" value="Livraison rapide partout au Togo" placeholder="Ex. Livraison rapide partout au Togo" oninput="updateFlyer()" style="padding-left:2.25rem">
+                        </div>
+
+                        <div style="display:flex;align-items:center;position:relative">
+                            <span style="position:absolute;left:.75rem;color:var(--brand-1);pointer-events:none;display:flex;align-items:center">
+                                <x-icon name="credit-card" :size="16" />
+                            </span>
+                            <input type="text" id="inputShopFeature2" class="input" value="Paiement sécurisé & à la livraison" placeholder="Ex. Paiement sécurisé & à la livraison" oninput="updateFlyer()" style="padding-left:2.25rem">
+                        </div>
+
+                        <div style="display:flex;align-items:center;position:relative">
+                            <span style="position:absolute;left:.75rem;color:var(--brand-1);pointer-events:none;display:flex;align-items:center">
+                                <x-icon name="check-circle" :size="16" />
+                            </span>
+                            <input type="text" id="inputShopFeature3" class="input" value="Produits de qualité 100% garantis" placeholder="Ex. Produits de qualité 100% garantis" oninput="updateFlyer()" style="padding-left:2.25rem">
+                        </div>
                     </div>
                 </div>
 
@@ -1049,9 +1066,9 @@
     function renderShopFlyer(ctx, W, H, isStory, theme) {
         const headline = document.getElementById('inputShopHeadline').value || `BIENVENUE CHEZ ${shopName.toUpperCase()}`;
         const tagline = document.getElementById('inputShopTagline').value || 'Votre référence shopping en ligne au Togo.';
-        const feat1 = document.getElementById('inputShopFeature1').value || '🚚 Livraison rapide partout au Togo';
-        const feat2 = document.getElementById('inputShopFeature2').value || '💵 Paiement sécurisé & à la livraison';
-        const feat3 = document.getElementById('inputShopFeature3').value || '⭐ Produits de qualité garantis';
+        const feat1 = document.getElementById('inputShopFeature1').value || 'Livraison rapide partout au Togo';
+        const feat2 = document.getElementById('inputShopFeature2').value || 'Paiement sécurisé & à la livraison';
+        const feat3 = document.getElementById('inputShopFeature3').value || 'Produits de qualité 100% garantis';
         const badgeText = document.getElementById('inputBadge').value || '🏪 BOUTIQUE EN LIGNE';
         const ctaText = document.getElementById('inputCta').value || `Visiter la boutique • WhatsApp : ${shopWhatsapp}`;
 
