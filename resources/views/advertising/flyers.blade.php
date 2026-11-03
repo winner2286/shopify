@@ -408,20 +408,56 @@
                 <div style="margin-bottom:1rem">
                     <label class="label" style="font-size:.85rem">Badge accroche promotionnel</label>
                     <div id="badgePresetsProduct" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem">
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🔥 PROMO FLASH')">🔥 PROMO FLASH</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('⚡ NOUVEL ARRIVAGE')">⚡ NOUVEL ARRIVAGE</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('💥 OFFRE SPÉCIALE')">💥 OFFRE SPÉCIALE</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('⭐ MEILLEURE VENTE')">⭐ MEILLEURE VENTE</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🎁 LIQUIDATION')">🎁 LIQUIDATION</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🚚 LIVRAISON GRATUITE')">🚚 LIVRAISON GRATUITE</button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('PROMO FLASH')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="zap" :size="13" />
+                            <span>PROMO FLASH</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('NOUVEL ARRIVAGE')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="sparkles" :size="13" />
+                            <span>NOUVEL ARRIVAGE</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('OFFRE SPÉCIALE')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="tag" :size="13" />
+                            <span>OFFRE SPÉCIALE</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('MEILLEURE VENTE')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="star" :size="13" />
+                            <span>MEILLEURE VENTE</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('LIQUIDATION')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="flame" :size="13" />
+                            <span>LIQUIDATION</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('LIVRAISON GRATUITE')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="truck" :size="13" />
+                            <span>LIVRAISON GRATUITE</span>
+                        </button>
                     </div>
                     <div id="badgePresetsShop" style="display:none;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem">
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🏪 BOUTIQUE EN LIGNE')">🏪 BOUTIQUE EN LIGNE</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('✨ NOUVELLE COLLECTION')">✨ NOUVELLE COLLECTION</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🚀 COMMANDEZ EN LIGNE')">🚀 COMMANDEZ EN LIGNE</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('📍 DISPONIBLE À LOMÉ')">📍 DISPONIBLE À LOMÉ</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('🚚 EXPÉDITION PARTOUT')">🚚 EXPÉDITION PARTOUT</button>
-                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('⭐ SERVICE DE CONFIANCE')">⭐ SERVICE DE CONFIANCE</button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('BOUTIQUE EN LIGNE')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="store" :size="13" />
+                            <span>BOUTIQUE EN LIGNE</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('NOUVELLE COLLECTION')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="sparkles" :size="13" />
+                            <span>NOUVELLE COLLECTION</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('COMMANDEZ EN LIGNE')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="shopping-bag" :size="13" />
+                            <span>COMMANDEZ EN LIGNE</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('DISPONIBLE À LOMÉ')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="map-pin" :size="13" />
+                            <span>DISPONIBLE À LOMÉ</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('EXPÉDITION PARTOUT')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="truck" :size="13" />
+                            <span>EXPÉDITION PARTOUT</span>
+                        </button>
+                        <button type="button" class="badge-preset btn btn-ghost btn-sm" onclick="setBadge('SERVICE DE CONFIANCE')" style="display:inline-flex;align-items:center;gap:.35rem">
+                            <x-icon name="shield" :size="13" />
+                            <span>SERVICE DE CONFIANCE</span>
+                        </button>
                     </div>
                     <input type="text" id="inputBadge" class="input" placeholder="Ou tapez votre propre badge..." oninput="updateFlyer()">
                 </div>
@@ -429,7 +465,7 @@
                 <!-- 7. Accroche / Sous-titre -->
                 <div style="margin-bottom:1rem">
                     <label for="inputHook" class="label" style="font-size:.85rem">Phrase d'urgence ou sous-titre</label>
-                    <input type="text" id="inputHook" class="input" value="Stock très limité — Faites vite ! ⏳" placeholder="Ex. Livraison rapide partout à Lomé" oninput="updateFlyer()">
+                    <input type="text" id="inputHook" class="input" value="Stock très limité — Faites vite !" placeholder="Ex. Livraison rapide partout à Lomé" oninput="updateFlyer()">
                 </div>
 
                 <!-- 8. Appel à l'action WhatsApp -->
@@ -635,8 +671,8 @@
             badgePresetsProd.style.display = 'flex';
             badgePresetsShop.style.display = 'none';
 
-            document.getElementById('inputBadge').value = '🔥 PROMO FLASH';
-            document.getElementById('inputHook').value = 'Stock très limité — Faites vite ! ⏳';
+            document.getElementById('inputBadge').value = 'PROMO FLASH';
+            document.getElementById('inputHook').value = 'Stock très limité — Faites vite !';
             document.getElementById('inputCta').value = `Commandez vite au ${shopWhatsapp}`;
         } else {
             optShop.classList.add('active');
@@ -651,7 +687,7 @@
             badgePresetsShop.style.display = 'flex';
             badgePresetsProd.style.display = 'none';
 
-            document.getElementById('inputBadge').value = '🏪 BOUTIQUE EN LIGNE';
+            document.getElementById('inputBadge').value = 'BOUTIQUE EN LIGNE';
             document.getElementById('inputHook').value = 'Découvrez tous nos articles et nouveautés en 1 clic !';
             document.getElementById('inputCta').value = `Visiter la boutique • WhatsApp : ${shopWhatsapp}`;
         }
@@ -715,7 +751,7 @@
         document.getElementById('inputProductTitle').value = p.title;
         document.getElementById('inputPrice').value = p.price;
         document.getElementById('inputOldPrice').value = p.compare_at_price || '';
-        document.getElementById('inputBadge').value = document.getElementById('inputBadge').value || '🔥 PROMO FLASH';
+        document.getElementById('inputBadge').value = document.getElementById('inputBadge').value || 'PROMO FLASH';
 
         if (p.image_url) {
             const img = new Image();
@@ -812,8 +848,8 @@
         const title = document.getElementById('inputProductTitle').value || 'Article d\'exception';
         const price = parseInt(document.getElementById('inputPrice').value) || 0;
         const oldPrice = parseInt(document.getElementById('inputOldPrice').value) || 0;
-        const badgeText = document.getElementById('inputBadge').value || '🔥 PROMO FLASH';
-        const hookText = document.getElementById('inputHook').value || 'Stock très limité — Faites vite ! ⏳';
+        const badgeText = document.getElementById('inputBadge').value || 'PROMO FLASH';
+        const hookText = document.getElementById('inputHook').value || 'Stock très limité — Faites vite !';
         const ctaText = document.getElementById('inputCta').value || 'Commandez vite sur WhatsApp';
 
         // En-tête : Boutique & Logo
@@ -1069,7 +1105,7 @@
         const feat1 = document.getElementById('inputShopFeature1').value || 'Livraison rapide partout au Togo';
         const feat2 = document.getElementById('inputShopFeature2').value || 'Paiement sécurisé & à la livraison';
         const feat3 = document.getElementById('inputShopFeature3').value || 'Produits de qualité 100% garantis';
-        const badgeText = document.getElementById('inputBadge').value || '🏪 BOUTIQUE EN LIGNE';
+        const badgeText = document.getElementById('inputBadge').value || 'BOUTIQUE EN LIGNE';
         const ctaText = document.getElementById('inputCta').value || `Visiter la boutique • WhatsApp : ${shopWhatsapp}`;
 
         // 1. Badge haut
