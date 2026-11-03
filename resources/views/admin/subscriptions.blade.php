@@ -102,7 +102,19 @@
                         $sub = $shop->subscription;
                         $plan = $sub?->plan;
                         $trialEnds = $sub?->trial_ends_at;
-                        $daysLeft = $trialEnds ? now()->diffInDays($trialEnds, false) : null;
+                        $isTrial = $sub && $sub->status === 'trial';
+                        $daysRemaining = null;
+                        $daysExpired = null;
+                        $isExpiringSoon = false;
+
+                        if ($trialEnds) {
+                            if ($trialEnds->isFuture()) {
+                                $daysRemaining = max(1, (int) ceil(now()->floatDiffInDays($trialEnds, false)));
+                                $isExpiringSoon = $daysRemaining <= 3;
+                            } else {
+                                $daysExpired = max(1, (int) ceil($trialEnds->floatDiffInDays(now())));
+                            }
+                        }
                     @endphp
                     <tr style="border-bottom:1px solid var(--border)">
                         <td style="padding:1rem">
@@ -149,18 +161,24 @@
                                 <div style="font-size:.85rem;font-weight:600">
                                     {{ $trialEnds->format('d/m/Y') }}
                                 </div>
-                                @if ($sub->status === 'trial')
-                                    @if ($daysLeft > 0)
-                                        <div style="font-size:.75rem;color:{{ $daysLeft <= 3 ? '#ef4444' : '#f59e0b' }};font-weight:600">
-                                            {{ (int) $daysLeft }} jour(s) restant(s)
+                                @if ($isTrial)
+                                    @if ($trialEnds->isFuture())
+                                        <div style="font-size:.75rem;color:{{ $isExpiringSoon ? '#ef4444' : '#f59e0b' }};font-weight:600">
+                                            @if ($daysRemaining === 1 && $trialEnds->isToday())
+                                                Dernier jour (aujourd'hui)
+                                            @elseif ($daysRemaining === 1)
+                                                1 jour restant
+                                            @else
+                                                {{ $daysRemaining }} jours restants
+                                            @endif
                                         </div>
                                     @else
                                         <div style="font-size:.75rem;color:var(--danger);font-weight:600">
-                                            Terminé il y a {{ abs((int)$daysLeft) }} j
+                                            Terminé il y a {{ $daysExpired }} j
                                         </div>
                                     @endif
                                 @endif
-                                @if ($sub->trial_reminder_sent_at)
+                                @if ($sub && $sub->trial_reminder_sent_at)
                                     <div style="font-size:.72rem;color:var(--text-soft);margin-top:.2rem;display:inline-flex;align-items:center;gap:.25rem">
                                         <span>✉️ Rappel envoyé le {{ $sub->trial_reminder_sent_at->format('d/m') }}</span>
                                     </div>
@@ -171,14 +189,38 @@
                         </td>
 
                         <td style="padding:1rem;text-align:right;white-space:nowrap">
-                            @if ($sub && $sub->status === 'trial')
-                                <form method="POST" action="{{ route('admin.subscriptions.send_reminder', $shop) }}" style="display:inline-block;margin-right:.4rem" onsubmit="return confirm('Envoyer immédiatement l\'email de rappel J-3 à {{ addslashes($shop->owner?->email ?? '') }} ?')">
-                                    @csrf
-                                    <button type="submit" class="btn btn-ghost btn-sm" title="Envoyer email rappel d'essai J-3 au marchand" style="display:inline-flex;align-items:center;gap:.3rem;color:#f59e0b;border:1px solid rgba(245,158,11,0.3)">
-                                        <x-icon name="send" size="13" />
-                                        <span>Rappel J-3</span>
-                                    </button>
-                                </form>
+                            @if ($isTrial && $trialEnds)
+                                @if ($trialEnds->isFuture())
+                                    @if ($isExpiringSoon)
+                                        @if ($sub->trial_reminder_sent_at)
+                                            <span class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.25);font-size:.75rem;padding:.32rem .55rem;margin-right:.4rem">
+                                                ✓ Rappel J-{{ $daysRemaining }} envoyé
+                                            </span>
+                                            <form method="POST" action="{{ route('admin.subscriptions.send_reminder', $shop) }}" style="display:inline-block;margin-right:.4rem" onsubmit="return confirm('Renvoyer l\'email de rappel à {{ addslashes($shop->owner?->email ?? '') }} ?')">
+                                                @csrf
+                                                <button type="submit" class="btn btn-ghost btn-sm" title="Renvoyer le rappel d'essai" style="padding:.25rem .45rem;font-size:.72rem;color:var(--text-soft)">
+                                                    Renvoyer
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form method="POST" action="{{ route('admin.subscriptions.send_reminder', $shop) }}" style="display:inline-block;margin-right:.4rem" onsubmit="return confirm('Envoyer immédiatement l\'email de rappel J-{{ $daysRemaining }} à {{ addslashes($shop->owner?->email ?? '') }} ?')">
+                                                @csrf
+                                                <button type="submit" class="btn btn-ghost btn-sm" title="Envoyer email rappel d'essai J-{{ $daysRemaining }} au marchand" style="display:inline-flex;align-items:center;gap:.3rem;color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);font-weight:600">
+                                                    <x-icon name="send" size="13" />
+                                                    <span>Rappel J-{{ $daysRemaining }}</span>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @else
+                                        <span class="badge" style="background:var(--bg-soft);color:var(--text-soft);border:1px solid var(--border);font-size:.74rem;padding:.32rem .55rem;margin-right:.4rem" title="Le rappel J-3 sera disponible 3 jours avant la fin d'essai">
+                                            Rappel à J-3 (dans {{ $daysRemaining - 3 }}j)
+                                        </span>
+                                    @endif
+                                @else
+                                    <span class="badge" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);font-size:.74rem;padding:.32rem .55rem;margin-right:.4rem">
+                                        Expiré
+                                    </span>
+                                @endif
                             @endif
 
                             <!-- Formulaire de modification rapide d'abonnement -->

@@ -31,7 +31,7 @@ class Subscription extends Model
             return false;
         }
 
-        return $this->trial_ends_at->isFuture() && now()->diffInDays($this->trial_ends_at, false) <= $days;
+        return $this->trial_ends_at->isFuture() && (int) ceil(now()->floatDiffInDays($this->trial_ends_at, false)) <= $days;
     }
 
     public function daysRemaining(): int
@@ -40,7 +40,7 @@ class Subscription extends Model
             return 0;
         }
 
-        return max(0, (int) ceil(now()->diffInHours($this->trial_ends_at, false) / 24));
+        return max(1, (int) ceil(now()->floatDiffInDays($this->trial_ends_at, false)));
     }
 
     public function shop(): BelongsTo
