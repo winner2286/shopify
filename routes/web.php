@@ -110,6 +110,8 @@ Route::middleware('auth')->group(function () {
     // Module I - Statistiques & Performance (I-01 à I-03)
     Route::get('/statistiques', [\App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics.index');
     Route::get('/statistiques/exporter', [\App\Http\Controllers\AnalyticsController::class, 'exportCsv'])->name('analytics.export_csv');
+    Route::get('/statistiques/conseiller-ia', [\App\Http\Controllers\AiAdvisorController::class, 'index'])->name('analytics.advisor');
+    Route::post('/statistiques/conseiller-ia/briefing', [\App\Http\Controllers\AiAdvisorController::class, 'generateBriefing'])->name('analytics.advisor.briefing');
 
     // ECOM AI ASSISTANT - Copilote Commercial & Opérationnel
     Route::get('/assistant-ia', [\App\Http\Controllers\AiAssistantController::class, 'index'])->name('ai.assistant');

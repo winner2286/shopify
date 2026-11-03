@@ -11,6 +11,9 @@
         </div>
 
         <div class="header-actions">
+            <a href="{{ route('analytics.advisor') }}" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
+                <x-icon name="sparkles" size="16" /> Conseiller IA & Croissance
+            </a>
             <a href="{{ route('analytics.export_csv') }}" 
                onclick="exportCsvSafe(event, '{{ route('analytics.export_csv') }}', 'statistiques-ventes-{{ date('Y-m-d') }}.csv')"
                class="btn btn-ghost btn-sm" 
@@ -22,6 +25,22 @@
                 <x-icon name="package" size="16" /> Commandes
             </a>
         </div>
+    </div>
+
+    <!-- Bannière d'accès direct au Conseiller IA -->
+    <div class="card" style="padding:1.1rem 1.4rem;margin-bottom:1.8rem;background:linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.08));border:1px solid rgba(168,85,247,0.3);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+        <div style="display:flex;align-items:center;gap:.9rem">
+            <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg, var(--brand-1), var(--brand-2));display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 12px rgba(99,102,241,0.3)">
+                <x-icon name="sparkles" size="20" />
+            </div>
+            <div>
+                <strong style="font-size:.95rem">Nouveau : Conseiller Stratégique d'Affaires IA</strong>
+                <p style="margin:0;font-size:.82rem;color:var(--text-soft)">Détectez votre capital immobilisé en stock dormant, surveillez les risques de rupture et recevez un briefing d'action exécutif.</p>
+            </div>
+        </div>
+        <a href="{{ route('analytics.advisor') }}" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:.4rem">
+            Consulter l'audit IA →
+        </a>
     </div>
 
     <!-- 4 Cartes de métriques clés (RG-10 : montants en FCFA) -->

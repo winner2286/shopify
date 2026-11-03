@@ -14,6 +14,8 @@ use App\Services\Ai\Tools\GetSalesAnalyticsTool;
 use App\Services\Ai\Tools\SearchProductsTool;
 use App\Services\Ai\Tools\AnalyzeCodRiskTool;
 use App\Services\Ai\Tools\AnswerCustomerInquiryTool;
+use App\Services\Ai\Tools\CompareSalesPeriodsTool;
+use App\Services\Ai\Tools\GetBusinessRecommendationsTool;
 use App\Services\Ai\Tools\GetPendingCodReviewTool;
 use App\Services\Ai\Tools\UpdateProductStockOrPriceTool;
 use Illuminate\Support\Facades\Log;
@@ -38,6 +40,8 @@ class ToolRegistry
             new GetOrdersSummaryTool(),
             new GetOrderDetailsTool(),
             new GetSalesAnalyticsTool(),
+            new CompareSalesPeriodsTool(),
+            new GetBusinessRecommendationsTool(),
             new GetInventoryAlertsTool(),
             new DraftCustomerMessageTool(),
             new UpdateProductStockOrPriceTool(),
