@@ -58,4 +58,9 @@ class AiMessage extends Model
     {
         return ! empty($this->action_required) && ($this->action_required['status'] ?? '') === 'pending';
     }
+
+    public function feedbacks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AiFeedback::class, 'ai_message_id');
+    }
 }

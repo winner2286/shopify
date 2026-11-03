@@ -884,13 +884,18 @@
                 currentConversationId = data.conversation_id;
 
                 // Mettre à jour les crédits dans l'en-tête
-                if (data.credits_remaining !== undefined) {
+                const remaining = data.remaining_credits ?? data.credits_remaining;
+                if (remaining !== undefined) {
                     const credEl = document.getElementById('ai-bubble-credits-val');
-                    if (credEl) credEl.textContent = data.credits_remaining;
+                    if (credEl) credEl.textContent = remaining;
                 }
 
                 // Afficher la réponse de l'assistant
-                appendAiBubbleMessage('assistant', data.response, data.action_required);
+                const assistantContent = data.message?.content || data.response || "Demande traitée avec succès.";
+                const messageId = data.message?.id || null;
+                const actionRequired = data.message?.action_required || data.action_required || null;
+
+                appendAiBubbleMessage('assistant', assistantContent, actionRequired, messageId);
             } else {
                 appendAiBubbleMessage('assistant', data.message || "Désolé, une erreur est survenue lors de l'échange.");
             }
@@ -904,7 +909,7 @@
         }
     };
 
-    function appendAiBubbleMessage(role, content, actionRequired = null) {
+    function appendAiBubbleMessage(role, content, actionRequired = null, messageId = null) {
         const msgContainer = document.getElementById('ai-bubble-messages');
         if (!msgContainer) return;
 
@@ -928,16 +933,54 @@
             `;
         }
 
+        let feedbackHtml = '';
+        if (role === 'assistant' && messageId) {
+            feedbackHtml = `
+                <span class="ai-bubble-feedback" id="b-fb-${messageId}" style="margin-right:auto;display:inline-flex;gap:4px">
+                    <button type="button" class="ai-fb-btn" onclick="sendAiBubbleFeedback(${messageId}, 'helpful')" title="Utile" style="background:none;border:none;cursor:pointer;font-size:0.75rem;padding:0 2px">👍</button>
+                    <button type="button" class="ai-fb-btn" onclick="sendAiBubbleFeedback(${messageId}, 'incorrect')" title="À améliorer" style="background:none;border:none;cursor:pointer;font-size:0.75rem;padding:0 2px">👎</button>
+                </span>
+            `;
+        }
+
         row.innerHTML = `
             <div class="ai-msg-bubble">
                 <div class="ai-bubble-text">${formatSimpleMarkdown(content)}</div>
                 ${actionHtml}
             </div>
-            <div class="ai-msg-time">${timeStr}</div>
+            <div class="ai-msg-time" style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+                ${feedbackHtml}
+                <span>${timeStr}</span>
+            </div>
         `;
 
         msgContainer.appendChild(row);
     }
+
+    window.sendAiBubbleFeedback = async function(messageId, rating) {
+        const el = document.getElementById(`b-fb-${messageId}`);
+        if (el) el.innerHTML = `<span style="font-size:0.7rem;color:var(--text-soft)">...</span>`;
+
+        try {
+            const resp = await fetch("{{ route('ai.feedback.store') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ message_id: messageId, rating: rating })
+            });
+            const d = await resp.json();
+            if (el) {
+                el.innerHTML = rating === 'helpful' 
+                    ? `<span style="font-size:0.7rem;color:#10b981;font-weight:600">👍 Merci !</span>`
+                    : `<span style="font-size:0.7rem;color:#f59e0b;font-weight:600">✓ Noté</span>`;
+            }
+        } catch (e) {
+            if (el) el.innerHTML = '';
+        }
+    };
 
     window.approveAiBubbleAction = async function(messageId, approved) {
         const box = document.getElementById(`bubble-act-${messageId}`);

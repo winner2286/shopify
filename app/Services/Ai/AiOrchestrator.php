@@ -17,15 +17,23 @@ class AiOrchestrator
 {
     protected LlmProviderInterface $llm;
     protected ToolRegistry $tools;
+    protected AiRagService $rag;
+    protected AiShopMemoryService $memory;
 
-    public function __construct(?LlmProviderInterface $llm = null, ?ToolRegistry $tools = null)
-    {
+    public function __construct(
+        ?LlmProviderInterface $llm = null,
+        ?ToolRegistry $tools = null,
+        ?AiRagService $rag = null,
+        ?AiShopMemoryService $memory = null
+    ) {
         $this->llm = $llm ?? new OpenRouterLlmProvider();
         $this->tools = $tools ?? new ToolRegistry();
+        $this->rag = $rag ?? new AiRagService();
+        $this->memory = $memory ?? new AiShopMemoryService();
     }
 
     /**
-     * Traite un message utilisateur dans le cadre d'une conversation et orchestre le Tool Calling.
+     * Traite un message utilisateur dans le cadre d'une conversation et orchestre le Tool Calling, le RAG et la mémoire.
      */
     public function sendMessage(Shop $shop, User $user, string $userMessage, ?int $conversationId = null, array $options = []): array
     {
@@ -63,10 +71,13 @@ class AiOrchestrator
             'content' => $userMessage,
         ]);
 
-        // 4. Construction du System Prompt contextualisé pour la boutique
-        $systemPrompt = $this->buildSystemPrompt($shop);
+        // 4. Recherche de connaissances RAG pertinentes pour la question
+        $ragChunks = $this->rag->search($userMessage, null, 3);
 
-        // 5. Assemblage de l'historique des messages récents (12 derniers pour conserver du contexte)
+        // 5. Construction du System Prompt enrichi (RAG + Mémoire + Rôle)
+        $systemPrompt = $this->buildSystemPrompt($shop, $userMessage, $ragChunks);
+
+        // 6. Assemblage de l'historique des messages récents (12 derniers pour conserver du contexte)
         $history = $conversation->messages()
             ->where('id', '!=', $userMsgRecord->id)
             ->latest('id')
@@ -97,7 +108,7 @@ class AiOrchestrator
 
         $messagesPayload[] = ['role' => 'user', 'content' => $userMessage];
 
-        // 6. Premier appel LLM avec déclaration des outils
+        // 7. Premier appel LLM avec déclaration des outils
         $toolsSchema = $this->tools->getToolsSchema();
         $response = $this->llm->chat($messagesPayload, $toolsSchema, $options);
 
@@ -105,12 +116,12 @@ class AiOrchestrator
         $totalTokensOutput = $response['tokens_output'] ?? 0;
         $modelUsed = $response['model_used'] ?? 'openrouter';
 
-        // 7. Résolution du Tool Calling si le LLM le demande
+        // 8. Résolution du Tool Calling si le LLM le demande
         $actionRequired = null;
 
         if (! empty($response['tool_calls'])) {
             // Sauvegarder la décision d'appel d'outil
-            $assistantToolMsg = AiMessage::create([
+            AiMessage::create([
                 'ai_conversation_id' => $conversation->id,
                 'role' => 'assistant',
                 'content' => $response['content'] ?: null,
@@ -133,7 +144,6 @@ class AiOrchestrator
                 $args = is_string($rawArgs) ? json_decode($rawArgs, true) : (array) $rawArgs;
                 $callId = $toolCall['id'] ?? ('call_' . uniqid());
 
-                $toolInstance = $this->tools->get($toolName);
                 $toolResult = $this->tools->execute($toolName, $shop, $args ?: [], $user);
 
                 // Si l'outil signale une action sensible nécessitant confirmation
@@ -176,18 +186,26 @@ class AiOrchestrator
             ]);
         } else {
             // Réponse directe sans outil
+            $finalContent = $response['content'] ?? "Désolé, je n'ai pas pu générer de réponse.";
             $finalAssistantMsg = AiMessage::create([
                 'ai_conversation_id' => $conversation->id,
                 'role' => 'assistant',
-                'content' => $response['content'] ?? "Désolé, je n'ai pas pu générer de réponse.",
+                'content' => $finalContent,
                 'tokens_input' => $response['tokens_input'],
                 'tokens_output' => $response['tokens_output'],
             ]);
         }
 
-        // 8. Journalisation de la consommation dans ai_generations (pour décompte des crédits)
+        // 9. Apprentissage continu : extraction automatique et mise à jour de la mémoire boutique
+        try {
+            $this->memory->extractAndSaveFacts($shop, $userMessage, $finalContent);
+        } catch (\Throwable $e) {
+            Log::warning("AiOrchestrator: échec extraction mémoire boutique : " . $e->getMessage());
+        }
+
+        // 10. Journalisation de la consommation dans ai_generations (pour décompte des crédits)
         $durationMs = (int) round((microtime(true) - $startTime) * 1000);
-        $costEstimatedFcfa = (int) ceil(($totalTokensInput * 0.0003 + $totalTokensOutput * 0.001) * 600); // barème FCFA indicatif
+        $costEstimatedFcfa = (int) ceil(($totalTokensInput * 0.0003 + $totalTokensOutput * 0.001) * 600);
 
         AiGeneration::create([
             'shop_id' => $shop->id,
@@ -203,6 +221,7 @@ class AiOrchestrator
             'output_data' => [
                 'conversation_id' => $conversation->id,
                 'has_tools' => ! empty($response['tool_calls']),
+                'has_rag' => $ragChunks->isNotEmpty(),
             ],
         ]);
 
@@ -278,32 +297,59 @@ class AiOrchestrator
     }
 
     /**
-     * Génère le System Prompt adapté au contexte temps réel de la boutique.
+     * Assemble le System Prompt enrichi avec le profil boutique, la mémoire long terme et les documents RAG.
      */
-    protected function buildSystemPrompt(Shop $shop): string
+    protected function buildSystemPrompt(Shop $shop, string $userMessage, $ragChunks): string
     {
         $shopName = $shop->name ?: 'Votre boutique';
         $currency = $shop->currency ?: 'FCFA';
         $category = $shop->business_category ?: 'Commerce de détail';
         $subdomain = $shop->subdomain ? "{$shop->subdomain}.zanika.shop" : 'Non configuré';
 
-        return <<<PROMPT
-Tu es **ECOM AI ASSISTANT**, le copilote de direction commerciale et opérationnelle propulsé par l'IA de la plateforme Zanika.
-Tu travailles directement pour le commerçant gérant la boutique : "{$shopName}".
+        // 1. Récupération de la mémoire persistante de la boutique
+        $memoryText = $this->memory->formatForPrompt($shop);
 
-Informations sur la boutique :
+        // 2. Formatage des chunks de connaissances RAG
+        $ragText = $this->rag->formatForPrompt($ragChunks);
+
+        return <<<PROMPT
+Tu es **ECOM AI ASSISTANT**, le copilote de direction commerciale et opérationnelle intégré à la plateforme E-Commerce Zanika.
+Tu travailles en binôme direct avec le commerçant propriétaire de la boutique **"{$shopName}"**.
+
+IDENTITÉ & POSTURE RELATIONNELLE :
+- Tu es un véritable collaborateur d'affaires professionnel, chaleureux, accessible et clairvoyant.
+- Tu n'es PAS un chatbot robotique aux formules prévisibles ni un simple répondeur automatique.
+- Tu es transparent sur le fait que tu es une intelligence artificielle spécialisée dans le commerce électronique, mais ta conversation est naturelle, fluide, intelligente et humaine.
+- Fais preuve d'empathie sincère quand le commerçant rencontre un problème (rupture de stock, colis refusé, chiffre en baisse).
+- Adapte la longueur de tes réponses :
+  * Si la question est opérationnelle ou simple (« Combien de sacs en stock ? »), réponds court (1 à 3 phrases claires).
+  * Si la question touche à la stratégie ou au diagnostic (« Pourquoi mes bénéfices sont faibles ? »), apporte une analyse structurée, bienveillante et orientée actions.
+- Évite les puces et listes à rallonge systématiques quand une réponse fluide en prose naturelle est plus agréable.
+- Pose une question ciblée de clarification lorsque la demande du commerçant est incomplète, au lieu de faire des suppositions hasardeuses.
+
+INFORMATIONS TEMPS RÉEL SUR LA BOUTIQUE :
 - Nom commercial : {$shopName}
 - Secteur d'activité : {$category}
-- Devise monétaire : {$currency}
-- URL de la boutique : {$subdomain}
-- Marché cible : Afrique de l'Ouest (Togo, Bénin, Côte d'Ivoire, Sénégal...), avec forte prévalence du Paiement à la Livraison (COD - Cash on Delivery) et du Mobile Money (T-Money, Flooz).
+- Devise monétaire officielle : {$currency}
+- URL publique vitrine : https://{$subdomain}
+- Marché principal : Afrique de l'Ouest (Togo, Bénin, Côte d'Ivoire, Sénégal...), avec forte prévalence du Paiement à la Livraison (Cash on Delivery - COD) et du Mobile Money (T-Money, Flooz, FeexPay).
 
-RÈGLES D'OR DE COMPORTEMENT :
-1. **Données Réelles Uniquement** : Tu as accès à des outils intégrés (`get_catalog_overview`, `search_products`, `get_orders_summary`, `get_order_details`, `get_sales_analytics`, `get_inventory_alerts`, `draft_customer_message`, `update_product_stock_or_price`). N'invente JAMAIS de faux chiffres, de fausses commandes ou de fausses ruptures de stocks. Quand on te pose une question sur les ventes, les stocks ou les commandes, invoque immédiatement l'outil adéquat.
-2. **Pragmatisme E-Commerce** : Sois concis, direct, stratégique et axé sur les résultats (ventes, réduction des annulations COD, marge).
-3. **Formatage Visuel & Lisible** : Utilise des puces markdown, des tableaux synthétiques et du gras pour mettre en avant les chiffres clés et les actions prioritaires.
-4. **Langue** : Exprime-toi en français soigné, professionnel et engageant.
-5. **Protection des Données Sensibles** : N'annule ni ne modifie jamais un produit ou une commande sans passer par l'outil dédié qui déclenchera la demande d'autorisation formelle du commerçant.
+{$memoryText}
+
+{$ragText}
+
+RÈGLES D'OR DU MÉTIER E-COMMERCE AFRIQUE :
+1. **Zéro Hallucination & Données Réelles** : N'invente JAMAIS de fausses statistiques, de fausses commandes ou de boutons imaginaires.
+   - Si la question porte sur les ventes, stocks ou commandes, invoque TOUJOURS tes outils intégrés (`get_catalog_overview`, `get_orders_summary`, `get_order_details`, `get_sales_analytics`, `get_inventory_alerts`, `search_products`).
+   - Si la question porte sur une manipulation de la plateforme Zanika, réfère-toi STRICTEMENT aux guides officiels de la base de connaissances ci-dessus (chemins de menus réels, boutons exacts).
+2. **Gestion du Cash on Delivery (COD)** : Le COD est vital mais risqué en Afrique. Recommande toujours le protocole d'appel ou message vocal WhatsApp dans les 30 minutes pour reconfirmer la présence du client avec le montant exact et un repère géographique clair.
+3. **Persuasion & Négociation sur WhatsApp** : Sur WhatsApp, ne brade jamais la marge unitaire d'un produit face à une demande de rabais. Propose plutôt un pack avantageux (ex: 2 articles avec remise globale) ou offre la livraison locale en geste commercial valorisant.
+4. **Diagnostic de Rentabilité Approfondi** :
+   Quand un commerçant s'interroge sur ses marges ou ses bénéfices faibles (« Beaucoup de commandes mais peu de bénéfices ») :
+   - Examine les données chiffrées via tes outils.
+   - Analyse les 4 causes racines : frais de coursier non répercutés, taux de refus COD après expédition, marge unitaire trop basse, remises excessives.
+   - Propose un plan d'action hiérarchisé et concret.
+5. **Garde-fous d'Écriture** : Toute modification de données (prix, stock) doit passer par l'outil dédié qui déclenche la demande de confirmation explicite du commerçant. Aucune action destructive sans son accord.
 PROMPT;
     }
 }

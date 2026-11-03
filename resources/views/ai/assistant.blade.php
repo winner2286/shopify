@@ -232,7 +232,13 @@
                                         </div>
                                     @endif
 
-                                    <div class="ai-bubble-time">{{ $msg->created_at->format('H:i') }}</div>
+                                    <div class="ai-bubble-footer" style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px">
+                                        <div class="ai-feedback-actions" id="feedback-actions-{{ $msg->id }}">
+                                            <button type="button" class="ai-feedback-btn" onclick="submitFeedback({{ $msg->id }}, 'helpful')" title="Réponse utile">👍</button>
+                                            <button type="button" class="ai-feedback-btn" onclick="openNegativeFeedbackModal({{ $msg->id }})" title="Réponse à améliorer">👎</button>
+                                        </div>
+                                        <div class="ai-bubble-time">{{ $msg->created_at->format('H:i') }}</div>
+                                    </div>
                                 </div>
                             </div>
                         @endif
@@ -1669,6 +1675,13 @@ function appendMessageToUi(role, content, time = '', actionRequired = null, mess
             `;
         }
 
+        const feedbackHtml = messageId ? `
+            <div class="ai-feedback-actions" id="feedback-actions-${messageId}">
+                <button type="button" class="ai-feedback-btn" onclick="submitFeedback(${messageId}, 'helpful')" title="Réponse utile">👍</button>
+                <button type="button" class="ai-feedback-btn" onclick="openNegativeFeedbackModal(${messageId})" title="Réponse à améliorer">👎</button>
+            </div>
+        ` : '<div></div>';
+
         row.innerHTML = `
             <div class="ai-avatar-mini">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
@@ -1676,7 +1689,10 @@ function appendMessageToUi(role, content, time = '', actionRequired = null, mess
             <div class="ai-bubble assistant-bubble">
                 <div class="ai-bubble-content markdown-rendered">${renderSimpleMarkdown(content)}</div>
                 ${actionCardHtml}
-                <div class="ai-bubble-time">${time}</div>
+                <div class="ai-bubble-footer" style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px">
+                    ${feedbackHtml}
+                    <div class="ai-bubble-time">${time}</div>
+                </div>
             </div>
         `;
     }
@@ -1759,10 +1775,103 @@ function renderSimpleMarkdown(text) {
     return html;
 }
 
+async function submitFeedback(messageId, rating, comment = '', category = 'general') {
+    const container = document.getElementById(`feedback-actions-${messageId}`);
+    if (container) {
+        container.innerHTML = '<span style="font-size:0.75rem;color:var(--text-soft)">Envoi...</span>';
+    }
+
+    try {
+        const res = await fetch('{{ route('ai.feedback.store') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                message_id: messageId,
+                rating: rating,
+                comment: comment,
+                category: category
+            })
+        });
+
+        const data = await res.json();
+        if (container) {
+            if (rating === 'helpful') {
+                container.innerHTML = '<span style="font-size:0.75rem;color:#10b981;font-weight:600">👍 Merci !</span>';
+            } else {
+                container.innerHTML = '<span style="font-size:0.75rem;color:#f59e0b;font-weight:600">✓ Signalé</span>';
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        if (container) container.innerHTML = '<span style="font-size:0.75rem;color:var(--text-soft)">Erreur</span>';
+    }
+}
+
+function openNegativeFeedbackModal(messageId) {
+    document.getElementById('modal-feedback-msg-id').value = messageId;
+    document.getElementById('modal-feedback-comment').value = '';
+    document.getElementById('ai-feedback-modal').style.display = 'flex';
+}
+
+function closeFeedbackModal() {
+    document.getElementById('ai-feedback-modal').style.display = 'none';
+}
+
+function submitModalFeedback() {
+    const msgId = document.getElementById('modal-feedback-msg-id').value;
+    const rating = document.querySelector('input[name="feedback-reason"]:checked')?.value || 'incorrect';
+    const comment = document.getElementById('modal-feedback-comment').value.trim();
+    closeFeedbackModal();
+    if (msgId) {
+        submitFeedback(parseInt(msgId), rating, comment, 'merchant_flag');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     scrollToBottom();
     const input = document.getElementById('ai-user-input');
     if (input) input.focus();
 });
 </script>
+
+<!-- MODAL FEEDBACK NÉGATIF / PRÉCISION -->
+<div id="ai-feedback-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(3px)">
+    <div class="card" style="max-width:440px;width:92%;padding:1.5rem;border-radius:14px;box-shadow:0 20px 40px rgba(0,0,0,0.4)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <h4 style="margin:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
+                <span>👎</span> Aidez-nous à améliorer cette réponse
+            </h4>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeFeedbackModal()" style="padding:.2rem .5rem">✕</button>
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-soft);margin-bottom:1rem">
+            Votre retour permet d'enrichir la base de connaissances sans modifier aveuglément le modèle.
+        </p>
+        <input type="hidden" id="modal-feedback-msg-id" value="">
+        <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem">
+            <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem">
+                <input type="radio" name="feedback-reason" value="incorrect" checked>
+                <span>Réponse <strong>incorrecte</strong> (erreur de fait ou route)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem">
+                <input type="radio" name="feedback-reason" value="incomplete">
+                <span>Réponse <strong>incomplète</strong> (manque d'étapes)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem">
+                <input type="radio" name="feedback-reason" value="irrelevant">
+                <span>Réponse <strong>peu pertinente ou hors-sujet</strong></span>
+            </label>
+        </div>
+        <div style="margin-bottom:1.25rem">
+            <textarea id="modal-feedback-comment" class="form-control" rows="3" placeholder="Précisez votre remarque (facultatif)..." style="width:100%;font-size:.85rem;resize:none;padding:.5rem;border-radius:8px"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:.5rem">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeFeedbackModal()">Annuler</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="submitModalFeedback()">Envoyer le retour</button>
+        </div>
+    </div>
+</div>
 @endsection

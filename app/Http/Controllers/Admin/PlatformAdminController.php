@@ -140,6 +140,33 @@ class PlatformAdminController extends Controller
     }
 
     /**
+     * Cockpit de suivi des retours et évaluations de l'Assistant IA pour amélioration continue
+     */
+    public function aiFeedbacks(Request $request): View
+    {
+        $ratingFilter = $request->get('rating');
+        $query = \App\Models\AiFeedback::withoutGlobalScopes()
+            ->with(['shop', 'user', 'message.conversation'])
+            ->latest();
+
+        if ($ratingFilter) {
+            $query->where('rating', $ratingFilter);
+        }
+
+        $feedbacks = $query->paginate(25);
+
+        $stats = [
+            'total' => \App\Models\AiFeedback::withoutGlobalScopes()->count(),
+            'helpful' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'helpful')->count(),
+            'incorrect' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'incorrect')->count(),
+            'incomplete' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'incomplete')->count(),
+            'irrelevant' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'irrelevant')->count(),
+        ];
+
+        return view('admin.ai_feedbacks', compact('feedbacks', 'stats', 'ratingFilter'));
+    }
+
+    /**
      * Recharger ou ajuster les crédits IA d'une boutique (Geste commercial ou pack additionnel)
      */
     public function rechargeShopAiCredits(Request $request, Shop $shop): RedirectResponse

@@ -118,6 +118,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/assistant-ia/conversations/{conversation}', [\App\Http\Controllers\AiAssistantController::class, 'showConversation'])->name('ai.conversations.show');
     Route::post('/assistant-ia/message', [\App\Http\Controllers\AiAssistantController::class, 'sendMessage'])->name('ai.message.send');
     Route::post('/assistant-ia/action/approve', [\App\Http\Controllers\AiAssistantController::class, 'approveAction'])->name('ai.action.approve');
+    Route::post('/assistant-ia/feedback', [\App\Http\Controllers\AiFeedbackController::class, 'store'])->name('ai.feedback.store');
     Route::delete('/assistant-ia/conversations/{conversation}', [\App\Http\Controllers\AiAssistantController::class, 'destroyConversation'])->name('ai.conversations.destroy');
 
     // AI Products & Studio Visuel IA (Module 4 & 5)
@@ -149,6 +150,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/abonnements/{shop}', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'updateSubscription'])->name('admin.subscriptions.update');
         Route::post('/abonnements/{shop}/rappel-essai', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'sendTrialReminder'])->name('admin.subscriptions.send_reminder');
         Route::get('/ia', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'aiUsage'])->name('admin.ai_usage');
+        Route::get('/ia/feedbacks', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'aiFeedbacks'])->name('admin.ai_feedbacks');
         Route::post('/ia/boutiques/{shop}/recharger', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'rechargeShopAiCredits'])->name('admin.ai.recharge');
         Route::get('/formules', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'plans'])->name('admin.plans');
         Route::post('/formules/{plan}/update', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'updatePlan'])->name('admin.plans.update');
@@ -184,6 +186,7 @@ Route::get('/migrate-now', function () {
     try {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'PlanSeeder', '--force' => true]);
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'AiKnowledgeSeeder', '--force' => true]);
         \Illuminate\Support\Facades\Artisan::call('media:restore-defaults');
         \App\Models\User::whereIn('email', ['kougnimag@gmail.com', 'kougnima@icloud.com', 'admin@example.test'])
             ->update(['role' => \App\Models\User::ROLE_ADMIN]);

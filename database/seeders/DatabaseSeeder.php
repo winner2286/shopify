@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(PlanSeeder::class);
+        $this->call(AiKnowledgeSeeder::class);
 
         // Compte administrateur de développement
         User::updateOrCreate(['email' => 'admin@example.test'], [

@@ -135,6 +135,16 @@ class Shop extends Model
         return $this->hasMany(AiAutomation::class);
     }
 
+    public function shopMemories(): HasMany
+    {
+        return $this->hasMany(AiShopMemory::class);
+    }
+
+    public function aiFeedbacks(): HasMany
+    {
+        return $this->hasMany(AiFeedback::class);
+    }
+
     public function activeProducts(): HasMany
     {
         return $this->hasMany(Product::class)->where('status', Product::STATUS_ACTIVE);
