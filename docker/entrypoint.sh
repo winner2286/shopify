@@ -12,7 +12,7 @@ if [ ! -f /var/www/html/.env ]; then
 fi
 
 # Export automatique de la clé OpenRouter pour Google Gemini 2.5 Flash
-export OPENROUTER_DEFAULT_KEY=$(echo "c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWUxNDhkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==" | base64 -d)
+export OPENROUTER_DEFAULT_KEY=$(echo "c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==" | base64 -d)
 if [ -z "$OPENROUTER_API_KEY" ]; then
     export OPENROUTER_API_KEY="$OPENROUTER_DEFAULT_KEY"
 fi

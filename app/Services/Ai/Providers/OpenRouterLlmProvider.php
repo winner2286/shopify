@@ -13,7 +13,7 @@ class OpenRouterLlmProvider implements LlmProviderInterface
 
     public static function getBackupKey(): string
     {
-        return (string) base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWUxNDhkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==');
+        return (string) base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==');
     }
 
     public function __construct(?string $apiKey = null, ?string $defaultModel = null)
