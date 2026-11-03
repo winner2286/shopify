@@ -96,7 +96,7 @@
         <h3 style="margin:0 0 1rem 0;font-size:1.2rem">Consommation des Crédits & Ajustement des Quotas Marchands</h3>
 
         <div style="overflow-x:auto">
-            <table class="table" style="width:100%;border-collapse:collapse;font-size:.88rem">
+            <table class="table" style="width:100%;min-width:760px;border-collapse:collapse;font-size:.88rem">
                 <thead>
                     <tr style="background:var(--bg-soft);border-bottom:1px solid var(--border);text-align:left">
                         <th style="padding:.75rem">Boutique</th>
@@ -104,7 +104,7 @@
                         <th style="padding:.75rem;text-align:center">Crédits Alloués</th>
                         <th style="padding:.75rem;text-align:center">Consommés</th>
                         <th style="padding:.75rem;text-align:center">Solde Restant</th>
-                        <th style="padding:.75rem;text-align:right">Action Super-Admin</th>
+                        <th style="padding:.75rem;text-align:right;white-space:nowrap">Action Super-Admin</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -129,23 +129,25 @@
                             <td style="padding:.75rem;text-align:center;font-weight:700;color:{{ $remaining <= 5 ? 'var(--danger)' : 'var(--ok)' }}">
                                 {{ $remaining }}
                             </td>
-                            <td style="padding:.75rem;text-align:right">
-                                <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="display:inline-flex;gap:.4rem;align-items:center">
-                                    @csrf
-                                    <input type="hidden" name="action_type" value="add">
-                                    <input type="hidden" name="bonus_credits" value="100">
-                                    <button type="submit" class="btn btn-primary btn-sm" style="font-size:.75rem;padding:.25rem .55rem" title="Accorder 100 crédits bonus">
-                                        +100 Crédits
-                                    </button>
-                                </form>
-                                <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="display:inline-flex;margin-left:.25rem">
-                                    @csrf
-                                    <input type="hidden" name="action_type" value="reset_used">
-                                    <input type="hidden" name="bonus_credits" value="0">
-                                    <button type="submit" class="btn btn-ghost btn-sm" style="font-size:.75rem;padding:.25rem .55rem" onclick="return confirm('Réinitialiser la consommation de cette boutique ?')">
-                                        Reset
-                                    </button>
-                                </form>
+                            <td style="padding:.6rem .75rem;text-align:right;white-space:nowrap">
+                                <div style="display:inline-flex;align-items:center;justify-content:flex-end;gap:.4rem;white-space:nowrap">
+                                    <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="margin:0;display:inline-block">
+                                        @csrf
+                                        <input type="hidden" name="action_type" value="add">
+                                        <input type="hidden" name="bonus_credits" value="100">
+                                        <button type="submit" class="btn btn-primary" style="height:32px;min-height:32px;padding:0 .75rem;font-size:.78rem;font-weight:600;border-radius:8px;box-shadow:none;display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap" title="Accorder 100 crédits bonus">
+                                            <span>+100 Crédits</span>
+                                        </button>
+                                    </form>
+                                    <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="margin:0;display:inline-block">
+                                        @csrf
+                                        <input type="hidden" name="action_type" value="reset_used">
+                                        <input type="hidden" name="bonus_credits" value="0">
+                                        <button type="submit" class="btn btn-ghost" style="height:32px;min-height:32px;padding:0 .65rem;font-size:.78rem;font-weight:500;border-radius:8px;border:1px solid var(--border);color:var(--text-soft);background:var(--bg-soft);display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap" onclick="return confirm('Réinitialiser la consommation de la boutique « {{ addslashes($s->name) }} » ?')" title="Remettre à zéro les crédits utilisés">
+                                            <span>Reset</span>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @endforeach
@@ -156,7 +158,7 @@
 
     <!-- Table des générations récentes -->
     <div class="card" style="padding:0;overflow-x:auto">
-        <table class="table" style="width:100%;border-collapse:collapse;font-size:.92rem">
+        <table class="table" style="width:100%;min-width:760px;border-collapse:collapse;font-size:.92rem">
             <thead>
                 <tr style="background:var(--bg-soft);border-bottom:1px solid var(--border);text-align:left">
                     <th style="padding:1rem">Date & Heure</th>
