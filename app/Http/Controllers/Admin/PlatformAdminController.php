@@ -116,6 +116,17 @@ class PlatformAdminController extends Controller
         $totalPromptTokens = (int) AiGeneration::withoutGlobalScopes()->sum('prompt_tokens');
         $totalCompletionTokens = (int) AiGeneration::withoutGlobalScopes()->sum('completion_tokens');
 
+        // Métriques de l'Agent IA ECOM
+        $totalConversations = \App\Models\AiConversation::withoutGlobalScopes()->count();
+        $totalMessages = \App\Models\AiMessage::withoutGlobalScopes()->count();
+        $totalAutomations = \App\Models\AiAutomation::withoutGlobalScopes()->where('is_active', true)->count();
+
+        // Top boutiques consommatrices
+        $topConsumerShops = Shop::withoutGlobalScopes()
+            ->orderByDesc('ai_credits_used')
+            ->take(10)
+            ->get();
+
         $generations = AiGeneration::withoutGlobalScopes()
             ->with('shop')
             ->latest()
@@ -123,8 +134,33 @@ class PlatformAdminController extends Controller
 
         return view('admin.ai_usage', compact(
             'totalCalls', 'totalCostFcfa', 'totalPromptTokens',
-            'totalCompletionTokens', 'generations'
+            'totalCompletionTokens', 'generations',
+            'totalConversations', 'totalMessages', 'totalAutomations', 'topConsumerShops'
         ));
+    }
+
+    /**
+     * Recharger ou ajuster les crédits IA d'une boutique (Geste commercial ou pack additionnel)
+     */
+    public function rechargeShopAiCredits(Request $request, Shop $shop): RedirectResponse
+    {
+        $this->checkAdmin($request);
+
+        $validated = $request->validate([
+            'bonus_credits' => 'required|integer',
+            'action_type' => 'required|string|in:add,reset_used',
+        ]);
+
+        if ($validated['action_type'] === 'reset_used') {
+            $shop->update(['ai_credits_used' => 0]);
+            $msg = "Les crédits utilisés de la boutique « {$shop->name} » ont été remis à zéro.";
+        } else {
+            // Décrémente l'usage pour redonner des crédits disponibles
+            $shop->decrement('ai_credits_used', max(0, $validated['bonus_credits']));
+            $msg = "{$validated['bonus_credits']} crédits IA bonus ont été accordés à la boutique « {$shop->name} ».";
+        }
+
+        return back()->with('status', $msg);
     }
 
     /**

@@ -149,6 +149,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/abonnements/{shop}', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'updateSubscription'])->name('admin.subscriptions.update');
         Route::post('/abonnements/{shop}/rappel-essai', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'sendTrialReminder'])->name('admin.subscriptions.send_reminder');
         Route::get('/ia', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'aiUsage'])->name('admin.ai_usage');
+        Route::post('/ia/boutiques/{shop}/recharger', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'rechargeShopAiCredits'])->name('admin.ai.recharge');
         Route::get('/formules', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'plans'])->name('admin.plans');
         Route::post('/formules/{plan}/update', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'updatePlan'])->name('admin.plans.update');
         Route::post('/formules/{plan}/toggle', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'togglePlan'])->name('admin.plans.toggle');

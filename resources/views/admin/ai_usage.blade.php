@@ -64,6 +64,96 @@
         </div>
     </div>
 
+    <!-- 3 Cartes Métriques ECOM AI ASSISTANT -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;margin-bottom:2rem">
+        <div class="card" style="padding:1.2rem;background:linear-gradient(135deg, rgba(99,102,241,0.08), transparent);border:1px solid color-mix(in srgb, var(--brand-2) 20%, var(--border))">
+            <div style="font-size:.82rem;color:var(--brand-2);font-weight:600">Sessions & Conversations IA</div>
+            <div style="font-size:1.6rem;font-weight:700;font-family:var(--font-display);margin-top:.2rem">
+                {{ number_format($totalConversations, 0, ',', ' ') }}
+            </div>
+            <div style="font-size:.78rem;color:var(--text-soft)">Échanges marchands avec le Copilote</div>
+        </div>
+
+        <div class="card" style="padding:1.2rem;background:linear-gradient(135deg, rgba(236,72,153,0.08), transparent);border:1px solid color-mix(in srgb, #ec4899 20%, var(--border))">
+            <div style="font-size:.82rem;color:#ec4899;font-weight:600">Messages & Tool Calls Traités</div>
+            <div style="font-size:1.6rem;font-weight:700;font-family:var(--font-display);margin-top:.2rem">
+                {{ number_format($totalMessages, 0, ',', ' ') }}
+            </div>
+            <div style="font-size:.78rem;color:var(--text-soft)">Actions d'inventaire, commandes & analyses</div>
+        </div>
+
+        <div class="card" style="padding:1.2rem;background:linear-gradient(135deg, rgba(16,185,129,0.08), transparent);border:1px solid color-mix(in srgb, var(--ok) 20%, var(--border))">
+            <div style="font-size:.82rem;color:var(--ok);font-weight:600">Règles d'Automatisation Actives</div>
+            <div style="font-size:1.6rem;font-weight:700;font-family:var(--font-display);margin-top:.2rem">
+                {{ number_format($totalAutomations, 0, ',', ' ') }}
+            </div>
+            <div style="font-size:.78rem;color:var(--text-soft)">Surveillance stocks, relances COD & briefings</div>
+        </div>
+    </div>
+
+    <!-- Gestion des Quotas & Recharges par Boutique (Module 15) -->
+    <div class="card" style="margin-bottom:2rem;padding:1.5rem">
+        <h3 style="margin:0 0 1rem 0;font-size:1.2rem">Consommation des Crédits & Ajustement des Quotas Marchands</h3>
+
+        <div style="overflow-x:auto">
+            <table class="table" style="width:100%;border-collapse:collapse;font-size:.88rem">
+                <thead>
+                    <tr style="background:var(--bg-soft);border-bottom:1px solid var(--border);text-align:left">
+                        <th style="padding:.75rem">Boutique</th>
+                        <th style="padding:.75rem">Plan Actuel</th>
+                        <th style="padding:.75rem;text-align:center">Crédits Alloués</th>
+                        <th style="padding:.75rem;text-align:center">Consommés</th>
+                        <th style="padding:.75rem;text-align:center">Solde Restant</th>
+                        <th style="padding:.75rem;text-align:right">Action Super-Admin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($topConsumerShops as $s)
+                        @php
+                            $allocated = $s->aiCreditsMonthly();
+                            $remaining = $s->aiCreditsRemaining();
+                            $used = $s->ai_credits_used;
+                            $pctUsed = $allocated > 0 ? round(($used / $allocated) * 100) : 0;
+                        @endphp
+                        <tr style="border-bottom:1px solid var(--border)">
+                            <td style="padding:.75rem;font-weight:600">
+                                {{ $s->name }} <span style="font-size:.75rem;color:var(--text-soft)">({{ $s->slug }})</span>
+                            </td>
+                            <td style="padding:.75rem">
+                                <span class="badge" style="background:var(--bg-soft)">{{ strtoupper($s->currentPlan()->name ?? 'FREE') }}</span>
+                            </td>
+                            <td style="padding:.75rem;text-align:center;font-weight:600">{{ $allocated }}</td>
+                            <td style="padding:.75rem;text-align:center;color:{{ $pctUsed >= 90 ? 'var(--danger)' : 'var(--text)' }}">
+                                {{ $used }} ({{ $pctUsed }}%)
+                            </td>
+                            <td style="padding:.75rem;text-align:center;font-weight:700;color:{{ $remaining <= 5 ? 'var(--danger)' : 'var(--ok)' }}">
+                                {{ $remaining }}
+                            </td>
+                            <td style="padding:.75rem;text-align:right">
+                                <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="display:inline-flex;gap:.4rem;align-items:center">
+                                    @csrf
+                                    <input type="hidden" name="action_type" value="add">
+                                    <input type="hidden" name="bonus_credits" value="100">
+                                    <button type="submit" class="btn btn-primary btn-sm" style="font-size:.75rem;padding:.25rem .55rem" title="Accorder 100 crédits bonus">
+                                        +100 Crédits
+                                    </button>
+                                </form>
+                                <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="display:inline-flex;margin-left:.25rem">
+                                    @csrf
+                                    <input type="hidden" name="action_type" value="reset_used">
+                                    <input type="hidden" name="bonus_credits" value="0">
+                                    <button type="submit" class="btn btn-ghost btn-sm" style="font-size:.75rem;padding:.25rem .55rem" onclick="return confirm('Réinitialiser la consommation de cette boutique ?')">
+                                        Reset
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Table des générations récentes -->
     <div class="card" style="padding:0;overflow-x:auto">
         <table class="table" style="width:100%;border-collapse:collapse;font-size:.92rem">
