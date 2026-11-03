@@ -69,6 +69,9 @@
                 <a href="{{ route('ai.orders.cod_review') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
                     <x-icon name="truck" size="14" /> Revue COD Intelligente
                 </a>
+                <a href="{{ route('ai.memory.index') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start;color:var(--accent)">
+                    <x-icon name="cpu" size="14" /> Mémoire Commerciale
+                </a>
             </div>
 
             <!-- Liste des conversations -->

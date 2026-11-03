@@ -121,6 +121,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/assistant-ia/feedback', [\App\Http\Controllers\AiFeedbackController::class, 'store'])->name('ai.feedback.store');
     Route::delete('/assistant-ia/conversations/{conversation}', [\App\Http\Controllers\AiAssistantController::class, 'destroyConversation'])->name('ai.conversations.destroy');
 
+    // Gestion souveraine de la mémoire IA par le commerçant
+    Route::get('/assistant-ia/memoire', [\App\Http\Controllers\AiShopMemoryController::class, 'index'])->name('ai.memory.index');
+    Route::post('/assistant-ia/memoire', [\App\Http\Controllers\AiShopMemoryController::class, 'store'])->name('ai.memory.store');
+    Route::put('/assistant-ia/memoire/{memory}', [\App\Http\Controllers\AiShopMemoryController::class, 'update'])->name('ai.memory.update');
+    Route::delete('/assistant-ia/memoire/{memory}', [\App\Http\Controllers\AiShopMemoryController::class, 'destroy'])->name('ai.memory.destroy');
+
     // AI Products & Studio Visuel IA (Module 4 & 5)
     Route::post('/assistant-ia/produits/analyser-photo', [\App\Http\Controllers\AiProductController::class, 'analyzePhoto'])->name('ai.products.analyze_photo');
     Route::post('/assistant-ia/produits/{product}/optimiser', [\App\Http\Controllers\AiProductController::class, 'optimizeProduct'])->name('ai.products.optimize');

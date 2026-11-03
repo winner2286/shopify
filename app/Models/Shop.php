@@ -145,6 +145,11 @@ class Shop extends Model
         return $this->hasMany(AiFeedback::class);
     }
 
+    public function proactiveInsights(): HasMany
+    {
+        return $this->hasMany(AiProactiveInsight::class)->latest();
+    }
+
     public function activeProducts(): HasMany
     {
         return $this->hasMany(Product::class)->where('status', Product::STATUS_ACTIVE);

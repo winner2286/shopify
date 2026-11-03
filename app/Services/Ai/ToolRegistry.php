@@ -19,6 +19,10 @@ use App\Services\Ai\Tools\GenerateMarketingCopyTool;
 use App\Services\Ai\Tools\GetBusinessRecommendationsTool;
 use App\Services\Ai\Tools\GetPendingCodReviewTool;
 use App\Services\Ai\Tools\UpdateProductStockOrPriceTool;
+use App\Services\Ai\Tools\AdjustProductPricePercentageTool;
+use App\Services\Ai\Tools\GetUnderperformingProductsTool;
+use App\Services\Ai\Tools\DispatchOrderToCourierTool;
+use App\Services\Ai\Tools\GetWeeklySalesReportTool;
 use Illuminate\Support\Facades\Log;
 
 class ToolRegistry
@@ -50,6 +54,10 @@ class ToolRegistry
             new AnalyzeCodRiskTool(),
             new GetPendingCodReviewTool(),
             new AnswerCustomerInquiryTool(),
+            new AdjustProductPricePercentageTool(),
+            new GetUnderperformingProductsTool(),
+            new DispatchOrderToCourierTool(),
+            new GetWeeklySalesReportTool(),
         ];
 
         foreach ($defaultTools as $tool) {
@@ -65,6 +73,11 @@ class ToolRegistry
     public function get(string $name): ?AiToolInterface
     {
         return $this->tools[$name] ?? null;
+    }
+
+    public function has(string $name): bool
+    {
+        return isset($this->tools[$name]);
     }
 
     /**
