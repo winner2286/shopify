@@ -1020,6 +1020,16 @@ body.ai-chat-open {
                 setTimeout(syncWithVisualViewport, 100);
             });
         }
+
+        // Fermer le clavier virtuel si l'utilisateur touche ou fait défiler les messages
+        const msgContainer = document.getElementById('ai-bubble-messages');
+        if (msgContainer) {
+            msgContainer.addEventListener('touchstart', function() {
+                if (input && document.activeElement === input) {
+                    input.blur();
+                }
+            }, { passive: true });
+        }
     });
 
     // Fermeture propre avec la touche Échap
@@ -1074,7 +1084,11 @@ body.ai-chat-open {
         if (!text) return;
 
         input.value = '';
-        input.focus();
+        if (window.innerWidth <= 768) {
+            input.blur(); // Ferme le clavier sur mobile pour libérer tout l'écran
+        } else {
+            input.focus();
+        }
 
         // Masquer l'écran d'accueil s'il est encore présent
         const welcome = document.getElementById('ai-bubble-welcome');
@@ -1182,6 +1196,14 @@ body.ai-chat-open {
         `;
 
         msgContainer.appendChild(row);
+
+        if (role === 'assistant') {
+            setTimeout(() => {
+                row.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 60);
+        } else {
+            scrollAiBubbleToBottom();
+        }
     }
 
     window.sendAiBubbleFeedback = async function(messageId, rating) {
