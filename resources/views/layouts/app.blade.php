@@ -482,12 +482,16 @@
                 <!-- Onglets OS (iOS / Android) -->
                 <div class="install-tabs-nav" role="tablist">
                     <button type="button" id="tab-btn-ios" class="install-tab-btn active" role="tab" aria-selected="true" onclick="switchInstallTab('ios')">
-                        <span class="tab-emoji">🍎</span>
+                        <span class="tab-icon">
+                            <x-icon name="apple" :size="20" />
+                        </span>
                         <span>iPhone & iPad</span>
                         <small class="tab-sub">Navigateur Safari</small>
                     </button>
                     <button type="button" id="tab-btn-android" class="install-tab-btn" role="tab" aria-selected="false" onclick="switchInstallTab('android')">
-                        <span class="tab-emoji">🤖</span>
+                        <span class="tab-icon">
+                            <x-icon name="android" :size="20" />
+                        </span>
                         <span>Android</span>
                         <small class="tab-sub">Chrome / Samsung</small>
                     </button>

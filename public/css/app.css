@@ -1937,9 +1937,14 @@ button.bottom-nav-item {
   transition: all 0.2s ease;
   font-family: inherit;
 }
-.install-tab-btn .tab-emoji {
+.install-tab-btn .tab-emoji,
+.install-tab-btn .tab-icon {
   font-size: 1.15rem;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 .install-tab-btn .tab-sub {
   font-size: 0.68rem;
