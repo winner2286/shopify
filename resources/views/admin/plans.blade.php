@@ -3,7 +3,7 @@
 @section('title', 'Formules d\'Abonnement : Super-Admin - '.config('platform.name'))
 
 @section('content')
-<div class="container" style="max-width:1040px;padding:2rem 1rem">
+<div class="container" style="width:100%;max-width:1040px;padding:clamp(1rem, 3.5vw, 2rem) 1rem;box-sizing:border-box">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
         <div>
             <h1 style="font-size:1.8rem;margin:0">Formules d'Abonnement (CDC J-05)</h1>
@@ -45,9 +45,9 @@
         </div>
     @endif
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:1.5rem">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(min(100%, 290px), 1fr));gap:1.5rem">
         @foreach ($plans as $p)
-            <div class="card" style="padding:1.8rem;display:flex;flex-direction:column;justify-content:space-between;border:1px solid {{ $p->active ? 'var(--border)' : 'rgba(239,68,68,0.4)' }};background:{{ $p->active ? 'var(--surface)' : 'rgba(239,68,68,0.02)' }}">
+            <div class="card" style="padding:clamp(1.2rem, 3.5vw, 1.8rem);box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;border:1px solid {{ $p->active ? 'var(--border)' : 'rgba(239,68,68,0.4)' }};background:{{ $p->active ? 'var(--surface)' : 'rgba(239,68,68,0.02)' }}">
                 <div>
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.8rem">
                         <div>
