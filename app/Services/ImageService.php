@@ -605,17 +605,13 @@ class ImageService
             $dstY = (int) round($targetSize * 0.44);
             $bottomY = $dstY + $targetH;
 
-            // Ombres de contact au sol : talon et semelle avant
-            $shadowHeel = imagecolorallocatealpha($canvas, 40, 28, 18, 92);
-            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.16), $bottomY - 4, 34, 16, $shadowHeel);
-            $shadowSole = imagecolorallocatealpha($canvas, 40, 28, 18, 95);
-            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.68), $bottomY - 8, (int)($targetW * 0.50), 22, $shadowSole);
-            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.36), $bottomY - 26, 26, 12, $shadowHeel);
-            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.85), $bottomY - 28, (int)($targetW * 0.35), 18, $shadowSole);
+            // Ombre de contact au sol nette et réaliste
+            $shadowCore = imagecolorallocatealpha($canvas, 40, 28, 18, 95);
+            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.50), $bottomY - 3, (int)($targetW * 0.82), 20, $shadowCore);
 
-            // Ombre diffuse d'ambiance
+            // Ombre diffuse d'ambiance projetée vers la droite selon la lumière de la fenêtre
             $shadowSoft = imagecolorallocatealpha($canvas, 70, 52, 32, 115);
-            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.52) + 15, $bottomY - 2, (int)($targetW * 0.90), 38, $shadowSoft);
+            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.54) + 12, $bottomY + 2, (int)($targetW * 0.96), 36, $shadowSoft);
 
             imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         } elseif ($style === 'jewelry') {
@@ -640,12 +636,13 @@ class ImageService
                 $targetH = (int) round($cH * ($targetW / $cW));
             }
             $dstX = (int) round(($targetSize - $targetW) / 2);
-            $dstY = (int) round($targetSize * 0.54) - $targetH;
+            // Calage parfait sur le sommet du cylindre en pierre (y = 534)
+            $dstY = 534 - $targetH + 4;
 
-            $shadowCore = imagecolorallocatealpha($canvas, 45, 40, 35, 100);
-            imagefilledellipse($canvas, (int)($targetSize / 2), $dstY + $targetH - 3, (int)($targetW * 0.8), 22, $shadowCore);
-            $shadowSoft = imagecolorallocatealpha($canvas, 70, 60, 50, 118);
-            imagefilledellipse($canvas, (int)($targetSize / 2), $dstY + $targetH + 3, (int)($targetW * 1.0), 38, $shadowSoft);
+            $shadowCore = imagecolorallocatealpha($canvas, 45, 40, 35, 95);
+            imagefilledellipse($canvas, (int)($targetSize / 2), 534, (int)($targetW * 0.85), 20, $shadowCore);
+            $shadowSoft = imagecolorallocatealpha($canvas, 70, 60, 50, 115);
+            imagefilledellipse($canvas, (int)($targetSize / 2), 537, (int)($targetW * 1.05), 34, $shadowSoft);
 
             imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         }
