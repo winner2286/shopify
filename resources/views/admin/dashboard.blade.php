@@ -142,8 +142,13 @@
                                     <span class="badge badge-warn" style="font-size:.75rem">En attente</span>
                                 @endif
                             </td>
-                            <td style="padding:1rem;font-size:.82rem;color:var(--text-soft)">
-                                {{ $order->created_at->diffForHumans() }}
+                            <td style="padding:1rem;font-size:.82rem">
+                                <div style="font-weight:600;color:var(--text)">
+                                    {{ $order->created_at->locale('fr')->isoFormat('D MMM [à] HH:mm') }}
+                                </div>
+                                <div style="font-size:.74rem;color:var(--text-soft)">
+                                    {{ $order->created_at->locale('fr')->diffForHumans() }}
+                                </div>
                             </td>
                         </tr>
                     @empty
