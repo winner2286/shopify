@@ -532,23 +532,26 @@ document.addEventListener('DOMContentLoaded', function() {
 // ==========================================================================
 // AI PHOTO-TO-PRODUCT VISION LOGIC
 // ==========================================================================
-function toggleAiVisionDropzone() {
+window.toggleAiVisionDropzone = function() {
     const wrap = document.getElementById('ai-vision-dropzone-wrap');
+    if (!wrap) return;
     wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
-}
+};
 
-function previewAiPhoto(input) {
+window.previewAiPhoto = function(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
             const thumb = document.getElementById('ai-photo-thumb-preview');
-            thumb.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+            if (thumb) {
+                thumb.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+            }
         };
         reader.readAsDataURL(input.files[0]);
     }
-}
+};
 
-async function runAiVisionAnalysis() {
+window.runAiVisionAnalysis = async function() {
     const input = document.getElementById('ai-photo-input');
     if (!input.files || !input.files[0]) {
         alert('Veuillez sélectionner une photo avant de lancer l\'analyse.');
@@ -616,11 +619,10 @@ async function runAiVisionAnalysis() {
         btn.disabled = false;
         btn.innerText = 'Analyser avec l\'IA';
     }
-}
+};
 
 function formatNumber(num) {
     return new Intl.NumberFormat('fr-FR').format(num || 0);
 }
-});
 </script>
 @endsection
