@@ -83,13 +83,13 @@
 
             <div class="ai-quick-prompts">
                 <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Fais-moi un point rapide sur mes stocks et les ruptures.')">
-                    <span>📦</span> État des stocks & ruptures
+                    <x-icon name="package" :size="14" /> <span>État des stocks & ruptures</span>
                 </button>
                 <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Combien de commandes COD sont en attente de confirmation ?')">
-                    <span>🛵</span> Commandes COD en attente
+                    <x-icon name="truck" :size="14" /> <span>Commandes COD en attente</span>
                 </button>
                 <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Donne-moi le bilan des ventes et mes 2 meilleures actions du jour.')">
-                    <span>📊</span> Bilan des ventes & opportunités
+                    <x-icon name="chart" :size="14" /> <span>Bilan des ventes & opportunités</span>
                 </button>
             </div>
         </div>
@@ -1064,13 +1064,13 @@ body.ai-chat-open {
                 <p>Que souhaitez-vous demander ou analyser aujourd'hui ?</p>
                 <div class="ai-quick-prompts">
                     <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Fais-moi un point rapide sur mes stocks et les ruptures.')">
-                        <span>📦</span> État des stocks & ruptures
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> <span>État des stocks & ruptures</span>
                     </button>
                     <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Combien de commandes COD sont en attente de confirmation ?')">
-                        <span>🛵</span> Commandes COD en attente
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg> <span>Commandes COD en attente</span>
                     </button>
                     <button type="button" class="ai-prompt-btn" onclick="sendAiBubblePrompt('Donne-moi le bilan des ventes et mes 2 meilleures actions du jour.')">
-                        <span>📊</span> Bilan des ventes & opportunités
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg> <span>Bilan des ventes & opportunités</span>
                     </button>
                 </div>
             </div>
@@ -1173,7 +1173,7 @@ body.ai-chat-open {
         if (actionRequired && actionRequired.status === 'pending') {
             actionHtml = `
                 <div class="ai-bubble-action-box" id="bubble-act-${actionRequired.message_id}">
-                    <strong>⚠️ Action requise : ${escapeHtml(actionRequired.title || 'Confirmation')}</strong>
+                    <strong>Action requise : ${escapeHtml(actionRequired.title || 'Confirmation')}</strong>
                     <div>${escapeHtml(actionRequired.description || '')}</div>
                     <div class="ai-bubble-action-btns">
                         <button type="button" class="ai-action-btn-yes" onclick="approveAiBubbleAction(${actionRequired.message_id}, true)">Approuver</button>
@@ -1187,8 +1187,8 @@ body.ai-chat-open {
         if (role === 'assistant' && messageId) {
             feedbackHtml = `
                 <span class="ai-bubble-feedback" id="b-fb-${messageId}" style="margin-right:auto;display:inline-flex;gap:4px">
-                    <button type="button" class="ai-fb-btn" onclick="sendAiBubbleFeedback(${messageId}, 'helpful')" title="Utile" style="background:none;border:none;cursor:pointer;font-size:0.75rem;padding:0 2px">👍</button>
-                    <button type="button" class="ai-fb-btn" onclick="sendAiBubbleFeedback(${messageId}, 'incorrect')" title="À améliorer" style="background:none;border:none;cursor:pointer;font-size:0.75rem;padding:0 2px">👎</button>
+                    <button type="button" class="ai-fb-btn" onclick="sendAiBubbleFeedback(${messageId}, 'helpful')" title="Utile" style="background:none;border:none;cursor:pointer;color:var(--text-soft);padding:0 2px;display:inline-flex;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3Z"/></svg></button>
+                    <button type="button" class="ai-fb-btn" onclick="sendAiBubbleFeedback(${messageId}, 'incorrect')" title="À améliorer" style="background:none;border:none;cursor:pointer;color:var(--text-soft);padding:0 2px;display:inline-flex;align-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3Z"/></svg></button>
                 </span>
             `;
         }
@@ -1232,7 +1232,7 @@ body.ai-chat-open {
             const d = await resp.json();
             if (el) {
                 el.innerHTML = rating === 'helpful' 
-                    ? `<span style="font-size:0.7rem;color:#10b981;font-weight:600">👍 Merci !</span>`
+                    ? `<span style="font-size:0.7rem;color:#10b981;font-weight:600">✓ Merci !</span>`
                     : `<span style="font-size:0.7rem;color:#f59e0b;font-weight:600">✓ Noté</span>`;
             }
         } catch (e) {

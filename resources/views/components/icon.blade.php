@@ -734,6 +734,81 @@
         </svg>
         @break
 
+    @case('award')
+    @case('trophy')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <path d="m8 21 4-4 4 4"/>
+            <path d="M12 17v4"/>
+            <path d="M7 4h10"/>
+            <path d="M17 4v6a5 5 0 0 1-10 0V4"/>
+            <path d="M3 9a2 2 0 0 0 2 2h2"/>
+            <path d="M17 11h2a2 2 0 0 0 2-2"/>
+        </svg>
+        @break
+
+    @case('heart')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+        </svg>
+        @break
+
+    @case('globe')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+            <path d="M2 12h20"/>
+        </svg>
+        @break
+
+    @case('mic')
+    @case('microphone')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+        </svg>
+        @break
+
+    @case('facebook')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+        </svg>
+        @break
+
+    @case('volume-x')
+    @case('mute')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="22" x2="16" y1="9" y2="15"/>
+            <line x1="16" x2="22" y1="9" y2="15"/>
+        </svg>
+    @case('truck')
+    @case('delivery')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+            <path d="M15 18H9"/>
+            <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
+            <circle cx="17" cy="18" r="2"/>
+            <circle cx="7" cy="18" r="2"/>
+        </svg>
+        @break
+
+    @case('chart')
+    @case('bar-chart')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <line x1="12" x2="12" y1="20" y2="10"/>
+            <line x1="18" x2="18" y1="20" y2="4"/>
+            <line x1="6" x2="6" y1="20" y2="16"/>
+        </svg>
+        @break
+
+    @case('trending-up')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+            <polyline points="16 7 22 7 22 13"/>
+        </svg>
+        @break
+
     @default
         <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
             <circle cx="12" cy="12" r="10"/>

@@ -8,7 +8,7 @@
     @if ($user->isAdmin())
         <div class="card" style="margin-bottom:1.5rem;padding:1rem 1.25rem;background:linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.05));border:1px solid rgba(239, 68, 68, 0.35);border-radius:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
             <div style="display:flex;align-items:center;gap:.75rem">
-                <span style="font-size:1.6rem">🛡️</span>
+                <x-icon name="shield" size="24" style="color:#f87171" />
                 <div>
                     <div style="font-weight:700;color:#f87171;font-size:1rem">Vous êtes connecté en tant que Super-Administrateur (Fondateur)</div>
                     <div style="font-size:.85rem;color:var(--text-soft)">Vous êtes actuellement sur la vue marchande. Pour superviser l'ensemble des boutiques, abonnements et alertes, accédez à votre espace dédié.</div>
@@ -59,7 +59,7 @@
     @if ($isTrialExpiring)
         <div class="card" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.06));border:1px solid rgba(245, 158, 11, 0.4);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
             <div style="display:flex;align-items:center;gap:.9rem">
-                <span style="font-size:1.8rem">⚠️</span>
+                <x-icon name="alert-triangle" size="28" style="color:#d97706" />
                 <div>
                     <div style="font-weight:700;color:#d97706;font-size:1.05rem">
                         Votre essai gratuit expire dans {{ $daysLeft <= 1 ? ($daysLeft == 0 ? "quelques heures" : "1 jour") : "$daysLeft jours" }} !
@@ -81,7 +81,7 @@
     @elseif ($sub && $sub->status === 'expired')
         <div class="card" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(220, 38, 38, 0.06));border:1px solid rgba(239, 68, 68, 0.4);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
             <div style="display:flex;align-items:center;gap:.9rem">
-                <span style="font-size:1.8rem">🛑</span>
+                <x-icon name="alert-circle" size="28" style="color:#ef4444" />
                 <div>
                     <div style="font-weight:700;color:#ef4444;font-size:1.05rem">
                         Votre période d'essai gratuit a expiré !

@@ -117,7 +117,7 @@
                 ← Retour à l'accueil
             </a>
             <a href="javascript:location.reload()" class="btn btn-secondary">
-                🔄 Réessayer
+                Réessayer
             </a>
         </div>
     </div>

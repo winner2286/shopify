@@ -101,7 +101,7 @@
                             <!-- Bouton Utiliser ma position actuelle -->
                             <button type="button" id="btn-geolocation" class="btn btn-ghost btn-sm" onclick="useCurrentLocation()" style="padding:.3rem .75rem;font-size:.82rem;display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--store-primary);color:var(--store-primary);border-radius:20px;cursor:pointer;background:transparent" title="Détecter automatiquement ma position GPS">
                                 <x-icon name="map-pin" :size="14" />
-                                <span id="geo-btn-text">📍 Utiliser ma position actuelle</span>
+                                <span id="geo-btn-text">Utiliser ma position actuelle</span>
                             </button>
                         </div>
 
@@ -125,7 +125,7 @@
                                 <iframe id="geo-map-iframe" style="width:100%;height:100%;border:none;background:#f8fafc" loading="lazy" src=""></iframe>
                             </div>
                             <p class="hint" style="margin-top:.45rem;margin-bottom:0;font-size:.76rem;line-height:1.4">
-                                📍 <strong>Position GPS enregistrée :</strong> Le livreur pourra ouvrir votre position exacte sur Google Maps pour vous livrer directement à votre porte. Vous pouvez ajuster ou compléter l'adresse ci-dessus si besoin.
+                                <strong>Position GPS enregistrée :</strong> Le livreur pourra ouvrir votre position exacte sur Google Maps pour vous livrer directement à votre porte. Vous pouvez ajuster ou compléter l'adresse ci-dessus si besoin.
                             </p>
                         </div>
                     </div>
@@ -323,7 +323,7 @@
             },
             function (err) {
                 if (btn) btn.disabled = false;
-                if (btnText) btnText.textContent = "📍 Utiliser ma position actuelle";
+                if (btnText) btnText.textContent = "Utiliser ma position actuelle";
 
                 var msg = "Impossible d'obtenir votre position GPS.";
                 if (err.code === 1) {

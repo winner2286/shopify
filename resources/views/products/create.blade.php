@@ -33,12 +33,12 @@
                         <x-icon name="sparkles" :size="22" />
                     </div>
                     <div>
-                        <strong style="font-size:1.05rem;color:var(--text);display:block">Remplir automatiquement depuis une photo avec l'IA ✨</strong>
+                        <strong style="font-size:1.05rem;color:var(--text);display:block">Remplir automatiquement depuis une photo avec l'IA</strong>
                         <span style="font-size:.85rem;color:var(--text-soft)">Déposez la photo d'un article : l'IA identifie le produit, rédige le titre et la description, suggère la catégorie et calcule le prix en FCFA.</span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-sm" onclick="toggleAiVisionDropzone()" style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-weight:700;border:none;padding:.5rem 1.1rem;border-radius:8px;cursor:pointer">
-                    ✨ Déposer une photo
+                <button type="button" class="btn btn-sm" onclick="toggleAiVisionDropzone()" style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-weight:700;border:none;padding:.5rem 1.1rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem">
+                    <x-icon name="sparkles" size="14" /> Déposer une photo
                 </button>
             </div>
 
@@ -107,7 +107,7 @@
                             <x-icon name="sparkles" size="18" />
                         </div>
                         <div style="font-size:.85rem;line-height:1.35">
-                            <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés ✨</strong>
+                            <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés</strong>
                             <span style="color:var(--text-soft)">La luminosité est rééquilibrée, le contraste renforcé et le produit cadré sur fond studio blanc pour une présentation professionnelle.</span>
                         </div>
                     </div>
@@ -469,7 +469,7 @@ document.addEventListener('DOMContentLoaded', function() {
             studioBadge.style.borderRadius = '4px';
             studioBadge.style.background = 'rgba(16, 185, 129, 0.9)';
             studioBadge.style.color = '#fff';
-            studioBadge.textContent = '✨ Studio';
+            studioBadge.textContent = 'Studio';
             studioBadge.style.zIndex = '2';
             item.appendChild(studioBadge);
 
@@ -600,7 +600,7 @@ async function runAiVisionAnalysis() {
             }
 
             statusMsg.style.color = '#10b981';
-            statusMsg.innerHTML = `✅ <strong>Fiche produit complétée avec succès !</strong> Titre, description, caractéristiques et prix suggéré (${formatNumber(a.price_fcfa)} FCFA) ont été injectés. Vous pouvez ajuster les champs librement.`;
+            statusMsg.innerHTML = `<strong>✓ Fiche produit complétée avec succès !</strong> Titre, description, caractéristiques et prix suggéré (${formatNumber(a.price_fcfa)} FCFA) ont été injectés. Vous pouvez ajuster les champs librement.`;
 
             // Scroll fluide vers le formulaire complété
             document.getElementById('title').scrollIntoView({ behavior: 'smooth', block: 'center' });

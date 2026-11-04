@@ -143,7 +143,7 @@
                     <div class="promo-deal-content">
                         <div>
                             <span class="promo-deal-tag">
-                                {{ $pHasDiscount ? '-' . $pDiscountPct . '% Réduction' : ($loop->first ? '⭐ Coup de cœur' : '🔥 Tendance') }}
+                                {{ $pHasDiscount ? '-' . $pDiscountPct . '% Réduction' : ($loop->first ? 'Coup de cœur' : 'Tendance') }}
                             </span>
                             <h3 class="promo-deal-title">{{ $promo->title }}</h3>
                             <p class="promo-deal-desc">{{ $promo->description ?: 'Qualité garantie, disponible immédiatement pour livraison rapide.' }}</p>

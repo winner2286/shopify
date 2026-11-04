@@ -62,7 +62,7 @@
                         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.35rem">
                             @if (! $p->active)
                                 <span class="badge badge-danger" style="font-size:.78rem">
-                                    🔴 Désactivée
+                                    Désactivée
                                 </span>
                             @endif
                             <span class="badge" style="font-size:.72rem;background:var(--bg-soft);color:var(--text-soft)">

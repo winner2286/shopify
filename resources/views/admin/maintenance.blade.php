@@ -177,11 +177,11 @@
                 </div>
 
                 <div style="padding:1rem;background:rgba(245, 158, 11, 0.08);border:1px solid rgba(245, 158, 11, 0.25);border-radius:8px;font-size:.85rem;color:#fbbf24;margin-bottom:1.5rem;box-sizing:border-box;word-break:break-word">
-                    <strong>🛡️ Garantie Super-Admin :</strong> Vos accès à <code>/admin</code> resteront entièrement ouverts et vous pourrez désactiver la maintenance à tout moment en 1 clic.
+                    <strong style="display:inline-flex;align-items:center;gap:.35rem"><x-icon name="shield" size="15" /> Garantie Super-Admin :</strong> Vos accès à <code>/admin</code> resteront entièrement ouverts et vous pourrez désactiver la maintenance à tout moment en 1 clic.
                 </div>
 
                 <button type="submit" class="btn btn-block" style="width:100%;max-width:100%;box-sizing:border-box;white-space:normal !important;line-height:1.4;display:flex;align-items:center;justify-content:center;gap:.5rem;background:linear-gradient(135deg, #ef4444, #dc2626);color:#ffffff;font-weight:800;padding:.85rem 1.25rem;font-size:1rem;border:none;border-radius:10px;box-shadow:0 4px 14px rgba(239, 68, 68, 0.35);cursor:pointer;text-align:center">
-                    <span>🔴 Basculer le Site en Mode Maintenance</span>
+                    <span>Basculer le Site en Mode Maintenance</span>
                 </button>
             </form>
         </div>
@@ -189,8 +189,8 @@
 
     <!-- Guide d'utilisation pour le fondateur -->
     <div class="card" style="padding:clamp(1.15rem, 3.5vw, 1.5rem);border-radius:12px;background:rgba(255,255,255,0.02);box-sizing:border-box">
-        <h4 style="font-size:1rem;font-weight:700;margin-bottom:.75rem">
-            ℹ️ Comment fonctionne la maintenance Zanika ?
+        <h4 style="font-size:1rem;font-weight:700;margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem">
+            <x-icon name="info" size="16" /> Comment fonctionne la maintenance Zanika ?
         </h4>
         <ul style="color:var(--text-soft);font-size:.9rem;line-height:1.7;padding-left:1.25rem;margin:0;word-break:break-word">
             <li><strong>Protection complète</strong> : Dès l'activation, toutes les requêtes publiques sont arrêtées et redirigées vers la page d'erreur HTTP 503 pré-rendue.</li>

@@ -59,35 +59,35 @@
                     <div class="ai-styles-selector">
                         <label class="ai-style-card active">
                             <input type="radio" name="style" value="studio_minimalist" checked>
-                            <div class="style-icon">🏢</div>
+                            <div class="style-icon"><x-icon name="image" :size="20" /></div>
                             <div class="style-title">Studio Minimaliste</div>
                             <div class="style-desc">Fond épuré, éclairage commercial doux</div>
                         </label>
 
                         <label class="ai-style-card">
                             <input type="radio" name="style" value="luxury_showroom">
-                            <div class="style-icon">✨</div>
+                            <div class="style-icon"><x-icon name="sparkles" :size="20" /></div>
                             <div class="style-title">Showroom Luxe</div>
                             <div class="style-desc">Marbre, reflets dorés, ambiance premium</div>
                         </label>
 
                         <label class="ai-style-card">
                             <input type="radio" name="style" value="lifestyle_urban">
-                            <div class="style-icon">🏙️</div>
+                            <div class="style-icon"><x-icon name="globe" :size="20" /></div>
                             <div class="style-title">Urbain Authentique</div>
                             <div class="style-desc">Style de vie moderne en Afrique de l'Ouest</div>
                         </label>
 
                         <label class="ai-style-card">
                             <input type="radio" name="style" value="flash_sale">
-                            <div class="style-icon">🔥</div>
+                            <div class="style-icon"><x-icon name="zap" :size="20" /></div>
                             <div class="style-title">Promo & Vente Flash</div>
                             <div class="style-desc">Affiche publicitaire percutante et dynamique</div>
                         </label>
 
                         <label class="ai-style-card">
                             <input type="radio" name="style" value="tropical_african">
-                            <div class="style-icon">🌿</div>
+                            <div class="style-icon"><x-icon name="heart" :size="20" /></div>
                             <div class="style-title">Afro Chic Chaleureux</div>
                             <div class="style-desc">Terracotta, plantes, lumière dorée</div>
                         </label>

@@ -44,13 +44,13 @@
                         <h3 style="margin:0">Détails du produit</h3>
                         <button type="button" class="btn btn-sm" onclick="runAiProductOptimize()" id="ai-optimize-btn" style="background:linear-gradient(135deg, #e11d48, #7c3aed);color:#fff;font-weight:700;border:none;padding:.35rem .85rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;box-shadow:0 2px 8px rgba(225,29,72,0.3)">
                             <x-icon name="sparkles" :size="14" />
-                            <span>Optimiser avec l'IA ✨</span>
+                            <span>Optimiser avec l'IA</span>
                         </button>
                     </div>
                     
                     <div id="ai-optimize-banner" style="display:none;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.35);border-radius:10px;padding:.85rem;margin-bottom:1.25rem">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-                            <strong style="color:#e11d48;font-size:.9rem">✨ Suggestions d'optimisation IA prêtes</strong>
+                            <strong style="color:#e11d48;font-size:.9rem">Suggestions d'optimisation IA prêtes</strong>
                             <button type="button" onclick="applyAiOptimizations()" class="btn btn-sm btn-primary" style="padding:.25rem .75rem;font-size:.78rem">
                                 Appliquer à la fiche
                             </button>
@@ -106,7 +106,7 @@
                                     <x-icon name="sparkles" size="16" />
                                 </div>
                                 <div style="font-size:.82rem;line-height:1.3">
-                                    <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés ✨</strong>
+                                    <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés</strong>
                                     <span style="color:var(--text-soft)">Luminosité rééquilibrée, netteté renforcée et cadrage studio carré 1:1.</span>
                                 </div>
                             </div>
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
             studioBadge.style.borderRadius = '4px';
             studioBadge.style.background = 'rgba(16, 185, 129, 0.9)';
             studioBadge.style.color = '#fff';
-            studioBadge.textContent = '✨ Studio';
+            studioBadge.textContent = 'Studio';
             studioBadge.style.zIndex = '2';
             item.appendChild(studioBadge);
 

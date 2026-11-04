@@ -81,7 +81,7 @@
 
         @if(empty($dashboard['orders']))
             <div style="padding:3rem 1.5rem;text-align:center;color:var(--text-soft)">
-                <div style="font-size:2.5rem;margin-bottom:.5rem">🎉</div>
+                <div style="margin-bottom:.5rem;color:#10b981;display:flex;justify-content:center"><x-icon name="check-circle" size="36" /></div>
                 <h4 style="margin:0 0 .35rem;color:var(--text)">Aucune commande COD en attente</h4>
                 <p style="margin:0;font-size:.85rem">Toutes les livraisons en cours sont finalisées ou encaissées !</p>
             </div>
@@ -129,7 +129,7 @@
                                     <strong style="color:var(--text)">{{ $ord['recommended_action'] }}</strong>
                                     @if(!empty($ord['risk_factors']))
                                         <div style="color:#ef4444;font-size:.75rem;margin-top:.2rem">
-                                            ⚠️ {{ implode(' ', $ord['risk_factors']) }}
+                                            <span style="font-weight:600">Attention :</span> {{ implode(' ', $ord['risk_factors']) }}
                                         </div>
                                     @endif
                                 </td>
@@ -174,8 +174,8 @@
                         <label for="client_phone">Téléphone WhatsApp du client (optionnel)</label>
                         <input type="text" id="client_phone" class="input" placeholder="Ex: +228 90 00 00 00">
                     </div>
-                    <button type="submit" class="btn btn-primary" id="btn-support-submit" style="width:100%;padding:.75rem;margin-top:.35rem">
-                        ✨ Générer la réponse idéale
+                    <button type="submit" class="btn btn-primary" id="btn-support-submit" style="width:100%;padding:.75rem;margin-top:.35rem;display:inline-flex;align-items:center;justify-content:center;gap:.35rem">
+                        <x-icon name="sparkles" size="16" /> <span>Générer la réponse idéale</span>
                     </button>
                 </div>
             </div>
@@ -186,7 +186,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
                 <span id="support-intent-badge" class="badge badge-ok" style="font-size:.78rem">Intention détectée</span>
                 <span id="support-escalation-alert" style="display:none;color:#ef4444;font-size:.8rem;font-weight:700">
-                    ⚠️ Transfert vers conseiller humain recommandé
+                    Transfert vers conseiller humain recommandé
                 </span>
             </div>
 
@@ -308,7 +308,7 @@ async function handleSupportSubmit(e) {
         alert('Erreur lors de la génération de la réponse.');
     } finally {
         btn.disabled = false;
-        btn.innerText = '✨ Générer la réponse idéale';
+        btn.innerHTML = 'Générer la réponse idéale';
     }
 }
 

@@ -130,7 +130,7 @@
                                     custom_id: 'ORDER:{{ $order->id }}',
                                     description: 'Commande #{{ $order->order_number }} sur {{ addslashes($shop->name) }}',
                                     currency: 'XOF',
-                                    buttonText: 'Payer {{ number_format($order->total, 0, ',', ' ') }} FCFA via FeexPay 💳',
+                                    buttonText: 'Payer {{ number_format($order->total, 0, ',', ' ') }} FCFA via FeexPay',
                                     callback: function(response) {
                                         if (response && (response.status === 'SUCCESSFUL' || response.status === 'SUCCESS')) {
                                             window.location.href = '{{ route('feexpay.callback') }}?custom_id=ORDER:{{ $order->id }}&reference=' + (response.reference || '');

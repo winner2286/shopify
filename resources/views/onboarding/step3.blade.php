@@ -56,7 +56,7 @@
                     <x-icon name="sparkles" size="20" />
                 </div>
                 <div style="font-size:.88rem;line-height:1.35">
-                    <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés ✨</strong>
+                    <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés</strong>
                     <span style="color:var(--text-soft)">Prenez vos photos directement au téléphone : l'IA et le système équilibrent la lumière, renforcent la netteté et cadrent vos articles au format studio blanc.</span>
                 </div>
             </div>
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
             studioBadge.style.borderRadius = '4px';
             studioBadge.style.background = 'rgba(16, 185, 129, 0.9)';
             studioBadge.style.color = '#fff';
-            studioBadge.textContent = '✨ Studio';
+            studioBadge.textContent = 'Studio';
             studioBadge.style.zIndex = '2';
             item.appendChild(studioBadge);
 

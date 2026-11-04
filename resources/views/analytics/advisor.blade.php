@@ -41,7 +41,7 @@
                 <div>
                     <div style="font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--brand-2)">Score de Santé Commerciale</div>
                     <h3 style="margin:.2rem 0 .4rem 0;font-size:1.3rem">
-                        {{ $diagnosis['health_score'] >= 75 ? 'Excellente Performance Globale 🚀' : ($diagnosis['health_score'] >= 55 ? 'Santé Commerciale Modérée 📈' : 'Attention Requise sur les Stocks ⚠️') }}
+                        {{ $diagnosis['health_score'] >= 75 ? 'Excellente Performance Globale' : ($diagnosis['health_score'] >= 55 ? 'Santé Commerciale Modérée' : 'Attention Requise sur les Stocks') }}
                     </h3>
                     <p style="margin:0;font-size:.9rem;color:var(--text-soft);max-width:550px">
                         {{ $diagnosis['strategic_verdict'] }}
@@ -343,7 +343,7 @@
                 </p>
 
                 <div style="padding:.8rem;background:var(--bg-soft);border-radius:var(--radius-sm);font-size:.82rem;line-height:1.5">
-                    💡 <strong>Conseil d'expert :</strong>
+                    <strong>Conseil d'expert :</strong>
                     Exigez une confirmation WhatsApp systématique avant expédition ou proposez une remise de 5% pour inciter au paiement Mobile Money immédiat.
                 </div>
             </div>

@@ -55,7 +55,9 @@
                     <label class="angle-card">
                         <input type="radio" name="angle" value="promotions" {{ old('angle', 'promotions') === 'promotions' ? 'checked' : '' }} onchange="toggleAnglePanels(this.value)">
                         <div class="angle-card-body">
-                            <div class="angle-icon" style="background:#fee2e2;color:#ef4444">🏷️</div>
+                            <div class="angle-icon" style="background:rgba(239, 68, 68, 0.12);color:#ef4444">
+                                <x-icon name="tag" :size="20" />
+                            </div>
                             <div class="angle-info">
                                 <div class="angle-title">Promotions & Rabais choc</div>
                                 <div class="angle-desc">Sélectionne automatiquement les articles avec les plus grosses remises réelles de votre boutique.</div>
@@ -67,7 +69,9 @@
                     <label class="angle-card">
                         <input type="radio" name="angle" value="nouveautes" {{ old('angle') === 'nouveautes' ? 'checked' : '' }} onchange="toggleAnglePanels(this.value)">
                         <div class="angle-card-body">
-                            <div class="angle-icon" style="background:#fef3c7;color:#d97706">✨</div>
+                            <div class="angle-icon" style="background:rgba(217, 119, 6, 0.12);color:#d97706">
+                                <x-icon name="sparkles" :size="20" />
+                            </div>
                             <div class="angle-info">
                                 <div class="angle-title">Nouveautés du catalogue</div>
                                 <div class="angle-desc">Met en avant les derniers produits ajoutés pour stimuler la curiosité de vos clients.</div>
@@ -79,7 +83,9 @@
                     <label class="angle-card">
                         <input type="radio" name="angle" value="bestsellers" {{ old('angle') === 'bestsellers' ? 'checked' : '' }} onchange="toggleAnglePanels(this.value)">
                         <div class="angle-card-body">
-                            <div class="angle-icon" style="background:#e0e7ff;color:#4f46e5">🏆</div>
+                            <div class="angle-icon" style="background:rgba(79, 70, 229, 0.12);color:#4f46e5">
+                                <x-icon name="trophy" :size="20" />
+                            </div>
                             <div class="angle-info">
                                 <div class="angle-title">Best-sellers & Incontournables</div>
                                 <div class="angle-desc">Présente vos articles les plus demandés et les plus populaires pour rassurer et convertir.</div>
@@ -91,7 +97,9 @@
                     <label class="angle-card">
                         <input type="radio" name="angle" value="coup_de_coeur" {{ (old('angle') === 'coup_de_coeur' || $selectedProductId) ? 'checked' : '' }} onchange="toggleAnglePanels(this.value)">
                         <div class="angle-card-body">
-                            <div class="angle-icon" style="background:#fce7f3;color:#db2777">❤️</div>
+                            <div class="angle-icon" style="background:rgba(219, 39, 119, 0.12);color:#db2777">
+                                <x-icon name="heart" :size="20" />
+                            </div>
                             <div class="angle-info">
                                 <div class="angle-title">Coup de cœur / Produit unique</div>
                                 <div class="angle-desc">Zoom immersif dédié à 1 seul article vedette pour un impact maximal.</div>
@@ -103,7 +111,9 @@
                     <label class="angle-card angle-card-special">
                         <input type="radio" name="angle" value="boutique" {{ old('angle') === 'boutique' ? 'checked' : '' }} onchange="toggleAnglePanels(this.value)">
                         <div class="angle-card-body">
-                            <div class="angle-icon" style="background:#ecfdf5;color:#059669">🏪</div>
+                            <div class="angle-icon" style="background:rgba(5, 150, 105, 0.12);color:#059669">
+                                <x-icon name="shop" :size="20" />
+                            </div>
                             <div class="angle-info">
                                 <div class="angle-title-wrap">
                                     <span class="angle-title">Présentation de la boutique</span>
@@ -180,7 +190,7 @@
                     <label class="tone-card">
                         <input type="radio" name="tone" value="dynamique" {{ old('tone', 'dynamique') === 'dynamique' ? 'checked' : '' }}>
                         <div class="tone-card-body">
-                            <div class="tone-header">⚡ Dynamique & Vendeur</div>
+                            <div class="tone-header">Dynamique & Vendeur</div>
                             <div class="tone-desc">Cuts énergiques toutes les 2s, animations percutantes, rythme entraînant.</div>
                         </div>
                     </label>
@@ -188,7 +198,7 @@
                     <label class="tone-card">
                         <input type="radio" name="tone" value="luxe" {{ old('tone') === 'luxe' ? 'checked' : '' }}>
                         <div class="tone-card-body">
-                            <div class="tone-header">✨ Luxe & Élégant</div>
+                            <div class="tone-header">Luxe & Élégant</div>
                             <div class="tone-desc">Zooms lents Ken Burns, typographie raffinée épurée, musique feutrée.</div>
                         </div>
                     </label>
@@ -196,7 +206,7 @@
                     <label class="tone-card">
                         <input type="radio" name="tone" value="fun" {{ old('tone') === 'fun' ? 'checked' : '' }}>
                         <div class="tone-card-body">
-                            <div class="tone-header">🎉 Fun & Pétillant</div>
+                            <div class="tone-header">Fun & Pétillant</div>
                             <div class="tone-desc">Transitions chaleureuses et vivantes, vocabulaire enthousiaste et direct.</div>
                         </div>
                     </label>
@@ -204,7 +214,7 @@
                     <label class="tone-card">
                         <input type="radio" name="tone" value="urgent" {{ old('tone') === 'urgent' ? 'checked' : '' }}>
                         <div class="tone-card-body">
-                            <div class="tone-header">⏳ Urgent (Offre limitée)</div>
+                            <div class="tone-header">Urgent (Offre limitée)</div>
                             <div class="tone-desc">Rythme accéléré, contrastes forts, alerte stock et appel pressant à l'action.</div>
                         </div>
                     </label>
@@ -212,7 +222,7 @@
                     <label class="tone-card">
                         <input type="radio" name="tone" value="chaleureux" {{ old('tone') === 'chaleureux' ? 'checked' : '' }}>
                         <div class="tone-card-body">
-                            <div class="tone-header">💛 Familial & Chaleureux</div>
+                            <div class="tone-header">Familial & Chaleureux</div>
                             <div class="tone-desc">Transitions douces, ton rassurant et bienveillant axé sur la proximité.</div>
                         </div>
                     </label>
@@ -280,7 +290,9 @@
                     <label class="platform-card">
                         <input type="radio" name="channel" value="tiktok" {{ old('channel', 'tiktok') === 'tiktok' ? 'checked' : '' }}>
                         <div class="platform-card-body">
-                            <div class="platform-icon">🎵</div>
+                            <div class="platform-icon">
+                                <x-icon name="tiktok" :size="20" />
+                            </div>
                             <div class="platform-info">
                                 <strong class="platform-name">TikTok</strong>
                                 <small class="platform-hint">La voix dit : « Le lien est dans la bio »</small>
@@ -291,7 +303,9 @@
                     <label class="platform-card">
                         <input type="radio" name="channel" value="instagram" {{ old('channel') === 'instagram' ? 'checked' : '' }}>
                         <div class="platform-card-body">
-                            <div class="platform-icon">📸</div>
+                            <div class="platform-icon">
+                                <x-icon name="instagram" :size="20" />
+                            </div>
                             <div class="platform-info">
                                 <strong class="platform-name">Instagram Reels</strong>
                                 <small class="platform-hint">La voix dit : « Le lien est dans la bio »</small>
@@ -302,7 +316,9 @@
                     <label class="platform-card">
                         <input type="radio" name="channel" value="whatsapp" {{ old('channel') === 'whatsapp' ? 'checked' : '' }}>
                         <div class="platform-card-body">
-                            <div class="platform-icon">💬</div>
+                            <div class="platform-icon">
+                                <x-icon name="whatsapp" :size="20" />
+                            </div>
                             <div class="platform-info">
                                 <strong class="platform-name">Statut WhatsApp</strong>
                                 <small class="platform-hint">Commande en ligne ou sur WhatsApp</small>
@@ -313,7 +329,9 @@
                     <label class="platform-card">
                         <input type="radio" name="channel" value="facebook" {{ old('channel') === 'facebook' ? 'checked' : '' }}>
                         <div class="platform-card-body">
-                            <div class="platform-icon">👥</div>
+                            <div class="platform-icon">
+                                <x-icon name="facebook" :size="20" />
+                            </div>
                             <div class="platform-info">
                                 <strong class="platform-name">Facebook</strong>
                                 <small class="platform-hint">La voix dit : « Le lien est dans la publication »</small>
@@ -324,7 +342,9 @@
                     <label class="platform-card">
                         <input type="radio" name="channel" value="general" {{ old('channel') === 'general' ? 'checked' : '' }}>
                         <div class="platform-card-body">
-                            <div class="platform-icon">🌐</div>
+                            <div class="platform-icon">
+                                <x-icon name="globe" :size="20" />
+                            </div>
                             <div class="platform-info">
                                 <strong class="platform-name">Tous Réseaux</strong>
                                 <small class="platform-hint">Formulation universelle pour commander en ligne</small>

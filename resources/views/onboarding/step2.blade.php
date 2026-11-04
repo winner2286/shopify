@@ -76,7 +76,7 @@
                     </label>
                     <button type="button" id="btn-geolocation" class="btn btn-ghost btn-sm" onclick="useCurrentLocation()" style="padding:.35rem .85rem;font-size:.82rem;display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--brand-primary);color:var(--brand-primary);border-radius:20px;cursor:pointer;background:transparent" title="Détecter automatiquement la position GPS de votre magasin">
                         <x-icon name="map-pin" :size="14" />
-                        <span id="geo-btn-text">📍 Utiliser ma position actuelle</span>
+                        <span id="geo-btn-text">Utiliser ma position actuelle</span>
                     </button>
                 </div>
                 <div class="hint" style="color:var(--text-soft);margin-bottom:.9rem">
@@ -188,7 +188,7 @@ function useCurrentLocation() {
     }
 
     if (btn) btn.disabled = true;
-    if (btnText) btnText.textContent = "📍 Détection en cours...";
+    if (btnText) btnText.textContent = "Détection en cours...";
 
     navigator.geolocation.getCurrentPosition(
         function (pos) {
@@ -242,7 +242,7 @@ function useCurrentLocation() {
         },
         function (err) {
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "📍 Utiliser ma position actuelle";
+            if (btnText) btnText.textContent = "Utiliser ma position actuelle";
 
             var msg = "Impossible d'obtenir votre position GPS.";
             if (err.code === 1) {

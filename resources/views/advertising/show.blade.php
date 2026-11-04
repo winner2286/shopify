@@ -227,7 +227,7 @@
                 <div class="settings-box studio-audio-box">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;flex-wrap:wrap;gap:.4rem">
                         <h3 class="settings-title" style="margin:0;display:flex;align-items:center;gap:.4rem">
-                            <span style="color:var(--brand-1)">🎙️</span>
+                            <span style="color:var(--brand-1)"><x-icon name="mic" :size="16" /></span>
                             <span>Voix-Off & Musique de la Vidéo</span>
                         </h3>
                         <span id="ad-custom-audio-badge" class="badge {{ $hasCustomVoice ? 'badge-ok' : 'badge-draft' }}" style="font-size:.68rem">
@@ -241,13 +241,13 @@
                     <!-- Sélecteur de mode de voix -->
                     <div class="voice-mode-tabs" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem">
                         <button type="button" id="btn-voice-mode-ai" class="btn-audio-tab {{ ! $hasCustomVoice ? 'active' : '' }}" onclick="switchVoiceMode('ai')">
-                            <div style="font-size:1.15rem;margin-bottom:.15rem">🤖</div>
+                            <div style="margin-bottom:.25rem;color:var(--brand-1)"><x-icon name="bot" :size="22" /></div>
                             <strong style="font-size:.85rem;display:block">Voix-Off IA</strong>
                             <small style="font-size:.7rem;opacity:.8">Synthèse automatique</small>
                         </button>
 
                         <button type="button" id="btn-voice-mode-custom" class="btn-audio-tab {{ $hasCustomVoice ? 'active' : '' }}" onclick="switchVoiceMode('custom')">
-                            <div style="font-size:1.15rem;margin-bottom:.15rem">🎙️</div>
+                            <div style="margin-bottom:.25rem;color:var(--brand-2)"><x-icon name="mic" :size="22" /></div>
                             <strong style="font-size:.85rem;display:block">Ma Propre Voix</strong>
                             <small style="font-size:.7rem;opacity:.8">Micro ou Note vocale</small>
                         </button>
@@ -312,7 +312,9 @@
                     <!-- PANNEAU : MUSIQUE DE FOND & DUCKING AUTOMATIQUE -->
                     <div>
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
-                            <strong style="font-size:.88rem">🎵 Ambiance Musicale de Fond :</strong>
+                            <strong style="font-size:.88rem;display:inline-flex;align-items:center;gap:.35rem">
+                                <x-icon name="music" :size="15" /> Ambiance Musicale de Fond :
+                            </strong>
                             <span class="badge badge-sm badge-draft" style="font-size:.65rem">Ducking auto actif</span>
                         </div>
                         <p style="font-size:.76rem;color:var(--text-soft);margin-bottom:.6rem;line-height:1.35">
@@ -321,32 +323,32 @@
 
                         <div class="tone-buttons-grid" id="music-track-grid">
                             <button type="button" class="btn-tone-chip {{ $musicTrack === 'afrobeat' ? 'selected' : '' }}" data-music-track="afrobeat" onclick="switchMusicTrack('afrobeat')">
-                                <span>⚡ Afrobeat</span>
+                                <span>Afrobeat</span>
                                 <small>Vendeur & Rythmé</small>
                             </button>
 
                             <button type="button" class="btn-tone-chip {{ $musicTrack === 'amapiano' ? 'selected' : '' }}" data-music-track="amapiano" onclick="switchMusicTrack('amapiano')">
-                                <span>💃 Amapiano</span>
+                                <span>Amapiano</span>
                                 <small>Tendance & Dynamique</small>
                             </button>
 
                             <button type="button" class="btn-tone-chip {{ $musicTrack === 'luxe' ? 'selected' : '' }}" data-music-track="luxe" onclick="switchMusicTrack('luxe')">
-                                <span>✨ Luxe & Chic</span>
+                                <span>Luxe & Chic</span>
                                 <small>Élégant & Feutré</small>
                             </button>
 
                             <button type="button" class="btn-tone-chip {{ $musicTrack === 'urgent' ? 'selected' : '' }}" data-music-track="urgent" onclick="switchMusicTrack('urgent')">
-                                <span>⏳ Flash Promo</span>
+                                <span>Flash Promo</span>
                                 <small>Rythme pressant</small>
                             </button>
 
                             <button type="button" class="btn-tone-chip {{ $musicTrack === 'custom' ? 'selected' : '' }}" data-music-track="custom" id="btn-custom-music-chip" onclick="triggerCustomMusicUpload()">
-                                <span>📁 Mon MP3</span>
+                                <span>Mon MP3</span>
                                 <small id="custom-music-label">{{ $hasCustomMusic ? 'Son personnalisé' : 'Importer un son' }}</small>
                             </button>
 
                             <button type="button" class="btn-tone-chip {{ $musicTrack === 'none' ? 'selected' : '' }}" data-music-track="none" onclick="switchMusicTrack('none')">
-                                <span>🔇 Sans Musique</span>
+                                <span>Sans Musique</span>
                                 <small>Voix pure</small>
                             </button>
                         </div>
@@ -367,27 +369,27 @@
 
                     <div class="tone-buttons-grid">
                         <button type="button" class="btn-tone-chip {{ $tone === 'dynamique' ? 'selected' : '' }}" data-studio-tone="dynamique">
-                            <span>⚡ Dynamique</span>
+                            <span>Dynamique</span>
                             <small>Cuts rapides • 124 BPM</small>
                         </button>
 
                         <button type="button" class="btn-tone-chip {{ $tone === 'luxe' ? 'selected' : '' }}" data-studio-tone="luxe">
-                            <span>✨ Luxe & Sobre</span>
+                            <span>Luxe & Sobre</span>
                             <small>Ken Burns lent • Feutré</small>
                         </button>
 
                         <button type="button" class="btn-tone-chip {{ $tone === 'fun' ? 'selected' : '' }}" data-studio-tone="fun">
-                            <span>🎉 Fun & Pétillant</span>
+                            <span>Fun & Pétillant</span>
                             <small>Rebonds vifs • Entraînant</small>
                         </button>
 
                         <button type="button" class="btn-tone-chip {{ $tone === 'urgent' ? 'selected' : '' }}" data-studio-tone="urgent">
-                            <span>⏳ Urgent (Offre)</span>
+                            <span>Urgent (Offre)</span>
                             <small>Tempo serré • 128 BPM</small>
                         </button>
 
                         <button type="button" class="btn-tone-chip {{ $tone === 'chaleureux' ? 'selected' : '' }}" data-studio-tone="chaleureux">
-                            <span>💛 Familial</span>
+                            <span>Familial</span>
                             <small>Glissements doux</small>
                         </button>
                     </div>
@@ -406,27 +408,27 @@
 
                     <div class="tone-buttons-grid">
                         <button type="button" class="btn-tone-chip {{ $platform === 'tiktok' ? 'selected' : '' }}" data-studio-platform="tiktok">
-                            <span>🎵 TikTok</span>
+                            <span style="display:inline-flex;align-items:center;gap:.35rem"><x-icon name="tiktok" :size="14" /> TikTok</span>
                             <small>« Lien dans la bio »</small>
                         </button>
 
                         <button type="button" class="btn-tone-chip {{ $platform === 'instagram' ? 'selected' : '' }}" data-studio-platform="instagram">
-                            <span>📸 Instagram</span>
+                            <span style="display:inline-flex;align-items:center;gap:.35rem"><x-icon name="instagram" :size="14" /> Instagram</span>
                             <small>« Lien dans la bio »</small>
                         </button>
 
                         <button type="button" class="btn-tone-chip {{ $platform === 'whatsapp' ? 'selected' : '' }}" data-studio-platform="whatsapp">
-                            <span>💬 WhatsApp</span>
+                            <span style="display:inline-flex;align-items:center;gap:.35rem"><x-icon name="whatsapp" :size="14" /> WhatsApp</span>
                             <small>« En ligne ou WhatsApp »</small>
                         </button>
 
                         <button type="button" class="btn-tone-chip {{ $platform === 'facebook' ? 'selected' : '' }}" data-studio-platform="facebook">
-                            <span>👥 Facebook</span>
+                            <span style="display:inline-flex;align-items:center;gap:.35rem"><x-icon name="facebook" :size="14" /> Facebook</span>
                             <small>« Lien en publication »</small>
                         </button>
 
                         <button type="button" class="btn-tone-chip {{ $platform === 'general' ? 'selected' : '' }}" data-studio-platform="general">
-                            <span>🌐 Tous Réseaux</span>
+                            <span style="display:inline-flex;align-items:center;gap:.35rem"><x-icon name="globe" :size="14" /> Tous Réseaux</span>
                             <small>« Lien boutique »</small>
                         </button>
                     </div>
@@ -451,7 +453,7 @@
                                     @if (!empty($pItem['imageUrl']))
                                         <img src="{{ $pItem['imageUrl'] }}" alt="{{ $pItem['title'] }}">
                                     @else
-                                        <span>🛍️</span>
+                                        <x-icon name="shopping-bag" :size="20" style="color:var(--text-soft)" />
                                     @endif
                                 </div>
                                 <div style="flex:1;min-width:0">
@@ -560,7 +562,7 @@
                                 @if ($pImg)
                                     <img src="{{ $pImg->url }}" alt="{{ $sp->title }}">
                                 @else
-                                    <span>📦</span>
+                                    <x-icon name="package" :size="20" style="color:var(--text-soft)" />
                                 @endif
                             </div>
                             <div class="product-pick-details">

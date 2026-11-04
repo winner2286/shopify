@@ -319,7 +319,7 @@
                     </label>
                     <button type="button" id="btn-settings-geo" class="btn btn-ghost btn-sm" onclick="useSettingsLocation()" style="padding:.3rem .75rem;font-size:.82rem;display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--brand-primary);color:var(--brand-primary);border-radius:20px;cursor:pointer;background:transparent" title="Détecter automatiquement ma position GPS">
                         <x-icon name="map-pin" :size="14" />
-                        <span id="settings-geo-text">📍 Utiliser ma position actuelle</span>
+                        <span id="settings-geo-text">Utiliser ma position actuelle</span>
                     </button>
                 </div>
                 <p class="hint" style="margin-top:0;margin-bottom:.8rem">
@@ -462,7 +462,7 @@ function useSettingsLocation() {
     }
 
     if (btn) btn.disabled = true;
-    if (btnText) btnText.textContent = "📍 Détection en cours...";
+    if (btnText) btnText.textContent = "Détection en cours...";
 
     navigator.geolocation.getCurrentPosition(
         function (pos) {
@@ -516,7 +516,7 @@ function useSettingsLocation() {
         },
         function (err) {
             if (btn) btn.disabled = false;
-            if (btnText) btnText.textContent = "📍 Utiliser ma position actuelle";
+            if (btnText) btnText.textContent = "Utiliser ma position actuelle";
 
             var msg = "Impossible d'obtenir votre position GPS.";
             if (err.code === 1) {

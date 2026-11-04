@@ -125,7 +125,7 @@
                     custom_id: 'SUB:{{ $subscription->id }}:{{ $plan->id }}',
                     description: 'Abonnement {{ addslashes($plan->name) }} Zanika ({{ $plan->monthly_price }} FCFA)',
                     currency: 'XOF',
-                    buttonText: 'Payer {{ number_format($plan->monthly_price, 0, ',', ' ') }} FCFA via FeexPay 💳',
+                    buttonText: 'Payer {{ number_format($plan->monthly_price, 0, ',', ' ') }} FCFA via FeexPay',
                     callback: function(response) {
                         if (response && (response.status === 'SUCCESSFUL' || response.status === 'SUCCESS')) {
                             window.location.href = '{{ route('feexpay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}&reference=' + (response.reference || '');

@@ -44,10 +44,10 @@
                 <div style="margin-bottom:1.2rem">
                     <label style="display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem">Canal de diffusion</label>
                     <select id="channel-select" class="form-control" style="width:100%;padding:.6rem;border-radius:var(--radius-sm);background:var(--bg-soft);border:1px solid var(--border);color:var(--text)">
-                        <option value="whatsapp">📱 WhatsApp (Statut ou Message Broadcast)</option>
-                        <option value="facebook_ads">🎯 Facebook & Instagram Ads (Meta)</option>
-                        <option value="sms">💬 SMS Marketing (< 160 caractères)</option>
-                        <option value="bundle_offer">🎁 Offre Pack Duo / Bundling Promo</option>
+                        <option value="whatsapp">WhatsApp (Statut ou Message Broadcast)</option>
+                        <option value="facebook_ads">Facebook & Instagram Ads (Meta)</option>
+                        <option value="sms">SMS Marketing (< 160 caractères)</option>
+                        <option value="bundle_offer">Offre Pack Duo / Bundling Promo</option>
                     </select>
                 </div>
 
@@ -55,7 +55,7 @@
                 <div style="margin-bottom:1.2rem">
                     <label style="display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem">Article concerné</label>
                     <select id="product-select" class="form-control" style="width:100%;padding:.6rem;border-radius:var(--radius-sm);background:var(--bg-soft);border:1px solid var(--border);color:var(--text)">
-                        <option value="">✨ Promotion globale de la boutique (Tous articles)</option>
+                        <option value="">Promotion globale de la boutique (Tous articles)</option>
                         @foreach ($products as $p)
                             <option value="{{ $p->id }}" {{ $selectedProductId === $p->id ? 'selected' : '' }}>
                                 {{ $p->title }} ({{ number_format($p->price, 0, ',', ' ') }} FCFA)
@@ -68,10 +68,10 @@
                 <div style="margin-bottom:1.2rem">
                     <label style="display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem">Angle d'accroche</label>
                     <select id="angle-select" class="form-control" style="width:100%;padding:.6rem;border-radius:var(--radius-sm);background:var(--bg-soft);border:1px solid var(--border);color:var(--text)">
-                        <option value="urgency">⚡ Urgence & Rareté (Stocks limités, 48h chrono)</option>
-                        <option value="discount">🏷️ Remise & Bon Plan (Prix exceptionnel)</option>
-                        <option value="social_proof">⭐ Preuve Sociale (Best-seller plébiscité)</option>
-                        <option value="benefit">💡 Bénéfice Direct (Solution à un besoin clé)</option>
+                        <option value="urgency">Urgence & Rareté (Stocks limités, 48h chrono)</option>
+                        <option value="discount">Remise & Bon Plan (Prix exceptionnel)</option>
+                        <option value="social_proof">Preuve Sociale (Best-seller plébiscité)</option>
+                        <option value="benefit">Bénéfice Direct (Solution à un besoin clé)</option>
                     </select>
                 </div>
 
@@ -112,7 +112,7 @@
             </div>
 
             <div id="loading-state" class="card" style="display:none;padding:3rem 2rem;text-align:center">
-                <div style="font-size:2.5rem;margin-bottom:1rem;animation:bounce 1.5s infinite">✨</div>
+                <div style="display:flex;justify-content:center;margin-bottom:1rem;color:var(--brand-1)"><x-icon name="sparkles" size="36" /></div>
                 <h3 style="margin:0 0 .5rem 0;font-size:1.2rem">Rédaction des textes publicitaires en cours...</h3>
                 <p style="margin:0;color:var(--text-soft);font-size:.9rem">L'IA analyse le produit et formule 3 angles psychologiques optimisés.</p>
             </div>
@@ -187,21 +187,21 @@ async function generateCampaign(e) {
                         </div>
                         <div style="display:flex;gap:.5rem">
                             <button onclick="copyToClipboard(this, ${JSON.stringify(v.content)})" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
-                                📋 Copier
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg> Copier
                             </button>
                             <a href="${whatsappUrl}" target="_blank" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:.3rem;background:#25D366;border-color:#25D366;color:#fff">
-                                📲 Envoyer sur WhatsApp
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> WhatsApp
                             </a>
                         </div>
                     </div>
 
-                    ${v.hook ? `<div style="font-size:.85rem;color:var(--brand-2);font-weight:600;margin-bottom:.6rem">⚡ Accroche : ${v.hook}</div>` : ''}
+                    ${v.hook ? `<div style="font-size:.85rem;color:var(--brand-2);font-weight:600;margin-bottom:.6rem">Accroche : ${v.hook}</div>` : ''}
 
                     <div style="background:var(--bg-soft);padding:1.2rem;border-radius:var(--radius-sm);font-size:.92rem;line-height:1.65;white-space:pre-wrap;border:1px solid var(--border);color:var(--text);margin-bottom:.8rem">${escapeHtml(v.content)}</div>
 
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.8rem;font-size:.8rem;color:var(--text-soft)">
                         ${v.call_to_action ? `<div><strong>CTA recommandé :</strong> ${escapeHtml(v.call_to_action)}</div>` : ''}
-                        ${v.targeting_tip ? `<div>💡 <strong>Conseil :</strong> ${escapeHtml(v.targeting_tip)}</div>` : ''}
+                        ${v.targeting_tip ? `<div><strong>Conseil :</strong> ${escapeHtml(v.targeting_tip)}</div>` : ''}
                     </div>
                 `;
 

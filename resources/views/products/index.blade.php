@@ -133,8 +133,8 @@
                                     <strong style="color:var(--brand-1);font-size:.95rem">{{ number_format($prod->price, 0, ',', ' ') }} FCFA</strong>
                                 </div>
                                 <div style="display:flex;gap:.35rem;align-items:center">
-                                    <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" style="padding:.25rem .5rem;font-size:.8rem" title="Créer une affiche promo 1-clic">
-                                        🎨 Affiche
+                                    <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" style="padding:.25rem .5rem;font-size:.8rem;display:inline-flex;align-items:center;gap:.3rem" title="Créer une affiche promo 1-clic">
+                                        <x-icon name="image" size="13" /> <span>Affiche</span>
                                     </a>
                                     <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm" style="padding:.25rem .65rem;font-size:.8rem">Modifier</a>
                                 </div>
@@ -207,8 +207,8 @@
                                 </td>
                                 <td style="text-align:right">
                                     <div style="display:inline-flex;gap:.35rem;align-items:center">
-                                        <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" title="Créer une affiche promo 1-clic pour ce produit">
-                                            🎨 Affiche
+                                        <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem" title="Créer une affiche promo 1-clic pour ce produit">
+                                            <x-icon name="image" size="13" /> <span>Affiche</span>
                                         </a>
                                         <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm">Modifier</a>
                                     </div>

@@ -180,7 +180,7 @@
                                 @endif
                                 @if ($sub && $sub->trial_reminder_sent_at)
                                     <div style="font-size:.72rem;color:var(--text-soft);margin-top:.2rem;display:inline-flex;align-items:center;gap:.25rem">
-                                        <span>✉️ Rappel envoyé le {{ $sub->trial_reminder_sent_at->format('d/m') }}</span>
+                                        <span>Rappel envoyé le {{ $sub->trial_reminder_sent_at->format('d/m') }}</span>
                                     </div>
                                 @endif
                             @else

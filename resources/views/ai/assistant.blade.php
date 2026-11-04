@@ -134,7 +134,7 @@
                         
                         <div class="ai-suggestions-grid">
                             <button type="button" class="ai-suggestion-chip" onclick="applySuggestion('Fais-moi un état des lieux complet de ma boutique et de mes stocks.')">
-                                <span class="chip-icon">📦</span>
+                                <span class="chip-icon"><x-icon name="package" :size="20" /></span>
                                 <div>
                                     <strong>État des stocks</strong>
                                     <span>Ruptures et réapprovisionnements</span>
@@ -142,7 +142,7 @@
                             </button>
 
                             <button type="button" class="ai-suggestion-chip" onclick="applySuggestion('Donne-moi le résumé de mes commandes et du chiffre d\'affaires de cette semaine.')">
-                                <span class="chip-icon">📊</span>
+                                <span class="chip-icon"><x-icon name="chart" :size="20" /></span>
                                 <div>
                                     <strong>Commandes & Chiffre d'Affaires</strong>
                                     <span>Synthèse des ventes de la semaine</span>
@@ -150,7 +150,7 @@
                             </button>
 
                             <button type="button" class="ai-suggestion-chip" onclick="applySuggestion('Quelles sont les commandes en attente de confirmation Cash on Delivery (COD) ?')">
-                                <span class="chip-icon">🛵</span>
+                                <span class="chip-icon"><x-icon name="truck" :size="20" /></span>
                                 <div>
                                     <strong>Commandes COD en attente</strong>
                                     <span>Validation et relances clients</span>
@@ -158,7 +158,7 @@
                             </button>
 
                             <button type="button" class="ai-suggestion-chip" onclick="applySuggestion('Analyse mes ventes des 30 derniers jours et propose-moi 3 recommandations d\'optimisation.')">
-                                <span class="chip-icon">📈</span>
+                                <span class="chip-icon"><x-icon name="trending-up" :size="20" /></span>
                                 <div>
                                     <strong>Conseiller Commercial</strong>
                                     <span>Diagnostic & stratégie de vente</span>
@@ -228,8 +228,8 @@
 
                                     <div class="ai-bubble-footer" style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px">
                                         <div class="ai-feedback-actions" id="feedback-actions-{{ $msg->id }}">
-                                            <button type="button" class="ai-feedback-btn" onclick="submitFeedback({{ $msg->id }}, 'helpful')" title="Réponse utile">👍</button>
-                                            <button type="button" class="ai-feedback-btn" onclick="openNegativeFeedbackModal({{ $msg->id }})" title="Réponse à améliorer">👎</button>
+                                            <button type="button" class="ai-feedback-btn" onclick="submitFeedback({{ $msg->id }}, 'helpful')" title="Réponse utile" style="display:inline-flex;align-items:center;padding:2px 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3Z"/></svg></button>
+                                            <button type="button" class="ai-feedback-btn" onclick="openNegativeFeedbackModal({{ $msg->id }})" title="Réponse à améliorer" style="display:inline-flex;align-items:center;padding:2px 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3Z"/></svg></button>
                                         </div>
                                         <div class="ai-bubble-time">{{ $msg->created_at->format('H:i') }}</div>
                                     </div>
@@ -278,7 +278,7 @@
                     </div>
                 </form>
                 <div class="ai-input-hint">
-                    <span>💡 <strong>Entrée</strong> pour envoyer, <strong>Maj+Entrée</strong> pour un saut de ligne. Connecté à la base de données sécurisée.</span>
+                    <span><strong>Entrée</strong> pour envoyer, <strong>Maj+Entrée</strong> pour un saut de ligne. Connecté à la base de données sécurisée.</span>
                 </div>
             </footer>
         </main>
@@ -1562,7 +1562,7 @@ async function handleChatSubmit(e) {
         typingIndicator.style.display = 'none';
 
         if (data.status === 'quota_exceeded') {
-            appendMessageToUi('assistant', `⚠️ **Crédits Épuisés** : ${data.message}`);
+            appendMessageToUi('assistant', `**Crédits Épuisés** : ${data.message}`);
         } else if (data.status === 'success') {
             document.getElementById('current-conversation-id').value = data.conversation_id;
             document.getElementById('current-chat-title').innerText = data.conversation_title;
@@ -1616,7 +1616,7 @@ async function submitActionDecision(messageId, approved) {
         const data = await res.json();
         if (data.status === 'success') {
             if (card) card.remove();
-            appendMessageToUi('assistant', approved ? "✅ **Action confirmée et appliquée à la boutique !**" : "🚫 Action annulée.");
+            appendMessageToUi('assistant', approved ? "**Action confirmée et appliquée à la boutique !**" : "Action annulée.");
         }
     } catch (err) {
         console.error(err);
@@ -1671,8 +1671,8 @@ function appendMessageToUi(role, content, time = '', actionRequired = null, mess
 
         const feedbackHtml = messageId ? `
             <div class="ai-feedback-actions" id="feedback-actions-${messageId}">
-                <button type="button" class="ai-feedback-btn" onclick="submitFeedback(${messageId}, 'helpful')" title="Réponse utile">👍</button>
-                <button type="button" class="ai-feedback-btn" onclick="openNegativeFeedbackModal(${messageId})" title="Réponse à améliorer">👎</button>
+                <button type="button" class="ai-feedback-btn" onclick="submitFeedback(${messageId}, 'helpful')" title="Réponse utile" style="display:inline-flex;align-items:center;padding:2px 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3Z"/></svg></button>
+                <button type="button" class="ai-feedback-btn" onclick="openNegativeFeedbackModal(${messageId})" title="Réponse à améliorer" style="display:inline-flex;align-items:center;padding:2px 4px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3Z"/></svg></button>
             </div>
         ` : '<div></div>';
 
@@ -1794,7 +1794,7 @@ async function submitFeedback(messageId, rating, comment = '', category = 'gener
         const data = await res.json();
         if (container) {
             if (rating === 'helpful') {
-                container.innerHTML = '<span style="font-size:0.75rem;color:#10b981;font-weight:600">👍 Merci !</span>';
+                container.innerHTML = '<span style="font-size:0.75rem;color:#10b981;font-weight:600">✓ Merci !</span>';
             } else {
                 container.innerHTML = '<span style="font-size:0.75rem;color:#f59e0b;font-weight:600">✓ Signalé</span>';
             }
@@ -1837,7 +1837,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="card" style="max-width:440px;width:92%;padding:1.5rem;border-radius:14px;box-shadow:0 20px 40px rgba(0,0,0,0.4)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
             <h4 style="margin:0;font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
-                <span>👎</span> Aidez-nous à améliorer cette réponse
+                Aidez-nous à améliorer cette réponse
             </h4>
             <button type="button" class="btn btn-ghost btn-sm" onclick="closeFeedbackModal()" style="padding:.2rem .5rem">✕</button>
         </div>

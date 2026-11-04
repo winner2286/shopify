@@ -1070,7 +1070,7 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        const fullCta = '💬 ' + ctaText;
+        const fullCta = ctaText;
         const maxCtaW = ctaW - 50;
         while (ctx.measureText(fullCta).width > maxCtaW && ctaFontSize > 18) {
             ctaFontSize -= 2;
@@ -1225,7 +1225,7 @@
             ctx.save();
             ctx.fillStyle = theme.priceColor;
             let linkFontSize = 28;
-            const cleanUrl = `🌐 Visitez notre boutique : ${shopUrl.replace(/^https?:\/\//, '')}`;
+            const cleanUrl = `Visitez notre boutique : ${shopUrl.replace(/^https?:\/\//, '')}`;
             ctx.font = `700 ${linkFontSize}px "Outfit", sans-serif`;
             while (ctx.measureText(cleanUrl).width > W - 140 && linkFontSize > 18) {
                 linkFontSize -= 2;
@@ -1256,7 +1256,7 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        const fullCta = '💬 ' + ctaText;
+        const fullCta = ctaText;
         const maxCtaW = ctaW - 50;
         while (ctx.measureText(fullCta).width > maxCtaW && ctaFontSize > 18) {
             ctaFontSize -= 2;

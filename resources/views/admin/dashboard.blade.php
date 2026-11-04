@@ -28,7 +28,7 @@
                 <x-icon name="diamond" size="15" /> Formules & Tarifs
             </a>
             <a href="{{ route('admin.maintenance') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem;{{ $isMaintenanceActive ? 'color:#ef4444;font-weight:700' : '' }}">
-                <x-icon name="wrench" size="15" /> Maintenance {{ $isMaintenanceActive ? '(🔴)' : '' }}
+                <x-icon name="wrench" size="15" /> Maintenance {{ $isMaintenanceActive ? '(Actif)' : '' }}
             </a>
         </div>
     </div>
@@ -44,7 +44,7 @@
         <div class="card" style="padding:1.25rem;border-left:4px solid {{ $isMaintenanceActive ? '#ef4444' : '#22c55e' }}">
             <div style="font-size:.85rem;color:var(--text-soft)">Statut Plateforme</div>
             <div style="font-size:1.25rem;font-weight:800;font-family:var(--font-display);margin:.3rem 0;color:{{ $isMaintenanceActive ? '#ef4444' : '#22c55e' }}">
-                {{ $isMaintenanceActive ? '🔴 En Maintenance' : '🟢 En Ligne' }}
+                {{ $isMaintenanceActive ? 'En Maintenance' : 'En Ligne' }}
             </div>
             <a href="{{ route('admin.maintenance') }}" style="font-size:.8rem;color:var(--brand-primary);text-decoration:none;font-weight:600">
                 Gérer la maintenance →

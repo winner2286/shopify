@@ -32,7 +32,7 @@
         </div>
 
         <div class="card" style="padding:1.25rem;border-radius:12px;border-left:4px solid #10b981">
-            <div style="font-size:0.85rem;color:#10b981;font-weight:600;margin-bottom:.25rem">👍 Réponses Utiles</div>
+            <div style="font-size:0.85rem;color:#10b981;font-weight:600;margin-bottom:.25rem">Réponses Utiles</div>
             <div style="font-size:1.8rem;font-weight:800;color:var(--text)">{{ number_format($stats['helpful']) }}</div>
             <div style="font-size:0.8rem;color:var(--text-soft);margin-top:.3rem">
                 {{ $stats['total'] > 0 ? round(($stats['helpful'] / $stats['total']) * 100, 1) : 0 }}% de satisfaction
@@ -40,13 +40,13 @@
         </div>
 
         <div class="card" style="padding:1.25rem;border-radius:12px;border-left:4px solid #ef4444">
-            <div style="font-size:0.85rem;color:#ef4444;font-weight:600;margin-bottom:.25rem">❌ Réponses Incorrectes</div>
+            <div style="font-size:0.85rem;color:#ef4444;font-weight:600;margin-bottom:.25rem">Réponses Incorrectes</div>
             <div style="font-size:1.8rem;font-weight:800;color:var(--text)">{{ number_format($stats['incorrect']) }}</div>
             <div style="font-size:0.8rem;color:var(--text-soft);margin-top:.3rem">À corriger dans le RAG</div>
         </div>
 
         <div class="card" style="padding:1.25rem;border-radius:12px;border-left:4px solid #f59e0b">
-            <div style="font-size:0.85rem;color:#f59e0b;font-weight:600;margin-bottom:.25rem">⚠️ Incomplètes ou Peu Pertinentes</div>
+            <div style="font-size:0.85rem;color:#f59e0b;font-weight:600;margin-bottom:.25rem">Incomplètes ou Peu Pertinentes</div>
             <div style="font-size:1.8rem;font-weight:800;color:var(--text)">{{ number_format($stats['incomplete'] + $stats['irrelevant']) }}</div>
             <div style="font-size:0.8rem;color:var(--text-soft);margin-top:.3rem">Précisions documentaires requises</div>
         </div>
@@ -55,10 +55,10 @@
     <!-- FILTRES -->
     <div style="display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap">
         <a href="{{ route('admin.ai_feedbacks') }}" class="btn btn-sm {{ empty($ratingFilter) ? 'btn-primary' : 'btn-ghost' }}">Tous ({{ $stats['total'] }})</a>
-        <a href="{{ route('admin.ai_feedbacks', ['rating' => 'helpful']) }}" class="btn btn-sm {{ $ratingFilter === 'helpful' ? 'btn-primary' : 'btn-ghost' }}">👍 Utiles ({{ $stats['helpful'] }})</a>
-        <a href="{{ route('admin.ai_feedbacks', ['rating' => 'incorrect']) }}" class="btn btn-sm {{ $ratingFilter === 'incorrect' ? 'btn-primary' : 'btn-ghost' }}">❌ Incorrects ({{ $stats['incorrect'] }})</a>
-        <a href="{{ route('admin.ai_feedbacks', ['rating' => 'incomplete']) }}" class="btn btn-sm {{ $ratingFilter === 'incomplete' ? 'btn-primary' : 'btn-ghost' }}">⚠️ Incomplets ({{ $stats['incomplete'] }})</a>
-        <a href="{{ route('admin.ai_feedbacks', ['rating' => 'irrelevant']) }}" class="btn btn-sm {{ $ratingFilter === 'irrelevant' ? 'btn-primary' : 'btn-ghost' }}">❓ Peu pertinents ({{ $stats['irrelevant'] }})</a>
+        <a href="{{ route('admin.ai_feedbacks', ['rating' => 'helpful']) }}" class="btn btn-sm {{ $ratingFilter === 'helpful' ? 'btn-primary' : 'btn-ghost' }}">Utiles ({{ $stats['helpful'] }})</a>
+        <a href="{{ route('admin.ai_feedbacks', ['rating' => 'incorrect']) }}" class="btn btn-sm {{ $ratingFilter === 'incorrect' ? 'btn-primary' : 'btn-ghost' }}">Incorrects ({{ $stats['incorrect'] }})</a>
+        <a href="{{ route('admin.ai_feedbacks', ['rating' => 'incomplete']) }}" class="btn btn-sm {{ $ratingFilter === 'incomplete' ? 'btn-primary' : 'btn-ghost' }}">Incomplets ({{ $stats['incomplete'] }})</a>
+        <a href="{{ route('admin.ai_feedbacks', ['rating' => 'irrelevant']) }}" class="btn btn-sm {{ $ratingFilter === 'irrelevant' ? 'btn-primary' : 'btn-ghost' }}">Peu pertinents ({{ $stats['irrelevant'] }})</a>
     </div>
 
     <!-- TABLE DES RETOURS -->
@@ -84,13 +84,13 @@
                             </td>
                             <td style="padding:1rem;white-space:nowrap">
                                 @if($fb->rating === 'helpful')
-                                    <span class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;font-weight:600">👍 Utile</span>
+                                    <span class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;font-weight:600">Utile</span>
                                 @elseif($fb->rating === 'incorrect')
-                                    <span class="badge" style="background:rgba(239,68,68,0.12);color:#ef4444;font-weight:600">❌ Incorrect</span>
+                                    <span class="badge" style="background:rgba(239,68,68,0.12);color:#ef4444;font-weight:600">Incorrect</span>
                                 @elseif($fb->rating === 'incomplete')
-                                    <span class="badge" style="background:rgba(245,158,11,0.12);color:#f59e0b;font-weight:600">⚠️ Incomplet</span>
+                                    <span class="badge" style="background:rgba(245,158,11,0.12);color:#f59e0b;font-weight:600">Incomplet</span>
                                 @else
-                                    <span class="badge" style="background:rgba(100,116,139,0.12);color:#64748b;font-weight:600">❓ Hors-sujet</span>
+                                    <span class="badge" style="background:rgba(100,116,139,0.12);color:#64748b;font-weight:600">Hors-sujet</span>
                                 @endif
                             </td>
                             <td style="padding:1rem;color:var(--text)">

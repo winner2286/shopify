@@ -56,7 +56,7 @@
     <!-- LISTE DES MÉMOIRES PAR CATÉGORIE -->
     @if($memories->isEmpty())
         <div class="card" style="text-align:center;padding:3.5rem 1.5rem;border-radius:12px">
-            <div style="font-size:2.5rem;margin-bottom:1rem">🧠</div>
+            <div style="margin-bottom:1rem;color:var(--brand-1);display:flex;justify-content:center"><x-icon name="sparkles" size="40" /></div>
             <h3 style="margin-bottom:.5rem">Aucune mémoire enregistrée pour le moment</h3>
             <p style="color:var(--text-soft);max-width:500px;margin:0 auto 1.5rem">
                 Discutez avec votre copilote ou ajoutez manuellement vos préférences pour qu'il s'adapte à vos habitudes (ex: zone de livraison prioritaire, objectifs de vente, canaux de discussion).
@@ -71,7 +71,7 @@
                 <div class="card" style="padding:1.5rem;border-radius:14px">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;border-bottom:1px solid var(--border);padding-bottom:.75rem">
                         <div style="display:flex;align-items:center;gap:.6rem">
-                            <span style="font-size:1.2rem">📌</span>
+                            <x-icon name="tag" size="16" style="color:var(--brand-1)" />
                             <h3 style="margin:0;font-size:1.1rem;font-weight:700">
                                 {{ $categoriesLabels[$category] ?? ucfirst($category) }}
                             </h3>
@@ -104,9 +104,9 @@
                                 <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;color:var(--text-soft);border-top:1px dashed var(--border);padding-top:.5rem">
                                     <span>
                                         @if($m->source === 'manual_merchant')
-                                            ✍️ Défini par vous
+                                            Défini par vous
                                         @else
-                                            🤖 Appris au fil de l'eau
+                                            Appris au fil de l'eau
                                         @endif
                                     </span>
                                     <span>
@@ -126,7 +126,7 @@
 <div id="add-memory-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(3px)">
     <div class="card" style="max-width:480px;width:92%;padding:1.5rem;border-radius:14px;box-shadow:0 20px 40px rgba(0,0,0,0.4)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-            <h4 style="margin:0;font-size:1.15rem">🧠 Ajouter une consigne à l'Assistant</h4>
+            <h4 style="margin:0;font-size:1.15rem">Ajouter une consigne à l'Assistant</h4>
             <button type="button" class="btn btn-ghost btn-sm" onclick="closeAddMemoryModal()" style="padding:.2rem .5rem">✕</button>
         </div>
 

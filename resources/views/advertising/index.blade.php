@@ -77,10 +77,11 @@
         </div>
 
         <div class="ads-header-btn-row">
-            <a href="{{ route('ads.flyers') }}" class="btn btn-sm btn-flyer-cta">
-                <span>🎨 + Affiche Promo</span>
+            <a href="{{ route('ads.flyers') }}" class="btn btn-sm btn-flyer-cta" style="display:inline-flex;align-items:center;gap:.4rem">
+                <x-icon name="image" :size="15" />
+                <span>+ Affiche Promo</span>
             </a>
-            <a href="{{ route('ads.create') }}" class="btn btn-primary btn-sm btn-video-cta">
+            <a href="{{ route('ads.create') }}" class="btn btn-primary btn-sm btn-video-cta" style="display:inline-flex;align-items:center;gap:.4rem">
                 <x-icon name="sparkles" :size="15" />
                 <span>+ Vidéo IA</span>
             </a>
@@ -90,13 +91,16 @@
     <!-- Onglets Studio avec défilement horizontal fluide -->
     <div class="ads-tabs-row">
         <a href="{{ route('ads.index') }}" class="btn btn-sm btn-primary" style="display:inline-flex;align-items:center;gap:.4rem">
-            <span>🎬 Bibliothèque Vidéos IA</span>
+            <x-icon name="video" :size="15" />
+            <span>Bibliothèque Vidéos IA</span>
         </a>
         <a href="{{ route('ads.flyers') }}" class="btn btn-sm btn-ghost" style="display:inline-flex;align-items:center;gap:.4rem">
-            <span>🎨 Affiches & Statuts WhatsApp</span>
+            <x-icon name="image" :size="15" />
+            <span>Affiches & Statuts WhatsApp</span>
         </a>
         <a href="{{ route('ads.create') }}" class="btn btn-sm btn-ghost" style="display:inline-flex;align-items:center;gap:.4rem">
-            <span>✨ Nouvelle Vidéo IA</span>
+            <x-icon name="sparkles" :size="15" />
+            <span>Nouvelle Vidéo IA</span>
         </a>
     </div>
 

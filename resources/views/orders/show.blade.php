@@ -18,7 +18,7 @@
         <div class="header-actions" style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem">
             <!-- Option 3 : Dispatch Livreur -->
             <button type="button" onclick="openDispatchModal()" class="btn btn-sm" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#fff;border:none;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 12px rgba(245,158,11,0.35);font-weight:600">
-                <span style="font-size:1.1rem;line-height:1">🛵</span> Transmettre au Livreur
+                <x-icon name="truck" size="16" /> Transmettre au Livreur
             </button>
 
             <!-- Option 2 : Reçu / Facture Pro -->
@@ -269,7 +269,7 @@
             <div class="card" style="margin-bottom:1.5rem;border-left:4px solid #f59e0b;background:linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, #f59e0b 4%), var(--surface))">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem">
                     <div style="display:flex;align-items:center;gap:.6rem">
-                        <span style="font-size:1.4rem">🛵</span>
+                        <x-icon name="truck" size="22" style="color:#d97706" />
                         <h3 style="margin:0;font-size:1.1rem">Mission Livreur Moto</h3>
                     </div>
                     @if ($order->status === 'shipped')
@@ -283,15 +283,15 @@
 
                 <div style="font-size:.88rem;color:var(--text-soft);margin-bottom:1rem;line-height:1.45">
                     @if ($order->payment_status === 'paid')
-                        <span style="color:var(--ok);font-weight:600">✅ Commande payée en ligne :</span> le livreur ne doit rien encaisser au client.
+                        <span style="color:var(--ok);font-weight:600;display:inline-flex;align-items:center;gap:.3rem"><x-icon name="check" size="14" /> Commande payée en ligne :</span> le livreur ne doit rien encaisser au client.
                     @else
-                        <span style="color:#d97706;font-weight:700">💵 À encaisser du client :</span> <strong>{{ number_format($order->total, 0, ',', ' ') }} FCFA</strong> à reverser à la boutique.
+                        <span style="color:#d97706;font-weight:700">À encaisser du client :</span> <strong>{{ number_format($order->total, 0, ',', ' ') }} FCFA</strong> à reverser à la boutique.
                     @endif
                 </div>
 
                 <div style="display:flex;flex-direction:column;gap:.5rem">
                     <button type="button" onclick="openDispatchModal()" class="btn btn-block" style="background:linear-gradient(135deg, #f59e0b, #d97706);color:#fff;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;box-shadow:0 4px 14px rgba(245,158,11,0.35);border:none;cursor:pointer">
-                        <span style="font-size:1.15rem">🛵</span> Transmettre la mission au livreur
+                        <x-icon name="truck" size="16" /> Transmettre la mission au livreur
                     </button>
                     <a href="{{ route('orders.receipt', $order) }}" class="btn btn-ghost btn-sm btn-block" style="display:inline-flex;align-items:center;justify-content:center;gap:.4rem">
                         <x-icon name="file-text" size="14" /> Voir le reçu client officiel
@@ -366,7 +366,7 @@
         <!-- En-tête Modal -->
         <div style="padding:1.2rem 1.5rem;background:linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.05));border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
             <div style="display:flex;align-items:center;gap:.6rem">
-                <span style="font-size:1.6rem">🛵</span>
+                <x-icon name="truck" size="24" style="color:#d97706" />
                 <div>
                     <h3 style="margin:0;font-size:1.15rem;font-weight:700">Mission Livreur (Zémidjan / Moto)</h3>
                     <p style="margin:0;font-size:.8rem;color:var(--text-soft)">Commande #{{ $order->order_number }}</p>
@@ -381,15 +381,15 @@
             <!-- Récapitulatif Rapide -->
             <div style="background:var(--bg-soft);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1.2rem;display:flex;flex-direction:column;gap:.6rem;font-size:.88rem">
                 <div style="display:flex;align-items:center;justify-content:space-between">
-                    <span style="color:var(--text-soft)">📍 Client :</span>
+                    <span style="color:var(--text-soft)">Client :</span>
                     <strong>{{ $order->customer_name }} ({{ $order->customer_phone }})</strong>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between">
-                    <span style="color:var(--text-soft)">🏁 Zone & Adresse :</span>
+                    <span style="color:var(--text-soft)">Zone & Adresse :</span>
                     <span style="text-align:right"><strong>{{ $order->delivery_zone_name }}</strong> — {{ Str::limit($order->delivery_address, 35) }}</span>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px dashed var(--border);padding-top:.5rem">
-                    <span style="color:var(--text-soft)">💰 Règlement :</span>
+                    <span style="color:var(--text-soft)">Règlement :</span>
                     @if ($order->payment_status === 'paid')
                         <span style="color:var(--ok);font-weight:700">DÉJÀ PAYÉ EN LIGNE (0 FCFA à encaisser)</span>
                     @else
@@ -429,14 +429,14 @@
 
             <!-- Aperçu pliable du texte de la course -->
             <details style="margin-bottom:1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:10px;padding:.6rem .8rem;font-size:.82rem">
-                <summary style="cursor:pointer;font-weight:600;color:var(--text-soft)">👁️ Voir le texte de la mission WhatsApp</summary>
+                <summary style="cursor:pointer;font-weight:600;color:var(--text-soft);display:inline-flex;align-items:center;gap:.4rem"><x-icon name="file-text" size="14" /> Voir le texte de la mission WhatsApp</summary>
                 <pre id="missionRawText" style="white-space:pre-wrap;font-family:monospace;font-size:.78rem;margin-top:.6rem;background:var(--surface);padding:.8rem;border-radius:6px;border:1px solid var(--border);max-height:180px;overflow-y:auto">{{ $deliveryMissionText }}</pre>
             </details>
 
             <!-- Boutons d'Action -->
             <div style="display:flex;gap:.6rem;flex-wrap:wrap">
                 <button type="submit" class="btn btn-primary" style="flex:1.4;background:linear-gradient(135deg, #f59e0b, #d97706);border:none;color:#fff;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.75rem 1rem">
-                    <span style="font-size:1.1rem">📲</span> Ouvrir sur WhatsApp
+                    <x-icon name="whatsapp" size="16" /> Ouvrir sur WhatsApp
                 </button>
                 <button type="button" onclick="copyMissionText()" class="btn btn-ghost" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:.35rem">
                     <x-icon name="copy" size="15" /> Copier texte

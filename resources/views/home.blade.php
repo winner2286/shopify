@@ -31,7 +31,7 @@
                 <div class="hero-auth-box" style="margin-top:1.5rem;padding:1.25rem 1.4rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
                     <div>
                         <div style="font-weight:700;font-size:1.05rem;color:var(--text);margin-bottom:.25rem">
-                            👋 Bonjour {{ auth()->user()->name }}
+                            Bonjour {{ auth()->user()->name }}
                         </div>
                         <div style="font-size:.88rem;color:var(--text-soft)">
                             Vous êtes connecté à votre compte Zanika.

@@ -603,10 +603,10 @@
                     <div>
                         <div class="shop-name">{{ $shop->name }}</div>
                         <div class="shop-meta">
-                            <div>📍 {{ $shop->address ?: 'Boutique certifiée' }}{{ $shop->city ? ' — ' . $shop->city : '' }}</div>
-                            <div>📞 {{ $shop->phone ?: ($shop->whatsapp ?: 'N/A') }}</div>
+                            <div>{{ $shop->address ?: 'Boutique certifiée' }}{{ $shop->city ? ' — ' . $shop->city : '' }}</div>
+                            <div>Tél : {{ $shop->phone ?: ($shop->whatsapp ?: 'N/A') }}</div>
                             @if ($shop->email_contact)
-                                <div>✉️ {{ $shop->email_contact }}</div>
+                                <div>Email : {{ $shop->email_contact }}</div>
                             @endif
                         </div>
                     </div>

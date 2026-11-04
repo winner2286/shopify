@@ -73,19 +73,19 @@
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
                     <tr>
                         <td style="padding: 10px; background: #fdf2f4; border: 1px solid #fecdd3; border-radius: 10px; text-align: center; width: 33%;">
-                            <div style="font-size: 12px; font-weight: 700; color: #9f1239;">🥉 ESSENTIEL</div>
+                            <div style="font-size: 12px; font-weight: 700; color: #9f1239;">ESSENTIEL</div>
                             <div style="font-size: 16px; font-weight: 900; color: #111827; margin: 4px 0;">10 000 F</div>
                             <div style="font-size: 11px; color: #4b5563;">Jusqu'à 50 articles</div>
                         </td>
                         <td style="width: 10px;"></td>
                         <td style="padding: 10px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 10px; text-align: center; width: 33%; position: relative;">
-                            <div style="font-size: 12px; font-weight: 800; color: #15803d;">⭐ PRO</div>
+                            <div style="font-size: 12px; font-weight: 800; color: #15803d;">PRO</div>
                             <div style="font-size: 16px; font-weight: 900; color: #111827; margin: 4px 0;">15 000 F</div>
                             <div style="font-size: 11px; color: #15803d; font-weight: 600;">Recommandé</div>
                         </td>
                         <td style="width: 10px;"></td>
                         <td style="padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; text-align: center; width: 33%;">
-                            <div style="font-size: 12px; font-weight: 700; color: #475569;">👑 PREMIUM</div>
+                            <div style="font-size: 12px; font-weight: 700; color: #475569;">PREMIUM</div>
                             <div style="font-size: 16px; font-weight: 900; color: #111827; margin: 4px 0;">30 000 F</div>
                             <div style="font-size: 11px; color: #4b5563;">Multi-accès & VIP</div>
                         </td>
@@ -102,13 +102,13 @@
                 <!-- Info paiement local & réassurance -->
                 <div style="border-top: 1px solid #e5e7eb; padding-top: 18px; text-align: center;">
                     <div style="font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 6px;">
-                        💳 Règlements simples et instantanés :
+                        Règlements simples et instantanés :
                     </div>
                     <div style="font-size: 13px; color: #6b7280;">
                         T-Money (Togo) • Flooz (Moov) • Cartes Bancaires Visa & Mastercard
                     </div>
                     <p style="margin: 14px 0 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">
-                        🛡️ <strong>Vos données sont protégées :</strong> Tous vos produits, photos et avis clients restent sauvegardés. Si vous ne renouvelez pas tout de suite, votre boutique sera simplement mise en pause temporaire sans aucune suppression.
+                        <strong>Vos données sont protégées :</strong> Tous vos produits, photos et avis clients restent sauvegardés. Si vous ne renouvelez pas tout de suite, votre boutique sera simplement mise en pause temporaire sans aucune suppression.
                     </p>
                 </div>
             </td>

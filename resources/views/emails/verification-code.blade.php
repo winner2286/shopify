@@ -40,13 +40,13 @@
                         {{ $code }}
                     </div>
                     <div style="font-size: 13px; color: #6b7280; font-weight: 600;">
-                        ⏱️ Valable pendant <strong>{{ $minutes }} minutes</strong>
+                        Valable pendant <strong>{{ $minutes }} minutes</strong>
                     </div>
                 </div>
 
                 <div style="background-color: #f9fafb; border-left: 4px solid #FF2D6D; border-radius: 4px; padding: 14px 16px; margin-bottom: 24px;">
                     <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.5;">
-                        🔒 <strong>Conseil de sécurité :</strong> Ne partagez ce code avec personne. L'équipe Zanika ne vous demandera jamais ce code par téléphone, WhatsApp ou SMS.
+                        <strong>Conseil de sécurité :</strong> Ne partagez ce code avec personne. L'équipe Zanika ne vous demandera jamais ce code par téléphone, WhatsApp ou SMS.
                     </p>
                 </div>
 
