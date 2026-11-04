@@ -491,7 +491,31 @@ PROMPT;
 
             $cutoutGd = @imagecreatefromstring($cutoutPng);
             if ($cutoutGd) {
-                // Style 1 : Studio Blanc Épuré (Standard Marketplace 1:1 Amazon / Zara)
+                // Rendu 1 : Mise en scène Lifestyle contextuelle adaptée au produit (ex: Dressing Loft, Bain & Spa Travertin, Parquet Chêne)
+                $lifestyle = $imageService->buildLifestyleScene($cutoutGd, $category, 1000);
+                if ($lifestyle && ! empty($lifestyle['canvas'])) {
+                    $lifeFilename = "lifestyle_{$uniq}.jpg";
+                    $lifePath = "shops/{$shop->id}/products_ai/{$lifeFilename}";
+                    $tmpL = tempnam(sys_get_temp_dir(), 'ai_lf_');
+                    imagejpeg($lifestyle['canvas'], $tmpL, 94);
+                    Storage::disk('public')->put($lifePath, file_get_contents($tmpL));
+                    @unlink($tmpL);
+                    imagedestroy($lifestyle['canvas']);
+
+                    $stagings[] = [
+                        'id' => 'lifestyle_staged',
+                        'type' => 'generated',
+                        'title' => $lifestyle['title'] ?? 'Mise en scène Décor Réel',
+                        'url' => Storage::disk('public')->url($lifePath),
+                        'path' => $lifePath,
+                        'cutout_path' => $cutoutPath,
+                        'selected' => true,
+                        'is_source' => false,
+                        'badge' => 'IA Lifestyle',
+                    ];
+                }
+
+                // Rendu 2 : Studio Blanc Épuré (Standard Marketplace 1:1 Amazon / Zara)
                 $whitePackshot = $imageService->buildStudioPackshot($cutoutGd, 'white', 1000);
                 if ($whitePackshot) {
                     $whiteFilename = "studio_white_{$uniq}.jpg";
@@ -505,17 +529,17 @@ PROMPT;
                     $stagings[] = [
                         'id' => 'studio_white',
                         'type' => 'generated',
-                        'title' => 'Studio Blanc Épuré (Marketplace)',
+                        'title' => 'Studio Blanc Épuré',
                         'url' => Storage::disk('public')->url($whitePath),
                         'path' => $whitePath,
                         'cutout_path' => $cutoutPath,
-                        'selected' => true,
+                        'selected' => empty($stagings),
                         'is_source' => false,
                         'badge' => 'Studio Pro',
                     ];
                 }
 
-                // Style 2 : Studio Ambiance Douce Ivoire / Perle épuré
+                // Rendu 3 : Studio Ambiance Douce Ivoire / Perle épuré
                 $ambientPackshot = $imageService->buildStudioPackshot($cutoutGd, 'ambient_light', 1000);
                 if ($ambientPackshot) {
                     $ambientFilename = "studio_ambient_{$uniq}.jpg";

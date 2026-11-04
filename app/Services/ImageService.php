@@ -472,6 +472,158 @@ class ImageService
         return $canvas;
     }
 
+    /**
+     * Compose une mise en scène lifestyle photoréaliste adaptée à la catégorie du produit
+     * (Vêtements sur portant dans un loft, Cosmétiques sur marbre/spa, Chaussures sur parquet, Bijoux sur marbre).
+     * Conserve 100% le produit réel avec ombres et intégration naturelle sans altération.
+     */
+    public function buildLifestyleScene($cutoutGd, string $category = 'general', int $targetSize = 1000)
+    {
+        $cutoutGd = $this->cropTransparent($cutoutGd);
+        $cW = imagesx($cutoutGd);
+        $cH = imagesy($cutoutGd);
+
+        $cat = strtolower($category);
+        $sceneFile = 'luxury_podium.jpg';
+        $style = 'general';
+        $title = 'Ambiance Podium Luxe';
+
+        if (str_contains($cat, 'mode') || str_contains($cat, 'vetement') || str_contains($cat, 'apparel') || str_contains($cat, 'pantalon') || str_contains($cat, 'robe') || str_contains($cat, 'chemise') || str_contains($cat, 'tissu') || str_contains($cat, 'sweat')) {
+            $sceneFile = 'apparel_rack.jpg';
+            $style = 'apparel';
+            $title = 'Mise en scène Dressing Loft';
+        } elseif (str_contains($cat, 'beaute') || str_contains($cat, 'cosmet') || str_contains($cat, 'parfum') || str_contains($cat, 'spray') || str_contains($cat, 'maison') || str_contains($cat, 'hygiene') || str_contains($cat, 'soin') || str_contains($cat, 'desodorisant')) {
+            $sceneFile = 'cosmetics_spa.jpg';
+            $style = 'cosmetics';
+            $title = 'Ambiance Bain & Spa Travertin';
+        } elseif (str_contains($cat, 'chaussure') || str_contains($cat, 'shoe') || str_contains($cat, 'sneaker') || str_contains($cat, 'basket')) {
+            $sceneFile = 'shoes_floor.jpg';
+            $style = 'shoes';
+            $title = 'Shooting Parquet Chêne';
+        } elseif (str_contains($cat, 'bijou') || str_contains($cat, 'montre') || str_contains($cat, 'watch') || str_contains($cat, 'jewelry') || str_contains($cat, 'collier')) {
+            $sceneFile = 'jewelry_marble.jpg';
+            $style = 'jewelry';
+            $title = 'Plateau Marbre Carrara';
+        }
+
+        $scenePath = public_path('images/ai_scenes/' . $sceneFile);
+        if (! file_exists($scenePath)) {
+            return [
+                'canvas' => $this->buildStudioPackshot($cutoutGd, 'ambient_light', $targetSize),
+                'title' => 'Studio Ambiance Douce',
+            ];
+        }
+
+        $bg = @imagecreatefromjpeg($scenePath);
+        if (! $bg) {
+            return [
+                'canvas' => $this->buildStudioPackshot($cutoutGd, 'ambient_light', $targetSize),
+                'title' => 'Studio Ambiance Douce',
+            ];
+        }
+
+        $bgW = imagesx($bg);
+        $bgH = imagesy($bg);
+
+        $canvas = imagecreatetruecolor($targetSize, $targetSize);
+        imagecopyresampled($canvas, $bg, 0, 0, 0, 0, $targetSize, $targetSize, $bgW, $bgH);
+        imagedestroy($bg);
+
+        if ($style === 'apparel') {
+            // Portant dans loft contemporain
+            $targetW = (int) round($targetSize * 0.32);
+            $targetH = (int) round($cH * ($targetW / $cW));
+            if ($targetH > (int) round($targetSize * 0.52)) {
+                $targetH = (int) round($targetSize * 0.52);
+                $targetW = (int) round($cW * ($targetH / $cH));
+            }
+            $dstX = (int) round($targetSize * 0.38);
+            $dstY = (int) round($targetSize * 0.315);
+
+            $shadowCore = imagecolorallocatealpha($canvas, 60, 45, 30, 95);
+            imagefilledellipse($canvas, $dstX + (int)($targetW / 2) + 20, (int) round($targetSize * 0.83), (int)($targetW * 0.85), 32, $shadowCore);
+            $shadowSoft = imagecolorallocatealpha($canvas, 80, 60, 40, 115);
+            imagefilledellipse($canvas, $dstX + (int)($targetW / 2) + 25, (int) round($targetSize * 0.835), (int)($targetW * 1.05), 52, $shadowSoft);
+
+            imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
+        } elseif ($style === 'cosmetics') {
+            // Comptoir spa travertin
+            $prod = $cutoutGd;
+            if ($cW > ($cH * 1.5)) {
+                $rotated = imagerotate($cutoutGd, 270, imagecolorallocatealpha($cutoutGd, 0, 0, 0, 127));
+                imagealphablending($rotated, false);
+                imagesavealpha($rotated, true);
+                $prod = $this->cropTransparent($rotated);
+                $cW = imagesx($prod);
+                $cH = imagesy($prod);
+            }
+
+            $targetH = (int) round($targetSize * 0.48);
+            $targetW = (int) round($cW * ($targetH / $cH));
+            $dstX = (int) round($targetSize * 0.42);
+            $dstY = (int) round($targetSize * 0.24);
+            $bottomY = $dstY + $targetH;
+
+            $shadowCore = imagecolorallocatealpha($canvas, 60, 50, 40, 95);
+            imagefilledellipse($canvas, $dstX + (int)($targetW / 2) + 12, $bottomY - 4, (int)($targetW * 0.88), 18, $shadowCore);
+            $shadowSoft = imagecolorallocatealpha($canvas, 90, 75, 60, 115);
+            imagefilledellipse($canvas, $dstX + (int)($targetW / 2) + 24, $bottomY + 2, (int)($targetW * 1.1), 32, $shadowSoft);
+
+            imagecopyresampled($canvas, $prod, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
+        } elseif ($style === 'shoes') {
+            $targetW = (int) round($targetSize * 0.58);
+            $targetH = (int) round($cH * ($targetW / $cW));
+            if ($targetH > (int) round($targetSize * 0.45)) {
+                $targetH = (int) round($targetSize * 0.45);
+                $targetW = (int) round($cW * ($targetH / $cH));
+            }
+            $dstX = (int) round(($targetSize - $targetW) / 2);
+            $dstY = (int) round($targetSize * 0.72) - $targetH;
+
+            $shadowCore = imagecolorallocatealpha($canvas, 50, 38, 25, 95);
+            imagefilledellipse($canvas, (int)($targetSize / 2) + 15, $dstY + $targetH - 4, (int)($targetW * 0.85), 26, $shadowCore);
+            $shadowSoft = imagecolorallocatealpha($canvas, 70, 55, 38, 115);
+            imagefilledellipse($canvas, (int)($targetSize / 2) + 30, $dstY + $targetH + 4, (int)($targetW * 1.05), 45, $shadowSoft);
+
+            imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
+        } elseif ($style === 'jewelry') {
+            $targetW = (int) round($targetSize * 0.42);
+            $targetH = (int) round($cH * ($targetW / $cW));
+            if ($targetH > (int) round($targetSize * 0.40)) {
+                $targetH = (int) round($targetSize * 0.40);
+                $targetW = (int) round($cW * ($targetH / $cH));
+            }
+            $dstX = (int) round(($targetSize - $targetW) / 2);
+            $dstY = (int) round($targetSize * 0.48) - (int)($targetH / 2);
+
+            $shadowCore = imagecolorallocatealpha($canvas, 30, 30, 35, 100);
+            imagefilledellipse($canvas, (int)($targetSize / 2), $dstY + $targetH - 2, (int)($targetW * 0.8), 20, $shadowCore);
+
+            imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
+        } else {
+            $targetH = (int) round($targetSize * 0.45);
+            $targetW = (int) round($cW * ($targetH / $cH));
+            if ($targetW > (int) round($targetSize * 0.55)) {
+                $targetW = (int) round($targetSize * 0.55);
+                $targetH = (int) round($cH * ($targetW / $cW));
+            }
+            $dstX = (int) round(($targetSize - $targetW) / 2);
+            $dstY = (int) round($targetSize * 0.54) - $targetH;
+
+            $shadowCore = imagecolorallocatealpha($canvas, 45, 40, 35, 100);
+            imagefilledellipse($canvas, (int)($targetSize / 2), $dstY + $targetH - 3, (int)($targetW * 0.8), 22, $shadowCore);
+            $shadowSoft = imagecolorallocatealpha($canvas, 70, 60, 50, 118);
+            imagefilledellipse($canvas, (int)($targetSize / 2), $dstY + $targetH + 3, (int)($targetW * 1.0), 38, $shadowSoft);
+
+            imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
+        }
+
+        return [
+            'canvas' => $canvas,
+            'title' => $title,
+        ];
+    }
+
     private function hasTransparency($image): bool
     {
         if (! function_exists('imagecolorat')) return false;
