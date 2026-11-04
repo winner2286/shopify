@@ -129,6 +129,8 @@ Route::middleware('auth')->group(function () {
 
     // AI Products & Studio Visuel IA (Module 4 & 5)
     Route::post('/assistant-ia/produits/analyser-photo', [\App\Http\Controllers\AiProductController::class, 'analyzePhoto'])->name('ai.products.analyze_photo');
+    Route::post('/assistant-ia/produits/verifier-qualite', [\App\Http\Controllers\AiProductController::class, 'verifyQuality'])->name('ai.products.verify_quality');
+    Route::post('/assistant-ia/produits/generer-variante', [\App\Http\Controllers\AiProductController::class, 'generateVariant'])->name('ai.products.generate_variant');
     Route::post('/assistant-ia/produits/{product}/optimiser', [\App\Http\Controllers\AiProductController::class, 'optimizeProduct'])->name('ai.products.optimize');
     Route::get('/assistant-ia/studio', [\App\Http\Controllers\AiProductController::class, 'studio'])->name('ai.studio');
     Route::post('/assistant-ia/studio/generer', [\App\Http\Controllers\AiProductController::class, 'generateVisual'])->name('ai.studio.generate');

@@ -22,6 +22,19 @@
         </svg>
         @break
 
+    @case('eye')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+            <circle cx="12" cy="12" r="3"/>
+        </svg>
+        @break
+
+    @case('check')
+        <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        @break
+
     @case('bot')
     @case('robot')
         <svg {!! $sizeAttr !!} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ $classes }}" style="{{ $style }}" aria-hidden="true">
