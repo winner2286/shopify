@@ -488,22 +488,45 @@ class ImageService
         $style = 'general';
         $title = 'Ambiance Podium Luxe';
 
-        if (str_contains($cat, 'mode') || str_contains($cat, 'vetement') || str_contains($cat, 'apparel') || str_contains($cat, 'pantalon') || str_contains($cat, 'robe') || str_contains($cat, 'chemise') || str_contains($cat, 'tissu') || str_contains($cat, 'sweat')) {
-            $sceneFile = 'apparel_rack.jpg';
-            $style = 'apparel';
-            $title = 'Mise en scène Dressing Loft';
-        } elseif (str_contains($cat, 'beaute') || str_contains($cat, 'cosmet') || str_contains($cat, 'parfum') || str_contains($cat, 'spray') || str_contains($cat, 'maison') || str_contains($cat, 'hygiene') || str_contains($cat, 'soin') || str_contains($cat, 'desodorisant')) {
-            $sceneFile = 'cosmetics_spa.jpg';
-            $style = 'cosmetics';
-            $title = 'Ambiance Bain & Spa Travertin';
-        } elseif (str_contains($cat, 'chaussure') || str_contains($cat, 'shoe') || str_contains($cat, 'sneaker') || str_contains($cat, 'basket')) {
+        $isShoes = str_contains($cat, 'shoe') || str_contains($cat, 'chaussure') || str_contains($cat, 'talon')
+            || str_contains($cat, 'escarpin') || str_contains($cat, 'mule') || str_contains($cat, 'sandale')
+            || str_contains($cat, 'sneaker') || str_contains($cat, 'basket') || str_contains($cat, 'botte')
+            || str_contains($cat, 'claquette') || str_contains($cat, 'mocassin');
+
+        $isCosmetics = str_contains($cat, 'cosmet') || str_contains($cat, 'beaute') || str_contains($cat, 'parfum')
+            || str_contains($cat, 'creme') || str_contains($cat, 'spray') || str_contains($cat, 'soin')
+            || str_contains($cat, 'hygiene') || str_contains($cat, 'serum') || str_contains($cat, 'desodorisant');
+
+        $isJewelry = str_contains($cat, 'jewelry') || str_contains($cat, 'bijou') || str_contains($cat, 'montre')
+            || str_contains($cat, 'watch') || str_contains($cat, 'collier') || str_contains($cat, 'bague')
+            || str_contains($cat, 'bracelet');
+
+        $isHangingApparel = str_contains($cat, 'clothing_hanging') || str_contains($cat, 'apparel_hanging')
+            || str_contains($cat, 'hanging') || str_contains($cat, 'cintre')
+            || str_contains($cat, 'veste') || str_contains($cat, 'manteau') || str_contains($cat, 'robe')
+            || str_contains($cat, 'chemise') || str_contains($cat, 'blazer') || str_contains($cat, 'trench')
+            || str_contains($cat, 'costume');
+
+        if ($isShoes) {
             $sceneFile = 'shoes_floor.jpg';
             $style = 'shoes';
             $title = 'Shooting Parquet Chêne';
-        } elseif (str_contains($cat, 'bijou') || str_contains($cat, 'montre') || str_contains($cat, 'watch') || str_contains($cat, 'jewelry') || str_contains($cat, 'collier')) {
+        } elseif ($isCosmetics) {
+            $sceneFile = 'cosmetics_spa.jpg';
+            $style = 'cosmetics';
+            $title = 'Ambiance Bain & Spa Travertin';
+        } elseif ($isJewelry) {
             $sceneFile = 'jewelry_marble.jpg';
             $style = 'jewelry';
             $title = 'Plateau Marbre Carrara';
+        } elseif ($isHangingApparel) {
+            $sceneFile = 'apparel_rack.jpg';
+            $style = 'apparel';
+            $title = 'Mise en scène Dressing Loft';
+        } else {
+            $sceneFile = 'luxury_podium.jpg';
+            $style = 'general';
+            $title = 'Ambiance Podium Showroom';
         }
 
         $scenePath = public_path('images/ai_scenes/' . $sceneFile);
@@ -530,7 +553,7 @@ class ImageService
         imagedestroy($bg);
 
         if ($style === 'apparel') {
-            // Portant dans loft contemporain
+            // Portant dans loft contemporain (Vêtements suspendus uniquement)
             $targetW = (int) round($targetSize * 0.32);
             $targetH = (int) round($cH * ($targetW / $cW));
             if ($targetH > (int) round($targetSize * 0.52)) {
@@ -571,19 +594,28 @@ class ImageService
 
             imagecopyresampled($canvas, $prod, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         } elseif ($style === 'shoes') {
-            $targetW = (int) round($targetSize * 0.58);
+            // Chaussures posées naturellement sur le parquet chêne avec ombres de contact
+            $targetW = (int) round($targetSize * 0.56);
             $targetH = (int) round($cH * ($targetW / $cW));
-            if ($targetH > (int) round($targetSize * 0.45)) {
-                $targetH = (int) round($targetSize * 0.45);
+            if ($targetH > (int) round($targetSize * 0.50)) {
+                $targetH = (int) round($targetSize * 0.50);
                 $targetW = (int) round($cW * ($targetH / $cH));
             }
-            $dstX = (int) round(($targetSize - $targetW) / 2);
-            $dstY = (int) round($targetSize * 0.72) - $targetH;
+            $dstX = (int) round(($targetSize - $targetW) / 2) + 15;
+            $dstY = (int) round($targetSize * 0.44);
+            $bottomY = $dstY + $targetH;
 
-            $shadowCore = imagecolorallocatealpha($canvas, 50, 38, 25, 95);
-            imagefilledellipse($canvas, (int)($targetSize / 2) + 15, $dstY + $targetH - 4, (int)($targetW * 0.85), 26, $shadowCore);
-            $shadowSoft = imagecolorallocatealpha($canvas, 70, 55, 38, 115);
-            imagefilledellipse($canvas, (int)($targetSize / 2) + 30, $dstY + $targetH + 4, (int)($targetW * 1.05), 45, $shadowSoft);
+            // Ombres de contact au sol : talon et semelle avant
+            $shadowHeel = imagecolorallocatealpha($canvas, 40, 28, 18, 92);
+            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.16), $bottomY - 4, 34, 16, $shadowHeel);
+            $shadowSole = imagecolorallocatealpha($canvas, 40, 28, 18, 95);
+            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.68), $bottomY - 8, (int)($targetW * 0.50), 22, $shadowSole);
+            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.36), $bottomY - 26, 26, 12, $shadowHeel);
+            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.85), $bottomY - 28, (int)($targetW * 0.35), 18, $shadowSole);
+
+            // Ombre diffuse d'ambiance
+            $shadowSoft = imagecolorallocatealpha($canvas, 70, 52, 32, 115);
+            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.52) + 15, $bottomY - 2, (int)($targetW * 0.90), 38, $shadowSoft);
 
             imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         } elseif ($style === 'jewelry') {

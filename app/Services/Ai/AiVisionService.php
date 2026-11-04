@@ -457,7 +457,10 @@ PROMPT;
                     [
                         'role' => 'user',
                         'content' => [
-                            ['type' => 'text', 'text' => 'Identifie cet article en 1 mot de catégorie (mode, beauté, électronique, maison, etc.) et donne un titre commercial court en français. Réponds STRICTEMENT en JSON: {"category": "...", "title": "..."}'],
+                            [
+                                'type' => 'text',
+                                'text' => 'Analyse ce produit e-commerce. Détermine précisément product_type parmi : "shoes" (chaussures, talons, baskets, mules, sandales, bottes), "clothing_hanging" (vêtements sur cintre : vestes, robes, chemises, manteaux), "clothing_flat" (vêtements pliés, t-shirts, pantalons), "cosmetics" (beauté, parfums, crèmes, flacons), "jewelry" (bijoux, montres), "bags" (sacs à main), ou "general" (autre). Donne aussi un titre commercial court en français. Réponds STRICTEMENT en JSON: {"product_type": "...", "title": "..."}'
+                            ],
                             ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]]
                         ]
                     ]
@@ -470,7 +473,11 @@ PROMPT;
                 $raw = $response->json('choices.0.message.content') ?? '{}';
                 $clean = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($raw));
                 $parsed = json_decode($clean, true);
-                if (! empty($parsed['category'])) $category = $parsed['category'];
+                if (! empty($parsed['product_type'])) {
+                    $category = $parsed['product_type'];
+                } elseif (! empty($parsed['category'])) {
+                    $category = $parsed['category'];
+                }
                 if (! empty($parsed['title'])) $productTitle = $parsed['title'];
             }
         } catch (\Throwable $e) {
