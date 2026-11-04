@@ -314,9 +314,15 @@
         <button type="button" onclick="closeAiVariationsModal()" style="position:absolute;top:1rem;right:1rem;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--bg-soft);color:var(--text);font-size:1.3rem;display:grid;place-items:center;cursor:pointer;line-height:1;z-index:5" aria-label="Fermer">×</button>
 
         <h2 style="font-size:1.25rem;font-weight:700;color:var(--text);margin:0 0 .35rem 0;padding-right:2.5rem;letter-spacing:-0.2px">Choisissez les images de votre produit</h2>
-        <p style="font-size:.86rem;color:var(--text-soft);margin:0 0 1.25rem 0;line-height:1.4">
+        <p style="font-size:.86rem;color:var(--text-soft);margin:0 0 1rem 0;line-height:1.4">
             Vos images générées sont cochées. Décochez celles à retirer, améliorez-les ou générez-en une autre.
         </p>
+
+        <!-- Contexte de mise en scène détecté -->
+        <div id="ai-modal-category-hint" style="display:none;margin-bottom:1.15rem;background:rgba(158,27,50,0.08);border:1px solid rgba(158,27,50,0.25);border-radius:10px;padding:.5rem .85rem;font-size:.82rem;color:var(--text);align-items:center;gap:.5rem">
+            <span style="color:#c5223d;font-weight:700">Décor adapté selon l'article :</span>
+            <span id="ai-modal-detected-product" style="font-weight:600"></span>
+        </div>
 
         <!-- Grille des cartes photos -->
         <div id="ai-variations-grid" style="display:grid;grid-template-columns:repeat(2, 1fr);gap:1rem;margin-bottom:1.5rem">
@@ -820,6 +826,16 @@ window.runAiQualityCheck = async function(file) {
 
         if (data.status === 'success' && data.variations && data.variations.length > 0) {
             currentAiVariations = data.variations;
+            const catHint = document.getElementById('ai-modal-category-hint');
+            const catText = document.getElementById('ai-modal-detected-product');
+            if (catHint && catText) {
+                if (data.product_title) {
+                    catHint.style.display = 'flex';
+                    catText.textContent = data.product_title;
+                } else {
+                    catHint.style.display = 'none';
+                }
+            }
             window.renderAiVariationsModal();
         } else {
             alert(data.error || 'Impossible de vérifier la qualité pour le moment.');
@@ -892,23 +908,29 @@ window.renderAiVariationsModal = function() {
         };
         card.appendChild(eyeBtn);
 
-        // Badge "Photo source" si originale
+        // Badge : "Photo source" si originale, sinon badge IA contextuel
+        const badgeSpan = document.createElement('span');
+        badgeSpan.style.position = 'absolute';
+        badgeSpan.style.top = '8px';
+        badgeSpan.style.left = '44px';
+        badgeSpan.style.fontSize = '0.72rem';
+        badgeSpan.style.fontWeight = '700';
+        badgeSpan.style.padding = '3px 8px';
+        badgeSpan.style.borderRadius = '6px';
+        badgeSpan.style.backdropFilter = 'blur(4px)';
+        badgeSpan.style.zIndex = '4';
+
         if (item.is_source) {
-            const sourceBadge = document.createElement('span');
-            sourceBadge.style.position = 'absolute';
-            sourceBadge.style.top = '8px';
-            sourceBadge.style.left = '44px';
-            sourceBadge.style.background = 'rgba(0,0,0,0.72)';
-            sourceBadge.style.color = '#ffffff';
-            sourceBadge.style.fontSize = '0.72rem';
-            sourceBadge.style.fontWeight = '700';
-            sourceBadge.style.padding = '3px 8px';
-            sourceBadge.style.borderRadius = '6px';
-            sourceBadge.style.backdropFilter = 'blur(4px)';
-            sourceBadge.style.zIndex = '4';
-            sourceBadge.textContent = 'Photo source';
-            card.appendChild(sourceBadge);
+            badgeSpan.style.background = 'rgba(0,0,0,0.72)';
+            badgeSpan.style.color = '#ffffff';
+            badgeSpan.textContent = 'Photo source';
+        } else {
+            badgeSpan.style.background = 'linear-gradient(135deg, rgba(158, 27, 50, 0.92), rgba(197, 34, 61, 0.92))';
+            badgeSpan.style.color = '#ffffff';
+            badgeSpan.style.boxShadow = '0 2px 6px rgba(158, 27, 50, 0.35)';
+            badgeSpan.textContent = item.badge || 'IA Studio';
         }
+        card.appendChild(badgeSpan);
 
         // Coche de sélection (haut droite) - Aux couleurs Zanika (#9e1b32 / #c5223d)
         const checkBadge = document.createElement('div');

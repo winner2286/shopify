@@ -349,6 +349,191 @@ PROMPT;
         }
     }
 
+    /**
+     * Analyse multimodale du produit et génération de mises en scène professionnelles contextuelles (comme Shafrik / Photoroom).
+     * Adapte le décor selon la nature de l'article :
+     * - Vêtements : portant moderne en métal noir dans une chambre/dressing contemporain avec parquet et lumière naturelle
+     * - Chaussures : sol parquet boisé élégant avec ombre portée douce
+     * - Bijoux/Montres : plateau de marbre poli ou socle velours avec reflets dorés
+     * - Cosmétiques/Parfums : comptoir en pierre travertin avec ambiance spa épurée
+     * - Sacs/Maroquinerie : console design ou fauteuil d'entrée chic
+     */
+    public function generateContextualStagings(Shop $shop, string $imageBinary, ?string $userHint = null): array
+    {
+        $startTime = microtime(true);
+        $uniq = uniqid();
+
+        // 1. Analyse Vision via Gemini 2.5 Flash
+        $dataUrl = str_starts_with($imageBinary, 'data:image')
+            ? $imageBinary
+            : 'data:image/jpeg;base64,' . base64_encode($imageBinary);
+
+        $prompt = <<<PROMPT
+You are an elite commercial product photographer and art director for high-end fashion & lifestyle e-commerce lookbooks (like Zara, Arket, Photoroom, Shafrik).
+Examine this product photo uploaded by a merchant.
+
+1. Identify:
+- category: one of [apparel, shoes, jewelry_watch, cosmetics_perfume, bags_leather, electronics, food_drink, general]
+- product_title: concise descriptive title in French (e.g. "Deux pantalons larges molletonnés")
+- exact_features: precise visual description (exact colors, cut, drawstrings, waistband, textures, finishes, hangers, materials)
+
+2. Create 2 tailored, photorealistic commercial staging scene prompts designed specifically for this product type.
+CRITICAL RULES FOR PROMPTS:
+- ALWAYS include "still life product photography, no models, no humans, zero people, strictly clean product staging" to prevent distorted human faces.
+- If apparel (clothes, pants, dresses, hoodies): The clothes must be hanging on brass or wood hangers on a sleek minimalist matte black steel clothes rack, in a bright modern Scandinavian bedroom loft with warm herringbone wooden parquet floor, soft natural window light, houseplant, photorealistic commercial 8k e-commerce lookbook shoot.
+- If shoes (sneakers, heels, loafers): Placed cleanly on a warm natural oak parquet floor with soft natural window sunlight casting a gentle realistic shadow, sharp crisp fabric/leather texture, 8k uhd.
+- If jewelry / watches: Displayed on a polished natural white Carrara marble tray or dark velvet stand with soft warm ambient lighting and subtle reflections, 8k uhd.
+- If cosmetics / perfumes: On an organic beige travertine stone bathroom counter with delicate water droplets and botanical eucalyptus stems, soft morning light, 8k uhd.
+- If bags / leather: Styled on a sleek mid-century solid walnut console table in an elegant sunlit foyer with warm parquet floor, 8k uhd.
+- If electronics: On a minimalist solid walnut desk beside a leather desk pad and soft ambient lamp, 8k uhd.
+- If food / beverage: On a rustic modern oak dining table with linen napkin and warm ambient light, 8k uhd.
+- If general: On a designer minimalist architectural pedestal with soft warm studio lighting, 8k uhd.
+
+Respond STRICTLY in valid JSON:
+{
+  "category": "apparel",
+  "product_title": "Deux pantalons larges molletonnés",
+  "exact_features": "exact description of the item(s)",
+  "scene_1": {
+    "title": "Mise en scène Dressing Loft",
+    "prompt": "Commercial catalog product photography, still life, no models, zero humans: [exact items with colors and details] hanging neatly on hangers on a minimalist matte black clothes rack in a stylish modern bedroom loft with warm herringbone parquet floor, soft natural window light, houseplant, photorealistic 8k e-commerce lookbook shoot"
+  },
+  "scene_2": {
+    "title": "Ambiance Showroom Boutique",
+    "prompt": "Luxury catalog photography, still life, no models, zero humans: [exact items with colors and details] displayed on a designer rack or pedestal in an elegant boutique showroom with soft ambient lighting, clean architectural backdrop, crisp sharp details, 8k uhd"
+  }
+}
+PROMPT;
+
+        $scenes = null;
+        try {
+            $client = Http::withHeaders([
+                'Authorization' => "Bearer {$this->apiKey}",
+                'Content-Type' => 'application/json',
+            ])->timeout(12);
+
+            if (! app()->environment('production')) {
+                $client = $client->withoutVerifying();
+            }
+
+            $response = $client->post('https://openrouter.ai/api/v1/chat/completions', [
+                'model' => $this->model,
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            ['type' => 'text', 'text' => $prompt],
+                            ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]]
+                        ]
+                    ]
+                ],
+                'temperature' => 0.2,
+                'max_tokens' => 800,
+            ]);
+
+            if ($response->successful()) {
+                $content = $response->json('choices.0.message.content') ?? '{}';
+                $clean = preg_replace('/^```(?:json)?\s*/i', '', trim($content));
+                $clean = preg_replace('/\s*```$/', '', $clean);
+                $scenes = json_decode($clean, true);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('generateContextualStagings Vision failed: ' . $e->getMessage());
+        }
+
+        // Prompts de secours si l'analyse vision échoue
+        if (! $scenes || empty($scenes['scene_1']['prompt'])) {
+            $scenes = [
+                'category' => 'apparel',
+                'product_title' => 'Article de mode',
+                'scene_1' => [
+                    'title' => 'Mise en scène Dressing Loft',
+                    'prompt' => 'Commercial catalog product photography, still life, no models, zero humans: clothing items hanging on brass hangers on a sleek minimalist black metal clothes rack in a stylish modern bedroom loft with wooden herringbone parquet floor, warm pendant light, houseplant, photorealistic e-commerce catalog photoshoot, 8k uhd',
+                ],
+                'scene_2' => [
+                    'title' => 'Ambiance Showroom Boutique',
+                    'prompt' => 'Luxury apparel catalog photography, still life, no models, zero humans: clothing items displayed on a designer clothes rack in an elegant boutique showroom with soft ambient lighting, architectural backdrop, crisp sharp details, 8k uhd',
+                ],
+            ];
+        }
+
+        // 2. Génération des visuels réalistes avec Flux
+        $stagings = [];
+
+        // Scène 1 (Dressing / Lifestyle adapté selon le type de produit)
+        $staged1 = $this->renderFluxScene($shop, $scenes['scene_1']['prompt'], "staged_lifestyle_{$uniq}");
+        if ($staged1) {
+            $stagings[] = [
+                'id' => 'staged_1',
+                'type' => 'generated',
+                'title' => $scenes['scene_1']['title'] ?? 'Mise en scène Dressing Loft',
+                'url' => $staged1['url'],
+                'path' => $staged1['path'],
+                'selected' => true,
+                'is_source' => false,
+                'badge' => 'IA Lifestyle',
+            ];
+        }
+
+        // Pause 1.2s pour éviter le rate-limiting du moteur
+        usleep(1200000);
+
+        // Scène 2 (Showroom / Boutique épurée adaptée)
+        $staged2 = $this->renderFluxScene($shop, $scenes['scene_2']['prompt'], "staged_showroom_{$uniq}");
+        if ($staged2) {
+            $stagings[] = [
+                'id' => 'staged_2',
+                'type' => 'generated',
+                'title' => $scenes['scene_2']['title'] ?? 'Ambiance Showroom Boutique',
+                'url' => $staged2['url'],
+                'path' => $staged2['path'],
+                'selected' => true,
+                'is_source' => false,
+                'badge' => 'IA Showroom',
+            ];
+        }
+
+        return [
+            'category' => $scenes['category'] ?? 'general',
+            'product_title' => $scenes['product_title'] ?? null,
+            'stagings' => $stagings,
+            'scenes' => $scenes,
+        ];
+    }
+
+    /**
+     * Génère une image de scène réaliste via Flux avec timeout court.
+     */
+    public function renderFluxScene(Shop $shop, string $prompt, string $filenameBase): ?array
+    {
+        try {
+            $encoded = urlencode($prompt);
+            $seed = rand(100, 99999);
+            $imageUrl = "https://image.pollinations.ai/prompt/{$encoded}?width=800&height=800&nologo=true&model=flux&seed={$seed}";
+
+            $client = Http::timeout(20);
+            if (! app()->environment('production')) {
+                $client = $client->withoutVerifying();
+            }
+
+            $response = $client->get($imageUrl);
+            if ($response->successful() && strlen($response->body()) > 2000) {
+                $filename = "{$filenameBase}.jpg";
+                $relativePath = "shops/{$shop->id}/products_ai/{$filename}";
+                Storage::disk('public')->put($relativePath, $response->body());
+
+                return [
+                    'url' => Storage::disk('public')->url($relativePath),
+                    'path' => $relativePath,
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('renderFluxScene error: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
     protected function fallbackProductData(?string $userHint): array
     {
         $title = $userHint ? ucfirst($userHint) : 'Nouvel Article Tendance';
