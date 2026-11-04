@@ -826,6 +826,7 @@ window.runAiQualityCheck = async function(file) {
 
         if (data.status === 'success' && data.variations && data.variations.length > 0) {
             currentAiVariations = data.variations;
+            window.currentCutoutPath = data.cutout_path || null;
             const catHint = document.getElementById('ai-modal-category-hint');
             const catText = document.getElementById('ai-modal-detected-product');
             if (catHint && catText) {
@@ -1083,6 +1084,9 @@ window.requestAnotherAiVariant = async function(basePath) {
 
     try {
         const formData = new FormData();
+        if (window.currentCutoutPath) {
+            formData.append('cutout_path', window.currentCutoutPath);
+        }
         if (basePath) {
             formData.append('photo_path', basePath);
         } else if (currentSourceFile) {

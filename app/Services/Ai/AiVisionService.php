@@ -358,59 +358,94 @@ PROMPT;
      * - Cosmétiques/Parfums : comptoir en pierre travertin avec ambiance spa épurée
      * - Sacs/Maroquinerie : console design ou fauteuil d'entrée chic
      */
+    /**
+     * Détoure précisément le produit via le modèle IA Inspyrenet (RMBG) sans jamais altérer l'objet.
+     */
+    public function removeBackground(string $imageBinary): ?string
+    {
+        try {
+            $b64 = 'data:image/jpeg;base64,' . base64_encode($imageBinary);
+            $spaceUrl = 'https://gokaygokay-inspyrenet-rembg.hf.space/gradio_api';
+
+            $payload = json_encode([
+                'data' => [
+                    ['url' => $b64],
+                    'Default'
+                ]
+            ]);
+
+            $ch = curl_init("{$spaceUrl}/call/predict");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 18);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $res = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($code !== 200 || empty($res)) {
+                return null;
+            }
+
+            $json = json_decode($res, true);
+            if (empty($json['event_id'])) {
+                return null;
+            }
+
+            $eventId = $json['event_id'];
+            $ch = curl_init("{$spaceUrl}/call/predict/{$eventId}");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $stream = curl_exec($ch);
+            curl_close($ch);
+
+            if (preg_match('/"url":\s*"([^"]+)"/', (string) $stream, $matches)) {
+                $fileUrl = str_replace('/g/gradio_api/', '/gradio_api/', $matches[1]);
+                $ch2 = curl_init($fileUrl);
+                curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch2, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch2, CURLOPT_TIMEOUT, 20);
+                $img = curl_exec($ch2);
+                $code2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+                curl_close($ch2);
+
+                if ($code2 === 200 && strlen($img) > 1000) {
+                    return $img;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('removeBackground error: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Analyse le produit par Vision et génère de vrais packshots e-commerce professionnels
+     * en isolant le produit réel et en l'incrustant sur décors studio haut de gamme avec ombrage naturel.
+     * ZERO hallucination, ZERO faux objet, ZERO filigrane.
+     */
     public function generateContextualStagings(Shop $shop, string $imageBinary, ?string $userHint = null): array
     {
-        $startTime = microtime(true);
         $uniq = uniqid();
+        $stagings = [];
+        $category = 'general';
+        $productTitle = 'Article de vente';
 
-        // 1. Analyse Vision via Gemini 2.5 Flash
-        $dataUrl = str_starts_with($imageBinary, 'data:image')
-            ? $imageBinary
-            : 'data:image/jpeg;base64,' . base64_encode($imageBinary);
-
-        $prompt = <<<PROMPT
-You are an elite commercial product photographer and art director for high-end fashion & lifestyle e-commerce lookbooks (like Zara, Arket, Photoroom, Shafrik).
-Examine this product photo uploaded by a merchant.
-
-1. Identify:
-- category: one of [apparel, shoes, jewelry_watch, cosmetics_perfume, bags_leather, electronics, food_drink, general]
-- product_title: concise descriptive title in French (e.g. "Deux pantalons larges molletonnés")
-- exact_features: precise visual description (exact colors, cut, drawstrings, waistband, textures, finishes, hangers, materials)
-
-2. Create 2 tailored, photorealistic commercial staging scene prompts designed specifically for this product type.
-CRITICAL RULES FOR PROMPTS:
-- ALWAYS include "still life product photography, no models, no humans, zero people, strictly clean product staging" to prevent distorted human faces.
-- If apparel (clothes, pants, dresses, hoodies): The clothes must be hanging on brass or wood hangers on a sleek minimalist matte black steel clothes rack, in a bright modern Scandinavian bedroom loft with warm herringbone wooden parquet floor, soft natural window light, houseplant, photorealistic commercial 8k e-commerce lookbook shoot.
-- If shoes (sneakers, heels, loafers): Placed cleanly on a warm natural oak parquet floor with soft natural window sunlight casting a gentle realistic shadow, sharp crisp fabric/leather texture, 8k uhd.
-- If jewelry / watches: Displayed on a polished natural white Carrara marble tray or dark velvet stand with soft warm ambient lighting and subtle reflections, 8k uhd.
-- If cosmetics / perfumes: On an organic beige travertine stone bathroom counter with delicate water droplets and botanical eucalyptus stems, soft morning light, 8k uhd.
-- If bags / leather: Styled on a sleek mid-century solid walnut console table in an elegant sunlit foyer with warm parquet floor, 8k uhd.
-- If electronics: On a minimalist solid walnut desk beside a leather desk pad and soft ambient lamp, 8k uhd.
-- If food / beverage: On a rustic modern oak dining table with linen napkin and warm ambient light, 8k uhd.
-- If general: On a designer minimalist architectural pedestal with soft warm studio lighting, 8k uhd.
-
-Respond STRICTLY in valid JSON:
-{
-  "category": "apparel",
-  "product_title": "Deux pantalons larges molletonnés",
-  "exact_features": "exact description of the item(s)",
-  "scene_1": {
-    "title": "Mise en scène Dressing Loft",
-    "prompt": "Commercial catalog product photography, still life, no models, zero humans: [exact items with colors and details] hanging neatly on hangers on a minimalist matte black clothes rack in a stylish modern bedroom loft with warm herringbone parquet floor, soft natural window light, houseplant, photorealistic 8k e-commerce lookbook shoot"
-  },
-  "scene_2": {
-    "title": "Ambiance Showroom Boutique",
-    "prompt": "Luxury catalog photography, still life, no models, zero humans: [exact items with colors and details] displayed on a designer rack or pedestal in an elegant boutique showroom with soft ambient lighting, clean architectural backdrop, crisp sharp details, 8k uhd"
-  }
-}
-PROMPT;
-
-        $scenes = null;
+        // 1. Analyse Vision rapide pour catégorisation et titre
         try {
+            $dataUrl = str_starts_with($imageBinary, 'data:image')
+                ? $imageBinary
+                : 'data:image/jpeg;base64,' . base64_encode($imageBinary);
+
             $client = Http::withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
                 'Content-Type' => 'application/json',
-            ])->timeout(12);
+            ])->timeout(8);
 
             if (! app()->environment('production')) {
                 $client = $client->withoutVerifying();
@@ -422,116 +457,125 @@ PROMPT;
                     [
                         'role' => 'user',
                         'content' => [
-                            ['type' => 'text', 'text' => $prompt],
+                            ['type' => 'text', 'text' => 'Identifie cet article en 1 mot de catégorie (mode, beauté, électronique, maison, etc.) et donne un titre commercial court en français. Réponds STRICTEMENT en JSON: {"category": "...", "title": "..."}'],
                             ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]]
                         ]
                     ]
                 ],
-                'temperature' => 0.2,
-                'max_tokens' => 800,
+                'temperature' => 0.1,
+                'max_tokens' => 200,
             ]);
 
             if ($response->successful()) {
-                $content = $response->json('choices.0.message.content') ?? '{}';
-                $clean = preg_replace('/^```(?:json)?\s*/i', '', trim($content));
-                $clean = preg_replace('/\s*```$/', '', $clean);
-                $scenes = json_decode($clean, true);
+                $raw = $response->json('choices.0.message.content') ?? '{}';
+                $clean = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($raw));
+                $parsed = json_decode($clean, true);
+                if (! empty($parsed['category'])) $category = $parsed['category'];
+                if (! empty($parsed['title'])) $productTitle = $parsed['title'];
             }
         } catch (\Throwable $e) {
-            Log::warning('generateContextualStagings Vision failed: ' . $e->getMessage());
+            Log::warning('generateContextualStagings Vision meta failed: ' . $e->getMessage());
         }
 
-        // Prompts de secours si l'analyse vision échoue
-        if (! $scenes || empty($scenes['scene_1']['prompt'])) {
-            $scenes = [
-                'category' => 'apparel',
-                'product_title' => 'Article de mode',
-                'scene_1' => [
-                    'title' => 'Mise en scène Dressing Loft',
-                    'prompt' => 'Commercial catalog product photography, still life, no models, zero humans: clothing items hanging on brass hangers on a sleek minimalist black metal clothes rack in a stylish modern bedroom loft with wooden herringbone parquet floor, warm pendant light, houseplant, photorealistic e-commerce catalog photoshoot, 8k uhd',
-                ],
-                'scene_2' => [
-                    'title' => 'Ambiance Showroom Boutique',
-                    'prompt' => 'Luxury apparel catalog photography, still life, no models, zero humans: clothing items displayed on a designer clothes rack in an elegant boutique showroom with soft ambient lighting, architectural backdrop, crisp sharp details, 8k uhd',
-                ],
-            ];
+        // 2. Détourage IA chirurgical du produit réel
+        $cutoutPng = $this->removeBackground($imageBinary);
+
+        /** @var \App\Services\ImageService $imageService */
+        $imageService = app(\App\Services\ImageService::class);
+
+        if ($cutoutPng) {
+            // Sauvegarder le PNG transparent pour variantes futures
+            $cutoutFilename = "cutout_{$uniq}.png";
+            $cutoutPath = "shops/{$shop->id}/products_ai/{$cutoutFilename}";
+            Storage::disk('public')->put($cutoutPath, $cutoutPng);
+
+            $cutoutGd = @imagecreatefromstring($cutoutPng);
+            if ($cutoutGd) {
+                // Style 1 : Studio Blanc Épuré (Standard Marketplace 1:1 Amazon / Zara)
+                $whitePackshot = $imageService->buildStudioPackshot($cutoutGd, 'white', 1000);
+                if ($whitePackshot) {
+                    $whiteFilename = "studio_white_{$uniq}.jpg";
+                    $whitePath = "shops/{$shop->id}/products_ai/{$whiteFilename}";
+                    $tmpW = tempnam(sys_get_temp_dir(), 'ai_w_');
+                    imagejpeg($whitePackshot, $tmpW, 94);
+                    Storage::disk('public')->put($whitePath, file_get_contents($tmpW));
+                    @unlink($tmpW);
+                    imagedestroy($whitePackshot);
+
+                    $stagings[] = [
+                        'id' => 'studio_white',
+                        'type' => 'generated',
+                        'title' => 'Studio Blanc Épuré (Marketplace)',
+                        'url' => Storage::disk('public')->url($whitePath),
+                        'path' => $whitePath,
+                        'cutout_path' => $cutoutPath,
+                        'selected' => true,
+                        'is_source' => false,
+                        'badge' => 'Studio Pro',
+                    ];
+                }
+
+                // Style 2 : Studio Ambiance Douce Ivoire / Perle épuré
+                $ambientPackshot = $imageService->buildStudioPackshot($cutoutGd, 'ambient_light', 1000);
+                if ($ambientPackshot) {
+                    $ambientFilename = "studio_ambient_{$uniq}.jpg";
+                    $ambientPath = "shops/{$shop->id}/products_ai/{$ambientFilename}";
+                    $tmpA = tempnam(sys_get_temp_dir(), 'ai_a_');
+                    imagejpeg($ambientPackshot, $tmpA, 94);
+                    Storage::disk('public')->put($ambientPath, file_get_contents($tmpA));
+                    @unlink($tmpA);
+                    imagedestroy($ambientPackshot);
+
+                    $stagings[] = [
+                        'id' => 'studio_ambient',
+                        'type' => 'generated',
+                        'title' => 'Studio Ambiance Douce',
+                        'url' => Storage::disk('public')->url($ambientPath),
+                        'path' => $ambientPath,
+                        'cutout_path' => $cutoutPath,
+                        'selected' => false,
+                        'is_source' => false,
+                        'badge' => 'Ambiance Pro',
+                    ];
+                }
+
+                imagedestroy($cutoutGd);
+            }
         }
 
-        // 2. Génération des visuels réalistes avec Flux
-        $stagings = [];
+        // 3. Fallback de secours si le service de détourage était indisponible
+        if (empty($stagings) && function_exists('imagecreatefromstring')) {
+            $srcGd = @imagecreatefromstring($imageBinary);
+            if ($srcGd) {
+                $enhanced = $imageService->enhancePhotoQuality($srcGd);
+                $studio = $imageService->formatStudioSquare($enhanced, 1000);
+                $fallbackFilename = "studio_fallback_{$uniq}.jpg";
+                $fallbackPath = "shops/{$shop->id}/products_ai/{$fallbackFilename}";
+                $tmpF = tempnam(sys_get_temp_dir(), 'ai_fb_');
+                imagejpeg($studio, $tmpF, 93);
+                Storage::disk('public')->put($fallbackPath, file_get_contents($tmpF));
+                @unlink($tmpF);
+                imagedestroy($studio);
 
-        // Scène 1 (Dressing / Lifestyle adapté selon le type de produit)
-        $staged1 = $this->renderFluxScene($shop, $scenes['scene_1']['prompt'], "staged_lifestyle_{$uniq}");
-        if ($staged1) {
-            $stagings[] = [
-                'id' => 'staged_1',
-                'type' => 'generated',
-                'title' => $scenes['scene_1']['title'] ?? 'Mise en scène Dressing Loft',
-                'url' => $staged1['url'],
-                'path' => $staged1['path'],
-                'selected' => true,
-                'is_source' => false,
-                'badge' => 'IA Lifestyle',
-            ];
-        }
-
-        // Pause 1.2s pour éviter le rate-limiting du moteur
-        usleep(1200000);
-
-        // Scène 2 (Showroom / Boutique épurée adaptée)
-        $staged2 = $this->renderFluxScene($shop, $scenes['scene_2']['prompt'], "staged_showroom_{$uniq}");
-        if ($staged2) {
-            $stagings[] = [
-                'id' => 'staged_2',
-                'type' => 'generated',
-                'title' => $scenes['scene_2']['title'] ?? 'Ambiance Showroom Boutique',
-                'url' => $staged2['url'],
-                'path' => $staged2['path'],
-                'selected' => true,
-                'is_source' => false,
-                'badge' => 'IA Showroom',
-            ];
+                $stagings[] = [
+                    'id' => 'studio_enhanced',
+                    'type' => 'generated',
+                    'title' => 'Studio Amélioré',
+                    'url' => Storage::disk('public')->url($fallbackPath),
+                    'path' => $fallbackPath,
+                    'selected' => true,
+                    'is_source' => false,
+                    'badge' => 'Optimisé',
+                ];
+            }
         }
 
         return [
-            'category' => $scenes['category'] ?? 'general',
-            'product_title' => $scenes['product_title'] ?? null,
+            'category' => $category,
+            'product_title' => $productTitle,
             'stagings' => $stagings,
-            'scenes' => $scenes,
+            'cutout_path' => $cutoutPath ?? null,
         ];
-    }
-
-    /**
-     * Génère une image de scène réaliste via Flux avec timeout court.
-     */
-    public function renderFluxScene(Shop $shop, string $prompt, string $filenameBase): ?array
-    {
-        try {
-            $encoded = urlencode($prompt);
-            $seed = rand(100, 99999);
-            $imageUrl = "https://image.pollinations.ai/prompt/{$encoded}?width=800&height=800&nologo=true&model=flux&seed={$seed}";
-
-            $client = Http::timeout(20);
-            if (! app()->environment('production')) {
-                $client = $client->withoutVerifying();
-            }
-
-            $response = $client->get($imageUrl);
-            if ($response->successful() && strlen($response->body()) > 2000) {
-                $filename = "{$filenameBase}.jpg";
-                $relativePath = "shops/{$shop->id}/products_ai/{$filename}";
-                Storage::disk('public')->put($relativePath, $response->body());
-
-                return [
-                    'url' => Storage::disk('public')->url($relativePath),
-                    'path' => $relativePath,
-                ];
-            }
-        } catch (\Throwable $e) {
-            Log::warning('renderFluxScene error: ' . $e->getMessage());
-        }
-
-        return null;
     }
 
     protected function fallbackProductData(?string $userHint): array

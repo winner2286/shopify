@@ -365,6 +365,113 @@ class ImageService
         return $canvas;
     }
 
+    /**
+     * Rogne automatiquement les marges transparentes autour de l'objet pour un cadrage parfait.
+     */
+    public function cropTransparent($img)
+    {
+        $w = imagesx($img);
+        $h = imagesy($img);
+        $minX = $w; $maxX = 0;
+        $minY = $h; $maxY = 0;
+
+        for ($x = 0; $x < $w; $x++) {
+            for ($y = 0; $y < $h; $y++) {
+                $alpha = (imagecolorat($img, $x, $y) >> 24) & 0x7F;
+                if ($alpha < 120) {
+                    if ($x < $minX) $minX = $x;
+                    if ($x > $maxX) $maxX = $x;
+                    if ($y < $minY) $minY = $y;
+                    if ($y > $maxY) $maxY = $y;
+                }
+            }
+        }
+
+        if ($minX > $maxX || $minY > $maxY) {
+            return $img;
+        }
+
+        $pad = 6;
+        $minX = max(0, $minX - $pad);
+        $minY = max(0, $minY - $pad);
+        $cropW = min($w - $minX, ($maxX - $minX + 1) + ($pad * 2));
+        $cropH = min($h - $minY, ($maxY - $minY + 1) + ($pad * 2));
+
+        $cropped = imagecrop($img, ['x' => $minX, 'y' => $minY, 'width' => $cropW, 'height' => $cropH]);
+        return $cropped ?: $img;
+    }
+
+    /**
+     * Compose un packshot studio e-commerce professionnel à partir d'un PNG détouré.
+     * Conserve 100% l'objet réel sans aucune déformation ou hallucination.
+     */
+    public function buildStudioPackshot($cutoutGd, string $style = 'white', int $targetSize = 1000)
+    {
+        $cutoutGd = $this->cropTransparent($cutoutGd);
+
+        $origW = imagesx($cutoutGd);
+        $origH = imagesy($cutoutGd);
+
+        $usableSize = (int) round($targetSize * 0.84);
+        $padding = (int) round(($targetSize - $usableSize) / 2);
+
+        $ratio = min($usableSize / $origW, $usableSize / $origH);
+        $newW = max(1, (int) round($origW * $ratio));
+        $newH = max(1, (int) round($origH * $ratio));
+
+        $dstX = (int) round(($targetSize - $newW) / 2);
+        $dstY = (int) round(($targetSize - $newH) / 2);
+
+        $canvas = imagecreatetruecolor($targetSize, $targetSize);
+
+        $shadowY = $dstY + $newH + 2;
+
+        if ($style === 'white') {
+            // Fond blanc pur studio marketplace standard (Amazon, Zara, Shopify)
+            $bg = imagecolorallocate($canvas, 255, 255, 255);
+            imagefilledrectangle($canvas, 0, 0, $targetSize, $targetSize, $bg);
+
+            // Double ombre de contact réaliste
+            $shadowCore = imagecolorallocatealpha($canvas, 30, 30, 35, 105);
+            imagefilledellipse($canvas, (int) round($targetSize / 2), $shadowY, (int) round($newW * 0.74), 18, $shadowCore);
+            $shadowSoft = imagecolorallocatealpha($canvas, 50, 50, 55, 118);
+            imagefilledellipse($canvas, (int) round($targetSize / 2), $shadowY + 4, (int) round($newW * 0.88), 32, $shadowSoft);
+        } elseif ($style === 'ambient_dark') {
+            // Fond studio sombre graphite luxueux
+            for ($y = 0; $y < $targetSize; $y++) {
+                $ratioY = $y / $targetSize;
+                $r = (int) round(28 - ($ratioY * 12));
+                $g = (int) round(28 - ($ratioY * 12));
+                $b = (int) round(32 - ($ratioY * 14));
+                $col = imagecolorallocate($canvas, $r, $g, $b);
+                imageline($canvas, 0, $y, $targetSize, $y, $col);
+            }
+            $shadowCore = imagecolorallocatealpha($canvas, 5, 5, 5, 85);
+            imagefilledellipse($canvas, (int) round($targetSize / 2), $shadowY, (int) round($newW * 0.74), 18, $shadowCore);
+            $shadowSoft = imagecolorallocatealpha($canvas, 10, 10, 10, 110);
+            imagefilledellipse($canvas, (int) round($targetSize / 2), $shadowY + 4, (int) round($newW * 0.88), 32, $shadowSoft);
+        } else {
+            // Studio Ambiance Doux Ivoire / Perle épuré
+            for ($y = 0; $y < $targetSize; $y++) {
+                $ratioY = $y / $targetSize;
+                $r = (int) round(250 - ($ratioY * 12));
+                $g = (int) round(248 - ($ratioY * 14));
+                $b = (int) round(246 - ($ratioY * 16));
+                $col = imagecolorallocate($canvas, $r, $g, $b);
+                imageline($canvas, 0, $y, $targetSize, $y, $col);
+            }
+            $shadowCore = imagecolorallocatealpha($canvas, 30, 25, 25, 105);
+            imagefilledellipse($canvas, (int) round($targetSize / 2), $shadowY, (int) round($newW * 0.74), 18, $shadowCore);
+            $shadowSoft = imagecolorallocatealpha($canvas, 50, 45, 45, 118);
+            imagefilledellipse($canvas, (int) round($targetSize / 2), $shadowY + 4, (int) round($newW * 0.88), 32, $shadowSoft);
+        }
+
+        // Incrustation de l'objet réel non déformé
+        imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $newW, $newH, $origW, $origH);
+
+        return $canvas;
+    }
+
     private function hasTransparency($image): bool
     {
         if (! function_exists('imagecolorat')) return false;
