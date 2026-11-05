@@ -76,8 +76,9 @@
 
                 <select name="filter" class="select" style="min-width:160px;" onchange="this.form.submit()">
                     <option value="">Tous les stocks</option>
+                    <option value="in_stock" @selected(request('filter') === 'in_stock')>En stock uniquement</option>
                     <option value="low_stock" @selected(request('filter') === 'low_stock')>Stock bas (≤ seuil)</option>
-                    <option value="out_of_stock" @selected(request('filter') === 'out_of_stock')>Épuisé (0)</option>
+                    <option value="out_of_stock" @selected(request('filter') === 'out_of_stock')>Épuisé (Rupture)</option>
                 </select>
             </div>
 
@@ -98,8 +99,13 @@
                     <x-icon name="tag" size="48" />
                 </div>
                 Aucun produit ne correspond à votre recherche.<br>
-                <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm" style="margin-top:1rem">+ Créer votre premier produit</a>
+                @if (request()->hasAny(['search', 'category_id', 'status', 'filter']))
+                    <a href="{{ route('products.index') }}" class="btn btn-ghost btn-sm" style="margin-top:1rem">Réinitialiser les filtres</a>
+                @else
+                    <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm" style="margin-top:1rem">+ Créer votre premier produit</a>
+                @endif
             </div>
+        @else
             <!-- Vue Cartes Mobiles pour Produits -->
             <div class="product-mobile-cards">
                 @foreach ($products as $prod)

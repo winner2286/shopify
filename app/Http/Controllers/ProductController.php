@@ -59,7 +59,7 @@ class ProductController extends Controller
                 });
             }
 
-            // Filtre stock bas / épuisé
+            // Filtre stock bas / épuisé / en stock
             if ($request->input('filter') === 'low_stock') {
                 $query->where('track_stock', true)
                       ->where('stock', '>', 0)
@@ -67,6 +67,11 @@ class ProductController extends Controller
             } elseif ($request->input('filter') === 'out_of_stock') {
                 $query->where('track_stock', true)
                       ->where('stock', '<=', 0);
+            } elseif ($request->input('filter') === 'in_stock') {
+                $query->where(function ($q) {
+                    $q->where('track_stock', false)
+                      ->orWhere('stock', '>', 0);
+                });
             }
 
             $products = $query->paginate(20)->withQueryString();
