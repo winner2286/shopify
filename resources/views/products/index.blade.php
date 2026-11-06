@@ -54,27 +54,27 @@
         </div>
     @endif
 
-    <!-- Barre de filtres et recherche (C-05) -->
-    <div class="card panel" style="margin-bottom: 1.5rem; padding: 1.2rem;">
-        <form method="GET" action="{{ route('products.index') }}" class="toolbar">
-            <div class="filters">
-                <input type="text" name="search" class="input" style="min-width:220px;" placeholder="Rechercher par nom, réf..." value="{{ request('search') }}">
+    <!-- Barre de filtres et recherche responsive (C-05) -->
+    <div class="card panel product-filters-card" style="margin-bottom: 1.25rem; padding: 1rem 1.15rem;">
+        <form method="GET" action="{{ route('products.index') }}" class="product-filters-form">
+            <div class="product-filters-inputs">
+                <input type="text" name="search" class="input product-filter-search" placeholder="Rechercher par nom, réf..." value="{{ request('search') }}">
                 
-                <select name="category_id" class="select" style="min-width:160px;" onchange="this.form.submit()">
+                <select name="category_id" class="select product-filter-select" onchange="this.form.submit()">
                     <option value="">Toutes les catégories</option>
                     @foreach ($categories as $cat)
                         <option value="{{ $cat->id }}" @selected(request('category_id') == $cat->id)>{{ $cat->name }}</option>
                     @endforeach
                 </select>
 
-                <select name="status" class="select" style="min-width:140px;" onchange="this.form.submit()">
+                <select name="status" class="select product-filter-select" onchange="this.form.submit()">
                     <option value="">Tous les statuts</option>
                     <option value="active" @selected(request('status') === 'active')>Actifs</option>
                     <option value="hidden" @selected(request('status') === 'hidden')>Masqués</option>
                     <option value="archived" @selected(request('status') === 'archived')>Archivés</option>
                 </select>
 
-                <select name="filter" class="select" style="min-width:160px;" onchange="this.form.submit()">
+                <select name="filter" class="select product-filter-select" onchange="this.form.submit()">
                     <option value="">Tous les stocks</option>
                     <option value="in_stock" @selected(request('filter') === 'in_stock')>En stock uniquement</option>
                     <option value="low_stock" @selected(request('filter') === 'low_stock')>Stock bas (≤ seuil)</option>
@@ -82,7 +82,7 @@
                 </select>
             </div>
 
-            <div style="display:flex;gap:.5rem">
+            <div class="product-filters-actions">
                 <button type="submit" class="btn btn-ghost btn-sm">Filtrer</button>
                 @if (request()->hasAny(['search', 'category_id', 'status', 'filter']))
                     <a href="{{ route('products.index') }}" class="btn btn-ghost btn-sm" style="color:var(--text-faint)">Effacer</a>
@@ -91,23 +91,22 @@
         </form>
     </div>
 
-    <!-- Tableau des produits -->
-    <section class="card panel">
-        @if ($products->isEmpty())
-            <div class="empty">
-                <div style="display:flex;justify-content:center;margin-bottom:1rem;color:var(--text-soft)" aria-hidden="true">
-                    <x-icon name="tag" size="48" />
-                </div>
-                Aucun produit ne correspond à votre recherche.<br>
-                @if (request()->hasAny(['search', 'category_id', 'status', 'filter']))
-                    <a href="{{ route('products.index') }}" class="btn btn-ghost btn-sm" style="margin-top:1rem">Réinitialiser les filtres</a>
-                @else
-                    <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm" style="margin-top:1rem">+ Créer votre premier produit</a>
-                @endif
+    <!-- Catalogue des produits -->
+    @if ($products->isEmpty())
+        <div class="card panel empty" style="text-align:center;padding:3.5rem 1rem">
+            <div style="display:flex;justify-content:center;margin-bottom:1rem;color:var(--text-soft)" aria-hidden="true">
+                <x-icon name="tag" size="48" />
             </div>
-        @else
-            <!-- Vue Cartes Mobiles pour Produits -->
-            <div class="product-mobile-cards">
+            <p style="margin:0 0 1rem;font-size:1.05rem">Aucun produit ne correspond à votre recherche.</p>
+            @if (request()->hasAny(['search', 'category_id', 'status', 'filter']))
+                <a href="{{ route('products.index') }}" class="btn btn-ghost btn-sm">Réinitialiser les filtres</a>
+            @else
+                <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm">+ Créer votre premier produit</a>
+            @endif
+        </div>
+    @else
+        <!-- Vue Cartes Mobiles pour Produits (visible sur mobile <= 768px uniquement) -->
+        <div class="product-mobile-cards">
                 @foreach ($products as $prod)
                     <div class="product-mobile-card">
                         @php $thumb = $prod->primaryImage?->thumbnail_url ?? $prod->images->first()?->thumbnail_url; @endphp
@@ -192,86 +191,87 @@
                 @endforeach
             </div>
 
-            <!-- Vue Tableau Tablette / Ordinateur -->
-            <div class="table-wrap products-desktop-table">
-                <table class="table">
-                    <thead>
+        <!-- Vue Tableau Tablette / Ordinateur (visible sur desktop > 768px uniquement) -->
+        <div class="card panel table-wrap products-desktop-table" style="margin-bottom:1.5rem">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width:60px">Photo</th>
+                        <th>Titre & Catégorie</th>
+                        <th>Prix (FCFA)</th>
+                        <th>Stock</th>
+                        <th>Statut</th>
+                        <th style="text-align:right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($products as $prod)
                         <tr>
-                            <th style="width:60px">Photo</th>
-                            <th>Titre & Catégorie</th>
-                            <th>Prix (FCFA)</th>
-                            <th>Stock</th>
-                            <th>Statut</th>
-                            <th style="text-align:right">Actions</th>
+                            <td style="width:60px">
+                                @php $thumb = $prod->primaryImage?->thumbnail_url ?? $prod->images->first()?->thumbnail_url; @endphp
+                                @if ($thumb)
+                                    <img src="{{ $thumb }}" alt="{{ $prod->title }}" class="thumb-preview" loading="lazy" style="width:52px;height:52px;min-width:52px;min-height:52px;max-width:52px;max-height:52px;border-radius:10px;object-fit:cover;display:block;" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $prod->id }}'">
+                                @else
+                                    <div class="thumb-preview" style="width:52px;height:52px;min-width:52px;min-height:52px;max-width:52px;max-height:52px;border-radius:10px;display:grid;place-items:center;color:var(--text-faint)">
+                                        <x-icon name="camera" size="18" />
+                                    </div>
+                                @endif
+                            </td>
+                            <td>
+                                <strong><a href="{{ route('products.edit', $prod) }}">{{ $prod->title }}</a></strong>
+                                <div style="font-size:.82rem;color:var(--text-soft)">
+                                    @if ($prod->categories->isNotEmpty())
+                                        {{ $prod->categories->pluck('name')->join(', ') }}
+                                    @else
+                                        <em>Non classé</em>
+                                    @endif
+                                    @if ($prod->sku) • Réf: {{ $prod->sku }} @endif
+                                </div>
+                            </td>
+                            <td>
+                                <strong>{{ number_format($prod->price, 0, ',', ' ') }} FCFA</strong>
+                                @if ($prod->compare_at_price)
+                                    <div style="font-size:.8rem;color:var(--text-faint);text-decoration:line-through;">
+                                        {{ number_format($prod->compare_at_price, 0, ',', ' ') }} FCFA
+                                    </div>
+                                @endif
+                            </td>
+                            <td>
+                                @if (! $prod->track_stock)
+                                    <span class="badge-status" style="background:hsl(240 20% 50%/.15);color:var(--text-soft)">Illimité</span>
+                                @elseif ($prod->isOutOfStock())
+                                    <span class="badge-status badge-out-of-stock">Épuisé (0)</span>
+                                @elseif ($prod->isLowStock())
+                                    <span class="badge-status badge-low-stock">Bas ({{ $prod->stock }})</span>
+                                @else
+                                    <span style="font-weight:600">{{ $prod->stock }} en stock</span>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge-status {{ $prod->status === 'active' ? 'badge-active' : 'badge-hidden' }}">
+                                    {{ $prod->status === 'active' ? 'Actif' : ($prod->status === 'hidden' ? 'Masqué' : 'Archivé') }}
+                                </span>
+                            </td>
+                            <td style="text-align:right">
+                                <div style="display:inline-flex;gap:.35rem;align-items:center">
+                                    <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem" title="Créer une affiche promo 1-clic pour ce produit">
+                                        <x-icon name="image" size="13" /> <span>Affiche</span>
+                                    </a>
+                                    <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm">Modifier</a>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($products as $prod)
-                            <tr>
-                                <td style="width:60px">
-                                    @php $thumb = $prod->primaryImage?->thumbnail_url ?? $prod->images->first()?->thumbnail_url; @endphp
-                                    @if ($thumb)
-                                        <img src="{{ $thumb }}" alt="{{ $prod->title }}" class="thumb-preview" loading="lazy" style="width:52px;height:52px;min-width:52px;min-height:52px;max-width:52px;max-height:52px;border-radius:10px;object-fit:cover;display:block;" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $prod->id }}'">
-                                    @else
-                                        <div class="thumb-preview" style="width:52px;height:52px;min-width:52px;min-height:52px;max-width:52px;max-height:52px;border-radius:10px;display:grid;place-items:center;color:var(--text-faint)">
-                                            <x-icon name="camera" size="18" />
-                                        </div>
-                                    @endif
-                                </td>
-                                <td>
-                                    <strong><a href="{{ route('products.edit', $prod) }}">{{ $prod->title }}</a></strong>
-                                    <div style="font-size:.82rem;color:var(--text-soft)">
-                                        @if ($prod->categories->isNotEmpty())
-                                            {{ $prod->categories->pluck('name')->join(', ') }}
-                                        @else
-                                            <em>Non classé</em>
-                                        @endif
-                                        @if ($prod->sku) • Réf: {{ $prod->sku }} @endif
-                                    </div>
-                                </td>
-                                <td>
-                                    <strong>{{ number_format($prod->price, 0, ',', ' ') }} FCFA</strong>
-                                    @if ($prod->compare_at_price)
-                                        <div style="font-size:.8rem;color:var(--text-faint);text-decoration:line-through;">
-                                            {{ number_format($prod->compare_at_price, 0, ',', ' ') }} FCFA
-                                        </div>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if (! $prod->track_stock)
-                                        <span class="badge-status" style="background:hsl(240 20% 50%/.15);color:var(--text-soft)">Illimité</span>
-                                    @elseif ($prod->isOutOfStock())
-                                        <span class="badge-status badge-out-of-stock">Épuisé (0)</span>
-                                    @elseif ($prod->isLowStock())
-                                        <span class="badge-status badge-low-stock">Bas ({{ $prod->stock }})</span>
-                                    @else
-                                        <span style="font-weight:600">{{ $prod->stock }} en stock</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="badge-status {{ $prod->status === 'active' ? 'badge-active' : 'badge-hidden' }}">
-                                        {{ $prod->status === 'active' ? 'Actif' : ($prod->status === 'hidden' ? 'Masqué' : 'Archivé') }}
-                                    </span>
-                                </td>
-                                <td style="text-align:right">
-                                    <div style="display:inline-flex;gap:.35rem;align-items:center">
-                                        <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem" title="Créer une affiche promo 1-clic pour ce produit">
-                                            <x-icon name="image" size="13" /> <span>Affiche</span>
-                                        </a>
-                                        <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm">Modifier</a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
 
-            <!-- Pagination -->
-            <div style="margin-top:1.5rem">
+        <!-- Pagination (affichée uniquement s'il y a plusieurs pages) -->
+        @if ($products->hasPages())
+            <div class="products-pagination" style="margin-top:1.25rem;margin-bottom:1rem;display:flex;justify-content:center">
                 {{ $products->links() }}
             </div>
         @endif
-    </section>
+    @endif
 </div>
 @endsection

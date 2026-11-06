@@ -1626,12 +1626,14 @@ html[data-theme='light'] .bottom-nav-item.admin-cockpit-link,
   letter-spacing: -0.025em;
 }
 
-/* Espacement garanti sous le contenu pour la barre mobile */
+/* Espacement garanti sous le contenu pour la barre mobile (appliqué uniquement à main pour éviter le double padding de 200px) */
 body.has-bottom-nav,
-body:has(.bottom-nav),
+body:has(.bottom-nav) {
+  padding-bottom: 0 !important;
+}
 body.has-bottom-nav main,
 body:has(.bottom-nav) main {
-  padding-bottom: calc(85px + max(14px, env(safe-area-inset-bottom, 14px))) !important;
+  padding-bottom: calc(72px + max(12px, env(safe-area-inset-bottom, 12px))) !important;
 }
 
 button.bottom-nav-item {
@@ -2171,6 +2173,40 @@ button.bottom-nav-item {
   display: inline;
 }
 
+/* Filtres Catalogue Produits */
+.product-filters-card {
+  border-radius: var(--radius-sm);
+}
+.product-filters-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+.product-filters-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.product-filter-search {
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+.product-filter-select {
+  flex: 0 1 auto;
+  min-width: 140px;
+}
+.product-filters-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 /* Cartes Responsive Mobiles : Catégories, Produits & Commandes */
 .category-mobile-cards,
 .product-mobile-cards,
@@ -2290,7 +2326,14 @@ button.bottom-nav-item {
 
   /* Produits : Cartes tactiles haute visibilité */
   .products-desktop-table { display: none !important; }
-  .product-mobile-cards { display: flex !important; flex-direction: column; gap: .75rem; }
+  .product-mobile-cards {
+    display: flex !important;
+    flex-direction: column;
+    gap: .75rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
   .product-mobile-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -2303,6 +2346,9 @@ button.bottom-nav-item {
     align-items: stretch;
     position: relative;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
   }
   .product-mobile-thumb-wrap {
     position: relative;
@@ -2456,6 +2502,49 @@ button.bottom-nav-item {
     background: #ffffff !important;
     border-color: rgba(15, 23, 42, 0.09) !important;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  /* Filtres Produits fluides et pleine largeur sur mobile */
+  .product-filters-card {
+    padding: 0.85rem 0.95rem !important;
+    margin-bottom: 1rem !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .product-filters-form {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+    width: 100% !important;
+  }
+  .product-filters-inputs {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+  .product-filter-search,
+  .product-filter-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 0.88rem !important;
+    height: 40px !important;
+  }
+  .product-filters-actions {
+    width: 100% !important;
+    display: flex !important;
+    gap: 0.5rem !important;
+    justify-content: stretch !important;
+  }
+  .product-filters-actions .btn {
+    flex: 1 !important;
+    justify-content: center !important;
+    text-align: center !important;
+    min-height: 38px !important;
+    font-size: 0.85rem !important;
   }
 }
 
@@ -3257,16 +3346,22 @@ button.bottom-nav-item {
     box-sizing: border-box;
   }
 
-  /* Permet le défilement horizontal fluide des tableaux sur smartphone */
-  .table-wrap,
+  /* Permet le défilement horizontal fluide des tableaux génériques sur smartphone (sans forcer les tables desktop dédiées) */
+  .table-wrap:not(.products-desktop-table):not(.categories-desktop-table):not(.orders-desktop-table),
   .card-table,
-  .card:has(table),
   .card[style*="overflow-x"] {
     padding: 0 !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     max-width: 100% !important;
     display: block !important;
+  }
+
+  /* Garantit que les tables desktop restent STRICTEMENT invisibles sur smartphone */
+  .products-desktop-table,
+  .categories-desktop-table,
+  .orders-desktop-table {
+    display: none !important;
   }
 
   .input, .select, textarea {
