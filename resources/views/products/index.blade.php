@@ -55,11 +55,16 @@
     @endif
 
     <!-- Barre de filtres et recherche responsive (C-05) -->
-    <div class="card panel product-filters-card" style="margin-bottom: 1.25rem; padding: 1rem 1.15rem;">
+    <div class="card panel product-filters-card">
         <form method="GET" action="{{ route('products.index') }}" class="product-filters-form">
-            <div class="product-filters-inputs">
+            <div class="product-search-wrap">
+                <span class="product-search-icon" aria-hidden="true">
+                    <x-icon name="search" size="16" />
+                </span>
                 <input type="text" name="search" class="input product-filter-search" placeholder="Rechercher par nom, réf..." value="{{ request('search') }}">
-                
+            </div>
+            
+            <div class="product-filters-selects">
                 <select name="category_id" class="select product-filter-select" onchange="this.form.submit()">
                     <option value="">Toutes les catégories</option>
                     @foreach ($categories as $cat)
@@ -107,9 +112,12 @@
     @else
         <!-- Vue Cartes Mobiles pour Produits (visible sur mobile <= 768px uniquement) -->
         <div class="product-mobile-cards">
-                @foreach ($products as $prod)
-                    <div class="product-mobile-card">
-                        @php $thumb = $prod->primaryImage?->thumbnail_url ?? $prod->images->first()?->thumbnail_url; @endphp
+            @foreach ($products as $prod)
+                <div class="product-mobile-card">
+                    @php $thumb = $prod->primaryImage?->thumbnail_url ?? $prod->images->first()?->thumbnail_url; @endphp
+                    
+                    <!-- Corps de la carte : Photo + Informations -->
+                    <div class="product-mobile-card-body">
                         <div class="product-mobile-thumb-wrap">
                             @if ($thumb)
                                 <img src="{{ $thumb }}" alt="{{ $prod->title }}" class="product-mobile-card-img" loading="lazy" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $prod->id }}'">
@@ -158,38 +166,40 @@
                                 </span>
                             </div>
 
-                            <!-- Prix & Actions -->
-                            <div class="product-mobile-card-bottom">
-                                <div class="product-mobile-card-price-wrap">
-                                    <span class="product-mobile-card-price">
-                                        {{ number_format($prod->price, 0, ',', ' ') }} FCFA
+                            <!-- Prix & Comparaison -->
+                            <div class="product-mobile-card-price-row">
+                                <span class="product-mobile-card-price">
+                                    {{ number_format($prod->price, 0, ',', ' ') }} FCFA
+                                </span>
+                                @if ($prod->compare_at_price && $prod->compare_at_price > $prod->price)
+                                    <span class="product-mobile-card-compare">
+                                        {{ number_format($prod->compare_at_price, 0, ',', ' ') }} FCFA
                                     </span>
-                                    @if ($prod->compare_at_price && $prod->compare_at_price > $prod->price)
-                                        <span class="product-mobile-card-compare">
-                                            {{ number_format($prod->compare_at_price, 0, ',', ' ') }} FCFA
-                                        </span>
-                                    @endif
-                                </div>
-
-                                <div class="product-mobile-card-actions">
-                                    @if ($userShop && $prod->status === 'active')
-                                        <a href="{{ url('/b/' . $userShop->subdomain . '/produits/' . $prod->slug) }}" target="_blank" class="btn btn-ghost btn-sm product-mobile-action-btn" title="Voir sur ma vitrine">
-                                            <x-icon name="external-link" size="13" />
-                                        </a>
-                                    @endif
-                                    <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm product-mobile-action-btn" title="Créer une affiche promo">
-                                        <x-icon name="image" size="13" />
-                                        <span>Affiche</span>
-                                    </a>
-                                    <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm product-mobile-action-btn primary" title="Modifier">
-                                        Modifier
-                                    </a>
-                                </div>
+                                @endif
                             </div>
                         </div>
                     </div>
-                @endforeach
-            </div>
+
+                    <!-- Pied de carte : Actions tactiles pleine largeur (jamais coupées) -->
+                    <div class="product-mobile-card-footer">
+                        @if ($userShop && $prod->status === 'active')
+                            <a href="{{ url('/b/' . $userShop->subdomain . '/produits/' . $prod->slug) }}" target="_blank" class="btn btn-ghost btn-sm product-mobile-footer-btn" title="Voir sur ma vitrine">
+                                <x-icon name="external-link" size="13" />
+                                <span>Vitrine</span>
+                            </a>
+                        @endif
+                        <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm product-mobile-footer-btn" title="Créer une affiche promo">
+                            <x-icon name="image" size="13" />
+                            <span>Affiche IA</span>
+                        </a>
+                        <a href="{{ route('products.edit', $prod) }}" class="btn btn-primary btn-sm product-mobile-footer-btn primary" title="Modifier le produit">
+                            <x-icon name="edit-2" size="13" />
+                            <span>Modifier</span>
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+        </div>
 
         <!-- Vue Tableau Tablette / Ordinateur (visible sur desktop > 768px uniquement) -->
         <div class="card panel table-wrap products-desktop-table" style="margin-bottom:1.5rem">
