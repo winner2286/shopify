@@ -6,6 +6,11 @@
     $bubbleCreditsRemaining = $bubbleShop ? $bubbleShop->aiCreditsRemaining() : 80;
     $bubbleCreditsMonthly = $bubbleShop ? $bubbleShop->aiCreditsMonthly() : 80;
     $bubbleShopName = $bubbleShop?->name ?: 'Votre boutique';
+    $bubbleActiveConv = $bubbleShop ? $bubbleShop->aiConversations()
+        ->where('last_message_at', '>=', now()->subHours(2))
+        ->latest('last_message_at')
+        ->first() : null;
+    $bubbleInitialConvId = $bubbleActiveConv?->id;
 @endphp
 
 <!-- ============================================================== -->
@@ -939,10 +944,69 @@ body.ai-chat-open {
 <!-- ============================================================== -->
 <script>
 (function() {
-    let currentConversationId = null;
+    let currentConversationId = {{ $bubbleInitialConvId ? (int) $bubbleInitialConvId : 'null' }};
+    if (!currentConversationId) {
+        const saved = localStorage.getItem('zanika_ai_bubble_conv_id');
+        if (saved) currentConversationId = parseInt(saved, 10);
+    }
     let isSending = false;
+    let hasLoadedHistory = false;
 
     let savedScrollY = 0;
+
+    async function loadActiveConversationIfNeeded() {
+        if (hasLoadedHistory) return;
+        hasLoadedHistory = true;
+
+        let targetConvId = currentConversationId;
+        if (!targetConvId) {
+            const saved = localStorage.getItem('zanika_ai_bubble_conv_id');
+            if (saved) targetConvId = parseInt(saved, 10);
+        }
+
+        let fetchUrl = targetConvId 
+            ? "{{ url('/assistant-ia/conversations') }}/" + targetConvId
+            : "{{ route('ai.conversations.active') }}";
+
+        try {
+            const resp = await fetch(fetchUrl, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                }
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.id) {
+                    currentConversationId = data.id;
+                    localStorage.setItem('zanika_ai_bubble_conv_id', data.id);
+                }
+                if (data.remaining_credits !== undefined) {
+                    const credEl = document.getElementById('ai-bubble-credits-val');
+                    if (credEl) credEl.textContent = data.remaining_credits;
+                }
+                if (data.messages && data.messages.length > 0) {
+                    const welcome = document.getElementById('ai-bubble-welcome');
+                    if (welcome) welcome.style.display = 'none';
+
+                    const msgContainer = document.getElementById('ai-bubble-messages');
+                    const existing = msgContainer.querySelectorAll('.ai-bubble-msg');
+                    existing.forEach(el => el.remove());
+
+                    data.messages.forEach(m => {
+                        if (m.role === 'user' || m.role === 'assistant') {
+                            if (m.content) {
+                                appendAiBubbleMessage(m.role, m.content, m.action_required, m.id);
+                            }
+                        }
+                    });
+                    scrollAiBubbleToBottom();
+                }
+            }
+        } catch (err) {
+            console.warn('Erreur chargement conversation active copilote:', err);
+        }
+    }
 
     function syncWithVisualViewport() {
         if (window.innerWidth > 768) return;
@@ -973,6 +1037,7 @@ body.ai-chat-open {
 
         const isClosed = win.style.display === 'none' || !win.style.display;
         if (isClosed) {
+            loadActiveConversationIfNeeded();
             savedScrollY = window.scrollY || window.pageYOffset || 0;
             win.style.display = 'flex';
             if (backdrop) backdrop.classList.add('active');
@@ -1053,6 +1118,10 @@ body.ai-chat-open {
 
     window.resetAiBubbleChat = function() {
         currentConversationId = null;
+        window.__forceNewConversation = true;
+        localStorage.removeItem('zanika_ai_bubble_conv_id');
+        hasLoadedHistory = true;
+
         const msgContainer = document.getElementById('ai-bubble-messages');
         if (!msgContainer) return;
         msgContainer.innerHTML = `
@@ -1124,7 +1193,8 @@ body.ai-chat-open {
                 },
                 body: JSON.stringify({
                     message: text,
-                    conversation_id: currentConversationId
+                    conversation_id: currentConversationId,
+                    force_new: !!window.__forceNewConversation
                 })
             });
 
@@ -1132,6 +1202,8 @@ body.ai-chat-open {
 
             if (data.status === 'success') {
                 currentConversationId = data.conversation_id;
+                window.__forceNewConversation = false;
+                localStorage.setItem('zanika_ai_bubble_conv_id', currentConversationId);
 
                 // Mettre à jour les crédits dans l'en-tête
                 const remaining = data.remaining_credits ?? data.credits_remaining;

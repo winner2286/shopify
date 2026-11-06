@@ -190,7 +190,11 @@ class ProductController extends Controller
             }
         }
 
-        return redirect()->route('products.index')->with('status', 'Produit créé avec succès !');
+        $statusMessage = $product->status === 'active'
+            ? 'Produit publié et mis en ligne avec succès sur votre boutique !'
+            : 'Produit enregistré avec succès en brouillon (masqué de la vitrine).';
+
+        return redirect()->route('products.index')->with('status', $statusMessage);
     }
 
     public function edit(Request $request, Product $product)
@@ -276,9 +280,22 @@ class ProductController extends Controller
                 ]);
                 $currentCount++;
             }
+        } elseif ($request->filled('ai_temp_photo_path')) {
+            $tempPath = $request->input('ai_temp_photo_path');
+            if (Storage::disk('public')->exists($tempPath)) {
+                $product->images()->create([
+                    'path' => $tempPath,
+                    'sort_order' => $product->images()->count(),
+                    'size_bytes' => Storage::disk('public')->size($tempPath),
+                ]);
+            }
         }
 
-        return redirect()->route('products.index')->with('status', 'Produit mis à jour.');
+        $statusMessage = $product->status === 'active'
+            ? 'Produit mis à jour et visible sur votre boutique.'
+            : 'Produit mis à jour et conservé en brouillon (masqué de la vitrine).';
+
+        return redirect()->route('products.index')->with('status', $statusMessage);
     }
 
     public function destroy(Product $product): RedirectResponse

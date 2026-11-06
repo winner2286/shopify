@@ -185,6 +185,11 @@ class Shop extends Model
         return $this->hasMany(Advertisement::class)->latest();
     }
 
+    public function discountCodes(): HasMany
+    {
+        return $this->hasMany(DiscountCode::class)->latest();
+    }
+
     /**
      * Initialise les zones de livraison types pour le Togo si aucune n'est configurée
      */

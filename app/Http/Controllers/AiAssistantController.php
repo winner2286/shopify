@@ -100,6 +100,49 @@ class AiAssistantController extends Controller
     }
 
     /**
+     * Récupère la conversation active la plus récente (moins de 2h) pour la bulle flottante.
+     */
+    public function getActiveConversation(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        if (! $shop) {
+            return response()->json(['active' => false]);
+        }
+
+        $activeConversation = $shop->aiConversations()
+            ->where('last_message_at', '>=', now()->subHours(2))
+            ->latest('last_message_at')
+            ->first();
+
+        if (! $activeConversation) {
+            return response()->json(['active' => false]);
+        }
+
+        $messages = $activeConversation->messages()
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function (AiMessage $m) {
+                return [
+                    'id' => $m->id,
+                    'role' => $m->role,
+                    'content' => $m->content,
+                    'tool_name' => $m->tool_name,
+                    'action_required' => $m->action_required,
+                    'created_at' => $m->created_at->format('H:i'),
+                ];
+            });
+
+        return response()->json([
+            'active' => true,
+            'id' => $activeConversation->id,
+            'title' => $activeConversation->title,
+            'messages' => $messages,
+            'remaining_credits' => $shop->aiCreditsRemaining(),
+        ]);
+    }
+
+    /**
      * Envoi d'un message à l'assistant IA avec Tool Calling orchestré.
      */
     public function sendMessage(Request $request, AiOrchestrator $orchestrator): JsonResponse
@@ -107,6 +150,7 @@ class AiAssistantController extends Controller
         $request->validate([
             'message' => 'required|string|max:4000',
             'conversation_id' => 'nullable|integer',
+            'force_new' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
@@ -117,8 +161,13 @@ class AiAssistantController extends Controller
 
         $messageText = trim($request->input('message'));
         $conversationId = $request->input('conversation_id');
+        $forceNew = (bool) $request->input('force_new', false);
 
-        $result = $orchestrator->sendMessage($shop, $user, $messageText, $conversationId);
+        $options = [
+            'force_new_conversation' => $forceNew,
+        ];
+
+        $result = $orchestrator->sendMessage($shop, $user, $messageText, $conversationId, $options);
 
         return response()->json($result);
     }

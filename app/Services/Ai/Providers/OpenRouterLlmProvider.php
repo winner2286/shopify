@@ -11,20 +11,20 @@ class OpenRouterLlmProvider implements LlmProviderInterface
     protected string $apiKey;
     protected string $defaultModel;
 
-    public static function getBackupKey(): string
-    {
-        return (string) base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==');
-    }
+    protected ?string $backupKey;
 
-    public function __construct(?string $apiKey = null, ?string $defaultModel = null)
+    public function __construct(?string $apiKey = null, ?string $defaultModel = null, ?string $backupKey = null)
     {
-        $backupKey = self::getBackupKey();
         $rawKey = $apiKey
             ?: (config('services.openrouter.key')
-                ?: env('OPENROUTER_API_KEY', $backupKey));
+                ?: env('OPENROUTER_API_KEY'));
 
-        $cleanKey = trim((string) $rawKey, " \t\n\r\0\x0B\"'");
-        $this->apiKey = ! empty($cleanKey) ? $cleanKey : $backupKey;
+        $this->apiKey = trim((string) $rawKey, " \t\n\r\0\x0B\"'");
+
+        $rawBackup = $backupKey
+            ?: (config('services.openrouter.backup_key')
+                ?: env('OPENROUTER_BACKUP_API_KEY'));
+        $this->backupKey = ! empty($rawBackup) ? trim((string) $rawBackup, " \t\n\r\0\x0B\"'") : null;
 
         $this->defaultModel = $defaultModel
             ?: (config('services.openrouter.model')
@@ -114,12 +114,11 @@ class OpenRouterLlmProvider implements LlmProviderInterface
 
             $response = $client->post('https://openrouter.ai/api/v1/chat/completions', $payload);
 
-            // Si la clé configurée est rejetée (401), bascule immédiate sur la clé de secours certifiée
-            $backupKey = self::getBackupKey();
-            if ($response->status() === 401 && trim($this->apiKey) !== $backupKey) {
-                Log::warning('OpenRouter: Clé principale rejetée (401). Bascule automatique sur la clé de secours validée.');
+            // Si la clé configurée est rejetée (401), bascule immédiate sur la clé de secours si configurée
+            if ($response->status() === 401 && ! empty($this->backupKey) && trim($this->apiKey) !== $this->backupKey) {
+                Log::warning('OpenRouter: Clé principale rejetée (401). Bascule automatique sur la clé de secours configurée.');
                 $backupClient = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . $backupKey,
+                    'Authorization' => 'Bearer ' . $this->backupKey,
                     'HTTP-Referer' => $cleanUrl,
                     'X-Title' => $cleanTitle,
                     'Content-Type' => 'application/json',

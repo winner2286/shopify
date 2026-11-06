@@ -23,6 +23,12 @@ use App\Services\Ai\Tools\AdjustProductPricePercentageTool;
 use App\Services\Ai\Tools\GetUnderperformingProductsTool;
 use App\Services\Ai\Tools\DispatchOrderToCourierTool;
 use App\Services\Ai\Tools\GetWeeklySalesReportTool;
+use App\Services\Ai\Tools\CreateProductTool;
+use App\Services\Ai\Tools\UpdateOrderStatusTool;
+use App\Services\Ai\Tools\ManageShippingZonesTool;
+use App\Services\Ai\Tools\ManageDiscountCodesTool;
+use App\Services\Ai\Tools\GenerateVideoAdScriptTool;
+use App\Services\Ai\Tools\CreateProductFromPhotoTool;
 use Illuminate\Support\Facades\Log;
 
 class ToolRegistry
@@ -42,12 +48,16 @@ class ToolRegistry
         $defaultTools = [
             new GetCatalogOverviewTool(),
             new SearchProductsTool(),
+            new CreateProductTool(),
+            new CreateProductFromPhotoTool(),
             new GetOrdersSummaryTool(),
             new GetOrderDetailsTool(),
+            new UpdateOrderStatusTool(),
             new GetSalesAnalyticsTool(),
             new CompareSalesPeriodsTool(),
             new GetBusinessRecommendationsTool(),
             new GenerateMarketingCopyTool(),
+            new GenerateVideoAdScriptTool(),
             new GetInventoryAlertsTool(),
             new DraftCustomerMessageTool(),
             new UpdateProductStockOrPriceTool(),
@@ -58,6 +68,8 @@ class ToolRegistry
             new GetUnderperformingProductsTool(),
             new DispatchOrderToCourierTool(),
             new GetWeeklySalesReportTool(),
+            new ManageShippingZonesTool(),
+            new ManageDiscountCodesTool(),
         ];
 
         foreach ($defaultTools as $tool) {

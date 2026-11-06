@@ -5,10 +5,17 @@ namespace App\Services\Ai\Tools;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
+use App\Services\Ai\ActionTokenService;
 use App\Services\Ai\Contracts\AiToolInterface;
 
 class AdjustProductPricePercentageTool implements AiToolInterface
 {
+    public function __construct(
+        protected ?ActionTokenService $tokenService = null
+    ) {
+        $this->tokenService = $tokenService ?? new ActionTokenService();
+    }
+
     public function name(): string
     {
         return 'adjust_product_price_percentage';
@@ -41,6 +48,10 @@ class AdjustProductPricePercentageTool implements AiToolInterface
                     'type' => 'boolean',
                     'description' => 'True uniquement lorsque l\'utilisateur clique sur le bouton de validation de modification.',
                 ],
+                'action_token' => [
+                    'type' => 'string',
+                    'description' => 'Jeton cryptographique HMAC signé autorisant la mutation.',
+                ],
             ],
         ];
     }
@@ -57,14 +68,14 @@ class AdjustProductPricePercentageTool implements AiToolInterface
         $percentage = (float) ($arguments['percentage'] ?? 0);
         $isConfirmed = ! empty($arguments['confirmed_by_user']);
 
-        // Recherche du produit
+        // Recherche du produit avec isolation hermétique par shop_id
         $product = null;
         if ($productId > 0) {
-            $product = Product::where('shop_id', $shop->id)->find($productId);
+            $product = Product::withoutGlobalScopes()->where('shop_id', $shop->id)->find($productId);
         }
 
         if (! $product && ! empty($productName)) {
-            $product = Product::where('shop_id', $shop->id)
+            $product = Product::withoutGlobalScopes()->where('shop_id', $shop->id)
                 ->where('title', 'like', "%{$productName}%")
                 ->first();
         }
@@ -94,12 +105,22 @@ class AdjustProductPricePercentageTool implements AiToolInterface
         $diff = $newPrice - $currentPrice;
         $sign = $diff >= 0 ? '+' : '';
 
-        // Si non confirmé : renvoyer action_required pour bouton interactif
+        $actionParams = [
+            'product_id' => $product->id,
+            'new_price' => $newPrice,
+            'percentage' => $percentage,
+        ];
+
+        // Si non confirmé : renvoyer action_required pour bouton interactif avec jeton HMAC
         if (! $isConfirmed) {
             $direction = $percentage > 0 ? "hausse" : "baisse";
+            $initiator = $user ?? $shop->owner ?? User::first();
+            $token = $this->tokenService->generateToken($shop, $initiator, $this->name(), $actionParams);
+
             return [
                 'status' => 'action_required',
-                'action_type' => 'adjust_product_price_percentage',
+                'action_type' => $this->name(),
+                'action_token' => $token,
                 'product_id' => $product->id,
                 'product_title' => $product->title,
                 'changes' => [
@@ -110,6 +131,19 @@ class AdjustProductPricePercentageTool implements AiToolInterface
                 ],
                 'message' => "Confirmation requise : Appliquer une {$direction} de {$percentage}% sur \"{$product->title}\" ? Le prix passera de " . number_format($currentPrice, 0, ',', ' ') . " {$shop->currency} à " . number_format($newPrice, 0, ',', ' ') . " {$shop->currency} ({$sign}" . number_format($diff, 0, ',', ' ') . " {$shop->currency}).",
             ];
+        }
+
+        // Vérification du jeton HMAC lors de l'exécution confirmée
+        $token = $arguments['action_token'] ?? '';
+        $executor = $user ?? $shop->owner ?? User::first();
+        if (! empty($token)) {
+            $validation = $this->tokenService->validateToken($token, $shop, $executor, $this->name(), $actionParams);
+            if (! $validation['valid']) {
+                return [
+                    'status' => 'security_rejection',
+                    'error' => "Refus de sécurité : " . ($validation['error'] ?? 'Jeton invalide.'),
+                ];
+            }
         }
 
         // Exécution réelle côté backend

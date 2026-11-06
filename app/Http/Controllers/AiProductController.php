@@ -81,15 +81,17 @@ class AiProductController extends Controller
     }
 
     /**
-     * Vérification qualité IA : analyse le produit avec Gemini Vision, adapte le décor au produit
-     * (vêtement sur portant dans dressing/loft, chaussures sur parquet, bijoux sur marbre, etc.)
-     * et génère les versions comparatives réalistes (IA vs Photo source originale).
+     * Vérification qualité IA & Studio Photo Professionnel :
+     * Analyse le produit, sépare fidèlement le sujet sans altération (Règle 4.A),
+     * adapte le décor et l'éclairage selon la catégorie et génère les packshots comparatifs 1:1.
      */
-    public function verifyQuality(Request $request, ImageService $imageService, AiVisionService $visionService): JsonResponse
+    public function verifyQuality(Request $request, \App\Services\Ai\ProductStudioService $studioService): JsonResponse
     {
         $request->validate([
             'photo' => 'nullable|file|image|max:10240',
             'photo_base64' => 'nullable|string',
+            'photo_path' => 'nullable|string',
+            'category_hint' => 'nullable|string|max:200',
         ]);
 
         $user = $request->user();
@@ -104,33 +106,16 @@ class AiProductController extends Controller
         } elseif ($request->filled('photo_base64')) {
             $base64 = $request->input('photo_base64');
             $imageBinary = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64));
+        } elseif ($request->filled('photo_path') && Storage::disk('public')->exists($request->input('photo_path'))) {
+            $imageBinary = Storage::disk('public')->get($request->input('photo_path'));
         }
 
         if (! $imageBinary) {
             return response()->json(['error' => 'Veuillez fournir une photo valide.'], 422);
         }
 
-        $uniq = uniqid();
-        $sourceFilename = "source_{$uniq}.jpg";
-        $sourcePath = "shops/{$shop->id}/products_ai/{$sourceFilename}";
-        Storage::disk('public')->put($sourcePath, $imageBinary);
-        $sourceUrl = Storage::disk('public')->url($sourcePath);
-
-        // 1. Détourage IA chirurgical & Packshots Studio professionnels
-        $context = $visionService->generateContextualStagings($shop, $imageBinary);
-        $variations = $context['stagings'] ?? [];
-
-        // 2. Photo source originale (pour que le vendeur garde le choix absolu)
-        $variations[] = [
-            'id' => 'source',
-            'type' => 'source',
-            'title' => 'Photo source',
-            'url' => $sourceUrl,
-            'path' => $sourcePath,
-            'selected' => empty($variations),
-            'is_source' => true,
-            'badge' => 'Originale',
-        ];
+        $categoryHint = $request->input('category_hint');
+        $studioResult = $studioService->processProductPhoto($shop, $imageBinary, $categoryHint);
 
         // Journalisation de la vérification qualité (+12 crédits)
         $shop->increment('ai_credits_used', 12);
@@ -138,34 +123,41 @@ class AiProductController extends Controller
             'shop_id' => $shop->id,
             'type' => 'ai_quality_check',
             'step' => 'studio_packshot',
-            'model_used' => 'zanika-studio-vision',
+            'model_used' => 'zanika-product-studio',
             'prompt_tokens' => 0,
             'completion_tokens' => 0,
             'cost_estimated_fcfa' => 12,
-            'duration_ms' => 1200,
+            'duration_ms' => $studioResult['duration_ms'] ?? 1200,
             'status' => 'success',
-            'input_summary' => "Packshot studio IA [{$context['category']}] : " . ($context['product_title'] ?? 'Article'),
+            'input_summary' => "Studio Packshot [{$studioResult['category']}] : " . ($studioResult['product_title'] ?? 'Article'),
         ]);
 
         return response()->json([
             'status' => 'success',
-            'category' => $context['category'] ?? 'general',
-            'product_title' => $context['product_title'] ?? null,
-            'cutout_path' => $context['cutout_path'] ?? null,
-            'message' => 'Packshots studio créés avec succès sans déformation',
-            'variations' => $variations,
+            'category' => $studioResult['category'] ?? 'general',
+            'product_title' => $studioResult['product_title'] ?? null,
+            'cutout_path' => $studioResult['cutout_path'] ?? null,
+            'cutout_url' => $studioResult['cutout_url'] ?? null,
+            'source_path' => $studioResult['source_path'] ?? null,
+            'source_url' => $studioResult['source_url'] ?? null,
+            'variations' => $studioResult['variations'] ?? [],
+            'quality_audit' => $studioResult['quality_audit'] ?? null,
+            'duration_ms' => $studioResult['duration_ms'] ?? null,
+            'message' => 'Packshots studio créés avec succès sans altération du produit',
         ]);
     }
 
     /**
-     * Génère une variante de décor supplémentaire (+6 crédits).
+     * Génère une variante de décor studio supplémentaire (+6 crédits).
      */
-    public function generateVariant(Request $request, ImageService $imageService, AiVisionService $visionService): JsonResponse
+    public function generateVariant(Request $request, \App\Services\Ai\ProductStudioService $studioService): JsonResponse
     {
         $request->validate([
             'photo_path' => 'nullable|string',
             'photo_base64' => 'nullable|string',
             'cutout_path' => 'nullable|string',
+            'style' => 'nullable|string',
+            'category' => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -174,59 +166,57 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
-        $uniq = uniqid();
-        $cutoutGd = null;
+        $cutoutPngBinary = null;
 
         // 1. Récupérer le PNG détouré si déjà disponible
         if ($request->filled('cutout_path') && Storage::disk('public')->exists($request->input('cutout_path'))) {
-            $pngBinary = Storage::disk('public')->get($request->input('cutout_path'));
-            $cutoutGd = @imagecreatefromstring($pngBinary);
+            $cutoutPngBinary = Storage::disk('public')->get($request->input('cutout_path'));
         }
 
-        // 2. Sinon détourer depuis la photo
-        if (! $cutoutGd) {
+        // 2. Sinon extraire le détourage depuis la photo
+        if (! $cutoutPngBinary) {
             $binary = null;
             if ($request->filled('photo_path') && Storage::disk('public')->exists($request->input('photo_path'))) {
                 $binary = Storage::disk('public')->get($request->input('photo_path'));
             } elseif ($request->filled('photo_base64')) {
                 $base64 = $request->input('photo_base64');
                 $binary = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64));
+            } elseif ($request->hasFile('photo')) {
+                $binary = file_get_contents($request->file('photo')->getRealPath());
             }
 
             if ($binary) {
-                $cutoutPng = $visionService->removeBackground($binary);
-                if ($cutoutPng) {
-                    $cutoutGd = @imagecreatefromstring($cutoutPng);
-                }
+                $extracted = $studioService->extractCutout($binary);
+                $cutoutPngBinary = $extracted['binary'] ?? null;
             }
         }
 
-        if ($cutoutGd) {
-            $darkPackshot = $imageService->buildStudioPackshot($cutoutGd, 'ambient_dark', 1000);
-            $filename = "studio_dark_{$uniq}.jpg";
-            $relativePath = "shops/{$shop->id}/products_ai/{$filename}";
-            $tmp = tempnam(sys_get_temp_dir(), 'ai_d_');
-            imagejpeg($darkPackshot, $tmp, 94);
-            Storage::disk('public')->put($relativePath, file_get_contents($tmp));
-            @unlink($tmp);
-            imagedestroy($darkPackshot);
-            imagedestroy($cutoutGd);
+        if ($cutoutPngBinary) {
+            $style = $request->input('style', 'studio_dark');
+            $category = $request->input('category', 'general');
 
-            $shop->increment('ai_credits_used', 6);
+            $variation = $studioService->renderVariant($shop, $cutoutPngBinary, $style, $category);
 
-            return response()->json([
-                'status' => 'success',
-                'variation' => [
-                    'id' => 'gen_' . $uniq,
-                    'type' => 'generated',
-                    'title' => 'Studio Sombre Graphite (Luxe)',
-                    'url' => Storage::disk('public')->url($relativePath),
-                    'path' => $relativePath,
-                    'selected' => true,
-                    'is_source' => false,
-                    'badge' => 'Ambiance Luxe',
-                ],
-            ]);
+            if ($variation) {
+                $shop->increment('ai_credits_used', 6);
+                AiGeneration::create([
+                    'shop_id' => $shop->id,
+                    'type' => 'ai_quality_check',
+                    'step' => 'studio_variant',
+                    'model_used' => 'zanika-product-studio',
+                    'prompt_tokens' => 0,
+                    'completion_tokens' => 0,
+                    'cost_estimated_fcfa' => 6,
+                    'duration_ms' => 300,
+                    'status' => 'success',
+                    'input_summary' => "Variante studio [{$style}] : {$category}",
+                ]);
+
+                return response()->json([
+                    'status' => 'success',
+                    'variation' => $variation,
+                ]);
+            }
         }
 
         return response()->json(['error' => 'Impossible de générer une autre variante pour le moment.'], 500);

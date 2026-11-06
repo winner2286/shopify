@@ -70,10 +70,12 @@ class AiShopMemoryService
         float $confidence = 1.0,
         string $source = 'system'
     ): AiShopMemory {
+        $cleanKey = Str::slug($key, '_');
+
         return AiShopMemory::withoutGlobalScopes()->updateOrCreate(
             [
                 'shop_id' => $shop->id,
-                'memory_key' => Str::slug($key, '_'),
+                'memory_key' => $cleanKey,
             ],
             [
                 'category' => $category,
@@ -86,13 +88,92 @@ class AiShopMemoryService
     }
 
     /**
-     * Analyse un tour de conversation pour extraire automatiquement les préférences ou faits déclarés.
+     * Récupère la liste des souvenirs groupés par axe ou filtrés par un axe précis.
+     */
+    public function listByAxis(Shop $shop, ?string $axis = null): Collection
+    {
+        $query = AiShopMemory::withoutGlobalScopes()->where('shop_id', $shop->id);
+
+        if ($axis) {
+            $query->where('category', $axis);
+        }
+
+        return $query->orderBy('category')->orderBy('memory_key')->get();
+    }
+
+    /**
+     * Récupère la valeur d'une clé de mémoire spécifique.
+     */
+    public function getFact(Shop $shop, string $key): ?string
+    {
+        $memory = AiShopMemory::withoutGlobalScopes()
+            ->where('shop_id', $shop->id)
+            ->where('memory_key', Str::slug($key, '_'))
+            ->first();
+
+        return $memory?->memory_value;
+    }
+
+    /**
+     * Droit à l'oubli souverain : supprime sélectivement un fait mémorisé.
+     */
+    public function forgetMemory(Shop $shop, string $key): bool
+    {
+        $deleted = AiShopMemory::withoutGlobalScopes()
+            ->where('shop_id', $shop->id)
+            ->where('memory_key', Str::slug($key, '_'))
+            ->delete();
+
+        return $deleted > 0;
+    }
+
+    /**
+     * Droit à l'oubli souverain : supprime l'intégralité des mémoires de la boutique.
+     */
+    public function forgetAllMemories(Shop $shop): int
+    {
+        return AiShopMemory::withoutGlobalScopes()
+            ->where('shop_id', $shop->id)
+            ->delete();
+    }
+
+    /**
+     * Analyse un tour de conversation pour extraire automatiquement les préférences ou faits déclarés
+     * selon les 4 axes fondamentaux.
      */
     public function extractAndSaveFacts(Shop $shop, string $userMessage, string $assistantResponse): void
     {
         $msg = mb_strtolower($userMessage);
 
-        // 1. Détection de la ville ou zone prioritaire
+        // AXE 1 : Profil & Niche métier (business_profile)
+        $niches = [
+            'chaussure' => 'Chaussures & Sneakers',
+            'vetement' => 'Mode & Prêt-à-porter',
+            'robe' => 'Mode Féminine & Robes',
+            'perruque' => 'Mèches & Perruques',
+            'cosmetique' => 'Beauté & Cosmétiques',
+            'savon' => 'Soins corporels & Savons artisanaux',
+            'telephone' => 'Smartphones & High-tech',
+            'bijoux' => 'Bijoux & Accessoires',
+            'montre' => 'Montres & Horlogerie',
+            'nourriture' => 'Alimentation & Épicerie fine',
+        ];
+
+        foreach ($niches as $k => $label) {
+            if (str_contains($msg, $k) && (str_contains($msg, 'je vends') || str_contains($msg, 'mes produits') || str_contains($msg, 'spécialisé') || str_contains($msg, 'boutique de'))) {
+                $this->storeMemory(
+                    $shop,
+                    AiShopMemory::CAT_PROFILE,
+                    'niche_produits',
+                    "Niche commerciale spécialisée : {$label}",
+                    0.90,
+                    'conversation_extraction'
+                );
+                break;
+            }
+        }
+
+        // AXE 2 : Habitudes opérationnelles & logistique (operational_habit)
         $cities = [
             'lomé' => 'Lomé (Togo)',
             'lome' => 'Lomé (Togo)',
@@ -120,8 +201,7 @@ class AiShopMemoryService
             }
         }
 
-        // 2. Détection du canal de vente privilégié
-        if (str_contains($msg, 'whatsapp') && (str_contains($msg, 'je vends') || str_contains($msg, 'mes commandes') || str_contains($msg, 'mes clients'))) {
+        if (str_contains($msg, 'whatsapp') && (str_contains($msg, 'je vends') || str_contains($msg, 'mes commandes') || str_contains($msg, 'mes clients') || str_contains($msg, 'canal'))) {
             $this->storeMemory(
                 $shop,
                 AiShopMemory::CAT_HABIT,
@@ -132,47 +212,51 @@ class AiShopMemoryService
             );
         }
 
-        // 3. Détection d'un objectif de chiffre d'affaires
+        // AXE 3 : Objectifs commerciaux & Cibles chiffrées (commercial_goal)
         if (preg_match('/(\d+[\s\d]*)\s*(fcfa|f cfa|francs?)/i', $msg, $matches)) {
             $amount = preg_replace('/\s+/', '', $matches[1]);
-            if ((int) $amount >= 10000 && (str_contains($msg, 'objectif') || str_contains($msg, 'viser') || str_contains($msg, 'atteindre') || str_contains($msg, 'gagner'))) {
+            if ((int) $amount >= 10000 && (str_contains($msg, 'objectif') || str_contains($msg, 'viser') || str_contains($msg, 'atteindre') || str_contains($msg, 'gagner') || str_contains($msg, 'chiffre'))) {
                 $this->storeMemory(
                     $shop,
                     AiShopMemory::CAT_GOAL,
                     'objectif_financier',
                     "Objectif commercial déclaré : " . number_format((int) $amount, 0, ',', ' ') . " FCFA",
-                    0.85,
+                    0.95,
                     'conversation_extraction'
                 );
             }
         }
 
-        // 4. Détection du secteur d'activité ou niche spécifique
-        $niches = [
-            'chaussure' => 'Chaussures & Sneakers',
-            'vetement' => 'Mode & Prêt-à-porter',
-            'robe' => 'Mode Féminine & Robes',
-            'perruque' => 'Mèches & Perruques',
-            'cosmetique' => 'Beauté & Cosmétiques',
-            'savon' => 'Soins corporels & Savons artisanaux',
-            'telephone' => 'Smartphones & High-tech',
-            'bijoux' => 'Bijoux & Accessoires',
-            'montre' => 'Montres & Horlogerie',
-            'nourriture' => 'Alimentation & Épicerie fine',
-        ];
+        // AXE 4 : Préférences de communication du commerçant (merchant_preference)
+        if (str_contains($msg, 'réponds court') || str_contains($msg, 'fais bref') || str_contains($msg, 'sois concis') || str_contains($msg, 'trop long')) {
+            $this->storeMemory(
+                $shop,
+                AiShopMemory::CAT_PREFERENCE,
+                'style_reponse',
+                "Préfère des réponses très concises, directes et sans fioritures",
+                0.95,
+                'conversation_extraction'
+            );
+        } elseif (str_contains($msg, 'détaille') || str_contains($msg, 'explique en détail') || str_contains($msg, 'donne des détails')) {
+            $this->storeMemory(
+                $shop,
+                AiShopMemory::CAT_PREFERENCE,
+                'style_reponse',
+                "Apprécie les explications pédagogiques détaillées et documentées",
+                0.95,
+                'conversation_extraction'
+            );
+        }
 
-        foreach ($niches as $k => $label) {
-            if (str_contains($msg, $k) && (str_contains($msg, 'je vends') || str_contains($msg, 'mes produits') || str_contains($msg, 'spécialisé') || str_contains($msg, 'boutique de'))) {
-                $this->storeMemory(
-                    $shop,
-                    AiShopMemory::CAT_PROFILE,
-                    'niche_produits',
-                    "Niche commerciale spécialisée : {$label}",
-                    0.90,
-                    'conversation_extraction'
-                );
-                break;
-            }
+        if (str_contains($msg, 'darija') || str_contains($msg, 'arabe') || str_contains($msg, 'marocain')) {
+            $this->storeMemory(
+                $shop,
+                AiShopMemory::CAT_PREFERENCE,
+                'langue_preferee',
+                "Capable d'échanger en Darija marocaine ou en arabe",
+                0.90,
+                'conversation_extraction'
+            );
         }
     }
 }

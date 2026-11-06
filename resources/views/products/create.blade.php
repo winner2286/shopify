@@ -9,6 +9,15 @@
             <p style="margin:0"><a href="{{ route('products.index') }}">← Retour au catalogue</a></p>
             <h1>Ajouter un produit</h1>
         </div>
+        <div style="display:flex;gap:.6rem;align-items:center">
+            <button type="button" class="btn btn-ghost" onclick="openProductLivePreview()" style="display:inline-flex;align-items:center;gap:.45rem;font-weight:700;border:1px solid var(--border);border-radius:10px;padding:.55rem .95rem;background:var(--surface)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>👁️ Aperçu de la fiche vitrine</span>
+            </button>
+        </div>
     </div>
 
     @if ($errors->any())
@@ -147,19 +156,26 @@
                     <!-- Grille de prévisualisation des photos sélectionnées -->
                     <div id="photos-preview-grid" class="gallery-grid" style="display:none;margin-top:1.2rem"></div>
 
-                    <!-- Bannière / Switch : Vérification qualité IA (Zanika Luxury Theme) -->
-                    <div id="ai-quality-card" style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1rem 1.15rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:all .2s;box-shadow:0 2px 10px rgba(0,0,0,0.15)">
-                        <div style="display:flex;align-items:center;gap:.85rem;min-width:0">
-                            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg, #9e1b32, #c5223d);display:grid;place-items:center;color:#fff;box-shadow:0 4px 14px rgba(158,27,50,0.35);flex-shrink:0">
-                                <x-icon name="sparkles" size="20" />
+                    <!-- Bannière / Studio Photo IA Professionnel (Zanika Luxury Theme) -->
+                    <div id="ai-quality-card" style="margin-top:1.25rem;background:var(--surface);border:1px solid rgba(158,27,50,0.3);border-radius:14px;padding:1rem 1.15rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;transition:all .2s;box-shadow:0 4px 16px rgba(0,0,0,0.2);flex-wrap:wrap">
+                        <div style="display:flex;align-items:center;gap:.85rem;min-width:240px;flex:1">
+                            <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg, #9e1b32, #c5223d);display:grid;place-items:center;color:#fff;box-shadow:0 4px 14px rgba(158,27,50,0.35);flex-shrink:0">
+                                <x-icon name="sparkles" size="22" />
                             </div>
                             <div style="min-width:0">
-                                <strong style="font-size:1rem;color:var(--text);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Vérification qualité IA</strong>
-                                <span style="font-size:.82rem;color:var(--text-soft);display:block;margin-top:2px;line-height:1.3">Chaque image contrôlée et corrigée si besoin • +12 crédits</span>
+                                <div style="display:flex;align-items:center;gap:.5rem">
+                                    <strong style="font-size:1.02rem;color:var(--text);display:block">Studio Photo IA Professionnel</strong>
+                                    <span style="font-size:.7rem;font-weight:700;color:#10b981;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);padding:1px 6px;border-radius:4px">100% Fidèle</span>
+                                </div>
+                                <span style="font-size:.82rem;color:var(--text-soft);display:block;margin-top:2px;line-height:1.3">Détourage net, cadrage 1:1, ombres physiques & décor adapté • +12 crédits</span>
                             </div>
                         </div>
-                        <div style="display:flex;align-items:center;gap:.6rem;flex-shrink:0">
-                            <label class="zanika-switch" title="Activer la vérification et génération studio IA">
+                        <div style="display:flex;align-items:center;gap:.75rem;flex-shrink:0">
+                            <button type="button" onclick="triggerAiStudioFromButton()" id="btn-trigger-ai-studio" class="btn" style="background:linear-gradient(135deg, #9e1b32, #c5223d);color:#fff;border:none;font-weight:700;padding:.65rem 1.2rem;border-radius:10px;font-size:.9rem;display:inline-flex;align-items:center;gap:.5rem;cursor:pointer;box-shadow:0 4px 14px rgba(158,27,50,0.35);transition:all .15s">
+                                <x-icon name="sparkles" size="16" />
+                                <span>Améliorer avec l'IA</span>
+                            </button>
+                            <label class="zanika-switch" title="Activer la vérification automatique après chaque cliché">
                                 <input type="checkbox" id="toggle-ai-quality" onchange="handleAiQualityToggle(this)">
                                 <span class="zanika-slider"></span>
                             </label>
@@ -167,9 +183,9 @@
                     </div>
 
                     <!-- Indicateur de chargement IA -->
-                    <div id="ai-quality-loading" style="display:none;margin-top:.75rem;padding:.75rem 1rem;background:rgba(158,27,50,0.08);border:1px solid rgba(158,27,50,0.3);border-radius:10px;color:var(--text);font-size:.85rem;align-items:center;gap:.6rem">
-                        <span style="width:16px;height:16px;border:2px solid #c5223d;border-top-color:transparent;border-radius:50%;display:inline-block;animation:zanika-spin 0.8s linear infinite;flex-shrink:0"></span>
-                        <span>Vérification et rendu studio IA en cours (1-2s)...</span>
+                    <div id="ai-quality-loading" style="display:none;margin-top:.75rem;padding:.85rem 1.1rem;background:rgba(158,27,50,0.08);border:1px solid rgba(158,27,50,0.3);border-radius:12px;color:var(--text);font-size:.88rem;align-items:center;gap:.75rem">
+                        <span style="width:18px;height:18px;border:2.5px solid #c5223d;border-top-color:transparent;border-radius:50%;display:inline-block;animation:zanika-spin 0.8s linear infinite;flex-shrink:0"></span>
+                        <span id="ai-quality-loading-text">Studio IA en cours : Analyse du produit, détourage haute précision et création des 4 packshots (1 à 2s)...</span>
                     </div>
                 </section>
 
@@ -241,14 +257,35 @@
                     </div>
 
                     <div class="field" style="margin-top:1.2rem">
-                        <label for="status">Statut du produit</label>
+                        <label for="status">Statut de publication</label>
                         <select id="status" name="status" class="select">
-                            <option value="active" @selected(old('status', 'active') === 'active')>Actif (visible sur la vitrine)</option>
-                            <option value="hidden" @selected(old('status') === 'hidden')>Masqué (brouillon)</option>
+                            <option value="active" @selected(old('status', 'active') === 'active')>Actif (visible immédiatement sur la boutique)</option>
+                            <option value="hidden" @selected(old('status') === 'hidden')>Masqué (enregistrer en brouillon privé)</option>
                         </select>
+                        <div class="hint" style="font-size:.78rem;color:var(--text-soft);margin-top:.35rem">
+                            Un produit en brouillon est sauvegardé sans être visible par vos clients sur la vitrine.
+                        </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-block" style="margin-top:1.5rem">Enregistrer le produit</button>
+                    <!-- Actions d'enregistrement et de prévisualisation -->
+                    <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:1.5rem">
+                        <button type="button" class="btn btn-ghost" onclick="openProductLivePreview()" style="width:100%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:.5rem;font-weight:700;padding:.85rem;background:var(--bg-soft);border-radius:10px">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <span>👁️ Prévisualiser avant de publier</span>
+                        </button>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+                            <button type="button" class="btn btn-ghost" onclick="confirmProductSubmission('hidden')" style="font-size:.82rem;padding:.75rem .4rem;text-align:center;border-radius:10px;border:1px solid var(--border)">
+                                💾 Enregistrer en brouillon
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="confirmProductSubmission('active')" style="background:linear-gradient(135deg, #10b981, #059669);border-color:#059669;font-size:.82rem;padding:.75rem .4rem;font-weight:700;text-align:center;border-radius:10px;box-shadow:0 3px 12px rgba(16,185,129,0.3)">
+                                🚀 Publier en ligne
+                            </button>
+                        </div>
+                    </div>
                 </section>
             </div>
 
@@ -305,50 +342,10 @@
 </style>
 
 <!-- ======================================================================= -->
-<!-- MODALE COMPARATIVE : CHOISIR LES IMAGES DU PRODUIT (THÈME ZANIKA)       -->
+<!-- MODALE STUDIO PHOTO IA PROFESSIONNEL (THÈME ZANIKA)                     -->
 <!-- ======================================================================= -->
-<div id="ai-variations-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);z-index:99999;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;box-sizing:border-box">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;max-width:680px;width:100%;padding:1.4rem;box-shadow:0 25px 70px rgba(0,0,0,0.7);position:relative;margin:auto;box-sizing:border-box">
-        
-        <!-- Bouton Fermer -->
-        <button type="button" onclick="closeAiVariationsModal()" style="position:absolute;top:1rem;right:1rem;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--bg-soft);color:var(--text);font-size:1.3rem;display:grid;place-items:center;cursor:pointer;line-height:1;z-index:5" aria-label="Fermer">×</button>
-
-        <h2 style="font-size:1.25rem;font-weight:700;color:var(--text);margin:0 0 .35rem 0;padding-right:2.5rem;letter-spacing:-0.2px">Choisissez les images de votre produit</h2>
-        <p style="font-size:.86rem;color:var(--text-soft);margin:0 0 1rem 0;line-height:1.4">
-            Vos images générées sont cochées. Décochez celles à retirer, améliorez-les ou générez-en une autre.
-        </p>
-
-        <!-- Contexte de mise en scène détecté -->
-        <div id="ai-modal-category-hint" style="display:none;margin-bottom:1.15rem;background:rgba(158,27,50,0.08);border:1px solid rgba(158,27,50,0.25);border-radius:10px;padding:.5rem .85rem;font-size:.82rem;color:var(--text);align-items:center;gap:.5rem">
-            <span style="color:#c5223d;font-weight:700">Décor adapté selon l'article :</span>
-            <span id="ai-modal-detected-product" style="font-weight:600"></span>
-        </div>
-
-        <!-- Grille des cartes photos -->
-        <div id="ai-variations-grid" style="display:grid;grid-template-columns:repeat(2, 1fr);gap:1rem;margin-bottom:1.5rem">
-            <!-- Injecté par JavaScript -->
-        </div>
-
-        <!-- Pied de la modale : Bouton de validation -->
-        <div style="display:flex;flex-direction:column;gap:.6rem">
-            <button type="button" id="btn-confirm-ai-selection" onclick="confirmAiPhotoSelection()" class="btn btn-primary" style="background:linear-gradient(135deg, #9e1b32, #c5223d);color:#fff;border:none;font-weight:700;padding:.9rem 1.4rem;border-radius:12px;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:.5rem;box-shadow:0 4px 16px rgba(158,27,50,0.35);cursor:pointer">
-                <x-icon name="check" size="18" />
-                <span>Valider la sélection pour ce produit</span>
-            </button>
-            <button type="button" onclick="closeAiVariationsModal()" class="btn btn-ghost" style="border:none;color:var(--text-soft);font-size:.85rem;cursor:pointer;padding:.4rem">
-                Fermer sans enregistrer
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Aperçu Plein Écran (Lightbox) -->
-<div id="ai-photo-lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(10px);z-index:100000;align-items:center;justify-content:center;padding:1.5rem" onclick="closeAiLightbox()">
-    <div style="position:relative;max-width:90vw;max-height:85vh;display:flex;align-items:center;justify-content:center" onclick="event.stopPropagation()">
-        <img id="ai-lightbox-img" src="" alt="Aperçu grand format" style="max-width:100%;max-height:85vh;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.8);object-fit:contain">
-        <button type="button" onclick="closeAiLightbox()" style="position:absolute;top:-12px;right:-12px;width:34px;height:34px;border-radius:50%;background:#ffffff;color:#000;border:none;font-size:18px;font-weight:bold;cursor:pointer;display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,0.4)">×</button>
-    </div>
-</div>
+@include('partials.ai_photo_studio_modal')
+@include('partials.product_live_preview_modal')
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -591,20 +588,35 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             item.appendChild(badge);
 
-            // Badge Studio
-            const studioBadge = document.createElement('span');
-            studioBadge.style.position = 'absolute';
-            studioBadge.style.bottom = '6px';
-            studioBadge.style.right = '6px';
-            studioBadge.style.fontSize = '0.65rem';
-            studioBadge.style.fontWeight = '600';
-            studioBadge.style.padding = '2px 5px';
-            studioBadge.style.borderRadius = '4px';
-            studioBadge.style.background = 'rgba(16, 185, 129, 0.9)';
-            studioBadge.style.color = '#fff';
-            studioBadge.textContent = 'Studio';
-            studioBadge.style.zIndex = '2';
-            item.appendChild(studioBadge);
+            // Bouton Studio IA interactif sur chaque photo
+            const aiStudioBtn = document.createElement('button');
+            aiStudioBtn.type = 'button';
+            aiStudioBtn.title = 'Améliorer cette photo avec le Studio Photo IA';
+            aiStudioBtn.style.position = 'absolute';
+            aiStudioBtn.style.bottom = '6px';
+            aiStudioBtn.style.right = '6px';
+            aiStudioBtn.style.background = 'linear-gradient(135deg, #9e1b32, #c5223d)';
+            aiStudioBtn.style.border = 'none';
+            aiStudioBtn.style.color = '#fff';
+            aiStudioBtn.style.fontSize = '0.68rem';
+            aiStudioBtn.style.fontWeight = '700';
+            aiStudioBtn.style.padding = '3px 8px';
+            aiStudioBtn.style.borderRadius = '6px';
+            aiStudioBtn.style.cursor = 'pointer';
+            aiStudioBtn.style.display = 'inline-flex';
+            aiStudioBtn.style.alignItems = 'center';
+            aiStudioBtn.style.gap = '3px';
+            aiStudioBtn.style.zIndex = '3';
+            aiStudioBtn.style.boxShadow = '0 2px 8px rgba(158,27,50,0.4)';
+            aiStudioBtn.innerHTML = `
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
+                <span>Studio IA</span>
+            `;
+            aiStudioBtn.onclick = function(e) {
+                e.stopPropagation();
+                window.runAiQualityCheck(file);
+            };
+            item.appendChild(aiStudioBtn);
 
             // Bouton rotation 90°
             const rotBtn = document.createElement('button');
@@ -776,10 +788,40 @@ window.handleAiQualityToggle = function(input) {
                 loadingBox.innerHTML = `<span>Sélectionnez ou prenez une photo : le comparateur qualité IA s'ouvrira immédiatement.</span>`;
                 setTimeout(() => {
                     if (loadingBox.style.display === 'flex' && !loadingBox.dataset.loading) {
-                        loadingBox.style.display = 'none';
-                    }
-                }, 4000);
-            }
+// ==========================================================================
+// ZANIKA AI PRODUCT PHOTOGRAPHY STUDIO — MOTEUR INTERACTIF JAVASCRIPT
+// ==========================================================================
+let currentAiVariations = [];
+let currentSourceFile = null;
+let activeCompareIndex = 0;
+
+window.triggerAiStudioFromButton = function() {
+    const files = window.getSelectedFiles ? window.getSelectedFiles() : [];
+    if (files.length > 0) {
+        window.runAiQualityCheck(files[0]);
+    } else {
+        const loadingBox = document.getElementById('ai-quality-loading');
+        if (loadingBox) {
+            loadingBox.style.display = 'flex';
+            const txt = document.getElementById('ai-quality-loading-text');
+            if (txt) txt.textContent = "Veuillez d'abord prendre ou choisir une photo pour ouvrir le Studio Photo IA.";
+            setTimeout(() => {
+                if (loadingBox.style.display === 'flex' && !loadingBox.dataset.loading) {
+                    loadingBox.style.display = 'none';
+                }
+            }, 3500);
+        }
+        // Ouvrir automatiquement la galerie ou caméra
+        const galleryBtn = document.getElementById('gallery-file-input');
+        if (galleryBtn) galleryBtn.click();
+    }
+};
+
+window.handleAiQualityToggle = function(input) {
+    if (input.checked) {
+        const files = window.getSelectedFiles ? window.getSelectedFiles() : [];
+        if (files.length > 0) {
+            window.runAiQualityCheck(files[0]);
         }
     }
 };
@@ -791,8 +833,6 @@ window.runAiQualityCheck = async function(file) {
             file = files[0];
         } else {
             alert('Veuillez d\'abord ajouter ou prendre une photo du produit.');
-            const toggle = document.getElementById('toggle-ai-quality');
-            if (toggle) toggle.checked = false;
             return;
         }
     }
@@ -800,17 +840,32 @@ window.runAiQualityCheck = async function(file) {
     currentSourceFile = file;
 
     const loadingBox = document.getElementById('ai-quality-loading');
+    const loadingText = document.getElementById('ai-quality-loading-text');
+    const triggerBtn = document.getElementById('btn-trigger-ai-studio');
+
     if (loadingBox) {
         loadingBox.dataset.loading = '1';
         loadingBox.style.display = 'flex';
-        loadingBox.innerHTML = `
-            <span style="width:16px;height:16px;border:2px solid #c5223d;border-top-color:transparent;border-radius:50%;display:inline-block;animation:zanika-spin 0.8s linear infinite;flex-shrink:0"></span>
-            <span>Vérification qualité IA en cours... Génération des rendus studio (1 à 2s)...</span>
+        if (loadingText) {
+            loadingText.textContent = "Studio Photo IA en cours : Détourage haute précision, cadrage 1:1 et création des packshots (1 à 2s)...";
+        }
+    }
+    if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.innerHTML = `
+            <span style="width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;display:inline-block;animation:zanika-spin 0.8s linear infinite"></span>
+            <span>Studio en cours...</span>
         `;
     }
 
     const formData = new FormData();
     formData.append('photo', file);
+
+    // Indication contextuelle (titre du produit ou catégorie saisie)
+    const titleVal = document.getElementById('title')?.value;
+    if (titleVal && titleVal.trim().length > 0) {
+        formData.append('category_hint', titleVal.trim());
+    }
 
     try {
         const res = await fetch('{{ route('ai.products.verify_quality') }}', {
@@ -827,35 +882,184 @@ window.runAiQualityCheck = async function(file) {
         if (data.status === 'success' && data.variations && data.variations.length > 0) {
             currentAiVariations = data.variations;
             window.currentCutoutPath = data.cutout_path || null;
+            window.currentSourceUrl = data.source_url || (file ? URL.createObjectURL(file) : '');
+
+            // Contexte produit détecté
             const catHint = document.getElementById('ai-modal-category-hint');
             const catText = document.getElementById('ai-modal-detected-product');
             if (catHint && catText) {
                 if (data.product_title) {
                     catHint.style.display = 'flex';
-                    catText.textContent = data.product_title;
+                    catText.textContent = data.product_title + ' (' + (data.category || 'e-commerce') + ')';
                 } else {
-                    catHint.style.display = 'none';
+                    catHint.style.display = 'flex';
+                    catText.textContent = (data.category || 'Article') + ' • Prêt pour la vente';
                 }
             }
-            window.renderAiVariationsModal();
+
+            // Quality score pill
+            const scorePill = document.getElementById('ai-modal-quality-score-pill');
+            if (scorePill && data.quality_audit) {
+                scorePill.textContent = '✓ ' + (data.quality_audit.score || 98) + '% Qualité E-commerce Pro';
+            }
+
+            window.renderAiStudioModal();
         } else {
-            alert(data.error || 'Impossible de vérifier la qualité pour le moment.');
+            alert(data.error || 'Impossible de traiter la photo avec le Studio IA pour le moment.');
         }
     } catch (err) {
-        console.error('Erreur qualité IA:', err);
-        alert('Erreur lors de la communication avec le service qualité IA.');
+        console.error('Erreur Studio IA:', err);
+        alert('Erreur lors de la communication avec le Studio Photo IA Zanika.');
     } finally {
         if (loadingBox) {
             delete loadingBox.dataset.loading;
             loadingBox.style.display = 'none';
         }
+        if (triggerBtn) {
+            triggerBtn.disabled = false;
+            triggerBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
+                <span>Améliorer avec l'IA</span>
+            `;
+        }
     }
 };
 
-window.renderAiVariationsModal = function() {
-    const grid = document.getElementById('ai-variations-grid');
+window.switchAiStudioTab = function(tab) {
+    const viewCompare = document.getElementById('ai-studio-view-compare');
+    const viewGallery = document.getElementById('ai-studio-view-gallery');
+    const btnCompare = document.getElementById('tab-btn-compare');
+    const btnGallery = document.getElementById('tab-btn-gallery');
+
+    if (tab === 'compare') {
+        if (viewCompare) viewCompare.style.display = 'block';
+        if (viewGallery) viewGallery.style.display = 'none';
+        if (btnCompare) {
+            btnCompare.style.background = 'rgba(255,255,255,0.12)';
+            btnCompare.style.borderColor = 'rgba(255,255,255,0.2)';
+            btnCompare.style.color = '#ffffff';
+        }
+        if (btnGallery) {
+            btnGallery.style.background = 'transparent';
+            btnGallery.style.borderColor = 'transparent';
+            btnGallery.style.color = 'var(--text-soft, #a1a1aa)';
+        }
+    } else {
+        if (viewCompare) viewCompare.style.display = 'none';
+        if (viewGallery) viewGallery.style.display = 'block';
+        if (btnGallery) {
+            btnGallery.style.background = 'rgba(255,255,255,0.12)';
+            btnGallery.style.borderColor = 'rgba(255,255,255,0.2)';
+            btnGallery.style.color = '#ffffff';
+        }
+        if (btnCompare) {
+            btnCompare.style.background = 'transparent';
+            btnCompare.style.borderColor = 'transparent';
+            btnCompare.style.color = 'var(--text-soft, #a1a1aa)';
+        }
+    }
+};
+
+window.selectCompareStyle = function(index) {
+    if (index < 0 || index >= currentAiVariations.length) return;
+    activeCompareIndex = index;
+    const item = currentAiVariations[index];
+
+    // Marquer la sélection
+    currentAiVariations.forEach((v, i) => {
+        v.selected = (i === index);
+    });
+
+    const targetImg = document.getElementById('ai-compare-target-img');
+    const badge = document.getElementById('ai-compare-style-badge');
+    const title = document.getElementById('ai-compare-style-title');
+    const confirmBtnText = document.getElementById('btn-confirm-text');
+
+    if (targetImg) targetImg.src = item.url;
+    if (badge) badge.textContent = item.badge || 'Studio Pro';
+    if (title) title.textContent = item.title;
+    if (confirmBtnText) {
+        confirmBtnText.textContent = item.is_source ? 'Conserver cette photo originale' : 'Utiliser ce packshot (' + item.title + ')';
+    }
+
+    // Mettre à jour l'état visuel des puces de style
+    const container = document.getElementById('ai-compare-style-buttons');
+    if (container) {
+        const buttons = container.querySelectorAll('button');
+        buttons.forEach((btn, bIdx) => {
+            if (bIdx === index) {
+                btn.style.background = 'linear-gradient(135deg, #9e1b32, #c5223d)';
+                btn.style.borderColor = '#c5223d';
+                btn.style.color = '#ffffff';
+                btn.style.fontWeight = '700';
+            } else {
+                btn.style.background = 'rgba(255,255,255,0.06)';
+                btn.style.borderColor = 'rgba(255,255,255,0.12)';
+                btn.style.color = 'var(--text, #fff)';
+                btn.style.fontWeight = '500';
+            }
+        });
+    }
+
+    // Rafraîchir les coches de la grille galerie
+    window.renderAiGalleryGrid();
+};
+
+window.renderAiStudioModal = function() {
     const modal = document.getElementById('ai-variations-modal');
-    if (!grid || !modal) return;
+    if (!modal) return;
+
+    // 1. Photo originale source
+    const sourceVar = currentAiVariations.find(v => v.is_source);
+    const sourceImg = document.getElementById('ai-compare-source-img');
+    if (sourceImg) {
+        sourceImg.src = sourceVar ? sourceVar.url : window.currentSourceUrl;
+    }
+
+    // 2. Première variation studio sélectionnée par défaut (ou index 0)
+    let initialIndex = currentAiVariations.findIndex(v => !v.is_source);
+    if (initialIndex < 0) initialIndex = 0;
+
+    // 3. Rendu des boutons puces de style sous le comparateur
+    const styleBtnBox = document.getElementById('ai-compare-style-buttons');
+    if (styleBtnBox) {
+        styleBtnBox.innerHTML = '';
+        currentAiVariations.forEach((item, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.padding = '6px 12px';
+            btn.style.borderRadius = '20px';
+            btn.style.border = '1px solid rgba(255,255,255,0.12)';
+            btn.style.background = 'rgba(255,255,255,0.06)';
+            btn.style.color = '#fff';
+            btn.style.fontSize = '0.78rem';
+            btn.style.cursor = 'pointer';
+            btn.style.display = 'inline-flex';
+            btn.style.alignItems = 'center';
+            btn.style.gap = '5px';
+            btn.style.transition = 'all .15s ease';
+
+            btn.innerHTML = `<span>${item.badge || item.title}</span>`;
+            btn.onclick = function() {
+                window.selectCompareStyle(idx);
+            };
+            styleBtnBox.appendChild(btn);
+        });
+    }
+
+    // 4. Rendu de la grille des styles
+    window.renderAiGalleryGrid();
+
+    // 5. Activer le comparatif avec le premier style
+    window.selectCompareStyle(initialIndex);
+    window.switchAiStudioTab('compare');
+
+    modal.style.display = 'flex';
+};
+
+window.renderAiGalleryGrid = function() {
+    const grid = document.getElementById('ai-variations-grid');
+    if (!grid) return;
 
     grid.innerHTML = '';
 
@@ -864,25 +1068,25 @@ window.renderAiVariationsModal = function() {
         card.className = 'ai-var-card';
         card.style.position = 'relative';
         card.style.aspectRatio = '1 / 1';
-        card.style.borderRadius = '14px';
+        card.style.borderRadius = '16px';
         card.style.overflow = 'hidden';
         card.style.background = '#ffffff';
         card.style.cursor = 'pointer';
         card.style.boxSizing = 'border-box';
         card.style.transition = 'all .2s ease';
-        card.style.border = item.selected ? '2.5px solid #9e1b32' : '2.5px solid transparent';
+        card.style.border = item.selected ? '2.5px solid #c5223d' : '1px solid rgba(255,255,255,0.15)';
         card.style.boxShadow = item.selected 
-            ? '0 0 0 1px #9e1b32, 0 8px 24px rgba(158, 27, 50, 0.3)' 
-            : '0 4px 14px rgba(0,0,0,0.15)';
+            ? '0 0 0 1px #c5223d, 0 8px 24px rgba(197, 34, 61, 0.4)' 
+            : '0 4px 14px rgba(0,0,0,0.25)';
 
         card.onclick = function() {
-            window.toggleAiVariation(idx);
+            window.selectCompareStyle(idx);
         };
 
-        // Bouton œil aperçu grand format (haut gauche)
+        // Bouton loupe plein écran
         const eyeBtn = document.createElement('button');
         eyeBtn.type = 'button';
-        eyeBtn.title = 'Agrandir la photo';
+        eyeBtn.title = 'Agrandir en haute résolution';
         eyeBtn.style.position = 'absolute';
         eyeBtn.style.top = '8px';
         eyeBtn.style.left = '8px';
@@ -898,10 +1102,7 @@ window.renderAiVariationsModal = function() {
         eyeBtn.style.zIndex = '4';
         eyeBtn.style.backdropFilter = 'blur(4px)';
         eyeBtn.innerHTML = `
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                <circle cx="12" cy="12" r="3"/>
-            </svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         `;
         eyeBtn.onclick = function(e) {
             e.stopPropagation();
@@ -909,7 +1110,7 @@ window.renderAiVariationsModal = function() {
         };
         card.appendChild(eyeBtn);
 
-        // Badge : "Photo source" si originale, sinon badge IA contextuel
+        // Badge
         const badgeSpan = document.createElement('span');
         badgeSpan.style.position = 'absolute';
         badgeSpan.style.top = '8px';
@@ -922,18 +1123,18 @@ window.renderAiVariationsModal = function() {
         badgeSpan.style.zIndex = '4';
 
         if (item.is_source) {
-            badgeSpan.style.background = 'rgba(0,0,0,0.72)';
+            badgeSpan.style.background = 'rgba(0,0,0,0.75)';
             badgeSpan.style.color = '#ffffff';
             badgeSpan.textContent = 'Photo source';
         } else {
-            badgeSpan.style.background = 'linear-gradient(135deg, rgba(158, 27, 50, 0.92), rgba(197, 34, 61, 0.92))';
+            badgeSpan.style.background = 'linear-gradient(135deg, rgba(158, 27, 50, 0.95), rgba(197, 34, 61, 0.95))';
             badgeSpan.style.color = '#ffffff';
             badgeSpan.style.boxShadow = '0 2px 6px rgba(158, 27, 50, 0.35)';
-            badgeSpan.textContent = item.badge || 'IA Studio';
+            badgeSpan.textContent = item.badge || 'Studio Pro';
         }
         card.appendChild(badgeSpan);
 
-        // Coche de sélection (haut droite) - Aux couleurs Zanika (#9e1b32 / #c5223d)
+        // Coche de sélection
         const checkBadge = document.createElement('div');
         checkBadge.style.position = 'absolute';
         checkBadge.style.top = '8px';
@@ -944,12 +1145,11 @@ window.renderAiVariationsModal = function() {
         checkBadge.style.display = 'grid';
         checkBadge.style.placeItems = 'center';
         checkBadge.style.zIndex = '4';
-        checkBadge.style.transition = 'all .15s ease';
 
         if (item.selected) {
             checkBadge.style.background = 'linear-gradient(135deg, #9e1b32, #c5223d)';
             checkBadge.style.color = '#ffffff';
-            checkBadge.style.boxShadow = '0 2px 8px rgba(158, 27, 50, 0.4)';
+            checkBadge.style.boxShadow = '0 2px 8px rgba(158, 27, 50, 0.45)';
             checkBadge.innerHTML = `
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12"/>
@@ -962,7 +1162,7 @@ window.renderAiVariationsModal = function() {
         }
         card.appendChild(checkBadge);
 
-        // Image de la variante
+        // Image
         const img = document.createElement('img');
         img.src = item.url;
         img.alt = item.title;
@@ -972,59 +1172,30 @@ window.renderAiVariationsModal = function() {
         img.style.display = 'block';
         card.appendChild(img);
 
-        // Bouton pill flottant en bas
-        const actionPill = document.createElement('button');
-        actionPill.type = 'button';
-        actionPill.style.position = 'absolute';
-        actionPill.style.bottom = '10px';
-        actionPill.style.left = '50%';
-        actionPill.style.transform = 'translateX(-50%)';
-        actionPill.style.background = 'rgba(255,255,255,0.95)';
-        actionPill.style.color = '#9e1b32';
-        actionPill.style.fontWeight = '700';
-        actionPill.style.fontSize = '0.78rem';
-        actionPill.style.padding = '6px 12px';
-        actionPill.style.borderRadius = '20px';
-        actionPill.style.border = '1px solid rgba(158,27,50,0.3)';
-        actionPill.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-        actionPill.style.display = 'inline-flex';
-        actionPill.style.alignItems = 'center';
-        actionPill.style.gap = '5px';
-        actionPill.style.cursor = 'pointer';
-        actionPill.style.whiteSpace = 'nowrap';
-        actionPill.style.zIndex = '4';
-
-        if (item.is_source) {
-            actionPill.innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9e1b32" stroke-width="2.5"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
-                <span>Faire une variante</span>
-            `;
-            actionPill.onclick = function(e) {
-                e.stopPropagation();
-                window.requestAnotherAiVariant(item.path);
-            };
-        } else {
-            actionPill.innerHTML = `
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9e1b32" stroke-width="2.5"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
-                <span>Améliorer avec IA</span>
-            `;
-            actionPill.onclick = function(e) {
-                e.stopPropagation();
-                window.requestAnotherAiVariant(item.path);
-            };
-        }
-        card.appendChild(actionPill);
+        // Titre flottant en bas
+        const titleBar = document.createElement('div');
+        titleBar.style.position = 'absolute';
+        titleBar.style.bottom = '0';
+        titleBar.style.insetInline = '0';
+        titleBar.style.padding = '8px 10px';
+        titleBar.style.background = 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)';
+        titleBar.style.color = '#ffffff';
+        titleBar.style.fontSize = '0.78rem';
+        titleBar.style.fontWeight = '600';
+        titleBar.style.zIndex = '3';
+        titleBar.textContent = item.title;
+        card.appendChild(titleBar);
 
         grid.appendChild(card);
     });
 
-    // 4ème carte : "Générer un autre • 6 crédits" (Zanika Theme)
+    // Carte : Générer une autre ambiance
     const addCard = document.createElement('div');
     addCard.id = 'ai-card-generate-another';
     addCard.style.aspectRatio = '1 / 1';
-    addCard.style.borderRadius = '14px';
-    addCard.style.border = '2px dashed rgba(158, 27, 50, 0.45)';
-    addCard.style.background = 'rgba(158, 27, 50, 0.04)';
+    addCard.style.borderRadius = '16px';
+    addCard.style.border = '2px dashed rgba(197, 34, 61, 0.45)';
+    addCard.style.background = 'rgba(197, 34, 61, 0.05)';
     addCard.style.display = 'flex';
     addCard.style.flexDirection = 'column';
     addCard.style.alignItems = 'center';
@@ -1034,51 +1205,30 @@ window.renderAiVariationsModal = function() {
     addCard.style.padding = '.75rem';
     addCard.style.textAlign = 'center';
     addCard.style.transition = 'all .2s ease';
-    addCard.style.boxSizing = 'border-box';
-
-    addCard.onmouseover = function() {
-        this.style.borderColor = '#c5223d';
-        this.style.background = 'rgba(158, 27, 50, 0.08)';
-    };
-    addCard.onmouseout = function() {
-        this.style.borderColor = 'rgba(158, 27, 50, 0.45)';
-        this.style.background = 'rgba(158, 27, 50, 0.04)';
-    };
 
     addCard.innerHTML = `
-        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg, #9e1b32, #c5223d);display:grid;place-items:center;color:#fff;box-shadow:0 4px 12px rgba(158,27,50,0.35);flex-shrink:0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-            </svg>
+        <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg, #9e1b32, #c5223d);display:grid;place-items:center;color:#fff;box-shadow:0 4px 12px rgba(158,27,50,0.35);flex-shrink:0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
         </div>
-        <strong style="color:#c5223d;font-size:.92rem;display:block">Générer un autre</strong>
-        <span style="color:var(--text-faint);font-size:.8rem">6 crédits</span>
+        <strong style="color:#f43f5e;font-size:.9rem;display:block">Autre ambiance studio</strong>
+        <span style="color:var(--text-soft, #a1a1aa);font-size:.78rem">Studio Carbone • 6 crédits</span>
     `;
 
     addCard.onclick = function() {
-        const sourcePath = currentAiVariations.find(v => v.is_source)?.path || null;
-        window.requestAnotherAiVariant(sourcePath);
+        window.requestAnotherAiVariant(null, 'studio_dark');
     };
 
     grid.appendChild(addCard);
-
-    modal.style.display = 'flex';
 };
 
-window.toggleAiVariation = function(index) {
-    if (index >= 0 && index < currentAiVariations.length) {
-        currentAiVariations[index].selected = !currentAiVariations[index].selected;
-        window.renderAiVariationsModal();
-    }
-};
-
-window.requestAnotherAiVariant = async function(basePath) {
-    const addCard = document.getElementById('ai-card-generate-another');
-    if (addCard) {
-        addCard.style.pointerEvents = 'none';
-        addCard.innerHTML = `
-            <span style="width:20px;height:20px;border:2px solid #c5223d;border-top-color:transparent;border-radius:50%;display:inline-block;animation:zanika-spin 0.8s linear infinite"></span>
-            <span style="color:#c5223d;font-size:.8rem;font-weight:600">Génération (2s)...</span>
+window.requestAnotherAiVariant = async function(basePath, chosenStyle = 'studio_dark') {
+    const retryBtn = document.getElementById('btn-retry-variant');
+    const originalRetryHtml = retryBtn ? retryBtn.innerHTML : '';
+    if (retryBtn) {
+        retryBtn.disabled = true;
+        retryBtn.innerHTML = `
+            <span style="width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;display:inline-block;animation:zanika-spin 0.8s linear infinite"></span>
+            <span>Rendu (1s)...</span>
         `;
     }
 
@@ -1087,6 +1237,7 @@ window.requestAnotherAiVariant = async function(basePath) {
         if (window.currentCutoutPath) {
             formData.append('cutout_path', window.currentCutoutPath);
         }
+        formData.append('style', chosenStyle);
         if (basePath) {
             formData.append('photo_path', basePath);
         } else if (currentSourceFile) {
@@ -1110,65 +1261,86 @@ window.requestAnotherAiVariant = async function(basePath) {
             } else {
                 currentAiVariations.push(data.variation);
             }
-            window.renderAiVariationsModal();
+
+            // Sélectionner la nouvelle variante créée
+            const newIndex = sourceIndex >= 0 ? sourceIndex : currentAiVariations.length - 1;
+            window.renderAiStudioModal();
+            window.selectCompareStyle(newIndex);
         } else {
             alert(data.error || 'Impossible de générer une autre variante.');
-            window.renderAiVariationsModal();
         }
     } catch (err) {
         console.error(err);
-        alert('Erreur lors de la création de la variante.');
-        window.renderAiVariationsModal();
+        alert('Erreur lors de la création de la variante studio.');
+    } finally {
+        if (retryBtn) {
+            retryBtn.disabled = false;
+            retryBtn.innerHTML = originalRetryHtml;
+        }
     }
 };
 
 window.confirmAiPhotoSelection = async function() {
-    const selected = currentAiVariations.filter(v => v.selected);
-    if (selected.length === 0) {
-        alert('Veuillez cocher au moins une photo à conserver pour votre produit.');
+    const selected = currentAiVariations.find(v => v.selected) || currentAiVariations[activeCompareIndex];
+    if (!selected) {
+        alert('Veuillez sélectionner un packshot.');
         return;
     }
 
     const btn = document.getElementById('btn-confirm-ai-selection');
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerText = 'Application des photos...';
+    btn.innerText = 'Application au produit...';
 
     try {
-        const newFiles = [];
-        for (let i = 0; i < selected.length; i++) {
-            const item = selected[i];
-            const response = await fetch(item.url);
+        if (selected.is_source && currentSourceFile) {
+            // Le commerçant a choisi sa photo originale sans modification
+            if (window.setSelectedFiles) {
+                window.setSelectedFiles([currentSourceFile]);
+            }
+        } else {
+            // Le commerçant a choisi le packshot studio IA
+            const response = await fetch(selected.url);
             const blob = await response.blob();
-            const fileName = (item.is_source ? 'source_' : 'ai_studio_') + (i + 1) + '.jpg';
-            const file = new File([blob], fileName, { type: 'image/jpeg', lastModified: Date.now() });
-            newFiles.push(file);
-        }
+            const fileName = 'packshot_studio_' + Date.now() + '.jpg';
+            const studioFile = new File([blob], fileName, { type: 'image/jpeg', lastModified: Date.now() });
 
-        if (window.setSelectedFiles) {
-            window.setSelectedFiles(newFiles);
+            if (window.setSelectedFiles) {
+                window.setSelectedFiles([studioFile]);
+            }
+
+            // Mémoriser le chemin serveur s'il existe
+            const hiddenPath = document.getElementById('ai_temp_photo_path');
+            if (hiddenPath && selected.path) {
+                hiddenPath.value = selected.path;
+            }
         }
 
         window.closeAiVariationsModal();
 
-        // Notification de confirmation
+        // Notification visuelle
         const alertBox = document.createElement('div');
-        alertBox.className = 'alert alert-success';
+        alertBox.className = 'alert alert-ok';
         alertBox.style.marginTop = '1rem';
-        alertBox.innerHTML = `<strong>✓ Sélection validée :</strong> Vos photos studio choisies sont prêtes et ajoutées à votre fiche produit.`;
+        alertBox.innerHTML = `<strong>✓ Photo sélectionnée validée :</strong> Packshot professionnel appliqué à votre fiche produit (format 1:1, produit 100% conservé).`;
         const container = document.getElementById('product-photos-section');
         if (container) {
             container.appendChild(alertBox);
-            setTimeout(() => alertBox.remove(), 4000);
+            setTimeout(() => alertBox.remove(), 4500);
         }
 
     } catch (err) {
         console.error(err);
-        alert('Erreur lors de l\'intégration des photos choisies.');
+        alert('Erreur lors de l\'intégration de la photo choisie.');
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
     }
+};
+
+window.keepOriginalPhoto = function() {
+    // Règle 6.8 & 6.9 : Le commerçant a le dernier mot, on conserve sa photo originale
+    window.closeAiVariationsModal();
 };
 
 window.closeAiVariationsModal = function() {

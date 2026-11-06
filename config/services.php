@@ -36,7 +36,7 @@ return [
     ],
 
     'openrouter' => [
-        'key' => env('OPENROUTER_API_KEY') ?: base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA=='),
+        'key' => env('OPENROUTER_API_KEY'),
         'model' => env('OPENROUTER_MODEL', 'google/gemini-2.5-flash'),
     ],
 

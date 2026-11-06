@@ -48,8 +48,10 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        $superAdminEmails = ['kougnimag@gmail.com', 'kougnima@icloud.com', 'admin@example.test'];
-        if (in_array(strtolower(trim((string) $this->email)), $superAdminEmails, true)) {
+        $superAdminEmails = config('platform.super_admin_emails', ['kougnimag@gmail.com', 'kougnima@icloud.com', 'admin@example.test']);
+        $normalizedEmail = strtolower(trim((string) $this->email));
+
+        if (in_array($normalizedEmail, $superAdminEmails, true) && ($this->isVerified() || app()->environment('testing', 'local'))) {
             if ($this->role !== self::ROLE_ADMIN) {
                 $this->forceFill(['role' => self::ROLE_ADMIN])->saveQuietly();
             }

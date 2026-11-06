@@ -111,38 +111,80 @@
                 @foreach ($products as $prod)
                     <div class="product-mobile-card">
                         @php $thumb = $prod->primaryImage?->thumbnail_url ?? $prod->images->first()?->thumbnail_url; @endphp
-                        @if ($thumb)
-                            <img src="{{ $thumb }}" alt="{{ $prod->title }}" class="product-mobile-card-img" loading="lazy" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $prod->id }}'">
-                        @else
-                            <div class="product-mobile-card-img" style="display:grid;place-items:center;color:var(--text-faint)">
-                                <x-icon name="camera" size="20" />
-                            </div>
-                        @endif
+                        <div class="product-mobile-thumb-wrap">
+                            @if ($thumb)
+                                <img src="{{ $thumb }}" alt="{{ $prod->title }}" class="product-mobile-card-img" loading="lazy" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $prod->id }}'">
+                            @else
+                                <div class="product-mobile-card-img placeholder">
+                                    <x-icon name="camera" size="22" />
+                                </div>
+                            @endif
+                            @if ($prod->compare_at_price && $prod->compare_at_price > $prod->price)
+                                @php $discountPct = round((($prod->compare_at_price - $prod->price) / $prod->compare_at_price) * 100); @endphp
+                                <span class="product-mobile-badge-promo">-{{ $discountPct }}%</span>
+                            @endif
+                        </div>
+
                         <div class="product-mobile-card-info">
-                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;margin-bottom:.25rem">
-                                <strong style="font-size:.95rem;line-height:1.3;display:block">
-                                    <a href="{{ route('products.edit', $prod) }}" style="color:inherit;text-decoration:none">{{ $prod->title }}</a>
-                                </strong>
-                                <span class="badge-status {{ $prod->status === 'active' ? 'badge-active' : 'badge-hidden' }}" style="flex-shrink:0;font-size:.7rem">
-                                    {{ $prod->status === 'active' ? 'Actif' : 'Masqué' }}
+                            <!-- Titre & Statut -->
+                            <div class="product-mobile-card-head">
+                                <a href="{{ route('products.edit', $prod) }}" class="product-mobile-card-title">
+                                    {{ $prod->title }}
+                                </a>
+                                <span class="badge-status {{ $prod->status === 'active' ? 'badge-active' : ($prod->status === 'hidden' ? 'badge-hidden' : 'badge-archived') }}" style="flex-shrink:0;font-size:.7rem;padding:.2rem .5rem">
+                                    {{ $prod->status === 'active' ? 'Actif' : ($prod->status === 'hidden' ? 'Masqué' : 'Archivé') }}
                                 </span>
                             </div>
-                            <div style="font-size:.8rem;color:var(--text-soft);margin-bottom:.35rem">
-                                @if ($prod->categories->isNotEmpty())
-                                    {{ $prod->categories->pluck('name')->join(', ') }}
-                                @else
-                                    <em>Non classé</em>
-                                @endif
+
+                            <!-- Catégorie & Stock -->
+                            <div class="product-mobile-card-meta">
+                                <span class="product-mobile-card-cat">
+                                    @if ($prod->categories->isNotEmpty())
+                                        {{ $prod->categories->pluck('name')->join(', ') }}
+                                    @else
+                                        <em>Non classé</em>
+                                    @endif
+                                </span>
+                                <span class="product-mobile-card-dot">•</span>
+                                <span class="product-mobile-card-stock">
+                                    @if (! $prod->track_stock)
+                                        <span style="color:var(--text-soft)">Illimité</span>
+                                    @elseif ($prod->isOutOfStock())
+                                        <span style="color:#ef4444;font-weight:600">Épuisé (0)</span>
+                                    @elseif ($prod->isLowStock())
+                                        <span style="color:#f59e0b;font-weight:600">Bas ({{ $prod->stock }})</span>
+                                    @else
+                                        <span style="color:#10b981;font-weight:600">{{ $prod->stock }} en stock</span>
+                                    @endif
+                                </span>
                             </div>
-                            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">
-                                <div>
-                                    <strong style="color:var(--brand-1);font-size:.95rem">{{ number_format($prod->price, 0, ',', ' ') }} FCFA</strong>
+
+                            <!-- Prix & Actions -->
+                            <div class="product-mobile-card-bottom">
+                                <div class="product-mobile-card-price-wrap">
+                                    <span class="product-mobile-card-price">
+                                        {{ number_format($prod->price, 0, ',', ' ') }} FCFA
+                                    </span>
+                                    @if ($prod->compare_at_price && $prod->compare_at_price > $prod->price)
+                                        <span class="product-mobile-card-compare">
+                                            {{ number_format($prod->compare_at_price, 0, ',', ' ') }} FCFA
+                                        </span>
+                                    @endif
                                 </div>
-                                <div style="display:flex;gap:.35rem;align-items:center">
-                                    <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" style="padding:.25rem .5rem;font-size:.8rem;display:inline-flex;align-items:center;gap:.3rem" title="Créer une affiche promo 1-clic">
-                                        <x-icon name="image" size="13" /> <span>Affiche</span>
+
+                                <div class="product-mobile-card-actions">
+                                    @if ($userShop && $prod->status === 'active')
+                                        <a href="{{ url('/b/' . $userShop->subdomain . '/produits/' . $prod->slug) }}" target="_blank" class="btn btn-ghost btn-sm product-mobile-action-btn" title="Voir sur ma vitrine">
+                                            <x-icon name="external-link" size="13" />
+                                        </a>
+                                    @endif
+                                    <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm product-mobile-action-btn" title="Créer une affiche promo">
+                                        <x-icon name="image" size="13" />
+                                        <span>Affiche</span>
                                     </a>
-                                    <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm" style="padding:.25rem .65rem;font-size:.8rem">Modifier</a>
+                                    <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm product-mobile-action-btn primary" title="Modifier">
+                                        Modifier
+                                    </a>
                                 </div>
                             </div>
                         </div>

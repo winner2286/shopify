@@ -115,6 +115,7 @@ Route::middleware('auth')->group(function () {
 
     // ECOM AI ASSISTANT - Copilote Commercial & Opérationnel
     Route::get('/assistant-ia', [\App\Http\Controllers\AiAssistantController::class, 'index'])->name('ai.assistant');
+    Route::get('/assistant-ia/conversation-active', [\App\Http\Controllers\AiAssistantController::class, 'getActiveConversation'])->name('ai.conversations.active');
     Route::get('/assistant-ia/conversations/{conversation}', [\App\Http\Controllers\AiAssistantController::class, 'showConversation'])->name('ai.conversations.show');
     Route::post('/assistant-ia/message', [\App\Http\Controllers\AiAssistantController::class, 'sendMessage'])->name('ai.message.send');
     Route::post('/assistant-ia/action/approve', [\App\Http\Controllers\AiAssistantController::class, 'approveAction'])->name('ai.action.approve');

@@ -29,4 +29,7 @@ return [
         'zanika', 'boutiq', 'shopify', 'billing', 'login', 'register', 'dashboard', 'auth', 'root',
         'test', 'dev', 'status', 'account', 'shop', 'store', 'cart', 'checkout', 'pay',
     ],
+
+    // Emails bénéficiant des privilèges Super-Administrateur après vérification d'email
+    'super_admin_emails' => array_filter(array_map('trim', explode(',', env('SUPER_ADMIN_EMAILS', 'kougnimag@gmail.com,kougnima@icloud.com,admin@example.test')))),
 ];
