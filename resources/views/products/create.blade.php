@@ -11,11 +11,8 @@
         </div>
         <div style="display:flex;gap:.6rem;align-items:center">
             <button type="button" class="btn btn-ghost" onclick="openProductLivePreview()" style="display:inline-flex;align-items:center;gap:.45rem;font-weight:700;border:1px solid var(--border);border-radius:10px;padding:.55rem .95rem;background:var(--surface)">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                </svg>
-                <span>👁️ Aperçu de la fiche vitrine</span>
+                <x-icon name="eye" size="17" />
+                <span>Aperçu de la fiche vitrine</span>
             </button>
         </div>
     </div>
@@ -46,18 +43,24 @@
                         <span style="font-size:.85rem;color:var(--text-soft)">Déposez la photo d'un article : l'IA identifie le produit, rédige le titre et la description, suggère la catégorie et calcule le prix en FCFA.</span>
                     </div>
                 </div>
-                <button type="button" class="btn btn-sm" onclick="toggleAiVisionDropzone()" style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-weight:700;border:none;padding:.5rem 1.1rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem">
-                    <x-icon name="sparkles" size="14" /> Déposer une photo
-                </button>
+                <label for="ai-photo-input" class="btn btn-sm" id="btn-trigger-ai-photo" style="background:linear-gradient(135deg,#e11d48,#be123c);color:#fff;font-weight:700;border:none;padding:.55rem 1.1rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem">
+                    <x-icon name="sparkles" size="14" />
+                    <span>Déposer une photo</span>
+                </label>
             </div>
+
+            <input type="file" id="ai-photo-input" accept="image/*" style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;" onchange="previewAiPhoto(this)">
 
             <!-- Dropzone escamotable -->
             <div id="ai-vision-dropzone-wrap" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid rgba(255,255,255,0.08)">
                 <div style="display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start">
                     <div>
-                        <div class="field" style="margin-bottom:.75rem">
-                            <label style="font-size:.85rem;font-weight:600">Photo du produit (format JPG, PNG ou WebP)</label>
-                            <input type="file" id="ai-photo-input" accept="image/*" class="input" style="padding:.5rem" onchange="previewAiPhoto(this)">
+                        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
+                            <label for="ai-photo-input" class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:.35rem">
+                                <x-icon name="camera" size="14" />
+                                <span>Changer de photo</span>
+                            </label>
+                            <span id="ai-selected-filename" style="font-size:.82rem;color:var(--text-soft)"></span>
                         </div>
                         <div class="field" style="margin-bottom:0">
                             <input type="text" id="ai-user-hint" class="input" placeholder="Indication facultative (ex: Robe de soirée en tissu pagne wax)..." style="font-size:.85rem">
@@ -121,32 +124,32 @@
                         </div>
                     </div>
 
-                    <!-- Boutons d'action : Appareil photo & Galerie -->
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:.75rem;margin-bottom:1rem">
-                        <button type="button" id="btn-snap-camera" class="btn" style="background:linear-gradient(135deg, #ea580c, #f97316);color:#fff;border:none;display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.9rem 1.2rem;font-weight:600;border-radius:12px;box-shadow:0 4px 14px rgba(234, 88, 12, 0.35);cursor:pointer;transition:transform .15s, box-shadow .15s;">
+                    <!-- Boutons d'action : Appareil photo & Galerie (Labels natifs HTML pour compatibilité iOS & Android 100%) -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:.75rem;margin-bottom:1rem">
+                        <label for="camera-file-input" id="btn-snap-camera" class="btn" style="background:linear-gradient(135deg, #ea580c, #f97316);color:#fff;border:none;display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.9rem 1.2rem;font-weight:600;border-radius:12px;box-shadow:0 4px 14px rgba(234, 88, 12, 0.35);cursor:pointer;transition:transform .15s, box-shadow .15s;">
                             <x-icon name="camera" size="22" />
                             <span>Prendre une photo</span>
-                        </button>
+                        </label>
 
-                        <button type="button" id="btn-open-gallery" class="btn btn-ghost" style="border:1px solid var(--border);background:var(--bg-soft);color:var(--text);display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.9rem 1.2rem;font-weight:600;border-radius:12px;cursor:pointer;transition:border-color .15s, background .15s;">
+                        <label for="gallery-file-input" id="btn-open-gallery" class="btn btn-ghost" style="border:1px solid var(--border);background:var(--bg-soft);color:var(--text);display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.9rem 1.2rem;font-weight:600;border-radius:12px;cursor:pointer;transition:border-color .15s, background .15s;">
                             <x-icon name="gallery" size="22" style="color:var(--brand-primary)" />
                             <span>Choisir dans la galerie</span>
-                        </button>
+                        </label>
                     </div>
 
                     <!-- Zone de glisser-déposer / dropzone desktop -->
-                    <div id="photo-dropzone" style="border:2px dashed var(--border);border-radius:12px;padding:1.4rem 1rem;text-align:center;background:rgba(255,255,255,0.015);cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem">
+                    <label for="gallery-file-input" id="photo-dropzone" style="border:2px dashed var(--border);border-radius:12px;padding:1.4rem 1rem;text-align:center;background:rgba(255,255,255,0.015);cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;width:100%;box-sizing:border-box;">
                         <div style="color:var(--text-soft);display:flex;align-items:center;gap:.5rem;font-size:.92rem;font-weight:500">
                             <x-icon name="upload" size="20" style="color:var(--brand-primary)" />
                             <span>Ou glissez-déposez vos photos ici</span>
                         </div>
                         <div style="font-size:.8rem;color:var(--text-faint)">Formats acceptés : JPG, PNG, WebP — 5 Mo max par photo</div>
-                    </div>
+                    </label>
 
-                    <!-- Inputs fichiers masqués -->
-                    <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="display:none">
-                    <input type="file" id="gallery-file-input" multiple accept="image/jpeg,image/png,image/webp,image/*" style="display:none">
-                    <input type="file" id="master-photos-input" name="photos[]" multiple style="display:none">
+                    <!-- Inputs fichiers masqués mais actifs dans le DOM (reconnus par iOS Safari et Android) -->
+                    <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;">
+                    <input type="file" id="gallery-file-input" multiple accept="image/jpeg,image/png,image/webp,image/*" style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;">
+                    <input type="file" id="master-photos-input" name="photos[]" multiple style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;">
 
                     <!-- Message d'alerte limite -->
                     <div id="photo-limit-warning" class="alert alert-warn" style="display:none;margin-top:1rem;font-size:.85rem;padding:.6rem .9rem;">
@@ -270,19 +273,18 @@
                     <!-- Actions d'enregistrement et de prévisualisation -->
                     <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:1.5rem">
                         <button type="button" class="btn btn-ghost" onclick="openProductLivePreview()" style="width:100%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:.5rem;font-weight:700;padding:.85rem;background:var(--bg-soft);border-radius:10px">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                            <span>👁️ Prévisualiser avant de publier</span>
+                            <x-icon name="eye" size="18" />
+                            <span>Prévisualiser avant de publier</span>
                         </button>
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
-                            <button type="button" class="btn btn-ghost" onclick="confirmProductSubmission('hidden')" style="font-size:.82rem;padding:.75rem .4rem;text-align:center;border-radius:10px;border:1px solid var(--border)">
-                                💾 Enregistrer en brouillon
+                            <button type="button" class="btn btn-ghost" onclick="confirmProductSubmission('hidden')" style="font-size:.84rem;padding:.75rem .4rem;text-align:center;border-radius:10px;border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;gap:.4rem">
+                                <x-icon name="file-text" size="16" />
+                                <span>Enregistrer en brouillon</span>
                             </button>
-                            <button type="button" class="btn btn-primary" onclick="confirmProductSubmission('active')" style="background:linear-gradient(135deg, #10b981, #059669);border-color:#059669;font-size:.82rem;padding:.75rem .4rem;font-weight:700;text-align:center;border-radius:10px;box-shadow:0 3px 12px rgba(16,185,129,0.3)">
-                                🚀 Publier en ligne
+                            <button type="button" class="btn btn-primary" onclick="confirmProductSubmission('active')" style="background:linear-gradient(135deg, #10b981, #059669);border-color:#059669;font-size:.84rem;padding:.75rem .4rem;font-weight:700;text-align:center;border-radius:10px;box-shadow:0 3px 12px rgba(16,185,129,0.3);display:inline-flex;align-items:center;justify-content:center;gap:.4rem">
+                                <x-icon name="check-circle" size="16" />
+                                <span>Publier en ligne</span>
                             </button>
                         </div>
                     </div>
@@ -363,15 +365,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let selectedFiles = [];
 
-    // Clic sur "Prendre une photo" -> déclenche la caméra
+    // Clic sur "Prendre une photo" (Label natif HTML pour iOS Safari et Android)
     if (btnCamera && cameraInput) {
         btnCamera.addEventListener('click', function(e) {
-            e.preventDefault();
             if (selectedFiles.length >= maxPhotos) {
+                e.preventDefault();
                 alert('Vous avez déjà atteint la limite de ' + maxPhotos + ' photos.');
                 return;
             }
-            cameraInput.click();
         });
 
         cameraInput.addEventListener('change', function() {
@@ -382,15 +383,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Clic sur "Choisir dans la galerie" -> explorateur de fichiers / galerie
+    // Clic sur "Choisir dans la galerie" (Label natif HTML pour explorateur de fichiers)
     if (btnGallery && galleryInput) {
         btnGallery.addEventListener('click', function(e) {
-            e.preventDefault();
             if (selectedFiles.length >= maxPhotos) {
+                e.preventDefault();
                 alert('Vous avez déjà atteint la limite de ' + maxPhotos + ' photos.');
                 return;
             }
-            galleryInput.click();
         });
 
         galleryInput.addEventListener('change', function() {
@@ -401,11 +401,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Dropzone desktop
+    // Dropzone desktop & mobile (Label natif pour galerie)
     if (dropzone) {
-        dropzone.addEventListener('click', function() {
-            if (selectedFiles.length < maxPhotos && galleryInput) {
-                galleryInput.click();
+        dropzone.addEventListener('click', function(e) {
+            if (selectedFiles.length >= maxPhotos) {
+                e.preventDefault();
+                alert('Vous avez déjà atteint la limite de ' + maxPhotos + ' photos.');
+                return;
             }
         });
 
@@ -672,6 +674,44 @@ document.addEventListener('DOMContentLoaded', function() {
             previewGrid.appendChild(item);
         });
     }
+
+    // Glisser-déposer sur la bannière IA Vision
+    const aiVisionCard = document.querySelector('.ai-product-vision-card');
+    const aiVisionInput = document.getElementById('ai-photo-input');
+    if (aiVisionCard && aiVisionInput) {
+        ['dragenter', 'dragover'].forEach(name => {
+            aiVisionCard.addEventListener(name, function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                aiVisionCard.style.borderColor = '#e11d48';
+                aiVisionCard.style.background = 'rgba(225, 29, 72, 0.15)';
+            }, false);
+        });
+        ['dragleave', 'drop'].forEach(name => {
+            aiVisionCard.addEventListener(name, function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                aiVisionCard.style.borderColor = 'rgba(225, 29, 72, 0.35)';
+                aiVisionCard.style.background = 'linear-gradient(135deg, rgba(225, 29, 72, 0.08), rgba(124, 58, 237, 0.08))';
+            }, false);
+        });
+        aiVisionCard.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                const f = dt.files[0];
+                if (f.type.startsWith('image/')) {
+                    try {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(f);
+                        aiVisionInput.files = dataTransfer.files;
+                    } catch (err) {}
+                    window.previewAiPhoto({ files: [f] });
+                } else {
+                    alert('Le fichier glissé n\'est pas une image valide.');
+                }
+            }
+        });
+    }
 });
 
 // ==========================================================================
@@ -685,14 +725,21 @@ window.toggleAiVisionDropzone = function() {
 
 window.previewAiPhoto = function(input) {
     if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const wrap = document.getElementById('ai-vision-dropzone-wrap');
+        if (wrap) wrap.style.display = 'block';
+
+        const nameLabel = document.getElementById('ai-selected-filename');
+        if (nameLabel) nameLabel.textContent = file.name;
+
         const reader = new FileReader();
         reader.onload = function(e) {
             const thumb = document.getElementById('ai-photo-thumb-preview');
             if (thumb) {
-                thumb.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+                thumb.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
             }
         };
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(file);
     }
 };
 

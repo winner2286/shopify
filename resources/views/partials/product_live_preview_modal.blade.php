@@ -48,7 +48,7 @@
                 <!-- Bandeau Démo Vitrine -->
                 <div class="preview-storefront-topbar">
                     <span class="preview-store-name">{{ auth()->user()->shop?->name ?? 'Ma Boutique' }}</span>
-                    <span class="preview-mode-tag">🔒 Aperçu privé avant publication</span>
+                    <span class="preview-mode-tag">Aperçu privé avant publication</span>
                 </div>
 
                 <!-- Simulation Fiche Produit Storefront -->
@@ -106,14 +106,18 @@
                         <!-- Réassurance E-commerce Afrique -->
                         <div class="preview-reassurance-box">
                             <div class="preview-reassurance-item">
-                                <span class="reassurance-icon">💵</span>
+                                <span class="reassurance-icon" style="display:flex;align-items:center;justify-content:center;color:var(--brand-primary)">
+                                    <x-icon name="wallet" size="20" />
+                                </span>
                                 <div>
                                     <strong>Paiement à la livraison (COD)</strong>
                                     <span>Réglez en espèces ou Mobile Money dès réception de votre colis.</span>
                                 </div>
                             </div>
                             <div class="preview-reassurance-item">
-                                <span class="reassurance-icon">⚡</span>
+                                <span class="reassurance-icon" style="display:flex;align-items:center;justify-content:center;color:var(--brand-primary)">
+                                    <x-icon name="truck" size="20" />
+                                </span>
                                 <div>
                                     <strong>Livraison rapide à domicile</strong>
                                     <span>Expédition soignée directement chez vous ou à votre bureau.</span>
@@ -142,14 +146,17 @@
             </div>
 
             <div class="preview-footer-actions">
-                <button type="button" class="btn btn-ghost" onclick="closeProductLivePreview()">
-                    ✏️ Continuer les modifications
+                <button type="button" class="btn btn-ghost" onclick="closeProductLivePreview()" style="display:inline-flex;align-items:center;justify-content:center;gap:.4rem">
+                    <x-icon name="edit" size="16" />
+                    <span>Continuer les modifications</span>
                 </button>
-                <button type="button" class="btn btn-secondary" onclick="confirmProductSubmission('hidden')">
-                    💾 Enregistrer en Brouillon (Masqué)
+                <button type="button" class="btn btn-secondary" onclick="confirmProductSubmission('hidden')" style="display:inline-flex;align-items:center;justify-content:center;gap:.4rem">
+                    <x-icon name="file-text" size="16" />
+                    <span>Enregistrer en Brouillon (Masqué)</span>
                 </button>
-                <button type="button" class="btn btn-primary" onclick="confirmProductSubmission('active')" style="background:linear-gradient(135deg, #10b981, #059669);border-color:#059669;box-shadow:0 4px 14px rgba(16,185,129,0.35)">
-                    🚀 Publier sur ma boutique (Actif)
+                <button type="button" class="btn btn-primary" onclick="confirmProductSubmission('active')" style="background:linear-gradient(135deg, #10b981, #059669);border-color:#059669;box-shadow:0 4px 14px rgba(16,185,129,0.35);display:inline-flex;align-items:center;justify-content:center;gap:.4rem">
+                    <x-icon name="check-circle" size="16" />
+                    <span>Publier sur ma boutique (Actif)</span>
                 </button>
             </div>
         </footer>
@@ -787,7 +794,7 @@ function openProductLivePreview() {
         discountBadge.textContent = '-' + discountPct + '% ÉCONOMIE';
 
         savingRow.style.display = 'block';
-        savingRow.textContent = '🎉 Vous économisez ' + formatFcfaNumber(savingAmt) + ' FCFA';
+        savingRow.textContent = 'Vous économisez ' + formatFcfaNumber(savingAmt) + ' FCFA';
     } else {
         compareEl.style.display = 'none';
         discountBadge.style.display = 'none';
@@ -825,7 +832,7 @@ function openProductLivePreview() {
         stockBadge.textContent = '✕ Épuisé pour le moment';
     } else if (stockVal <= 3) {
         stockBadge.className = 'preview-stock-status out-of-stock';
-        stockBadge.textContent = '⚠️ Attention : Plus que ' + stockVal + ' article(s) en stock !';
+        stockBadge.textContent = 'Attention : Plus que ' + stockVal + ' article(s) en stock !';
     } else {
         stockBadge.className = 'preview-stock-status in-stock';
         stockBadge.textContent = '✓ En stock (' + stockVal + ' disponibles) — Expédié sous 24h';
