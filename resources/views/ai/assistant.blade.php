@@ -103,7 +103,7 @@
         </aside>
 
         <!-- ZONE PRINCIPALE DE CHAT -->
-        <main class="ai-chat-main">
+        <section class="ai-chat-main">
             <!-- Entête du chat -->
             <header class="ai-chat-header">
                 <div style="display:flex;align-items:center;gap:0.75rem">
@@ -257,31 +257,58 @@
 
             <!-- Formulaire d'envoi -->
             <footer class="ai-chat-input-wrapper">
-                <form id="ai-chat-form" onsubmit="handleChatSubmit(event)">
-                    <input type="hidden" id="current-conversation-id" value="{{ $activeConversation ? $activeConversation->id : '' }}">
-                    
-                    <div class="ai-input-box">
-                        <textarea 
-                            id="ai-user-input" 
-                            name="message" 
-                            rows="1" 
-                            placeholder="Posez une question sur vos ventes, stocks, commandes COD ou demandez un conseil commercial..." 
-                            required
-                            oninput="autoResizeTextarea(this)"
-                            onkeydown="handleTextareaKeydown(event)"></textarea>
-
-                        <div class="ai-input-actions">
-                            <button type="submit" class="ai-send-btn" id="ai-send-btn" title="Envoyer le message">
-                                <x-icon name="send" :size="18" />
-                            </button>
-                        </div>
+                <div class="ai-input-wrapper-inner">
+                    <!-- Suggestions d'actions rapides (Chips cliquables) -->
+                    <div class="ai-input-quick-chips">
+                        <button type="button" class="ai-quick-chip" onclick="applySuggestion('Fais-moi un point rapide sur mes stocks et les ruptures.')">
+                            <x-icon name="package" :size="13" />
+                            <span>Audit des stocks</span>
+                        </button>
+                        <button type="button" class="ai-quick-chip" onclick="applySuggestion('Combien de commandes COD sont en attente de confirmation ?')">
+                            <x-icon name="truck" :size="13" />
+                            <span>Commandes COD</span>
+                        </button>
+                        <button type="button" class="ai-quick-chip" onclick="applySuggestion('Donne-moi le résumé de mes commandes et du chiffre d\'affaires de cette semaine.')">
+                            <x-icon name="chart" :size="13" />
+                            <span>Bilan Ventes & CA</span>
+                        </button>
+                        <button type="button" class="ai-quick-chip" onclick="applySuggestion('Analyse mes ventes des 30 derniers jours et propose-moi 3 recommandations concrètes.')">
+                            <x-icon name="trending-up" :size="13" />
+                            <span>Conseil Stratégique</span>
+                        </button>
                     </div>
-                </form>
-                <div class="ai-input-hint">
-                    <span><strong>Entrée</strong> pour envoyer, <strong>Maj+Entrée</strong> pour un saut de ligne. Connecté à la base de données sécurisée.</span>
+
+                    <form id="ai-chat-form" onsubmit="handleChatSubmit(event)">
+                        <input type="hidden" id="current-conversation-id" value="{{ $activeConversation ? $activeConversation->id : '' }}">
+                        
+                        <div class="ai-input-card">
+                            <textarea 
+                                id="ai-user-input" 
+                                name="message" 
+                                rows="1" 
+                                placeholder="Posez une question sur vos ventes, stocks, commandes COD ou demandez une action concrète..." 
+                                required
+                                oninput="autoResizeTextarea(this)"
+                                onkeydown="handleTextareaKeydown(event)"></textarea>
+
+                            <div class="ai-input-bottom-bar">
+                                <div class="ai-input-meta">
+                                    <span class="ai-live-indicator">
+                                        <span class="ai-live-dot"></span> Données boutique en direct
+                                    </span>
+                                </div>
+                                <div class="ai-input-actions">
+                                    <span class="ai-input-shortcut-hint"><strong>Entrée</strong> pour envoyer</span>
+                                    <button type="submit" class="ai-send-btn" id="ai-send-btn" title="Envoyer le message">
+                                        <x-icon name="send" :size="16" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </footer>
-        </main>
+        </section>
 
     </div>
 </div>
@@ -289,22 +316,49 @@
 <style>
 /* ==========================================================================
    ECOM AI ASSISTANT — MODERN PREMIUM STYLING
+   Neutralisation des paddings parasites du layout global & fixation 100% viewport
    ========================================================================== */
+html.ai-assistant-active,
+body.ai-assistant-active {
+    overflow: hidden !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+}
+
+body.has-bottom-nav main:has(.ai-assistant-wrapper),
+body:has(.bottom-nav) main:has(.ai-assistant-wrapper),
+body:has(.ai-assistant-wrapper) main,
+body.ai-assistant-active main {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    height: calc(100vh - 72px) !important;
+    max-height: calc(100vh - 72px) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
 .ai-assistant-wrapper {
     background: var(--bg, #09090b);
-    min-height: calc(100vh - 70px);
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
     color: var(--text, #f4f4f5);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
 }
 
 .ai-container {
     display: flex;
-    flex: 1;
+    flex: 1 1 0%;
     max-width: 1600px;
     width: 100%;
     margin: 0 auto;
-    height: calc(100vh - 70px);
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
     position: relative;
     overflow: hidden;
 }
@@ -317,6 +371,10 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 100;
 }
@@ -553,12 +611,16 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    max-height: 100%;
+    min-height: 0;
     min-width: 0;
+    overflow: hidden;
+    padding-bottom: 0 !important;
     background: radial-gradient(circle at 50% 0%, rgba(225, 29, 72, 0.04) 0%, transparent 60%);
 }
 
 .ai-chat-header {
-    padding: 1rem 1.5rem;
+    padding: 0.85rem 1.5rem;
     border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
     display: flex;
     justify-content: space-between;
@@ -567,6 +629,7 @@
     flex-wrap: wrap;
     background: rgba(18, 18, 23, 0.6);
     backdrop-filter: blur(12px);
+    flex-shrink: 0;
 }
 
 .ai-sidebar-toggle-btn {
@@ -635,8 +698,9 @@
 /* MESSAGES SCROLL */
 .ai-messages-scroll {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    padding: 1.5rem 2rem;
+    padding: 1.5rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
@@ -959,57 +1023,146 @@
 
 /* INPUT FOOTER */
 .ai-chat-input-wrapper {
-    padding: 1rem 1.5rem 1.25rem;
-    border-top: 1px solid var(--border, rgba(255, 255, 255, 0.06));
-    background: rgba(18, 18, 23, 0.7);
-    backdrop-filter: blur(12px);
+    flex-shrink: 0;
+    padding: 0.65rem 1.5rem 0.9rem;
+    border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    background: rgba(18, 18, 23, 0.85);
+    backdrop-filter: blur(16px);
+    position: relative;
+    z-index: 20;
 }
 
-.ai-input-box {
+.ai-input-wrapper-inner {
+    max-width: 920px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Quick Action Suggestion Chips */
+.ai-input-quick-chips {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    overflow-x: auto;
+    padding: 2px 2px 4px;
+    scrollbar-width: none;
+}
+.ai-input-quick-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.ai-quick-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    color: var(--text-soft, #cbd5e1);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: inherit;
+}
+
+.ai-quick-chip:hover {
+    background: linear-gradient(135deg, rgba(225, 29, 72, 0.15), rgba(124, 58, 237, 0.15));
+    border-color: rgba(225, 29, 72, 0.4);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.ai-input-card {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
-    border-radius: 14px;
-    padding: 0.6rem 0.85rem;
+    border-radius: 16px;
+    padding: 0.75rem 1rem 0.6rem;
     display: flex;
-    align-items: flex-end;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.35rem;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.ai-input-box:focus-within {
+.ai-input-card:focus-within {
     border-color: #e11d48;
     background: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.2);
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.22), 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 #ai-user-input {
-    flex: 1;
+    width: 100%;
     background: transparent;
     border: none;
     outline: none;
     resize: none;
     color: #ffffff;
-    font-size: 16px; /* Empêche le zoom automatique sur iOS */
+    font-size: 15px;
     font-family: inherit;
     line-height: 1.5;
+    min-height: 40px;
     max-height: 160px;
-    padding: 0.3rem 0;
+    padding: 0;
 }
 
 #ai-user-input::placeholder {
     color: var(--text-muted, #71717a);
 }
 
-.ai-input-actions {
+.ai-input-bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-input-meta {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
+.ai-live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    color: #10b981;
+    font-weight: 600;
+}
+
+.ai-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 6px #10b981;
+    display: inline-block;
+}
+
+.ai-input-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.ai-input-shortcut-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted, #71717a);
+}
+
 .ai-send-btn {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
     background: linear-gradient(135deg, #e11d48, #be123c);
     border: none;
     color: #ffffff;
@@ -1019,24 +1172,19 @@
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.35);
 }
 
 .ai-send-btn:hover {
     background: linear-gradient(135deg, #f43f5e, #e11d48);
     transform: scale(1.05);
+    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.5);
 }
 
 .ai-send-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
-}
-
-.ai-input-hint {
-    font-size: 0.7rem;
-    color: var(--text-muted, #71717a);
-    margin-top: 0.4rem;
-    text-align: center;
 }
 
 /* RESPONSIVE MOBILE ULTRA FLUIDE */
@@ -1110,12 +1258,21 @@
 }
 
 @media (max-width: 768px) {
+    body.has-bottom-nav main:has(.ai-assistant-wrapper),
+    body.ai-assistant-active main {
+        height: calc(100dvh - 60px - 72px) !important;
+        max-height: calc(100dvh - 60px - 72px) !important;
+    }
+
     .ai-assistant-wrapper {
-        min-height: calc(100dvh - 58px);
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
     }
 
     .ai-container {
-        height: calc(100dvh - 58px - 76px) !important;
+        height: 100% !important;
+        max-height: 100% !important;
     }
 
     .ai-chat-header {
@@ -1131,10 +1288,25 @@
     }
 
     .ai-chat-input-wrapper {
-        padding: 0.6rem 0.75rem;
+        padding: 0.5rem 0.65rem 0.65rem;
     }
 
-    .ai-input-hint {
+    .ai-input-quick-chips {
+        gap: 0.35rem;
+        padding: 1px 0 3px;
+    }
+
+    .ai-quick-chip {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.72rem;
+    }
+
+    .ai-input-card {
+        padding: 0.55rem 0.75rem 0.5rem;
+        border-radius: 14px;
+    }
+
+    .ai-input-shortcut-hint {
         display: none;
     }
 }
@@ -1365,33 +1537,55 @@
     color: #0f172a;
 }
 
-/* Zone de saisie en bas en mode clair */
+/* Zone de saisie en bas en mode clair (data-theme="light") */
 [data-theme='light'] .ai-chat-input-wrapper {
     background: #ffffff;
     border-top-color: #e2e8f0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.03);
 }
 
-[data-theme='light'] .ai-input-box {
+[data-theme='light'] .ai-quick-chip {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+[data-theme='light'] .ai-quick-chip:hover {
+    background: #ffffff;
+    border-color: rgba(225, 29, 72, 0.45);
+    color: #be123c;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.1);
+}
+
+[data-theme='light'] .ai-input-card {
     background: #f8fafc;
     border-color: #cbd5e1;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-[data-theme='light'] .ai-input-box:focus-within {
+[data-theme='light'] .ai-input-card:focus-within {
     background: #ffffff;
     border-color: #e11d48;
-    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.16), 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
-[data-theme='light'] .ai-input-box textarea {
+[data-theme='light'] #ai-user-input {
     color: #0f172a;
 }
 
-[data-theme='light'] .ai-input-box textarea::placeholder {
+[data-theme='light'] #ai-user-input::placeholder {
     color: #94a3b8;
 }
 
-[data-theme='light'] .ai-input-hint {
+[data-theme='light'] .ai-input-bottom-bar {
+    border-top-color: #e2e8f0;
+}
+
+[data-theme='light'] .ai-live-indicator {
+    color: #059669;
+}
+
+[data-theme='light'] .ai-input-shortcut-hint {
     color: #64748b;
 }
 
@@ -1404,6 +1598,8 @@
 // ==========================================================================
 // ECOM AI ASSISTANT CLIENT ENGINE
 // ==========================================================================
+document.documentElement.classList.add('ai-assistant-active');
+document.body.classList.add('ai-assistant-active');
 let isSending = false;
 
 function autoResizeTextarea(el) {
@@ -1434,7 +1630,32 @@ function applySuggestion(text) {
     document.getElementById('ai-chat-form').dispatchEvent(new Event('submit', { cancelable: true }));
 }
 
+function getOrCreateTypingIndicator() {
+    let indicator = document.getElementById('ai-typing-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.className = 'ai-message-row assistant-row';
+        indicator.id = 'ai-typing-indicator';
+        indicator.style.display = 'none';
+        indicator.innerHTML = `
+            <div class="ai-avatar-mini">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            </div>
+            <div class="ai-bubble assistant-bubble ai-typing-bubble">
+                <span class="ai-typing-text" id="ai-typing-status">L'IA analyse vos données...</span>
+                <div class="ai-dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+        `;
+    }
+    return indicator;
+}
+
 function startNewConversation() {
+    window.__forceNewConversation = true;
     document.getElementById('current-conversation-id').value = '';
     document.getElementById('current-chat-title').innerText = 'Nouvel échange avec votre copilote';
     
@@ -1448,11 +1669,55 @@ function startNewConversation() {
             <div class="ai-welcome-icon">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
             </div>
-            <h2>Nouvelle session engagée</h2>
-            <p>Posez n'importe quelle question sur vos stocks, vos commandes Cash on Delivery ou demandez un audit des ventes.</p>
+            <h2>Bonjour, je suis votre Copilote Commercial IA</h2>
+            <p>Je suis connecté en direct à votre catalogue, vos stocks, vos commandes et vos données de livraison. Comment puis-je vous aider aujourd'hui ?</p>
+            
+            <div class="ai-suggestions-grid">
+                <button type="button" class="ai-suggestion-chip" onclick="applySuggestion('Fais-moi un état des lieux complet de ma boutique et de mes stocks.')">
+                    <span class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+                    <div>
+                        <strong>État des stocks</strong>
+                        <span>Ruptures et réapprovisionnements</span>
+                    </div>
+                </button>
+
+                <button type="button" class="ai-suggestion-chip" onclick="applySuggestion('Donne-moi le résumé de mes commandes et du chiffre d\\'affaires de cette semaine.')">
+                    <span class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="16"/></svg></span>
+                    <div>
+                        <strong>Commandes & Chiffre d'Affaires</strong>
+                        <span>Synthèse des ventes de la semaine</span>
+                    </div>
+                </button>
+
+                <button type="button" class="ai-suggestion-chip" onclick="applySuggestion('Quelles sont les commandes en attente de confirmation Cash on Delivery (COD) ?')">
+                    <span class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span>
+                    <div>
+                        <strong>Commandes COD en attente</strong>
+                        <span>Validation et relances clients</span>
+                    </div>
+                </button>
+
+                <button type="button" class="ai-suggestion-chip" onclick="applySuggestion('Analyse mes ventes des 30 derniers jours et propose-moi 3 recommandations d\\'optimisation.')">
+                    <span class="chip-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
+                    <div>
+                        <strong>Conseiller Commercial</strong>
+                        <span>Diagnostic & stratégie de vente</span>
+                    </div>
+                </button>
+            </div>
         </div>
     `;
-    document.getElementById('ai-user-input').focus();
+    container.appendChild(getOrCreateTypingIndicator());
+    const sidebar = document.getElementById('ai-sidebar');
+    const backdrop = document.getElementById('ai-sidebar-backdrop');
+    if (sidebar && sidebar.classList.contains('open')) sidebar.classList.remove('open');
+    if (backdrop && backdrop.classList.contains('open')) backdrop.classList.remove('open');
+    const input = document.getElementById('ai-user-input');
+    if (input) {
+        input.value = '';
+        autoResizeTextarea(input);
+        input.focus();
+    }
 }
 
 async function loadConversation(conversationId) {
@@ -1463,6 +1728,7 @@ async function loadConversation(conversationId) {
         if (!res.ok) throw new Error('Impossible de charger la conversation');
 
         const data = await res.json();
+        window.__forceNewConversation = false;
         document.getElementById('current-conversation-id').value = data.id;
         document.getElementById('current-chat-title').innerText = data.title;
 
@@ -1479,11 +1745,12 @@ async function loadConversation(conversationId) {
             appendMessageToUi(msg.role, msg.content, msg.created_at, msg.action_required, msg.id);
         });
 
+        container.appendChild(getOrCreateTypingIndicator());
         scrollToBottom();
 
         // Fermer la sidebar sur mobile si ouverte
         const sidebar = document.getElementById('ai-sidebar');
-        if (sidebar.classList.contains('open')) sidebar.classList.remove('open');
+        if (sidebar && sidebar.classList.contains('open')) sidebar.classList.remove('open');
 
     } catch (err) {
         console.error(err);
@@ -1517,14 +1784,15 @@ async function deleteConversation(event, conversationId) {
 }
 
 async function handleChatSubmit(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (isSending) return;
 
     const input = document.getElementById('ai-user-input');
-    const message = input.value.trim();
+    const message = input ? input.value.trim() : '';
     if (!message) return;
 
     const conversationId = document.getElementById('current-conversation-id').value;
+    const forceNew = !conversationId || !!window.__forceNewConversation;
 
     // Supprimer la carte de bienvenue si présente
     const welcomeCard = document.getElementById('ai-welcome-card');
@@ -1537,9 +1805,11 @@ async function handleChatSubmit(e) {
 
     // Activer l'indicateur de typing
     isSending = true;
-    document.getElementById('ai-send-btn').disabled = true;
-    const typingIndicator = document.getElementById('ai-typing-indicator');
+    const sendBtn = document.getElementById('ai-send-btn');
+    if (sendBtn) sendBtn.disabled = true;
+
     const container = document.getElementById('ai-messages-container');
+    const typingIndicator = getOrCreateTypingIndicator();
     container.appendChild(typingIndicator);
     typingIndicator.style.display = 'flex';
     scrollToBottom();
@@ -1554,16 +1824,22 @@ async function handleChatSubmit(e) {
             },
             body: JSON.stringify({
                 message: message,
-                conversation_id: conversationId ? parseInt(conversationId) : null
+                conversation_id: conversationId ? parseInt(conversationId) : null,
+                force_new: forceNew
             })
         });
 
+        if (res.status === 419) {
+            appendMessageToUi('assistant', "Votre session a expiré. Veuillez rafraîchir la page (F5) pour continuer.");
+            return;
+        }
+
         const data = await res.json();
-        typingIndicator.style.display = 'none';
 
         if (data.status === 'quota_exceeded') {
             appendMessageToUi('assistant', `**Crédits Épuisés** : ${data.message}`);
         } else if (data.status === 'success') {
+            window.__forceNewConversation = false;
             document.getElementById('current-conversation-id').value = data.conversation_id;
             document.getElementById('current-chat-title').innerText = data.conversation_title;
 
@@ -1577,18 +1853,19 @@ async function handleChatSubmit(e) {
                 updateCreditsDisplay(data.remaining_credits);
             }
         } else {
-            appendMessageToUi('assistant', "Une erreur est survenue lors de l'exécution de votre requête. Veuillez réessayer.");
+            appendMessageToUi('assistant', data.message || "Une erreur est survenue lors de l'exécution de votre requête. Veuillez réessayer.");
         }
 
     } catch (err) {
-        typingIndicator.style.display = 'none';
         appendMessageToUi('assistant', "Erreur de connexion avec le serveur IA.");
-        console.error(err);
+        console.error('Erreur assistant chat:', err);
     } finally {
+        const typingEl = document.getElementById('ai-typing-indicator');
+        if (typingEl) typingEl.style.display = 'none';
         isSending = false;
-        document.getElementById('ai-send-btn').disabled = false;
+        if (sendBtn) sendBtn.disabled = false;
         scrollToBottom();
-        input.focus();
+        if (input) input.focus();
     }
 }
 

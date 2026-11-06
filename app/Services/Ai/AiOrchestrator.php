@@ -410,8 +410,12 @@ class AiOrchestrator
         // 2. Formatage des chunks de connaissances RAG
         $ragText = $this->rag->formatForPrompt($ragChunks);
 
-        // 3. Détection des alertes proactives du moment
-        $proactiveText = $this->proactiveAdvisor->formatForPrompt($shop);
+        // 3. Détection des alertes proactives du moment (seulement au 1er message ou si demandé pour éviter l'effet perroquet)
+        if ($priorMessagesCount === 0) {
+            $proactiveText = $this->proactiveAdvisor->formatForPrompt($shop);
+        } else {
+            $proactiveText = "--- NOTE SUR LES ALERTES DU MOMENT ---\nLa discussion est déjà en cours. Ne répète PAS les alertes de rupture de stock ou d'indicateurs déjà mentionnées au message précédent, sauf si le commerçant te pose expressément une question dessus.\n--- FIN NOTE ---";
+        }
 
         // 4. Instructions de continuité conversationnelle
         $userMsgLower = mb_strtolower(trim($userMessage));

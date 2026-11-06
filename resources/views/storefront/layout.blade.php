@@ -320,66 +320,143 @@
             position: relative;
             z-index: 1;
             width: 100%;
-            height: 100%;
-            border-radius: 28px;
-            background: color-mix(in srgb, var(--surface) 92%, #fff);
-            border: 1px solid color-mix(in srgb, var(--store-primary) 35%, var(--border));
-            padding: 1.3rem;
+            border-radius: 24px;
+            background: color-mix(in srgb, var(--surface) 96%, #fff);
+            border: 1px solid color-mix(in srgb, var(--store-primary) 28%, var(--border));
+            padding: 1.15rem;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 20px 48px rgba(0,0,0,0.25);
+            box-shadow: 0 16px 36px -10px rgba(0,0,0,0.18), 0 4px 12px rgba(0,0,0,0.05);
             text-decoration: none;
             color: var(--text);
-            transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .35s;
-            animation: flameFloat 6s ease-in-out infinite;
+            transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .3s ease, border-color .3s ease;
+            overflow: hidden;
         }
         .hero-spotlight-card:hover {
-            transform: translateY(-8px) scale(1.03);
-            box-shadow: 0 28px 65px var(--store-primary-glow);
+            transform: translateY(-6px);
+            box-shadow: 0 24px 48px -10px var(--store-primary-glow);
+            border-color: var(--store-primary);
+        }
+        .hero-spotlight-media {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 18px;
+            overflow: hidden;
+            background: var(--bg-soft);
+            border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: .85rem;
+        }
+        .hero-spotlight-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 0;
+            margin-bottom: 0;
+            filter: none;
+            transition: transform .45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .hero-spotlight-card:hover .hero-spotlight-img {
+            transform: scale(1.06);
+        }
+        .hero-spotlight-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-faint);
+            background: var(--bg-soft);
         }
         .hero-spotlight-badge {
             position: absolute;
-            top: 1rem;
-            left: 1rem;
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #fff;
-            font-size: .78rem;
+            top: .65rem;
+            left: .65rem;
+            z-index: 5;
+            background: rgba(18, 18, 24, 0.88);
+            backdrop-filter: blur(8px);
+            color: #ffffff;
+            font-size: .72rem;
             font-weight: 800;
-            padding: .3rem .75rem;
+            padding: .28rem .65rem;
             border-radius: 99px;
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
             display: inline-flex;
             align-items: center;
-            gap: .35rem;
+            gap: .3rem;
+            letter-spacing: .02em;
         }
-        .hero-spotlight-img {
-            width: 80%;
-            height: 64%;
-            object-fit: cover;
-            border-radius: 18px;
-            margin-bottom: .8rem;
-            filter: drop-shadow(0 12px 24px rgba(0,0,0,0.3));
+        .hero-spotlight-badge.discount {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
         }
         .hero-spotlight-info {
             text-align: center;
             width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .hero-spotlight-pill {
+            font-size: .68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--store-primary);
+            margin-bottom: .25rem;
         }
         .hero-spotlight-title {
-            font-size: 1.15rem;
+            font-size: 1.05rem;
             font-weight: 800;
-            margin-bottom: .25rem;
+            margin: 0 0 .35rem;
             color: var(--text);
-            white-space: nowrap;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .hero-spotlight-price-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: .5rem;
+            margin-bottom: .35rem;
         }
         .hero-spotlight-price {
             font-size: 1.25rem;
             font-weight: 900;
             color: var(--store-primary);
             font-family: var(--font-display);
+        }
+        .hero-spotlight-price small {
+            font-size: .65em;
+            font-weight: 700;
+        }
+        .hero-spotlight-old-price {
+            font-size: .82rem;
+            color: var(--text-faint);
+            text-decoration: line-through;
+            font-weight: 600;
+        }
+        .hero-spotlight-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--store-primary);
+            margin-top: .2rem;
+            transition: transform .2s ease;
+        }
+        .hero-spotlight-card:hover .hero-spotlight-cta {
+            transform: translateX(3px);
         }
 
         /* Bannières Offres Spéciales (Style King Eco Deals) */
@@ -658,26 +735,24 @@
                 line-height: 1.5;
             }
             .hero-pedestal-wrap {
-                max-width: 250px;
+                max-width: 270px;
             }
             .hero-spotlight-card {
-                padding: 1rem;
+                padding: .85rem;
                 border-radius: 20px;
             }
-            .hero-spotlight-badge {
-                font-size: .7rem;
-                padding: .25rem .6rem;
-                top: .75rem;
-                left: .75rem;
+            .hero-spotlight-media {
+                border-radius: 14px;
+                margin-bottom: .65rem;
             }
-            .hero-spotlight-img {
-                width: 75%;
-                height: 125px;
-                border-radius: 12px;
-                margin-bottom: .6rem;
+            .hero-spotlight-badge {
+                font-size: .68rem;
+                padding: .22rem .55rem;
+                top: .5rem;
+                left: .5rem;
             }
             .hero-spotlight-title {
-                font-size: 1rem;
+                font-size: .95rem;
             }
             .hero-spotlight-price {
                 font-size: 1.15rem;
@@ -861,37 +936,31 @@
 
         /* Cartes Produits Dynamiques & Captivantes */
         .product-card {
-            background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 97%, #fff) 0%, var(--surface) 100%);
-            border: 1px solid color-mix(in srgb, var(--store-primary) 22%, var(--border));
-            border-radius: var(--radius);
+            background: color-mix(in srgb, var(--surface) 98%, #fff);
+            border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+            border-radius: 18px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             position: relative;
-            transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1),
-                        box-shadow .35s cubic-bezier(0.16, 1, 0.3, 1),
+            transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1),
+                        box-shadow .3s cubic-bezier(0.16, 1, 0.3, 1),
                         border-color .25s ease;
-            box-shadow: 0 6px 22px rgba(0, 0, 0, 0.14);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
         }
         .product-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 42px -10px var(--store-primary-glow), 0 0 0 1px color-mix(in srgb, var(--store-primary) 60%, transparent);
-            border-color: var(--store-primary);
+            transform: translateY(-6px);
+            box-shadow: 0 16px 36px -8px var(--store-primary-glow, rgba(0,0,0,0.14));
+            border-color: color-mix(in srgb, var(--store-primary) 65%, var(--border));
         }
 
         .product-rating-row {
-            display: flex; align-items: center; gap: .4rem;
-            margin-bottom: .35rem; font-size: .75rem;
-        }
-        .product-stars {
-            color: #f59e0b; letter-spacing: 1px; font-size: .82rem;
-        }
-        .product-rating-text {
-            color: var(--text-faint); font-weight: 600; font-size: .74rem;
+            display: none;
         }
         .product-img-wrap {
             position: relative; width: 100%; aspect-ratio: 1;
             background: var(--bg-soft); overflow: hidden; display: block;
+            border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
         }
         .product-img-wrap::after {
             content: '';
@@ -908,25 +977,25 @@
         }
         .product-img-wrap img {
             width: 100%; height: 100%; object-fit: cover;
-            transition: transform .6s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: transform .5s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .product-card:hover .product-img-wrap img {
-            transform: scale(1.09);
+            transform: scale(1.06);
         }
         .product-discount-badge {
             position: absolute; top: .65rem; left: .65rem;
-            background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; font-size: .75rem;
-            font-weight: 800; padding: .25rem .55rem; border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
-            animation: discountPulse 2.5s infinite; z-index: 2;
+            background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; font-size: .72rem;
+            font-weight: 800; padding: .25rem .55rem; border-radius: 99px;
+            box-shadow: 0 4px 10px rgba(220, 38, 38, 0.35);
+            z-index: 3; letter-spacing: .02em;
         }
         .product-card-badge-top {
             position: absolute; top: .65rem; right: .65rem;
-            background: rgba(18, 18, 22, 0.85); backdrop-filter: blur(8px);
-            color: var(--ok); font-size: .7rem; font-weight: 700;
-            padding: .2rem .5rem; border-radius: 6px;
+            background: rgba(18, 18, 24, 0.82); backdrop-filter: blur(8px);
+            color: #10b981; font-size: .68rem; font-weight: 700;
+            padding: .2rem .5rem; border-radius: 99px;
             border: 1px solid rgba(255, 255, 255, 0.15);
-            z-index: 2; display: inline-flex; align-items: center; gap: .25rem;
+            z-index: 3; display: inline-flex; align-items: center; gap: .25rem;
         }
         .product-card-actions-float {
             position: absolute; bottom: .75rem; right: .75rem;
@@ -1028,42 +1097,7 @@
             display: inline-block; animation: spinSlow .7s linear infinite;
         }
 
-        /* Live Activity / Social Proof Toast */
-        .live-sales-toast {
-            position: fixed; bottom: 1.5rem; left: 1.5rem; z-index: 95;
-            background: color-mix(in srgb, var(--surface) 95%, #000);
-            border: 1px solid color-mix(in srgb, var(--store-primary) 30%, var(--border));
-            backdrop-filter: blur(14px);
-            border-radius: 14px;
-            padding: .65rem .95rem;
-            display: flex; align-items: center; gap: .75rem;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-            max-width: 340px;
-            opacity: 0; transform: translateY(20px);
-            transition: opacity .4s ease, transform .4s ease;
-            pointer-events: none;
-        }
-        .live-sales-toast.active {
-            opacity: 1; transform: translateY(0);
-            pointer-events: auto;
-        }
-        .live-sales-thumb {
-            width: 40px; height: 40px; border-radius: 8px;
-            object-fit: cover; border: 1px solid var(--border); flex-shrink: 0;
-        }
-        .live-sales-text {
-            font-size: .8rem; color: var(--text-soft); line-height: 1.35;
-        }
-        .live-sales-text strong {
-            color: var(--text); font-weight: 700;
-        }
-        .live-sales-badge {
-            font-size: .7rem; font-weight: 700; color: #22c55e;
-            display: flex; align-items: center; gap: .25rem; margin-top: .15rem;
-        }
-        @media (max-width: 600px) {
-            .live-sales-toast { bottom: 5rem; left: 1rem; right: 1rem; max-width: none; }
-        }
+
 
         /* Mobile Sticky Product Bar (Fiche Produit) */
         .mobile-sticky-product-bar {
@@ -1424,17 +1458,6 @@
             </a>
         </aside>
     @endif
-    <!-- Notification Interactive de Commande en Direct (Preuve Sociale Locale) -->
-    <div id="store-live-sale-toast" class="live-sales-toast" aria-live="polite">
-        <img id="live-sale-img" src="" alt="" class="live-sales-thumb" style="display:none">
-        <div class="live-sales-text">
-            <div><strong id="live-sale-product">Article Vedette</strong></div>
-            <div style="font-size:.76rem;color:var(--text-soft)">Commandé à <span id="live-sale-city">Lomé</span> • <span id="live-sale-time">Il y a 6 min</span></div>
-            <div class="live-sales-badge">
-                <x-icon name="check" size="12" /> Commande vérifiée
-            </div>
-        </div>
-        <button type="button" class="toast-close" onclick="document.getElementById('store-live-sale-toast').classList.remove('active')" style="margin-left:auto;font-size:1.1rem">&times;</button>
-    </div>
+
 </body>
 </html>

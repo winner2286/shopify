@@ -41,16 +41,11 @@ class AiAssistantController extends Controller
         $activeConversationId = $request->query('c');
         $activeConversation = null;
 
+        // Charger une conversation spécifique uniquement si ?c=ID est explicitement demandé dans l'URL
         if ($activeConversationId) {
             $activeConversation = $shop->aiConversations()
                 ->with(['messages'])
                 ->find($activeConversationId);
-        }
-
-        // Si aucune conversation demandée spécifiquement, charger la plus récente avec messages
-        if (! $activeConversation && $conversations->isNotEmpty()) {
-            $activeConversation = $conversations->first();
-            $activeConversation->load('messages');
         }
 
         $aiCreditsMonthly = $shop->aiCreditsMonthly();
@@ -162,6 +157,12 @@ class AiAssistantController extends Controller
         $messageText = trim($request->input('message'));
         $conversationId = $request->input('conversation_id');
         $forceNew = (bool) $request->input('force_new', false);
+
+        // Si aucun conversation_id n'est fourni, créer impérativement un nouvel échange indépendant
+        if (empty($conversationId)) {
+            $forceNew = true;
+            $conversationId = null;
+        }
 
         $options = [
             'force_new_conversation' => $forceNew,

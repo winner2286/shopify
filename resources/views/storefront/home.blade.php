@@ -67,26 +67,42 @@
                 </div>
             </div>
 
-            <!-- Colonne 2 : Vitrine Piédestal Flottante Inspirée Burger King -->
+            <!-- Colonne 2 : Vitrine Vedette Coup de Cœur -->
             @if ($featuredProduct)
                 <div class="hero-spotlight-col reveal-on-scroll" style="--delay: 1">
                     <div class="hero-pedestal-wrap">
                         <div class="hero-pedestal-glow"></div>
                         <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $featuredProduct->slug) }}" class="hero-spotlight-card">
-                            <span class="hero-spotlight-badge">
-                                <span>⭐</span> {{ $hasFeaturedDiscount ? '-' . $featuredDiscountPct . '% Réduction' : 'Sélection Vedette' }}
-                            </span>
-                            @if ($featuredImg)
-                                <img src="{{ $featuredImg->thumbnail_url }}" alt="{{ $featuredProduct->title }}" class="hero-spotlight-img" loading="eager" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $featuredProduct->id }}&color={{ urlencode($shop->brand_color ?: '#10b981') }}'">
-                            @else
-                                <div class="hero-spotlight-img" style="display:flex;align-items:center;justify-content:center;background:var(--bg-soft);color:var(--text-faint)">
-                                    <x-icon name="shopping-bag" size="56" />
-                                </div>
-                            @endif
+                            <div class="hero-spotlight-media">
+                                @if ($hasFeaturedDiscount)
+                                    <span class="hero-spotlight-badge discount">
+                                        <x-icon name="tag" size="12" /> -{{ $featuredDiscountPct }}%
+                                    </span>
+                                @else
+                                    <span class="hero-spotlight-badge">
+                                        <x-icon name="sparkles" size="12" /> Coup de Cœur
+                                    </span>
+                                @endif
+
+                                @if ($featuredImg)
+                                    <img src="{{ $featuredImg->thumbnail_url }}" alt="{{ $featuredProduct->title }}" class="hero-spotlight-img" loading="eager" onerror="this.onerror=null; this.src='/api/placeholder-image?id={{ $featuredProduct->id }}&color={{ urlencode($shop->brand_color ?: '#10b981') }}'">
+                                @else
+                                    <div class="hero-spotlight-placeholder">
+                                        <x-icon name="shopping-bag" size="44" />
+                                    </div>
+                                @endif
+                            </div>
+
                             <div class="hero-spotlight-info">
-                                <div class="hero-spotlight-title">{{ $featuredProduct->title }}</div>
-                                <div class="hero-spotlight-price">{{ number_format($featuredProduct->price, 0, ',', ' ') }} FCFA</div>
-                                <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;font-weight:700;color:var(--store-primary);margin-top:.4rem">
+                                <span class="hero-spotlight-pill">Article Vedette</span>
+                                <h3 class="hero-spotlight-title">{{ $featuredProduct->title }}</h3>
+                                <div class="hero-spotlight-price-row">
+                                    <span class="hero-spotlight-price">{{ number_format($featuredProduct->price, 0, ',', ' ') }} <small>FCFA</small></span>
+                                    @if ($hasFeaturedDiscount)
+                                        <span class="hero-spotlight-old-price">{{ number_format($featuredProduct->compare_at_price, 0, ',', ' ') }} FCFA</span>
+                                    @endif
+                                </div>
+                                <span class="hero-spotlight-cta">
                                     Voir l'article <x-icon name="arrow-right" size="13" />
                                 </span>
                             </div>
@@ -289,10 +305,7 @@
                             </span>
                         </div>
 
-                        <div class="product-rating-row">
-                            <span class="product-stars">★★★★★</span>
-                            <span class="product-rating-text">4.9 • Choix populaire</span>
-                        </div>
+
 
                         <h3 class="product-card-title">
                             <a href="{{ url('/b/' . $shop->subdomain . '/produits/' . $product->slug) }}">
