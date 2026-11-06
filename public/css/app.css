@@ -5074,3 +5074,117 @@ button.bottom-nav-item {
 @keyframes exportSpin {
   to { transform: rotate(360deg); }
 }
+
+/* ==========================================================================
+   Pagination Zanika Responsive & Compact (Élimination des flèches géantes)
+   ========================================================================== */
+.zanika-pagination-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+  width: 100%;
+}
+
+.zanika-pagination-info {
+  font-size: 0.82rem;
+  color: var(--text-soft, #94a3b8);
+  text-align: center;
+}
+
+.zanika-pagination-info strong {
+  color: var(--text, #ffffff);
+}
+
+.zanika-pagination-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: var(--surface, #131318);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  padding: 0.35rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.zanika-page-numbers {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.zanika-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-soft, #cbd5e1);
+  background: transparent;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  user-select: none;
+  cursor: pointer;
+}
+
+.zanika-page-btn:hover:not(.disabled):not(.active) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.zanika-page-btn.active {
+  background: linear-gradient(135deg, var(--brand-1, #9e1b32), #c5223d);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(158, 27, 50, 0.4);
+}
+
+.zanika-page-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.zanika-page-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  display: block;
+}
+
+.zanika-page-ellipsis {
+  padding: 0 0.35rem;
+  color: var(--text-faint, #64748b);
+  font-size: 0.85rem;
+}
+
+/* Garde-fous universels pour tout SVG de pagination ou classe w-5 */
+nav[role="navigation"] svg,
+.pagination svg,
+svg.w-5,
+svg.h-5 {
+  width: 16px !important;
+  height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  display: inline-block !important;
+}
+
+nav[role="navigation"] .hidden {
+  display: none !important;
+}
+
+nav[role="navigation"] {
+  max-width: 100%;
+}
+

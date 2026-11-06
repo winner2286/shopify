@@ -29,5 +29,9 @@ class AppServiceProvider extends ServiceProvider
                 $config['token'] ?? (string) env('GOOGLE_MAIL_WEBHOOK_TOKEN', 'ZanikaSecureMailToken2026')
             );
         });
+
+        // Pagination responsive Zanika (évite les flèches SVG géantes sans Tailwind)
+        \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.zanika');
+        \Illuminate\Pagination\Paginator::defaultSimpleView('vendor.pagination.zanika');
     }
 }
