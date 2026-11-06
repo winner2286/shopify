@@ -1,12 +1,15 @@
 {
-  "name": "Zanika",
+  "name": "Zanika Cockpit",
   "short_name": "Zanika",
-  "description": "Zanika — Le commerce à votre manière. Plateforme e-commerce tout-en-un.",
+  "description": "Zanika — Le commerce à votre manière. Créez, gérez et développez votre boutique en ligne avec l'IA.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0B0D12",
-  "theme_color": "#FF2D6D",
+  "background_color": "#07080C",
+  "theme_color": "#9e1b32",
   "orientation": "portrait-primary",
+  "lang": "fr",
+  "categories": ["business", "shopping", "finance"],
   "icons": [
     {
       "src": "/images/brand/icon-192.png",

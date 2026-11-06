@@ -18,16 +18,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Icônes officielles Zanika pour Apple iOS (iPhone/iPad) & Android -->
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=3">
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=3">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=3">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=3">
-    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=4">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=4">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=4">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=4">
+    <link rel="manifest" href="{{ asset('manifest.json') }}?v=4">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#9e1b32" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#07080C" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-title" content="Zanika">
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('{{ asset('sw.js') }}?v=1.0')
+                    .then(function(reg) {
+                        console.log('[Zanika PWA] Service Worker actif sur scope:', reg.scope);
+                    })
+                    .catch(function(err) {
+                        console.warn('[Zanika PWA] Service Worker non enregistré:', err);
+                    });
+            });
+        }
+    </script>
     <!-- Preload Splash Screen Assets pour fluidité maximale sans saccade -->
     <link rel="preload" as="image" href="{{ asset('images/brand/splash_icon.webp') }}" type="image/webp">
     <link rel="preload" as="image" href="{{ asset('images/brand/splash_wordmark.webp') }}" type="image/webp">
@@ -599,13 +615,79 @@
             </div>
         </div>
 
+        <!-- Bannière flottante d'installation PWA Mobile Zanika -->
+        <div id="pwa-floating-banner" style="display:none;position:fixed;bottom:72px;left:50%;transform:translateX(-50%);z-index:9990;width:calc(100% - 24px);max-width:440px;background:rgba(15, 23, 42, 0.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(158,27,50,0.4);border-radius:14px;padding:.75rem 1rem;box-shadow:0 8px 30px rgba(0,0,0,0.55);align-items:center;justify-content:space-between;gap:.75rem;box-sizing:border-box">
+            <div style="display:flex;align-items:center;gap:.65rem;min-width:0">
+                <img src="{{ asset('images/brand/icon-192.png') }}" alt="Zanika" style="width:38px;height:38px;border-radius:9px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.3);flex-shrink:0">
+                <div style="min-width:0;line-height:1.25">
+                    <strong style="font-size:.86rem;color:#ffffff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zanika Cockpit</strong>
+                    <span style="font-size:.74rem;color:#94a3b8;display:block">Installer l'application sur votre écran</span>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+                <button type="button" onclick="triggerPwaInstallFromBanner()" class="btn btn-sm btn-primary" style="padding:.45rem .85rem;font-size:.8rem;font-weight:700;border-radius:8px;box-shadow:0 2px 10px rgba(158,27,50,0.4)">
+                    Installer
+                </button>
+                <button type="button" onclick="dismissPwaBanner()" aria-label="Fermer" style="background:transparent;border:none;color:#94a3b8;padding:.3rem .5rem;cursor:pointer;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center">
+                    ✕
+                </button>
+            </div>
+        </div>
+
         <script>
             var _deferredInstallPrompt = null;
+
+            function isPwaStandalone() {
+                return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || 
+                       (window.navigator && window.navigator.standalone === true);
+            }
+
+            function checkAndShowPwaBanner() {
+                if (isPwaStandalone()) return;
+                if (sessionStorage.getItem('zanika_pwa_dismissed')) return;
+                
+                var banner = document.getElementById('pwa-floating-banner');
+                if (banner) {
+                    banner.style.display = 'flex';
+                }
+            }
+
+            function dismissPwaBanner() {
+                var banner = document.getElementById('pwa-floating-banner');
+                if (banner) banner.style.display = 'none';
+                sessionStorage.setItem('zanika_pwa_dismissed', '1');
+            }
+
+            function triggerPwaInstallFromBanner() {
+                dismissPwaBanner();
+                if (_deferredInstallPrompt) {
+                    _deferredInstallPrompt.prompt();
+                    _deferredInstallPrompt.userChoice.then(function(choice) {
+                        if (choice.outcome === 'accepted') {
+                            var banner = document.getElementById('pwa-floating-banner');
+                            if (banner) banner.style.display = 'none';
+                        }
+                        _deferredInstallPrompt = null;
+                    });
+                } else {
+                    openInstallGuideModal();
+                }
+            }
+
             window.addEventListener('beforeinstallprompt', function(e) {
                 e.preventDefault();
                 _deferredInstallPrompt = e;
                 var wrap = document.getElementById('pwa-native-install-wrap');
                 if (wrap) wrap.style.display = 'block';
+                checkAndShowPwaBanner();
+            });
+
+            // Afficher discrètement la bannière après 3 secondes sur mobile si pas encore installé
+            window.addEventListener('DOMContentLoaded', function() {
+                var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isMobile && !isPwaStandalone()) {
+                    setTimeout(checkAndShowPwaBanner, 2500);
+                }
             });
 
             function openInstallGuideModal() {
