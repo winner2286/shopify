@@ -1603,12 +1603,14 @@ html[data-theme='light'] .bottom-nav-item.admin-cockpit-link,
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 26px;
+  height: 28px;
 }
 
 .bottom-nav-item .icon svg {
-  width: 23px;
-  height: 23px;
+  width: 24px !important;
+  height: 24px !important;
+  max-width: 24px !important;
+  max-height: 24px !important;
   transition: transform .15s ease;
 }
 
@@ -1621,9 +1623,11 @@ html[data-theme='light'] .bottom-nav-item.admin-cockpit-link,
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  line-height: 1.15;
-  font-size: clamp(0.63rem, 2.3vw, 0.72rem);
-  letter-spacing: -0.025em;
+  line-height: 1.2;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin-top: 1px;
 }
 
 /* Espacement garanti sous le contenu pour la barre mobile (appliqué uniquement à main pour éviter le double padding de 200px) */
@@ -5168,11 +5172,11 @@ button.bottom-nav-item {
   font-size: 0.85rem;
 }
 
-/* Garde-fous universels pour tout SVG de pagination ou classe w-5 */
-nav[role="navigation"] svg,
+/* Garde-fous universels pour tout SVG de pagination uniquement */
+.zanika-pagination-nav svg,
 .pagination svg,
-svg.w-5,
-svg.h-5 {
+nav.zanika-pagination-nav svg,
+.zanika-pagination-wrap svg {
   width: 16px !important;
   height: 16px !important;
   max-width: 16px !important;
@@ -5180,11 +5184,11 @@ svg.h-5 {
   display: inline-block !important;
 }
 
-nav[role="navigation"] .hidden {
+.zanika-pagination-nav .hidden {
   display: none !important;
 }
 
-nav[role="navigation"] {
+.zanika-pagination-nav {
   max-width: 100%;
 }
 
