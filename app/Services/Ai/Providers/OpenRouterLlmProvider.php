@@ -35,7 +35,7 @@ class OpenRouterLlmProvider implements LlmProviderInterface
     {
         $model = $options['model'] ?? $this->defaultModel;
         $temperature = $options['temperature'] ?? 0.6;
-        $maxTokens = $options['max_tokens'] ?? 2000;
+        $maxTokens = $options['max_tokens'] ?? 800;
         $timeout = $options['timeout'] ?? 30;
 
         if (empty($this->apiKey)) {
@@ -131,6 +131,36 @@ class OpenRouterLlmProvider implements LlmProviderInterface
                 $response = $backupClient->post('https://openrouter.ai/api/v1/chat/completions', $payload);
             }
 
+            // Si OpenRouter renvoie 402 (Payment Required / balance faible / réservation de tokens dépassée)
+            if ($response->status() === 402) {
+                Log::warning('OpenRouter API returned 402: ' . $response->body());
+
+                // 1. Essai avec la clé de secours si disponible
+                if (! empty($this->backupKey) && trim($this->apiKey) !== $this->backupKey) {
+                    Log::info('OpenRouter 402: Tentative avec la clé de secours...');
+                    $backupClient = Http::withHeaders([
+                        'Authorization' => 'Bearer ' . $this->backupKey,
+                        'HTTP-Referer' => $cleanUrl,
+                        'X-Title' => $cleanTitle,
+                        'Content-Type' => 'application/json',
+                    ])->timeout($timeout);
+
+                    if (! app()->environment('production')) {
+                        $backupClient = $backupClient->withoutVerifying();
+                    }
+
+                    $response = $backupClient->post('https://openrouter.ai/api/v1/chat/completions', $payload);
+                }
+
+                // 2. Si toujours 402, tentative d'ajustement automatique avec max_tokens réduit (ex: 500 tokens)
+                if ($response->status() === 402 && ($payload['max_tokens'] ?? 0) > 500) {
+                    Log::info('OpenRouter 402: Tentative de repli avec max_tokens réduit à 500...');
+                    $reducedPayload = $payload;
+                    $reducedPayload['max_tokens'] = 500;
+                    $response = $client->post('https://openrouter.ai/api/v1/chat/completions', $reducedPayload);
+                }
+            }
+
             if ($response->successful()) {
                 $data = $response->json();
                 $choice = $data['choices'][0]['message'] ?? [];
@@ -153,6 +183,28 @@ class OpenRouterLlmProvider implements LlmProviderInterface
             }
 
             Log::warning('OpenRouter API returned error ' . $response->status() . ': ' . $response->body());
+
+            if ($response->status() === 402) {
+                return [
+                    'content' => "⚠️ **Crédits OpenRouter épuisés** : Le solde de crédits de votre compte OpenRouter est insuffisant pour traiter cette requête (Code HTTP 402 : Payment Required). Veuillez recharger votre compte sur [OpenRouter](https://openrouter.ai/settings/credits) ou mettre à jour votre clé API.",
+                    'tool_calls' => null,
+                    'tokens_input' => 0,
+                    'tokens_output' => 0,
+                    'model_used' => $model,
+                    'raw' => ['error' => $response->body()],
+                ];
+            }
+
+            if ($response->status() === 401) {
+                return [
+                    'content' => "⚠️ **Clé OpenRouter invalide ou révoquée** (Code HTTP 401 : Unauthorized). Veuillez vérifier votre clé API dans la configuration.",
+                    'tool_calls' => null,
+                    'tokens_input' => 0,
+                    'tokens_output' => 0,
+                    'model_used' => $model,
+                    'raw' => ['error' => $response->body()],
+                ];
+            }
 
             return [
                 'content' => "Une erreur temporaire est survenue lors de la communication avec le modèle IA (Code HTTP " . $response->status() . "). Veuillez réessayer.",
