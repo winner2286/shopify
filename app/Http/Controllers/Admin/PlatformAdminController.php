@@ -568,18 +568,37 @@ class PlatformAdminController extends Controller
         } else {
             try {
                 $response = Http::withToken($openRouterKey)
-                    ->timeout(2)
+                    ->timeout(3)
                     ->get('https://openrouter.ai/api/v1/auth/key');
                 if ($response->successful()) {
                     $json = $response->json('data') ?? [];
                     $limit = $json['limit'] ?? null;
                     $usage = $json['usage'] ?? null;
-                    if ($limit !== null && $usage !== null) {
-                        $remaining = max(0, $limit - $usage);
-                        $openRouterMsg = "Solde restant : $" . number_format($remaining, 2);
+                    $limitRemaining = (float) ($json['limit_remaining'] ?? 50);
+                    $isFreeTier = (bool) ($json['is_free_tier'] ?? false);
+                    $remaining = ($limit !== null && $usage !== null) ? max(0, $limit - $usage) : $limitRemaining;
+
+                    if ($isFreeTier && $remaining < 2.0) {
+                        $openRouterStatus = 'warning';
+                        $openRouterMsg = "Solde bas : $" . number_format($remaining, 2) . " (Recharge conseillée)";
+                        try {
+                            app(\App\Services\AdminNotificationService::class)->notifyLowAiCredits(
+                                'Solde IA OpenRouter Faible',
+                                "Votre réserve OpenRouter est de $" . number_format($remaining, 2) . ". Pour garantir le service continu de vos commerçants, prévoyez une recharge de 5$ sur https://openrouter.ai/settings/credits."
+                            );
+                        } catch (\Throwable $e) {}
                     } else {
-                        $openRouterMsg = 'En ligne (Actif)';
+                        $openRouterMsg = "Solde disponible : $" . number_format($remaining, 2);
                     }
+                } elseif ($response->status() === 402) {
+                    $openRouterStatus = 'error';
+                    $openRouterMsg = 'Crédits épuisés (Code 402)';
+                    try {
+                        app(\App\Services\AdminNotificationService::class)->notifyLowAiCredits(
+                            'Crédits IA OpenRouter Épuisés (Code 402)',
+                            'Le solde OpenRouter est à 0$. Le système de secours automatique Zanika a pris le relais. Veuillez recharger 5$ sur https://openrouter.ai/settings/credits.'
+                        );
+                    } catch (\Throwable $e) {}
                 } else {
                     $openRouterStatus = 'warning';
                     $openRouterMsg = 'HTTP ' . $response->status();

@@ -247,4 +247,62 @@ class AdminNotificationService
             Log::error("[AdminNotification] Erreur alerte système: " . $e->getMessage());
         }
     }
+
+    /**
+     * Alerte proactive spécifique : Solde IA faible ou épuisé (Déclenche Push Mobile + Email Super-Admin)
+     */
+    public function notifyLowAiCredits(string $title, string $message): void
+    {
+        try {
+            // Anti-spam : vérifier si une alerte similaire a déjà été émise dans les 6 dernières heures
+            $recentAlert = SystemAlert::where('type', 'system_health')
+                ->where('title', 'like', '%OpenRouter%')
+                ->where('created_at', '>=', now()->subHours(6))
+                ->exists();
+
+            if ($recentAlert) {
+                return;
+            }
+
+            SystemAlert::create([
+                'type' => 'system_health',
+                'severity' => 'critical',
+                'title' => $title,
+                'message' => $message,
+                'data' => [
+                    'action_url' => 'https://openrouter.ai/settings/credits',
+                    'alerted_at' => now()->toIso8601String(),
+                ],
+            ]);
+
+            // 1. Notification Push Mobile au Super-Admin
+            $adminUsers = $this->getAdminUsers();
+            foreach ($adminUsers as $admin) {
+                $this->webPush->sendNotification(
+                    $admin,
+                    '🚨 Alerte Trésorerie IA Zanika',
+                    $title . ' : ' . substr($message, 0, 110),
+                    route('admin.audit'),
+                    [
+                        'tag' => 'ai-credits-low-' . date('YmdH'),
+                        'severity' => 'critical',
+                    ]
+                );
+            }
+
+            // 2. Email direct au Super-Admin
+            foreach ($this->getAdminEmails() as $email) {
+                try {
+                    Mail::raw($message . "\n\nPour recharger votre solde : https://openrouter.ai/settings/credits\nOu ajoutez une clé Google Gemini gratuite (GEMINI_API_KEY) dans vos variables d'environnement.", function ($m) use ($email, $title) {
+                        $m->to($email)->subject("[Zanika Alerte Critique] " . $title);
+                    });
+                } catch (\Throwable $e) {
+                    Log::warning("[AdminNotification] Échec envoi email alerte solde: " . $e->getMessage());
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error("[AdminNotification] Erreur notification solde bas: " . $e->getMessage());
+        }
+    }
 }
+
