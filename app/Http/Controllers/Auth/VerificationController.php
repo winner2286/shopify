@@ -43,6 +43,13 @@ class VerificationController extends Controller
 
         $user->forceFill(['email_verified_at' => now()])->save();
 
+        // Notification immédiate du Super-Admin (Mobile Push + Email + Audit Alert)
+        try {
+            app(\App\Services\AdminNotificationService::class)->notifyMerchantRegistered($user, $user->shop);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("[VerificationController] Notification admin échouée : " . $e->getMessage());
+        }
+
         $request->session()->forget('pending_user_id');
         Auth::login($user);
         $request->session()->regenerate();

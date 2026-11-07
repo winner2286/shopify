@@ -40,4 +40,10 @@ return [
         'model' => env('OPENROUTER_MODEL', 'google/gemini-2.5-flash'),
     ],
 
+    'webpush' => [
+        'public_key' => env('VAPID_PUBLIC_KEY', 'BGKwSjr1JTOEHbpn_kAevk39d1yAae-i0qYZVhYo7pKiPVe0pFhCDzuTdymr931C-LTOTJ9RpXWzpLRcHrxyDA8'),
+        'private_key' => env('VAPID_PRIVATE_KEY', '76-U4KpznuWle7-wCIW6d6DLIHAKjq8tBr2rc4gcW88'),
+        'subject' => env('VAPID_SUBJECT', 'mailto:kougnimag@gmail.com'),
+    ],
+
 ];

@@ -118,3 +118,75 @@ self.addEventListener('fetch', (event) => {
             })
     );
 });
+
+// ==========================================
+// NOTIFICATIONS PUSH & INTERACTIONS MOBILES
+// ==========================================
+
+self.addEventListener('push', (event) => {
+    let data = {
+        title: 'Zanika',
+        body: 'Nouvelle notification.',
+        icon: '/images/brand/icon-512.png',
+        badge: '/images/brand/icon-192.png',
+        url: '/',
+        vibrate: [200, 100, 200, 100, 300],
+        tag: 'zanika-notification',
+        data: {}
+    };
+
+    if (event.data) {
+        try {
+            const json = event.data.json();
+            data = Object.assign({}, data, json);
+        } catch (e) {
+            data.body = event.data.text();
+        }
+    }
+
+    const options = {
+        body: data.body,
+        icon: data.icon || '/images/brand/icon-512.png',
+        badge: data.badge || '/images/brand/icon-192.png',
+        vibrate: data.vibrate || [200, 100, 200, 100, 300],
+        tag: data.tag || 'zanika-alert-' + Date.now(),
+        renotify: true,
+        data: {
+            url: data.url || '/',
+            ...data.data
+        },
+        actions: [
+            { action: 'open', title: '👀 Voir les détails' }
+        ]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const targetUrl = (event.notification.data && event.notification.data.url)
+        ? event.notification.data.url
+        : '/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (let i = 0; i < clientList.length; i++) {
+                const client = clientList[i];
+                if ('focus' in client) {
+                    client.focus();
+                    if ('navigate' in client) {
+                        return client.navigate(targetUrl);
+                    }
+                    return;
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
+});

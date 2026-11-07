@@ -124,6 +124,13 @@ class ShopSettingsController extends Controller
 
         $shop->update(['status' => Shop::PUBLISHED]);
 
+        // Notification immédiate du Super-Admin (Mobile Push + Email + Audit Alert)
+        try {
+            app(\App\Services\AdminNotificationService::class)->notifyShopLaunched($shop);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("[ShopSettingsController] Notification admin boutique échouée : " . $e->getMessage());
+        }
+
         return redirect()->route('shop.settings')->with('published_success', true)->with('status', 'Félicitations ! Votre boutique est désormais en ligne et accessible à vos clients.');
     }
 

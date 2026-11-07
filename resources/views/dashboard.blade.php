@@ -50,6 +50,33 @@
         </div>
     </div>
 
+    <!-- Bannière d'activation des Notifications Mobiles Instantanées (Commandes & Alertes) -->
+    <div class="card push-banner" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(109, 61, 242, 0.12), rgba(255, 45, 109, 0.08));border:1px solid rgba(109, 61, 242, 0.3);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+        <div style="display:flex;align-items:center;gap:.85rem">
+            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg, var(--brand-1, #ff2d6d), var(--brand-2, #6d3df2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;box-shadow:0 4px 12px rgba(255, 45, 109, 0.3);flex-shrink:0">
+                🔔
+            </div>
+            <div>
+                <div style="font-weight:700;font-size:1rem;color:var(--text);display:flex;align-items:center;gap:.5rem">
+                    <span>Notifications Mobiles Instantanées</span>
+                    <span class="badge badge-ok" data-push-state style="font-size:.7rem">Vérification...</span>
+                </div>
+                <div style="font-size:.85rem;color:var(--text-soft)">Recevez une alerte sonore avec vibration dès qu'un client passe commande sur votre boutique.</div>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+            <button type="button" class="btn btn-sm btn-primary" data-push-action="enable" style="display:none;align-items:center;gap:.4rem">
+                <x-icon name="bell" size="14" /> Activer sur ce téléphone
+            </button>
+            <button type="button" class="btn btn-sm btn-ghost" data-push-action="test" style="display:none;align-items:center;gap:.4rem;border:1px solid var(--border)">
+                <span>🔔 Tester</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-ghost" data-push-action="disable" style="display:none;align-items:center;gap:.4rem;color:var(--text-soft)">
+                <span>Désactiver</span>
+            </button>
+        </div>
+    </div>
+
     @php
         $sub = $shop?->subscription;
         $isTrialExpiring = $sub && $sub->isExpiringSoon(3);

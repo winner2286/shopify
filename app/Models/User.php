@@ -41,6 +41,11 @@ class User extends Authenticatable
         return $this->hasMany(VerificationCode::class);
     }
 
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
     public function isMerchant(): bool
     {
         return $this->role === self::ROLE_MERCHANT;

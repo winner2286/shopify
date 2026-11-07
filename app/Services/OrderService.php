@@ -186,6 +186,13 @@ class OrderService
             \Illuminate\Support\Facades\Log::warning("Notification WhatsApp échouée pour #{$order->order_number} : " . $e->getMessage());
         }
 
+        // 9. Notification Push Mobile instantanée du commerçant (PWA Web Push avec vibration/son)
+        try {
+            app(\App\Services\AdminNotificationService::class)->notifyMerchantOrder($order);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Notification Web Push commande échouée pour #{$order->order_number} : " . $e->getMessage());
+        }
+
         return $order;
     }
 

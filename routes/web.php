@@ -148,6 +148,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/assistant-ia/automatisations/{automation}/basculer', [\App\Http\Controllers\AiMarketingController::class, 'toggleAutomation'])->name('ai.automations.toggle');
     Route::post('/assistant-ia/automatisations/executer-maintenant', [\App\Http\Controllers\AiMarketingController::class, 'runAutomationsNow'])->name('ai.automations.run_now');
 
+    // Web Push Notifications PWA (Commerçants & Super-Admins)
+    Route::get('/push/vapid-key', [\App\Http\Controllers\PushNotificationController::class, 'vapidPublicKey'])->name('push.vapid_key');
+    Route::post('/push/subscribe', [\App\Http\Controllers\PushNotificationController::class, 'subscribe'])->name('push.subscribe');
+    Route::post('/push/unsubscribe', [\App\Http\Controllers\PushNotificationController::class, 'unsubscribe'])->name('push.unsubscribe');
+    Route::post('/push/test', [\App\Http\Controllers\PushNotificationController::class, 'test'])->name('push.test');
+
     // Module J - Super-Administration de la Plateforme (J-01 à J-08)
     Route::prefix('admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'dashboard'])->name('admin.dashboard');
@@ -166,6 +172,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/formules/{plan}/toggle', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'togglePlan'])->name('admin.plans.toggle');
         Route::get('/maintenance', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'maintenance'])->name('admin.maintenance');
         Route::post('/maintenance', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'toggleMaintenance'])->name('admin.maintenance.toggle');
+
+        // Audit, Contrôle & Alertes Système Super-Admin
+        Route::get('/audit', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'audit'])->name('admin.audit');
+        Route::post('/audit/alertes/{alert}/lue', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'markAlertRead'])->name('admin.audit.read');
+        Route::post('/audit/alertes/toutes-lues', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'markAllAlertsRead'])->name('admin.audit.read_all');
+        Route::post('/audit/test-sante', [\App\Http\Controllers\Admin\PlatformAdminController::class, 'runHealthCheck'])->name('admin.audit.health_check');
     });
 });
 

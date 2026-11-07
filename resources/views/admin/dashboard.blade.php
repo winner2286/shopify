@@ -15,6 +15,9 @@
         </div>
 
         <div class="admin-nav-pills">
+            <a href="{{ route('admin.audit') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem;color:var(--brand-1)">
+                <x-icon name="shield" size="15" /> 🛡️ Audit & Alertes
+            </a>
             <a href="{{ route('admin.shops') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
                 <x-icon name="shop" size="15" /> Boutiques
             </a>

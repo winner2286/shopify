@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>@yield('title', config('platform.name').' : votre boutique en ligne créée par l\'IA')</title>
     <meta name="description" content="@yield('description', 'Créez, promouvez et gérez votre boutique en ligne en quelques minutes grâce à l\'intelligence artificielle. Paiement Mobile Money, carte et à la livraison.')">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <script>
         (function() {
             var savedTheme = 'dark';
@@ -34,7 +35,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('{{ asset('sw.js') }}?v=1.0')
+                navigator.serviceWorker.register('{{ asset('sw.js') }}?v=1.1')
                     .then(function(reg) {
                         console.log('[Zanika PWA] Service Worker actif sur scope:', reg.scope);
                     })
@@ -52,6 +53,7 @@
     <script src="{{ asset('js/app.js') }}?v={{ file_exists(public_path('js/app.js')) ? filemtime(public_path('js/app.js')) : '1.1' }}" defer></script>
     @auth
         <script src="{{ asset('js/order-notifications.js') }}?v={{ file_exists(public_path('js/order-notifications.js')) ? filemtime(public_path('js/order-notifications.js')) : '1.1' }}" defer></script>
+        <script src="{{ asset('js/pwa-push.js') }}?v={{ file_exists(public_path('js/pwa-push.js')) ? filemtime(public_path('js/pwa-push.js')) : '1.0' }}" defer></script>
     @endauth
 <body class="@auth has-bottom-nav @endauth">
     @guest
