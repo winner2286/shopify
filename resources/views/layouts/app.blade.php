@@ -145,6 +145,10 @@
                                     <span>Paramètres</span>
                                 </a>
                                 <div style="height:1px;background:var(--border);margin:.2rem 0"></div>
+                                <button type="button" class="nav-more-item" onclick="var t=document.getElementById('theme-toggle');if(t)t.click();" style="width:100%;background:transparent;border:none;text-align:left;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:.5rem;color:var(--text)">
+                                    <x-icon name="sun" :size="15" />
+                                    <span>Changer de thème (Sombre / Clair)</span>
+                                </button>
                                 <button type="button" class="nav-more-item" onclick="openInstallGuideModal()" style="width:100%;background:transparent;border:none;text-align:left;font-family:inherit;cursor:pointer;color:var(--brand-1)">
                                     <x-icon name="download" :size="15" />
                                     <span>Installer l'application</span>
@@ -172,6 +176,11 @@
                         </a>
                     @endif
 
+                    <!-- Bouton de bascule Mode Sombre / Mode Clair (Positionné avant la déconnexion pour une visibilité garantie) -->
+                    <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                    </button>
+
                     <form method="POST" action="{{ route('logout') }}" style="display:inline;margin:0">@csrf
                         <button id="nav-logout" class="btn btn-ghost btn-sm" type="submit" title="Déconnexion" aria-label="Déconnexion">
                             <span class="logout-text">Déconnexion</span>
@@ -184,12 +193,12 @@
                         <span class="btn-full-text">Démarrer l'essai gratuit</span>
                         <span class="btn-short-text">Essai gratuit</span>
                     </a>
-                @endauth
 
-                <!-- Bouton de bascule Mode Sombre / Mode Clair (à l'extrémité droite) -->
-                <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-                </button>
+                    <!-- Bouton de thème pour visiteurs non connectés -->
+                    <button type="button" class="theme-toggle-btn" id="theme-toggle" aria-label="Changer de thème" title="Changer de thème">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                    </button>
+                @endauth
             </nav>
         </div>
     </header>
@@ -306,6 +315,17 @@
                     </div>
                     <x-icon name="arrow-right" :size="16" />
                 </a>
+
+                <button type="button" class="mobile-plus-item" onclick="var t=document.getElementById('theme-toggle');if(t){t.click();}else{document.dispatchEvent(new Event('theme-toggle-click'));}closeMobilePlusMenu();" style="width:100%;text-align:left;background:transparent;border:none;cursor:pointer">
+                    <div class="mobile-plus-icon" style="background:rgba(245, 158, 11, 0.15);color:#f59e0b">
+                        <x-icon name="sun" :size="22" />
+                    </div>
+                    <div class="mobile-plus-info">
+                        <strong>Apparence (Mode Sombre / Clair)</strong>
+                        <span>Changer l'affichage fond blanc ou fond sombre</span>
+                    </div>
+                    <span style="font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--bg-soft);border:1px solid var(--border);color:var(--text)">Basculer</span>
+                </button>
 
                 <button type="button" class="mobile-plus-item" onclick="openInstallGuideModal()" style="width:100%;background:linear-gradient(135deg, rgba(158,27,50,0.12), rgba(244,63,94,0.08));border:1px solid rgba(158,27,50,0.3);text-align:left;font-family:inherit;cursor:pointer">
                     <div class="mobile-plus-icon" style="background:linear-gradient(135deg, var(--brand-1), #dc2626);color:#ffffff;box-shadow:0 3px 10px rgba(158,27,50,0.35)">

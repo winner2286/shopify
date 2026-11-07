@@ -382,9 +382,12 @@
       requestBrowserNotificationPermission();
     });
 
-    // Insérer avant le bouton déconnexion
-    var logoutForm = navActions.querySelector('form[action*="deconnexion"]');
-    if (logoutForm) {
+    // Insérer avant le bouton thème ou avant le bouton déconnexion
+    var themeToggle = navActions.querySelector('#theme-toggle, .theme-toggle-btn');
+    var logoutForm = navActions.querySelector('form[action*="deconnexion"], form[action*="logout"]');
+    if (themeToggle) {
+      navActions.insertBefore(btn, themeToggle);
+    } else if (logoutForm) {
       navActions.insertBefore(btn, logoutForm);
     } else {
       navActions.appendChild(btn);
