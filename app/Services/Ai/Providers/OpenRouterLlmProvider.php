@@ -297,7 +297,7 @@ class OpenRouterLlmProvider implements LlmProviderInterface
         }
 
         try {
-            $model = config('services.groq.model') ?: env('GROQ_MODEL', 'llama-3.3-70b-versatile');
+            $model = config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b');
             $url = "https://api.groq.com/openai/v1/chat/completions";
 
             $payload = [
@@ -306,6 +306,11 @@ class OpenRouterLlmProvider implements LlmProviderInterface
                 'max_tokens' => min($maxTokens, 800),
                 'temperature' => 0.6,
             ];
+
+            if (! empty($tools)) {
+                $payload['tools'] = $tools;
+                $payload['tool_choice'] = 'auto';
+            }
 
             $client = Http::withHeaders([
                 'Authorization' => 'Bearer ' . trim($groqKey),
