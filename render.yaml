@@ -73,6 +73,24 @@ services:
         value: "https://api-v2.feexpay.me"
       - key: FEEXPAY_CURRENCY
         value: "XOF"
+      # IA Moteur Principal (OpenRouter)
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "google/gemini-2.5-flash"
+      # IA Cascade de Secours Ultra-Rapide (Groq LPU)
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: "openai/gpt-oss-120b"
+      # Web Push Notifications (PWA VAPID)
+      - key: VAPID_PUBLIC_KEY
+        value: "BGKwSjr1JTOEHbpn_kAevk39d1yAae-i0qYZVhYo7pKiPVe0pFhCDzuTdymr931C-LTOTJ9RpXWzpLRcHrxyDA8"
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        value: "mailto:kougnimag@gmail.com"
+
 
 # Base de données PostgreSQL infogérée Render (Tier Gratuit)
 databases:
