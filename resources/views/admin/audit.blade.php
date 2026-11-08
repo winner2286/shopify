@@ -251,7 +251,7 @@
                                     </span>
 
                                     <span style="font-size:.78rem;color:var(--text-soft)">
-                                        {{ $alert->created_at->diffForHumans() }} ({{ $alert->created_at->format('d/m/Y à H:i') }})
+                                        {{ $alert->created_at ? $alert->created_at->diffForHumans() . ' (' . $alert->created_at->format('d/m/Y à H:i') . ')' : 'Récemment' }}
                                     </span>
                                 </div>
 

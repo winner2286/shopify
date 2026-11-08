@@ -503,37 +503,68 @@ class PlatformAdminController extends Controller
         $filterSeverity = $request->query('severity');
         $onlyUnread = $request->boolean('unread', false);
 
-        $alertsQuery = SystemAlert::latest();
+        // Auto-guérison : si la table system_alerts ou push_subscriptions n'existe pas encore, exécuter les migrations
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('system_alerts')) {
+                Artisan::call('migrate', ['--force' => true]);
+            }
+        } catch (\Throwable $e) {}
 
-        if ($filterCategory) {
-            $alertsQuery->where('type', $filterCategory);
-        }
-        if ($filterSeverity) {
-            $alertsQuery->where('severity', $filterSeverity);
-        }
-        if ($onlyUnread) {
-            $alertsQuery->where('is_read', false);
-        }
+        try {
+            $alertsQuery = SystemAlert::latest();
 
-        $alerts = $alertsQuery->paginate(20)->withQueryString();
+            if ($filterCategory) {
+                $alertsQuery->where('type', $filterCategory);
+            }
+            if ($filterSeverity) {
+                $alertsQuery->where('severity', $filterSeverity);
+            }
+            if ($onlyUnread) {
+                $alertsQuery->where('is_read', false);
+            }
+
+            $alerts = $alertsQuery->paginate(20)->withQueryString();
+        } catch (\Throwable $e) {
+            $alerts = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+        }
 
         // 1. Audit en temps réel des services critiques
         $health = $this->computeHealthStatus();
 
-        // 2. Statistiques journalières d'activité & sécurité
+        // 2. Statistiques journalières d'activité & sécurité protégées
         $today = now()->startOfDay();
         $stats = [
-            'unread_alerts' => SystemAlert::where('is_read', false)->count(),
-            'critical_alerts' => SystemAlert::where('severity', 'critical')->where('is_read', false)->count(),
-            'merchants_today' => User::where('role', User::ROLE_MERCHANT)->where('created_at', '>=', $today)->count(),
-            'merchants_7d' => User::where('role', User::ROLE_MERCHANT)->where('created_at', '>=', now()->subDays(7))->count(),
-            'shops_launched_today' => Shop::where('status', Shop::PUBLISHED)->where('updated_at', '>=', $today)->count(),
-            'orders_today' => Order::withoutGlobalScopes()->where('created_at', '>=', $today)->count(),
-            'gmv_today' => (int) Order::withoutGlobalScopes()->where('created_at', '>=', $today)->where('status', '!=', Order::STATUS_CANCELLED)->sum('total'),
-            'push_devices_admin' => PushSubscription::whereHas('user', fn($q) => $q->where('role', User::ROLE_ADMIN))->count(),
-            'push_devices_merchants' => PushSubscription::whereHas('user', fn($q) => $q->where('role', User::ROLE_MERCHANT))->count(),
-            'push_devices_total' => PushSubscription::count(),
+            'unread_alerts' => 0,
+            'critical_alerts' => 0,
+            'merchants_today' => 0,
+            'merchants_7d' => 0,
+            'shops_launched_today' => 0,
+            'orders_today' => 0,
+            'gmv_today' => 0,
+            'push_devices_admin' => 0,
+            'push_devices_merchants' => 0,
+            'push_devices_total' => 0,
         ];
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('system_alerts')) {
+                $stats['unread_alerts'] = SystemAlert::where('is_read', false)->count();
+                $stats['critical_alerts'] = SystemAlert::where('severity', 'critical')->where('is_read', false)->count();
+            }
+            $stats['merchants_today'] = User::where('role', User::ROLE_MERCHANT)->where('created_at', '>=', $today)->count();
+            $stats['merchants_7d'] = User::where('role', User::ROLE_MERCHANT)->where('created_at', '>=', now()->subDays(7))->count();
+            $stats['shops_launched_today'] = Shop::where('status', Shop::PUBLISHED)->where('updated_at', '>=', $today)->count();
+            $stats['orders_today'] = Order::withoutGlobalScopes()->where('created_at', '>=', $today)->count();
+            $stats['gmv_today'] = (int) Order::withoutGlobalScopes()->where('created_at', '>=', $today)->where('status', '!=', Order::STATUS_CANCELLED)->sum('total');
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('push_subscriptions')) {
+                $stats['push_devices_admin'] = PushSubscription::whereHas('user', fn($q) => $q->where('role', User::ROLE_ADMIN))->count();
+                $stats['push_devices_merchants'] = PushSubscription::whereHas('user', fn($q) => $q->where('role', User::ROLE_MERCHANT))->count();
+                $stats['push_devices_total'] = PushSubscription::count();
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('PlatformAdminController: Calcul partiel des statistiques d\'audit: ' . $e->getMessage());
+        }
 
         return view('admin.audit', compact('alerts', 'health', 'stats', 'filterCategory', 'filterSeverity', 'onlyUnread'));
     }

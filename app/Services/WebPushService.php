@@ -44,6 +44,18 @@ class WebPushService
     }
 
     /**
+     * Envoie une notification push native avec signature directe (titre, message, URL, options)
+     */
+    public function sendNotification(User $user, string $title, string $body, ?string $url = null, array $options = []): int
+    {
+        return $this->sendToUser($user, array_merge([
+            'title' => $title,
+            'body' => $body,
+            'url' => $url ?: route('dashboard'),
+        ], $options));
+    }
+
+    /**
      * Envoie une notification push native à tous les appareils enregistrés d'un utilisateur.
      */
     public function sendToUser(User $user, array $payload): int
