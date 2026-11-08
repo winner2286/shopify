@@ -35,7 +35,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-                navigator.serviceWorker.register('{{ asset('sw.js') }}?v=1.1')
+                navigator.serviceWorker.register('{{ asset('sw.js') }}?v=1.2')
                     .then(function(reg) {
                         console.log('[Zanika PWA] Service Worker actif sur scope:', reg.scope);
                     })

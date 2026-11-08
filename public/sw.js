@@ -1,6 +1,6 @@
 // Service Worker Officiel Zanika PWA
 // Cache Versioning
-const CACHE_NAME = 'zanika-pwa-v1.0';
+const CACHE_NAME = 'zanika-pwa-v1.1';
 
 // Ressources statiques essentielles mises en cache
 const PRECACHE_ASSETS = [

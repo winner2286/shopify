@@ -183,23 +183,25 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 }
 .nav-container {
   width: 100%;
-  max-width: 1400px;
+  max-width: 1600px;
   margin-inline: auto;
-  padding-inline: 1.5rem;
+  padding-inline: clamp(0.75rem, 2vw, 1.5rem);
   box-sizing: border-box;
 }
 .nav-inner {
   display: flex; align-items: center; justify-content: space-between;
-  height: 72px; gap: 1rem;
+  height: 70px; gap: 0.5rem;
+  width: 100%; min-width: 0;
 }
 .nav-brand-wrap {
-  display: flex; align-items: center; gap: 1.25rem;
-  flex-shrink: 0; min-width: 0;
+  display: flex; align-items: center; gap: clamp(0.5rem, 1vw, 1.25rem);
+  flex-shrink: 1; min-width: 0;
 }
 .nav-primary-links {
   display: inline-flex;
   align-items: center;
-  gap: .35rem;
+  gap: .25rem;
+  flex-wrap: nowrap;
 }
 .logo {
   display: flex; align-items: center; gap: .65rem;
@@ -210,7 +212,7 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   white-space: nowrap; flex-shrink: 0;
 }
 .nav-actions {
-  display: flex; align-items: center; gap: .35rem; flex-shrink: 0;
+  display: flex; align-items: center; gap: .35rem; flex-shrink: 0; margin-left: auto; flex-wrap: nowrap;
 }
 .nav-actions .btn-sm,
 .nav-primary-links .btn-sm {
@@ -235,23 +237,48 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   white-space: nowrap !important;
 }
 
-/* Adaptation Responsive Fluide de la Barre de Navigation (Écrans 769px à 1440px) */
-@media (max-width: 1440px) {
-  .nav-container { padding-inline: 1rem !important; }
-  .nav-brand-wrap { gap: 1rem !important; }
-  .nav-actions { gap: .35rem !important; }
-  .sound-toggle-btn .sound-label { display: none !important; }
-  .sound-toggle-btn { padding: .32rem .55rem !important; }
-  .nav-actions #nav-admin .nav-admin-full { display: none !important; }
-  .nav-actions #nav-admin .nav-admin-short { display: inline !important; }
+/* ==========================================================================
+   NAVIGATION DESKTOP & PWA BUREAU RESPONSIVE (ZERO COUPURE / ZERO DÉBORDEMENT)
+   ========================================================================== */
+
+/* 1. Écrans Ultra-Larges (>= 1500px) : Déploiement complet des 8 onglets + textes */
+@media (min-width: 1500px) {
+  .nav-more-dropdown { display: none !important; }
+  .nav-desktop-secondary { display: inline-flex !important; }
+  .nav-actions #nav-admin .nav-admin-full { display: inline !important; }
+  .nav-actions #nav-admin .nav-admin-short { display: none !important; }
+  .nav-actions #nav-preview-store .nav-btn-text { display: inline !important; }
+  .sound-toggle-btn .sound-label { display: inline !important; }
+  .logout-text { display: inline !important; }
+  .logout-icon { display: none !important; }
 }
 
-@media (max-width: 1260px) {
-  .nav-brand-wrap { gap: .65rem !important; }
-  .nav-primary-links { gap: .2rem !important; }
-  .nav-primary-links .btn-sm { padding: .3rem .5rem !important; font-size: .8rem !important; }
+/* 2. PWA Bureau Windows & PC Portables (1200px à 1499px) : Onglets secondaires rangés dans "Plus ▾" */
+@media (max-width: 1499px) and (min-width: 1200px) {
+  .nav-desktop-secondary { display: none !important; }
+  .nav-more-dropdown { display: inline-block !important; }
+  .nav-actions #nav-admin .nav-admin-full { display: none !important; }
+  .nav-actions #nav-admin .nav-admin-short { display: inline !important; }
+  .nav-actions #nav-preview-store .nav-btn-text { display: inline !important; }
+  .sound-toggle-btn .sound-label { display: none !important; }
+  .sound-toggle-btn { padding: .32rem .55rem !important; }
+  .logout-text { display: inline !important; }
+  .logout-icon { display: none !important; }
+}
+
+/* 3. Écrans Compacts, Demi-fenêtre Windows 960px & Tablettes (769px à 1199px) */
+@media (max-width: 1199px) and (min-width: 769px) {
+  .nav-desktop-secondary { display: none !important; }
+  .nav-more-dropdown { display: inline-block !important; }
+  .nav-brand-wrap { gap: .5rem !important; }
+  .nav-primary-links { gap: .15rem !important; }
+  .nav-primary-links .btn-sm { padding: .28rem .45rem !important; font-size: .8rem !important; }
+  .nav-actions #nav-admin .nav-admin-full { display: none !important; }
+  .nav-actions #nav-admin .nav-admin-short { display: inline !important; }
   .nav-actions #nav-preview-store .nav-btn-text { display: none !important; }
   .nav-actions #nav-preview-store { padding: .32rem .55rem !important; }
+  .sound-toggle-btn .sound-label { display: none !important; }
+  .sound-toggle-btn { padding: .32rem .55rem !important; }
   .logout-text { display: none !important; }
   .logout-icon { display: inline-flex !important; }
   #nav-logout { padding: .32rem .55rem !important; }
@@ -2150,34 +2177,8 @@ button.bottom-nav-item {
   width: 100%;
 }
 
-/* Responsive Desktop Header & Breakpoints */
-@media (min-width: 1240px) {
-  .nav-more-dropdown { display: none !important; }
-  .nav-desktop-secondary { display: inline-flex !important; }
-  .nav-admin-short { display: none !important; }
-  .nav-admin-full { display: inline !important; }
-  .logout-icon { display: none; }
-  .logout-text { display: inline; }
-}
+/* (Les règles responsive de la navigation desktop et PWA sont désormais unifiées en début de fichier sous .nav) */
 
-@media (max-width: 1239px) and (min-width: 769px) {
-  .nav-desktop-secondary { display: none !important; }
-  .nav-more-dropdown { display: inline-block !important; }
-  .nav-admin-full { display: none !important; }
-  .nav-admin-short { display: inline !important; }
-  .logout-text { display: none !important; }
-  .logout-icon { display: inline-flex !important; }
-  #nav-logout { padding: .32rem .55rem !important; }
-}
-
-@media (max-width: 768px) {
-  .nav-more-dropdown { display: none !important; }
-  .nav-desktop-secondary { display: none !important; }
-  .nav-admin-full { display: none !important; }
-  .nav-admin-short { display: inline !important; }
-  .logout-text { display: none !important; }
-  .logout-icon { display: inline-flex !important; }
-}
 
 /* En-têtes de tableau de bord & catalogue */
 .dash-head {
@@ -3378,12 +3379,12 @@ button.bottom-nav-item {
   display: block;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1499px) {
   .sound-toggle-btn {
-    padding: 0.35rem 0.5rem;
+    padding: 0.32rem 0.55rem;
   }
   .sound-toggle-btn .sound-label {
-    display: none;
+    display: none !important;
   }
 }
 
