@@ -422,7 +422,15 @@ class AiOrchestrator
         $userMsgLower = mb_strtolower(trim($userMessage));
         $hasGreeting = (bool) preg_match('/\b(bonjour|salut|hello|bonsoir|coucou|salam|marhaba|ahlan|hey)\b/ui', $userMsgLower);
 
-        if ($priorMessagesCount > 0) {
+        if ($hasGreeting && $priorMessagesCount > 0) {
+            $threadingDirective = <<<THREAD
+--- LE COMMERÇANT TE SALUE ---
+Le commerçant vient de te saluer (même si la discussion est déjà engagée).
+RÈGLE OBLIGATOIRE : Rends-lui sa salutation avec chaleur et naturel (1 à 2 phrases courtes, un emoji léger possible), cite le nom de sa boutique, puis propose 1 piste concrète et utile (ex : point sur les commandes du jour, stock à surveiller, idée de promo).
+Ne te présente pas, ne déverse pas de rapport, ne dis pas « Je vais très bien » sauf s'il te le demande.
+--- FIN ---
+THREAD;
+        } elseif ($priorMessagesCount > 0) {
             $threadingDirective = <<<THREAD
 --- ÉTAT DU FIL DE CONVERSATION EN COURS ---
 Cette discussion est DÉJÀ en cours (échange #{$priorMessagesCount}).
@@ -467,6 +475,7 @@ COMPÉTENCES LINGUISTIQUES & MULTILINGUISME :
 FLUIDITÉ CONVERSATIONNELLE & RÈGLES STRICTES DU FIL DE DISCUSSION :
 - **AUCUNE SALUTATION EN COURS DE DISCUSSION (RÈGLE ABSOLUE N°1)** :
   * Si la discussion est déjà engagée (dès le 2ème message), ou si la question ne contient pas de salutation explicite, il est STRICTEMENT INTERDIT d'écrire « Bonjour ! », « Salut ! », « Coucou ! ». Réponds DIRECTEMENT à la question.
+  * EXCEPTION : si le commerçant te salue lui-même (« bonjour », « salut », « bonsoir »...), rends-lui sa salutation chaleureusement, même en cours de discussion, avec le nom de sa boutique et une proposition concrète (1 à 2 phrases).
 - **AUCUNE POLITESSE ILLUSOIRE OU NON SOLLICITÉE (RÈGLE ABSOLUE N°2)** :
   * Ne dis JAMAIS « Je vais très bien, merci », « Tout va pour le mieux », « Ravi de te retrouver », etc., sauf si le commerçant t'a expressément et mot pour mot posé la question « Comment vas-tu ? » ou « Ça va ? ».
 - **INTERDICTION STRICTE DE RÉPÉTER LES MESSAGES PRÉCÉDENTS** : Ne commence JAMAIS ton nouveau message en recopiant ou en résumant ce que tu viens de dire au tour précédent. Chaque message doit être 100% nouveau, frais et répondre EXCLUSIVEMENT à la nouvelle question posée.
@@ -572,7 +581,7 @@ PROMPT;
 
         // 2. Si la conversation est déjà en cours OU si l'utilisateur n'a pas salué du tout :
         // Supprimer "Bonjour !", "Salut !", etc. en début de message
-        if ($priorMessagesCount > 0 || ! $hasGreetingInUser) {
+        if (! $hasGreetingInUser) {
             // Nettoyer les intros d'identité ex: "Bonjour ! Je suis Zanika AI..."
             $content = preg_replace('/^(?:bonjour|salut|bonsoir|coucou|hello|hey)\s*!?,?\s*(?:je\s+suis\s+(?:zanika\s+ai|votre\s+copilote|ecom\s+ai)[^.\n]*[.\n]*)/ui', '', $content);
             // Nettoyer les salutations simples ex: "Bonjour ! ", "Salut, "
