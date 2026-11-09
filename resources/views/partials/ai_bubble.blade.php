@@ -1198,6 +1198,15 @@ body.ai-chat-open {
                 })
             });
 
+            if (response.status === 401) {
+                appendAiBubbleMessage('assistant', "Votre session a expiré suite à la mise à jour de la plateforme. Veuillez actualiser la page (F5) pour vous reconnecter.");
+                return;
+            }
+            if (response.status === 419) {
+                appendAiBubbleMessage('assistant', "Le jeton de sécurité a été renouvelé lors du redéploiement. Veuillez rafraîchir la page (F5).");
+                return;
+            }
+
             const data = await response.json();
 
             if (data.status === 'success') {

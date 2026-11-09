@@ -1829,8 +1829,8 @@ async function handleChatSubmit(e) {
             })
         });
 
-        if (res.status === 419) {
-            appendMessageToUi('assistant', "Votre session a expiré. Veuillez rafraîchir la page (F5) pour continuer.");
+        if (res.status === 401 || res.status === 419) {
+            appendMessageToUi('assistant', "Votre session a expiré suite à la mise à jour de la plateforme. Veuillez actualiser la page (F5) pour vous reconnecter.");
             return;
         }
 

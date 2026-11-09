@@ -25,7 +25,7 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: SESSION_DRIVER
-        value: file
+        value: database
       - key: CACHE_STORE
         value: file
       - key: QUEUE_CONNECTION
