@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'groq'),
+        'driver' => env('AI_PROVIDER', 'groq'),
+    ],
+
     'openrouter' => [
         'key' => env('OPENROUTER_API_KEY'),
         'model' => env('OPENROUTER_MODEL', 'google/gemini-2.5-flash'),
@@ -49,6 +54,8 @@ return [
     'groq' => [
         'key' => env('GROQ_API_KEY'),
         'model' => env('GROQ_MODEL', 'openai/gpt-oss-120b'),
+        'fallback_model' => env('GROQ_FALLBACK_MODEL', 'llama-3.3-70b-versatile'),
+        'vision_model' => env('GROQ_VISION_MODEL', 'meta-llama/llama-4-scout-17b-16e-instruct'),
     ],
 
     'webpush' => [

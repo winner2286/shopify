@@ -73,16 +73,22 @@ services:
         value: "https://api-v2.feexpay.me"
       - key: FEEXPAY_CURRENCY
         value: "XOF"
-      # IA Moteur Principal (OpenRouter)
-      - key: OPENROUTER_API_KEY
-        sync: false
-      - key: OPENROUTER_MODEL
-        value: "google/gemini-2.5-flash"
-      # IA Cascade de Secours Ultra-Rapide (Groq LPU)
+      # IA Moteur Principal Ultra-Rapide (Groq LPU)
+      - key: AI_PROVIDER
+        value: "groq"
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
         value: "openai/gpt-oss-120b"
+      - key: GROQ_FALLBACK_MODEL
+        value: "llama-3.3-70b-versatile"
+      - key: GROQ_VISION_MODEL
+        value: "meta-llama/llama-4-scout-17b-16e-instruct"
+      # IA Cascade de Secours (OpenRouter)
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: "google/gemini-2.5-flash"
       # Web Push Notifications (PWA VAPID)
       - key: VAPID_PUBLIC_KEY
         value: "BGKwSjr1JTOEHbpn_kAevk39d1yAae-i0qYZVhYo7pKiPVe0pFhCDzuTdymr931C-LTOTJ9RpXWzpLRcHrxyDA8"

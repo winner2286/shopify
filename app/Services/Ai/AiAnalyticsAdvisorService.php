@@ -7,7 +7,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\Ai\Contracts\LlmProviderInterface;
-use App\Services\Ai\Providers\OpenRouterLlmProvider;
+use App\Services\Ai\Providers\GroqLlmProvider;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +18,7 @@ class AiAnalyticsAdvisorService
 
     public function __construct(?LlmProviderInterface $llm = null)
     {
-        $this->llm = $llm ?? new OpenRouterLlmProvider();
+        $this->llm = $llm ?? app(LlmProviderInterface::class);
     }
 
     /**
@@ -213,6 +213,12 @@ class AiAnalyticsAdvisorService
         // Frais logistiques estimés perdus sur annulations COD (frais de port moyen * annulations)
         $lostShippingOnCod = (int) $codOrders->where('status', Order::STATUS_CANCELLED)->sum('shipping_cost');
 
+        // 3b. Analyse causale de rentabilité (Panier moyen, frais de port, remises)
+        $nonCancelled30d = $allOrders30d->where('status', '!=', Order::STATUS_CANCELLED);
+        $avgBasket30d = $nonCancelled30d->count() > 0 ? (int) round($nonCancelled30d->sum('total') / $nonCancelled30d->count()) : 0;
+        $avgShipping30d = $nonCancelled30d->count() > 0 ? (int) round($nonCancelled30d->sum('shipping_cost') / $nonCancelled30d->count()) : 0;
+        $discountedProductsCount = $activeProducts->filter(fn($p) => $p->compare_at_price && $p->compare_at_price > $p->price)->count();
+
         // 4. Calcul du score de santé global du business (0 à 100)
         $healthScore = $this->calculateHealthScore(
             $allOrders30d->count(),
@@ -241,6 +247,16 @@ class AiAnalyticsAdvisorService
                 'cod_cancel_rate' => $codCancelRate,
                 'prepaid_success_rate' => $prepaidSuccessRate,
                 'estimated_lost_shipping_fcfa' => $lostShippingOnCod,
+            ],
+            'profitability_diagnosis' => [
+                'average_basket_fcfa' => $avgBasket30d,
+                'average_shipping_charged_fcfa' => $avgShipping30d,
+                'discounted_products_count' => $discountedProductsCount,
+                'causes_analysis' => [
+                    'shipping_margin_leak' => $avgShipping30d < 1200 ? 'Attention : frais de livraison facturés bas (< 1 200 FCFA), risque de subventionner le coursier sur votre marge.' : 'Frais de livraison cohérents.',
+                    'cod_return_erosion' => $codCancelRate > 15 ? "Alerte : taux d'annulation COD élevé ({$codCancelRate}%), causant une perte logistique sèche." : 'Taux de refus COD maîtrisé.',
+                    'low_aov_pressure' => $avgBasket30d > 0 && $avgBasket30d < 10000 ? 'Panier moyen faible (< 10 000 FCFA) : privilégiez les offres Pack Duo pour amortir les coûts de livraison et publicité.' : 'Panier moyen sain.',
+                ],
             ],
             'strategic_verdict' => $this->getStrategicVerdictText($healthScore, $sleepingCapitalTotal, count($restockUrgency)),
         ];
@@ -425,7 +441,11 @@ class AiAnalyticsAdvisorService
      */
     protected function generateLlmExecutiveBriefing(Shop $shop, array $diagnosis): string
     {
+        $memoryContext = app(AiShopMemoryService::class)->formatForPrompt($shop);
+
         $prompt = "Tu es le Directeur Commercial & Stratégique IA de la boutique '{$shop->name}'.
+{$memoryContext}
+
 Voici les métriques réelles actuelles :
 - Score de santé : {$diagnosis['health_score']}/100
 - Capital dormant immobilisé : " . number_format($diagnosis['dead_stock']['total_capital_immobilise_fcfa'], 0, ',', ' ') . " FCFA ({$diagnosis['dead_stock']['total_items_count']} articles sans vente depuis 30j)
@@ -443,10 +463,10 @@ Rédige un briefing exécutif ultra-clair pour le commerçant avec EXACTEMENT ce
 (Propose une opération concrète : promo flash, pack duo, ou message WhatsApp spécifique pour débloquer du chiffre d'affaires rapidement).";
 
         try {
-            $response = $this->llm->chatCompletion([
+            $response = $this->llm->chat([
                 ['role' => 'system', 'content' => 'Tu es un expert en e-commerce africain (marché francophone, FCFA, COD, WhatsApp). Tu es direct, bienveillant, orienté rentabilité et cash-flow.'],
                 ['role' => 'user', 'content' => $prompt],
-            ], [
+            ], [], [
                 'max_tokens' => 900,
                 'temperature' => 0.3,
             ]);

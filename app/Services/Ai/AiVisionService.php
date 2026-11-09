@@ -13,11 +13,18 @@ use Illuminate\Support\Str;
 
 class AiVisionService
 {
+    protected string $groqKey;
+    protected string $groqModel;
+    protected string $groqVisionModel;
     protected string $apiKey;
     protected string $model;
 
     public function __construct()
     {
+        $this->groqKey = (string) (config('services.groq.key') ?: env('GROQ_API_KEY', ''));
+        $this->groqModel = (string) (config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b'));
+        $this->groqVisionModel = (string) (config('services.groq.vision_model') ?: env('GROQ_VISION_MODEL', 'meta-llama/llama-4-scout-17b-16e-instruct'));
+
         $this->apiKey = (string) (config('services.openrouter.key')
             ?: env('OPENROUTER_API_KEY', ''));
         
@@ -108,19 +115,46 @@ PROMPT;
         ];
 
         try {
-            $cleanUrl = trim(preg_replace('/[\r\n\t]+/', '', (string) config('app.url', 'https://zanika.shop')));
-            $client = Http::withHeaders([
-                'Authorization' => "Bearer {$this->apiKey}",
-                'HTTP-Referer' => $cleanUrl ?: 'https://zanika.shop',
-                'X-Title' => 'Zanika AI Vision',
-                'Content-Type' => 'application/json',
-            ])->timeout(30);
+            $response = null;
+            $usedModel = $this->model;
 
-            if (! app()->environment('production')) {
-                $client = $client->withoutVerifying();
+            // 1. Priorité Groq Vision LPU
+            if (! empty($this->groqKey)) {
+                $groqPayload = $payload;
+                $groqPayload['model'] = $this->groqVisionModel;
+
+                $groqClient = Http::withHeaders([
+                    'Authorization' => "Bearer {$this->groqKey}",
+                    'Content-Type' => 'application/json',
+                ])->timeout(25);
+
+                if (! app()->environment('production')) {
+                    $groqClient = $groqClient->withoutVerifying();
+                }
+
+                $response = $groqClient->post('https://api.groq.com/openai/v1/chat/completions', $groqPayload);
+                if ($response->successful()) {
+                    $usedModel = 'groq:' . $this->groqVisionModel;
+                }
             }
 
-            $response = $client->post('https://openrouter.ai/api/v1/chat/completions', $payload);
+            // 2. Relais OpenRouter si Groq Vision échoue
+            if (! $response || ! $response->successful()) {
+                $cleanUrl = trim(preg_replace('/[\r\n\t]+/', '', (string) config('app.url', 'https://zanika.shop')));
+                $client = Http::withHeaders([
+                    'Authorization' => "Bearer {$this->apiKey}",
+                    'HTTP-Referer' => $cleanUrl ?: 'https://zanika.shop',
+                    'X-Title' => 'Zanika AI Vision',
+                    'Content-Type' => 'application/json',
+                ])->timeout(30);
+
+                if (! app()->environment('production')) {
+                    $client = $client->withoutVerifying();
+                }
+
+                $response = $client->post('https://openrouter.ai/api/v1/chat/completions', $payload);
+                $usedModel = $this->model;
+            }
 
             if ($response->successful()) {
                 $rawContent = $response->json('choices.0.message.content') ?? '{}';
@@ -142,7 +176,7 @@ PROMPT;
                     'shop_id' => $shop->id,
                     'type' => 'ai_product_vision',
                     'step' => 'photo_analysis',
-                    'model_used' => $this->model,
+                    'model_used' => $usedModel,
                     'prompt_tokens' => $response->json('usage.prompt_tokens', 0),
                     'completion_tokens' => $response->json('usage.completion_tokens', 0),
                     'cost_estimated_fcfa' => 15,
@@ -201,22 +235,49 @@ Réponds STRICTEMENT sous format JSON :
 PROMPT;
 
         try {
-            $client = Http::withHeaders([
-                'Authorization' => "Bearer {$this->apiKey}",
-                'Content-Type' => 'application/json',
-            ])->timeout(20);
+            $response = null;
+            $usedModel = 'groq:' . $this->groqModel;
 
-            if (! app()->environment('production')) {
-                $client = $client->withoutVerifying();
+            // 1. Priorité Groq LPU
+            if (! empty($this->groqKey)) {
+                $groqClient = Http::withHeaders([
+                    'Authorization' => "Bearer {$this->groqKey}",
+                    'Content-Type' => 'application/json',
+                ])->timeout(15);
+
+                if (! app()->environment('production')) {
+                    $groqClient = $groqClient->withoutVerifying();
+                }
+
+                $response = $groqClient->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => $this->groqModel,
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'temperature' => 0.4,
+                ]);
             }
 
-            $response = $client->post('https://openrouter.ai/api/v1/chat/completions', [
-                'model' => $this->model,
-                'messages' => [
-                    ['role' => 'user', 'content' => $prompt]
-                ],
-                'temperature' => 0.4,
-            ]);
+            // 2. Relais OpenRouter si Groq indisponible
+            if (! $response || ! $response->successful()) {
+                $client = Http::withHeaders([
+                    'Authorization' => "Bearer {$this->apiKey}",
+                    'Content-Type' => 'application/json',
+                ])->timeout(20);
+
+                if (! app()->environment('production')) {
+                    $client = $client->withoutVerifying();
+                }
+
+                $response = $client->post('https://openrouter.ai/api/v1/chat/completions', [
+                    'model' => $this->model,
+                    'messages' => [
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'temperature' => 0.4,
+                ]);
+                $usedModel = $this->model;
+            }
 
             if ($response->successful()) {
                 $rawContent = $response->json('choices.0.message.content') ?? '{}';
@@ -229,7 +290,7 @@ PROMPT;
                     'shop_id' => $shop->id,
                     'type' => 'ai_product_optimize',
                     'step' => 'copywriting_optimization',
-                    'model_used' => $this->model,
+                    'model_used' => $usedModel,
                     'prompt_tokens' => $response->json('usage.prompt_tokens', 0),
                     'completion_tokens' => $response->json('usage.completion_tokens', 0),
                     'cost_estimated_fcfa' => 10,

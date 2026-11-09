@@ -1,5 +1,5 @@
 # AUDIT TECHNIQUE ET FONCTIONNEL COMPLET DE LA PLATEFORME ZANIKA
-## Spécialisation et Élévation de l'Agent IA en Copilote E-Commerce Autonome
+## Spécialisation et Élévation de l'AgtIA en Copilote E-Commerce Autonome
 
 *Document de référence architecturale et stratégique*  
 *Date de réalisation : Novembre 2026*  

@@ -98,7 +98,7 @@ class AiAdvertisingService
             'shop_id' => $shop->id,
             'type' => 'ad_text',
             'step' => 'ad_generation',
-            'model_used' => 'gemini-2.5-flash-pro',
+            'model_used' => 'groq:' . (config('services.groq.model') ?: 'openai/gpt-oss-120b'),
             'prompt_tokens' => 450,
             'completion_tokens' => 620,
             'cost_estimated_fcfa' => 12,
@@ -275,10 +275,11 @@ class AiAdvertisingService
         string $url,
         string $domain
     ): ?array {
+        $groqKey = config('services.groq.key') ?: env('GROQ_API_KEY');
         $openrouterKey = config('services.openrouter.key') ?: env('OPENROUTER_API_KEY', base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA=='));
         $geminiKey = env('GEMINI_API_KEY');
 
-        if (empty($openrouterKey) && empty($geminiKey)) {
+        if (empty($groqKey) && empty($openrouterKey) && empty($geminiKey)) {
             return null;
         }
 
@@ -337,7 +338,45 @@ Réponds STRICTEMENT avec un objet JSON valide ayant cette structure :
 }
 PROMPT;
 
-        // 1. Priorité OpenRouter (avec Gemini 2.5 Flash via OpenAI format)
+        // 1. Priorité Groq LPU Haute Vitesse
+        if (! empty($groqKey)) {
+            try {
+                $groqModel = config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b');
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $groqKey,
+                    'Content-Type' => 'application/json',
+                ])->timeout(10)->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => $groqModel,
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'Tu es un assistant marketing e-commerce africain haut de gamme. Tu réponds UNIQUEMENT en JSON valide strict sans balises markdown ni explications.'],
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'max_tokens' => 1200,
+                    'temperature' => 0.7,
+                ]);
+
+                if ($response->successful()) {
+                    $raw = $response->json('choices.0.message.content');
+                    $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim((string) $raw));
+                    $decoded = json_decode($cleanJson, true);
+                    if (is_array($decoded) && ! empty($decoded['texts']) && ! empty($decoded['scripts'])) {
+                        $titleSlugHash = '#' . preg_replace('/\s+/', '', $title);
+                        foreach ($decoded['texts'] as &$txt) {
+                            if (str_contains($txt, $titleSlugHash) && ! str_contains($txt, $title)) {
+                                $txt = str_replace($titleSlugHash, $title, $txt);
+                            }
+                        }
+                        unset($txt);
+                        return $decoded;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Groq API call failed in AiAdvertisingService: ' . $e->getMessage());
+            }
+        }
+
+        // 2. Relais OpenRouter (avec Gemini 2.5 Flash via OpenAI format)
         if (!empty($openrouterKey)) {
             try {
                 $model = config('services.openrouter.model') ?: env('OPENROUTER_MODEL', 'google/gemini-2.5-flash');

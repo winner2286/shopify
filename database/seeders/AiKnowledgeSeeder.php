@@ -17,22 +17,29 @@ class AiKnowledgeSeeder extends Seeder
                 'category' => 'catalog_rules',
                 'title' => 'Comment ajouter un nouveau produit sur Zanika',
                 'slug' => 'guide-ajouter-produit',
-                'keywords' => ['ajouter', 'nouveau', 'produit', 'creer', 'article', 'catalogue', 'stock', 'prix'],
-                'target_routes' => 'products.create, products.index',
+                'keywords' => ['ajouter', 'nouveau', 'produit', 'creer', 'article', 'catalogue', 'stock', 'prix', 'fiche'],
+                'target_routes' => 'products.create, products.index, ai.studio',
                 'sort_order' => 1,
                 'content' => <<<TEXT
-Pour ajouter un produit dans votre boutique Zanika :
-1. Rendez-vous dans le menu latéral : cliquez sur "Catalogue" puis sur "Produits" (URL : /produits).
-2. Cliquez sur le bouton "+ Ajouter un produit" en haut à droite (URL : /produits/create).
-3. Renseignez les informations obligatoires :
-   - Titre du produit (nom clair et vendeur).
+Pour ajouter un produit dans votre boutique Zanika, vous disposez de 3 méthodes officielles :
+Méthode 1 — Depuis l'interface Catalogue :
+1. Rendez-vous dans le menu latéral : cliquez sur "Produits" (URL : /produits).
+2. Cliquez sur le bouton "+ Ajouter un produit" en haut à droite (URL : /produits/creer).
+3. Renseignez les informations clés :
+   - Titre du produit (nom clair, précis et vendeur).
    - Catégorie (à sélectionner parmi vos catégories existantes ou à créer dans /categories).
-   - Prix de vente en FCFA (chiffre entier sans virgule).
-   - Prix d'origine barré (optionnel, champ "compare_at_price" pour afficher une promotion).
+   - Prix de vente en FCFA (entier positif sans virgule).
+   - Prix d'origine barré (optionnel, champ "compare_at_price" pour afficher une remise en %).
    - Gestion de stock : cochez "Suivre le stock", indiquez le stock initial et le seuil d'alerte de stock faible (ex: 5 unités).
-   - Description : description détaillée avec bénéfices du produit.
-   - Photos du produit : chargez vos visuels nets (le studio IA peut aussi optimiser vos photos).
-4. Cliquez sur "Enregistrer le produit". Le produit devient immédiatement visible sur votre vitrine publique.
+   - Description détaillée mettant en avant les bénéfices client.
+   - Photos du produit (vous pouvez aussi les sublimer via le Studio Visuel IA).
+4. Cliquez sur "Enregistrer le produit".
+
+Méthode 2 — Création directe avec votre Copilote IA :
+Demandez dans le chat : « Crée un produit [Nom] à [Prix] FCFA avec [Stock] unités en stock ». L'assistant prépare la fiche complète via l'outil create_product et affiche un panneau de validation sécurisé en 1 clic.
+
+Méthode 3 — Création par simple photo (Vision IA) :
+Envoyez ou analysez la photo de votre article via l'outil create_product_from_photo ou le Studio IA : l'IA rédige le titre, la description, suggère une fourchette de prix en FCFA et prépare la mise en vente sous votre validation.
 TEXT
             ],
 
@@ -40,20 +47,20 @@ TEXT
                 'category' => 'catalog_rules',
                 'title' => 'Comment modifier le prix ou le stock d\'un article',
                 'slug' => 'guide-modifier-prix-stock',
-                'keywords' => ['modifier', 'changer', 'prix', 'stock', 'tarif', 'mettre a jour', 'reajuster'],
+                'keywords' => ['modifier', 'changer', 'prix', 'stock', 'tarif', 'mettre a jour', 'reajuster', 'article'],
                 'target_routes' => 'products.edit, products.index',
                 'sort_order' => 2,
                 'content' => <<<TEXT
-Il existe 2 manières de modifier le prix ou le stock d'un produit :
+Il existe 2 manières officielles de modifier le prix ou le stock d'un produit sur Zanika :
 Méthode 1 (Manuelle via l'interface) :
 1. Allez dans le menu "Produits" (/produits).
-2. Cliquez sur le produit concerné ou sur son bouton "Modifier" (/produits/{id}/edit).
+2. Cliquez sur le produit concerné ou sur son bouton "Modifier" (/produits/{id}/modifier).
 3. Modifiez le champ "Prix" ou "Stock disponible".
-4. Cliquez sur "Mettre à jour". Chaque modification de stock enregistre automatiquement un historique traçable dans stock_movements.
+4. Cliquez sur "Mettre à jour". Chaque modification de stock enregistre automatiquement un mouvement d'audit traçable dans stock_movements.
 
-Méthode 2 (Directe via l'assistant ECOM AI) :
-Demandez simplement dans le chat : « Change le prix du produit [Nom ou ID] à 15 000 FCFA » ou « Ajoute 20 unités au stock de [Nom] ».
-L'assistant prépare l'action avec l'outil de mise à jour sécurisé et vous affiche un bouton interactif de validation ("Valider la modification"). Aucune donnée n'est altérée sans votre accord formel en 1 clic.
+Méthode 2 (Assistée via l'assistant ECOM AI) :
+Demandez directement dans le chat : « Change le prix du produit [Nom ou ID] à 15 000 FCFA », « Applique une baisse de 10% sur [Produit] » ou « Mets le stock de [Nom] à 25 unités ».
+L'assistant prépare l'action via update_product_stock_or_price ou adjust_product_price_percentage et affiche une carte de confirmation sécurisée par jeton HMAC ("Valider la modification"). Aucune donnée n'est modifiée sans votre validation explicite.
 TEXT
             ],
 
@@ -61,68 +68,68 @@ TEXT
                 'category' => 'catalog_rules',
                 'title' => 'Comment savoir si un produit est en rupture de stock ou proche de la rupture',
                 'slug' => 'guide-rupture-stock-alertes',
-                'keywords' => ['rupture', 'stock', 'epuise', 'seuil', 'alerte', 'critique', 'inventaire'],
+                'keywords' => ['rupture', 'stock', 'epuise', 'seuil', 'alerte', 'critique', 'inventaire', 'savoir', 'manque'],
                 'target_routes' => 'products.index, dashboard',
                 'sort_order' => 3,
                 'content' => <<<TEXT
-Pour identifier les produits en rupture ou faibles en stock :
-1. Sur le Tableau de bord (/tableau-de-bord) : l'indicateur "Alertes de stock" liste les articles ayant atteint ou dépassé leur seuil critique.
-2. Dans la liste des produits (/produits) :
-   - Un badge rouge "Rupture" s'affiche dès que le stock est inférieur ou égal à 0.
-   - Un badge orange "Stock faible" s'affiche dès que le stock est inférieur ou égal au seuil défini (low_stock_threshold).
-3. Avec l'assistant IA : posez la question « Quels sont mes produits en rupture ? » ou « Donne-moi l'état de mes stocks ». L'assistant appelle immédiatement l'outil get_inventory_alerts et vous présente un récapitulatif clair avec actions d'urgence recommandées.
+Pour savoir immédiatement si un produit est en rupture de stock ou sous son seuil critique :
+1. Sur le Tableau de bord (/tableau-de-bord) : le bloc "Alertes de stock" signale en temps réel les articles épuisés ou proches de la rupture.
+2. Dans le Catalogue Produits (/produits) :
+   - Un badge rouge "Rupture" s'affiche dès que le stock est à 0.
+   - Un badge orange "Stock faible" s'affiche dès que le stock est inférieur ou égal au seuil d'alerte (low_stock_threshold, par défaut 5 unités).
+3. Via l'assistant IA : demandez « Comment savoir si un produit est en rupture de stock ? » ou « Quels sont mes produits en rupture ? ». L'assistant interroge votre base en temps réel avec l'outil get_inventory_alerts et vous liste les articles critiques avec le manque à gagner estimé.
+4. Via les Automatisations IA (/assistant-ia/automatisations) : l'alerte proactive de stock faible surveille automatiquement votre inventaire.
 TEXT
             ],
 
             [
                 'category' => 'catalog_rules',
-                'title' => 'Comment créer une réduction ou une promotion sur Zanika',
+                'title' => 'Comment créer une réduction, une promotion ou un code promo sur Zanika',
                 'slug' => 'guide-creer-reduction-promo',
-                'keywords' => ['reduction', 'promotion', 'solde', 'prix barre', 'remise', 'rabais', 'offre'],
+                'keywords' => ['reduction', 'promotion', 'code promo', 'solde', 'prix barre', 'remise', 'rabais', 'offre', 'coupon'],
                 'target_routes' => 'products.edit, ads.create, ai.marketing',
                 'sort_order' => 4,
                 'content' => <<<TEXT
-Sur la plateforme Zanika, les promotions et réductions s'appliquent via 2 mécanismes officiels :
-1. Le Prix Barré sur la fiche produit :
-   - Modifiez votre produit (/produits/{id}/edit).
-   - Renseignez le champ "Prix d'origine / Prix barré" (compare_at_price) avec une valeur supérieure à votre prix de vente normal (price).
-   - Exemple : Prix normal = 12 000 FCFA, Prix d'origine = 15 000 FCFA.
-   - La vitrine publique affichera automatiquement le prix d'origine barré et un badge promo de pourcentage d'économie (ex: -20%).
+Sur Zanika, vous disposez de 3 mécanismes complémentaires pour créer une réduction :
+1. Le Prix Barré sur une fiche produit (accessible à tous les forfaits) :
+   - Ouvrez la fiche du produit (/produits/{id}/modifier).
+   - Renseignez un "Prix barré / Prix d'origine" (compare_at_price) supérieur au prix de vente actuel (ex: Prix de vente = 12 000 FCFA, Prix barré = 15 000 FCFA).
+   - La vitrine publique affiche automatiquement le prix barré et un macaron de remise (ex: -20%).
+   - Vous pouvez aussi demander à l'IA : « Applique une remise de 15% sur [Produit] » (outil adjust_product_price_percentage).
 
-2. Le Studio Marketing & Affiches Promo (/publicite/creer ou /assistant-ia/marketing) :
-   - Créez une affiche ou une publication en sélectionnant l'angle psychologique "discount / promotion".
-   - Indiquez le pourcentage ou le montant de la remise. L'IA génère les visuels avec macarons promotionnels et le texte de persuasion adapté aux réseaux sociaux.
+2. Les Codes Promotionnels (inclus dès la formule Pro et Premium) :
+   - Vous pouvez créer un code promo (ex: BIENVENUE10, TABASKI20) offrant un pourcentage de remise (jusqu'à 90%) ou un montant fixe en FCFA, avec un montant minimum de commande, un plafond d'utilisations et une durée de validité.
+   - Demandez à l'IA : « Crée un code promo PROMO15 de 15% valable 14 jours » (outil manage_discount_codes avec confirmation sécurisée).
+
+3. Le Studio Marketing & Publicités (/publicite/creer ou /assistant-ia/marketing) :
+   - Génère automatiquement les affiches promotionnelles, vidéos TikTok/Statuts WhatsApp et textes de vente annonçant votre réduction.
 TEXT
             ],
 
             // =========================================================================
-            // 2. COMMANDES, EXPÉDITIONS & CASH ON DELIVERY (COD)
+            // 2. COMMANDES, EXPÉDITIONS, RETOURS & CASH ON DELIVERY (COD)
             // =========================================================================
             [
                 'category' => 'orders_cod',
-                'title' => 'Comment consulter, gérer et traiter les commandes',
+                'title' => 'Comment consulter, filtrer et traiter mes commandes',
                 'slug' => 'guide-consulter-commandes',
-                'keywords' => ['commandes', 'consulter', 'statut', 'livraison', 'suivi', 'ventes', 'facture', 'recu'],
+                'keywords' => ['commandes', 'consulter', 'voir', 'statut', 'livraison', 'suivi', 'ventes', 'facture', 'recu'],
                 'target_routes' => 'orders.index, orders.show',
                 'sort_order' => 5,
                 'content' => <<<TEXT
 Pour consulter et gérer vos commandes sur Zanika :
-1. Allez dans le menu "Commandes" (/commandes).
-2. Utilisez les onglets de filtres en haut de page :
-   - "En attente" (pending) : nouvelles commandes passées par les clients nécessitant validation.
-   - "Confirmées" (confirmed) : commandes validées avec le client.
-   - "Expédiées" (shipped) : colis confié au livreur.
-   - "Livrées" (delivered) : colis remis et encaissé.
-   - "Annulées" (cancelled) : commandes rejetées ou annulées avec motif consigné.
-3. Cliquez sur une commande pour ouvrir sa fiche détaillée (/commandes/{id}) :
-   - Coordonnées client (nom, numéro de téléphone direct, quartier).
-   - Articles commandés et quantités.
-   - Frais de livraison et montant total en FCFA.
-   - Reçu imprimable / téléchargeable (/commandes/{id}/recu).
-4. Actions rapides disponibles sur la fiche :
-   - Bouton "Dépêcher au livreur" (génère le bon WhatsApp).
-   - Bouton "Marquer comme encaissée" (met à jour le paiement à paid).
-   - Bouton "Annuler la commande" (remet les articles en stock automatiquement).
+1. Cliquez sur "Commandes" dans le menu principal (/commandes).
+2. Filtrez vos commandes par statut grâce aux onglets :
+   - "En attente" (pending) : nouvelles commandes à reconfirmer rapidement avec le client.
+   - "Confirmées" (confirmed) : commandes validées prêtes à être préparées.
+   - "Expédiées" (shipped) : colis remis au coursier / livreur.
+   - "Livrées" (delivered) : colis livré au client et encaissé.
+   - "Annulées" (cancelled) : commandes annulées (avec remise en stock automatique des articles).
+3. Cliquez sur une commande (/commandes/{id}) pour :
+   - Voir le détail des articles, le quartier de livraison, le téléphone WhatsApp du client et l'historique des statuts.
+   - Télécharger ou partager le reçu officiel (/commandes/{id}/recu).
+   - Dépêcher la commande à un livreur sur WhatsApp en 1 clic.
+4. Via l'assistant IA : demandez « Résume mes commandes du jour » (outil get_orders_summary) ou « Donne-moi les détails de la commande #[Numéro] » (outil get_order_details).
 TEXT
             ],
 
@@ -130,19 +137,17 @@ TEXT
                 'category' => 'orders_cod',
                 'title' => 'Comment dépêcher une commande à un livreur sur WhatsApp',
                 'slug' => 'guide-depecher-livreur-whatsapp',
-                'keywords' => ['livreur', 'coursier', 'depecher', 'moto', 'zemidjan', 'whatsapp', 'expedition'],
+                'keywords' => ['livreur', 'coursier', 'depecher', 'moto', 'zemidjan', 'whatsapp', 'expedition', 'feuille de route'],
                 'target_routes' => 'orders.show',
                 'sort_order' => 6,
                 'content' => <<<TEXT
-Zanika intègre un système direct d'affectation de livreurs adapté au contexte ouest-africain :
-1. Ouvrez la commande confirmée dans "Commandes" (/commandes/{id}).
-2. Cliquez sur le bouton "Dépêcher au livreur".
-3. L'application génère un lien WhatsApp pré-rempli contenant :
-   - L'adresse de livraison et le quartier du client.
-   - Le contact téléphonique du destinataire avec lien d'appel direct.
-   - Le détail des articles à livrer.
-   - Le montant exact à encaisser auprès du client (valeur des articles + frais de livraison).
-4. Choisissez le livreur dans vos contacts WhatsApp et envoyez le message en 1 seconde. Le coursier dispose immédiatement de toute la feuille de route sans erreur de transmission.
+Zanika facilite la coordination avec vos livreurs et coursiers moto :
+1. Ouvrez la fiche de la commande (/commandes/{id}) et cliquez sur "Dépêcher au livreur", ou demandez à l'IA : « Prépare la feuille de route livreur pour la commande #[Numéro] » (outil dispatch_order_to_courier).
+2. Le système génère un message WhatsApp structuré prêt à envoyer contenant :
+   - Le numéro de commande, le nom et le téléphone direct du client.
+   - La zone et l'adresse précise / repère de livraison.
+   - La liste des articles à remettre.
+   - Le montant exact à encaisser à la livraison (en cas de COD) ou la mention "Déjà payé par Mobile Money".
 TEXT
             ],
 
@@ -150,102 +155,99 @@ TEXT
                 'category' => 'orders_cod',
                 'title' => 'Comment configurer les zones et tarifs de livraison',
                 'slug' => 'guide-zones-livraison',
-                'keywords' => ['livraison', 'zones', 'frais', 'expedition', 'tarif', 'quartier', 'ville'],
+                'keywords' => ['livraison', 'zones', 'frais', 'expedition', 'tarif', 'quartier', 'ville', 'transport'],
                 'target_routes' => 'shipping.index',
                 'sort_order' => 7,
                 'content' => <<<TEXT
-Pour paramétrer les frais de livraison payés par vos clients lors du passage de commande :
-1. Rendez-vous dans le menu "Livraison" (/livraison).
-2. Cliquez sur "Ajouter une zone de livraison".
-3. Renseignez :
-   - Nom de la zone (ex: "Lomé Intra-Muros", "Lomé Périphérie", "Cotonou & Calavi", "Abidjan Zone 1").
-   - Tarif forfaitaire de livraison en FCFA (ex: 1 000 FCFA, 1 500 FCFA, 2 500 FCFA).
-   - Délai indicatif estimé (ex: "Le jour même en 3h", "24h à 48h").
-4. Cliquez sur "Enregistrer".
-Lors du passage de commande sur votre vitrine (/b/{sous-domaine}/commander), le client choisit sa zone dans la liste déroulante et les frais s'ajoutent automatiquement au total du panier.
+Pour gérer vos zones et frais de livraison :
+1. Allez dans le menu "Livraison" (/livraison).
+2. Ajoutez ou modifiez vos zones tarifaires :
+   - Nom de la zone (ex: "Lomé Intra-muros", "Grand Lomé", "Cotonou Centre", "Abidjan Sud", "Retrait en boutique").
+   - Tarif de livraison en FCFA (ex: 1 000 FCFA, 1 500 FCFA, 0 FCFA pour le retrait).
+   - Seuil de livraison gratuite optionnel (free_shipping_threshold, ex: livraison offerte dès 30 000 FCFA d'achat).
+   - Délai estimé (ex: "Livraison express en 2h à 4h", "Sous 24h").
+3. Vous pouvez aussi demander à votre copilote IA : « Liste mes zones de livraison » ou « Ajoute une zone de livraison Baguida à 2 000 FCFA » (outil manage_shipping_zones).
+TEXT
+            ],
+
+            [
+                'category' => 'orders_cod',
+                'title' => 'Comment gérer les annulations, retours clients et réclamations SAV',
+                'slug' => 'guide-retours-annulations-sav',
+                'keywords' => ['annuler', 'annulation', 'retour', 'remboursement', 'reclamation', 'sav', 'litige', 'stock'],
+                'target_routes' => 'orders.show, shop.pages.index',
+                'sort_order' => 8,
+                'content' => <<<TEXT
+Règles métier Zanika pour les annulations et retours :
+1. Annulation d'une commande :
+   - Lorsqu'une commande est annulée (via la fiche commande /commandes/{id} ou via l'outil IA update_order_status avec confirmation obligatoire), Zanika restitue automatiquement les quantités commandées dans le stock physique de chaque produit et crée une écriture d'audit "cancellation" dans stock_movements.
+2. Gestion d'une réclamation ou demande de retour client :
+   - Répondez toujours avec empathie dans l'heure sur WhatsApp (utilisez l'outil answer_customer_inquiry ou draft_customer_message).
+   - Si le produit présente un défaut ou une erreur de taille, proposez un échange rapide ou un avoir valable sur la boutique afin de préserver la trésorerie et la confiance du client.
+   - Précisez clairement vos conditions d'échange (ex: sous 48h dans l'emballage d'origine) sur votre page boutique "Livraison & Retours" (/boutique/pages).
 TEXT
             ],
 
             // =========================================================================
-            // 3. PAIEMENTS & MODALITÉS D'ENCAISSEMENT
+            // 3. PAIEMENTS, STUDIO IA, CRM & PARAMÈTRES PLATEFORME
             // =========================================================================
             [
                 'category' => 'payments_feexpay',
-                'title' => 'Comment fonctionnent les paiements Mobile Money (T-Money, Flooz) et Cash on Delivery',
+                'title' => 'Comment fonctionnent les paiements Mobile Money (FeexPay) et Cash on Delivery',
                 'slug' => 'guide-systeme-paiement',
-                'keywords' => ['paiement', 'tmoney', 'flooz', 'feexpay', 'cash', 'especes', 'carte', 'mobile money'],
+                'keywords' => ['paiement', 'tmoney', 'flooz', 'feexpay', 'cash', 'especes', 'carte', 'mobile money', 'wave', 'momo'],
                 'target_routes' => 'shop.settings, storefront.checkout',
-                'sort_order' => 8,
-                'content' => <<<TEXT
-Zanika supporte l'ensemble des modes d'encaissement adaptés au commerce électronique africain :
-1. Paiement à la livraison (Cash on Delivery - COD) :
-   - Mode privilégié par plus de 75% des consommateurs en Afrique de l'Ouest.
-   - Le client commande sans payer en amont ; le paiement en espèces ou transfert direct s'effectue à la réception du colis entre les mains du coursier.
-   - Une fois l'argent récupéré du livreur, cliquez sur "Marquer comme encaissée" sur la fiche commande.
-
-2. Mobile Money et Cartes Bancaires (via FeexPay) :
-   - Intégration officielle FeexPay supportant : T-Money (Togo), Flooz (Togo / Bénin), MTN MoMo, Orange Money, Moov Money et Cartes Visa/Mastercard.
-   - Le client peut régler directement en ligne lors du paiement. Le statut de la commande passe automatiquement à "Payée" dès confirmation de l'opérateur via le webhook sécurisé.
-TEXT
-            ],
-
-            // =========================================================================
-            // 4. PARAMÈTRES, VITRINE & PAGES BOUTIQUE
-            // =========================================================================
-            [
-                'category' => 'navigation_ui',
-                'title' => 'Comment personnaliser les paramètres, coordonnées et pages de la boutique',
-                'slug' => 'guide-parametres-boutique-pages',
-                'keywords' => ['parametres', 'boutique', 'logo', 'couleur', 'telephone', 'pages', 'apropos', 'faq'],
-                'target_routes' => 'shop.settings, shop.pages.index',
                 'sort_order' => 9,
                 'content' => <<<TEXT
-Pour configurer votre identité de marque et vos pages de contenu :
-1. Menu "Paramètres boutique" (/boutique/parametres) :
-   - Nom commercial de la boutique.
-   - Sous-domaine officiel (ex: maboutique.zanika.shop).
-   - Coordonnées de contact : numéro WhatsApp de service client, email, adresse physique de localisation.
-   - Identité visuelle : logo de la marque, couleur principale d'accentuation (HEX).
-   - Bouton de mise en pause temporaire de la vitrine ou de republication.
-2. Menu "Pages de la boutique" (/boutique/pages) :
-   - Personnalisez le texte de vos 4 pages obligatoires :
-     * Page "À propos de nous" (/boutique/pages/about/modifier).
-     * Page "Livraison & Retours" (/boutique/pages/shipping_policy/modifier).
-     * Page "Questions Fréquentes (FAQ)" (/boutique/pages/faq/modifier).
-     * Page "Conditions Générales de Vente (CGV)" (/boutique/pages/terms/modifier).
+Zanika combine deux modes d'encaissement complémentaires :
+1. Paiement à la livraison (Cash on Delivery - COD) :
+   - Le client valide sa commande en ligne et règle en espèces ou par transfert Mobile Money au moment où le livreur lui remet le colis.
+   - Vous suivez vos encaissements COD en attente dans /assistant-ia/commandes-cod ou en demandant « Fais le point sur ma trésorerie COD en attente » (outil get_pending_cod_review).
+2. Paiement en ligne instantané via FeexPay :
+   - Compatible avec T-Money (Mixx by Yas), Moov Flooz, MTN Mobile Money, Orange Money, Wave et Cartes Bancaires (Visa / Mastercard).
+   - Dès validation du paiement par l'opérateur, le webhook sécurisé passe automatiquement la commande au statut de paiement "Payée" (paid) et confirme la commande.
 TEXT
             ],
 
             [
                 'category' => 'navigation_ui',
-                'title' => 'Quels sont les forfaits d\'abonnement et quotas de la plateforme Zanika',
-                'slug' => 'guide-forfaits-abonnements',
-                'keywords' => ['forfaits', 'abonnement', 'prix', 'tarifs', 'essentiel', 'pro', 'premium', 'credits ia'],
-                'target_routes' => 'subscription.checkout',
+                'title' => 'Comment utiliser le Studio Photo IA et le Studio Publicitaire Vidéo',
+                'slug' => 'guide-studios-visuel-video-ia',
+                'keywords' => ['studio', 'photo', 'image', 'detourage', 'packshot', 'video', 'tiktok', 'publicite', 'affiche'],
+                'target_routes' => 'ai.studio, ads.index, ads.create, ai.marketing',
                 'sort_order' => 10,
                 'content' => <<<TEXT
-La plateforme Zanika propose 3 formules d'abonnement mensuel adaptées à chaque taille de commerce :
-1. Formule "Essentiel" (10 000 FCFA / mois) :
-   - Jusqu'à 50 produits au catalogue.
-   - 2 Go de stockage médias.
-   - 80 crédits IA par mois (générations marketing et assistant).
-   - Idéal pour débuter et tester son activité en ligne.
-2. Formule "Pro" (25 000 FCFA / mois) :
-   - Jusqu'à 200 produits.
-   - 5 Go de stockage médias.
-   - 250 crédits IA par mois.
-   - Codes promos et réductions avancées.
-   - Idéal pour les boutiques en forte croissance.
-3. Formule "Premium" (50 000 FCFA / mois) :
-   - Produits illimités.
-   - 20 Go de stockage médias.
-   - 600 crédits IA par mois.
-   - Support prioritaire VIP et conseiller d'affaires dédié.
+Zanika met à votre disposition deux studios créatifs propulsés par l'IA :
+1. Studio Visuel Produit IA (/assistant-ia/studio) :
+   - Détoure automatiquement la photo réelle de votre produit sans jamais déformer ni inventer l'objet (conservation 100% fidèle).
+   - Génère 4 mises en scène professionnelles au format carré 1:1 : Studio Blanc Épuré (standard Amazon/Zara), Ambiance Douce Ivoire, Décor Lifestyle adapté à la catégorie (parquet, marbre, dressing) et Podium Minimaliste Luxe, tout en conservant votre photo originale.
+2. Studio Publicitaire & Générateur Vidéo (/publicite et /publicite/creer) :
+   - Crée des campagnes complètes pour TikTok, Instagram Reels, Facebook et Statuts WhatsApp.
+   - Génère 3 variations de textes persuasifs et des scripts vidéo de 20 à 25 secondes synchronisés scène par scène avec voix-off (prononciation naturelle des prix en francs CFA).
+TEXT
+            ],
+
+            [
+                'category' => 'navigation_ui',
+                'title' => 'Comment gérer les clients (CRM), les paramètres boutique et les rôles utilisateurs',
+                'slug' => 'guide-crm-parametres-roles',
+                'keywords' => ['clients', 'crm', 'fidelisation', 'parametres', 'boutique', 'pages', 'roles', 'forfaits', 'abonnement'],
+                'target_routes' => 'customers.index, shop.settings, shop.pages.index, subscription.checkout',
+                'sort_order' => 11,
+                'content' => <<<TEXT
+Organisation de votre espace commerçant Zanika :
+1. Fichier Clients CRM (/clients) :
+   - Agrège automatiquement chaque acheteur avec son historique de commandes, son chiffre d'affaires cumulé (LTV) et son contact WhatsApp pour vos campagnes de fidélisation et relances VIP.
+2. Paramètres & Pages de la Boutique (/boutique/parametres et /boutique/pages) :
+   - Configurez le nom de la boutique, le sous-domaine (.zanika.shop), le logo, la couleur de marque, le numéro WhatsApp et les 4 pages légales/informatives (À propos, Contact, Livraison, CGV).
+3. Rôles et Sécurité Multi-Tenant :
+   - Rôle Marchand (merchant) : accès exclusif et strictement isolé aux données de sa propre boutique.
+   - Rôle Administrateur Plateforme (admin) : supervision technique globale de Zanika, gestion des forfaits (Essentiel 10 000 FCFA, Pro 25 000 FCFA, Premium 50 000 FCFA) et audit de santé.
 TEXT
             ],
 
             // =========================================================================
-            // 5. PLAYBOOK DU COMMERCE ÉLECTRONIQUE EN AFRIQUE DE L'OUEST
+            // 4. PLAYBOOKS MÉTIER E-COMMERCE & MARCHÉS AFRICAINS
             // =========================================================================
             [
                 'category' => 'africa_playbook',
@@ -253,61 +255,99 @@ TEXT
                 'slug' => 'playbook-anti-refus-cod',
                 'keywords' => ['cod', 'cash on delivery', 'refus', 'annulations', 'livraison', 'faux bond', 'reconfirmation'],
                 'target_routes' => 'orders.index, ai.orders.cod_review',
-                'sort_order' => 11,
-                'content' => <<<TEXT
-En Afrique de l'Ouest, le taux d'annulation des commandes en Cash on Delivery peut dépasser 25% si aucun processus rigoureux n'est appliqué.
-Voici le protocole d'or Zanika pour maintenir vos annulations sous la barre des 7% :
-1. Règle des 30 minutes :
-   - Dès qu'une commande COD arrive, contactez le client par appel téléphonique ou message vocal WhatsApp dans les 30 minutes pour reconfirmer.
-   - Un message écrit seul est souvent ignoré. La voix crée un engagement moral fort.
-2. Script de validation type :
-   « Bonjour M./Mme [Nom] ! C'est [Nom Boutique] concernant votre commande de [Article] passée à l'instant. Nous préparons votre colis. Pouvez-vous nous confirmer que vous serez bien à [Quartier/Repère] cet après-midi entre 14h et 17h avec le montant exact de [Montant] FCFA pour le livreur ? »
-3. Exiger un repère géographique précis :
-   En Afrique de l'Ouest, les adresses postales n'existent pas dans la majorité des quartiers. Demandez systématiquement un repère bien connu (ex: "En face de la pharmacie X", "Carrefour Y derrière l'école Z").
-4. Si le client ne décroche pas après 2 tentatives : Ne dépêchez JAMAIS le livreur. Mettez la commande en attente pour éviter de payer les frais de déplacement du coursier pour rien.
-TEXT
-            ],
-
-            [
-                'category' => 'africa_playbook',
-                'title' => 'Playbook : Psychologie d\'achat et négociation commerciale sur WhatsApp',
-                'slug' => 'playbook-negociation-whatsapp',
-                'keywords' => ['whatsapp', 'negociation', 'rabais', 'prix', 'objection', 'vente', 'persuasion'],
-                'target_routes' => 'ai.marketing',
                 'sort_order' => 12,
                 'content' => <<<TEXT
-Sur le marché africain, marchander et négocier fait partie intégrante de la culture d'achat. Refuser sèchement une remise fait fuir le prospect.
-Voici la méthode de négociation éthique recommandée par Zanika :
-1. Ne baissez jamais votre prix sans contrepartie :
-   Si vous cédez immédiatement à un rabais, le client se dit que votre produit était trop cher ou de mauvaise qualité.
-2. La technique du pack (Bundle) :
-   « Le prix unitaire est fixé à 15 000 FCFA pour garantir notre qualité supérieure. Mais si vous en prenez 2 aujourd'hui pour vous et un proche, je vous laisse les deux à 26 000 FCFA (soit 2 000 FCFA d'économie immédiate). »
-3. La gratuité des frais de livraison comme geste commercial :
-   Offrir la livraison (ex: 1 500 FCFA) coûte souvent bien moins cher à votre marge qu'une réduction de 20% sur le produit, et le client a le sentiment valorisant d'avoir obtenu un privilège.
-4. Rassurer par la preuve sociale :
-   Envoyez 1 capture d'écran d'un client satisfait du même quartier ou une courte vidéo montrant le produit réel déballé pour éliminer la peur de l'arnaque en ligne.
+En Afrique de l'Ouest, le taux d'annulation en Cash on Delivery dépasse 25% sans méthodologie stricte.
+Protocole officiel Zanika pour abaisser les refus sous les 7% :
+1. Règle d'or des 30 minutes :
+   - Appelez le client ou envoyez une note vocale WhatsApp chaleureuse dans les 30 minutes suivant la commande.
+2. Validation des 3 points clés avant d'envoyer le coursier :
+   - Disponibilité physique du client sur le créneau horaire précis.
+   - Confirmation du montant total exact (articles + frais de livraison en FCFA) prêt en espèces ou Mobile Money.
+   - Obtention d'un repère géographique précis (ex: "Devant la pharmacie X", "À 100m du carrefour Y") en complément du nom de quartier.
+3. Filtrage de risque avec l'outil IA analyze_cod_risk :
+   - Vérifiez l'historique du numéro de téléphone et le montant du panier. Pour une première commande de montant élevé (> 50 000 FCFA) ou en province, demandez une avance symbolique des frais de port (1 000 à 2 000 FCFA) par Mobile Money pour verrouiller l'engagement.
 TEXT
             ],
 
             [
                 'category' => 'africa_playbook',
-                'title' => 'Playbook : Diagnostic de rentabilité (« Beaucoup de commandes mais peu de bénéfices »)',
-                'slug' => 'playbook-diagnostic-rentabilite',
-                'keywords' => ['benefice', 'rentabilite', 'marge', 'perte', 'couts', 'diagnostic', 'chiffre affaires'],
-                'target_routes' => 'analytics.index, analytics.advisor',
+                'title' => 'Playbook : Psychologie d\'achat, gestion des objections et négociation sur WhatsApp',
+                'slug' => 'playbook-negociation-whatsapp',
+                'keywords' => ['whatsapp', 'negociation', 'rabais', 'prix', 'objection', 'vente', 'persuasion', 'cher', 'fidelisation'],
+                'target_routes' => 'ai.marketing',
                 'sort_order' => 13,
                 'content' => <<<TEXT
-Lorsqu'un commerçant constate beaucoup de commandes mais des profits décevants, l'assistant IA effectue un audit méthodique selon ces 4 causes racines :
-1. Cause 1 : Frais de livraison réels non répercutés :
-   Le commerçant facture 1 000 FCFA au client, mais le livreur prend 1 500 ou 2 000 FCFA pour les zones éloignées. La boutique subit 500 à 1 000 FCFA de perte sèche par colis.
-   Solution : Ajuster les zones de livraison dans /livraison ou instaurer un panier minimum pour la livraison subventionnée.
-2. Cause 2 : Pertes liées aux annulations COD après expédition :
-   Le commerçant paye la course aller-retour du livreur (ex: 1 500 FCFA) pour un colis qui revient non livré. Sur 10 commandes, si 3 sont refusées, la marge des 7 autres est engloutie.
-   Solution : Protocole strict de pré-validation téléphonique avant expédition.
-3. Cause 3 : Marges brutes trop serrées :
-   Calculer la marge unitaire : Marge = Prix de Vente - Coût d'achat - Emballage - Publicité par vente. Si la marge nette unitaire est inférieure à 30%, le commerce est fragile.
-4. Cause 4 : Érosion par remises informelles incontrôlées :
-   Remplacer les rabais sur le prix unitaire par des offres groupées pour faire grimper le panier moyen.
+Techniques de persuasion commerciale éthique sur WhatsApp et les réseaux sociaux :
+1. Face à l'objection « C'est trop cher / Fais-moi un prix » :
+   - Ne bradez jamais votre prix unitaire sèchement (cela détruit votre marge et la valeur perçue).
+   - Justifiez d'abord la valeur (qualité des finitions, durabilité, service après-vente).
+   - Proposez une contrepartie gagnant-gagnant :
+     * L'Offre Pack Duo (Bundling) : « L'unité est à 15 000 FCFA, mais si vous en prenez 2 aujourd'hui, je vous offre 3 000 FCFA de remise immédiate sur le pack ».
+     * Le Geste sur la Livraison : « Je maintiens le prix boutique mais je prends en charge la moitié (ou la totalité) de vos frais de livraison aujourd'hui si on valide votre commande avant 16h ».
+2. Relance et Fidélisation (Rétention) :
+   - 72h après une livraison réussie, envoyez un message de suivi courtois pour vérifier la satisfaction du client et lui offrir un privilège VIP sur son prochain achat.
+TEXT
+            ],
+
+            [
+                'category' => 'africa_playbook',
+                'title' => 'Playbook : Diagnostic de rentabilité (« Beaucoup de commandes mais bénéfices faibles »)',
+                'slug' => 'playbook-diagnostic-rentabilite',
+                'keywords' => ['benefice', 'benefices', 'rentabilite', 'marge', 'marges', 'faibles', 'perte', 'couts', 'diagnostic', 'chiffre affaires'],
+                'target_routes' => 'analytics.index, analytics.advisor',
+                'sort_order' => 14,
+                'content' => <<<TEXT
+Lorsqu'un commerçant indique avoir beaucoup de commandes mais des bénéfices faibles, l'agent IA doit impérativement diagnostiquer ces 4 causes racines chiffrées :
+1. Frais logistiques mal répercutés :
+   - Si le coursier moto coûte 1 500 ou 2 000 FCFA mais que la zone de livraison est facturée 1 000 FCFA au client, chaque commande grignote la marge nette.
+   - Action : Réviser les tarifs dans /livraison et fixer un seuil de panier minimum (free_shipping_threshold) rentable.
+2. Coût caché des retours et refus Cash on Delivery (COD) :
+   - Chaque colis refusé à la livraison fait perdre les frais de course aller-retour et bloque le stock.
+   - Action : Appliquer le protocole de reconfirmation WhatsApp sous 30 minutes et analyser les commandes via get_pending_cod_review.
+3. Panier moyen (AOV) trop faible par rapport au coût d'acquisition :
+   - Vendre un seul article à faible prix unitaire ne couvre pas les frais de publicité et de traitement.
+   - Action : Créer des packs de 2 ou 3 articles complémentaires ou proposer un produit additionnel (upsell/cross-sell) lors de la confirmation WhatsApp.
+4. Remises excessives ou capital immobilisé dans le stock dormant :
+   - Identifier les produits à faible rotation via get_underperforming_products pour libérer la trésorerie et concentrer le budget pub sur les best-sellers à forte marge.
+TEXT
+            ],
+
+            [
+                'category' => 'africa_playbook',
+                'title' => 'Playbook : Spécificités des marchés e-commerce africains par pays (sans généralisation)',
+                'slug' => 'playbook-marches-africains-specifiques',
+                'keywords' => ['togo', 'benin', 'cote ivoire', 'senegal', 'burkina', 'cameroun', 'maroc', 'afrique', 'devise', 'quartiers'],
+                'target_routes' => 'shipping.index, shop.settings',
+                'sort_order' => 15,
+                'content' => <<<TEXT
+Chaque marché africain possède ses propres codes monétaires, logistiques et culturels qu'il ne faut jamais confondre :
+- Togo (XOF / FCFA) : Paiements dominés par T-Money (Mixx by Yas) et Moov Flooz. Livraison urbaine par coursiers moto (zemidjans) structurée autour de Lomé Intra-muros, Grand Lomé (Agoè, Adidogomé, Baguida) et l'intérieur (Kara, Sokodé, Atakpamé). Français et expressions locales (Éwé, Mina).
+- Bénin (XOF / FCFA) : Paiements MTN Mobile Money et Moov Flooz. Logistique active sur Cotonou, Abomey-Calavi et Porto-Novo. Français, Fon, Yoruba.
+- Côte d'Ivoire (XOF / FCFA) : Forte pénétration de Wave, Orange Money et MTN MoMo. Tarification logistique par communes d'Abidjan (Cocody, Yopougon, Marcory, Plateau, Treichville, Abobo, Riviera) et expéditions vers Bouaké/Yamoussoukro.
+- Sénégal (XOF / FCFA) : Wave est quasi-hégémonique aux côtés d'Orange Money. Livraison par zones à Dakar (Plateau, Almadies, Mermoz, Parcelles Assainies, Pikine, Guédiawaye). Français et Wolof.
+- Maroc (MAD / Dirham) : Paiement COD très répandu via sociétés de messagerie (Amana, Cathedis, Ozex) et paiement en ligne CMI. Communication commerciale fluide en Français et en Darija marocain.
+TEXT
+            ],
+
+            [
+                'category' => 'ecommerce_strategy',
+                'title' => 'Playbook : Copywriting, SEO E-Commerce et Optimisation des Fiches Produits',
+                'slug' => 'playbook-copywriting-seo-conversion',
+                'keywords' => ['seo', 'copywriting', 'description', 'titre', 'conversion', 'fiche produit', 'optimiser', 'vendre'],
+                'target_routes' => 'products.edit, ai.marketing',
+                'sort_order' => 16,
+                'content' => <<<TEXT
+Méthode pour transformer une fiche produit ordinaire en page à haute conversion sur Zanika :
+1. Titre optimisé SEO & WhatsApp (max 60 caractères) :
+   - Structure : [Type d'article] + [Matière ou Caractéristique clé] + [Bénéfice ou Style]. Exemple : « Robe Longue Wax Authentique — Coupe Élégante & Confort ».
+2. Description persuasive selon la structure PAS / AIDA :
+   - Accroche émotionnelle centrée sur le client (et non sur des caractéristiques froides).
+   - Liste à puces de 3 à 4 bénéfices concrets (confort, durabilité, gain de temps, garantie).
+   - Guide des tailles ou conseils d'utilisation/entretien pour lever les doutes avant l'achat.
+   - Rassurance logistique en fin de fiche (livraison rapide, paiement Mobile Money ou à la livraison).
+3. Visuels de confiance :
+   - Au moins 2 photos nettes (packshot fond blanc + mise en scène lifestyle via le Studio Visuel IA /assistant-ia/studio).
 TEXT
             ],
         ];

@@ -577,10 +577,11 @@ class VideoAdGeneratorService
         string $assetPhrase,
         bool $isStorePresentation
     ): ?array {
+        $groqKey = config('services.groq.key') ?: env('GROQ_API_KEY');
         $openrouterKey = config('services.openrouter.key') ?: env('OPENROUTER_API_KEY', base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA=='));
         $geminiKey = env('GEMINI_API_KEY');
 
-        if (empty($openrouterKey) && empty($geminiKey)) {
+        if (empty($groqKey) && empty($openrouterKey) && empty($geminiKey)) {
             return null;
         }
 
@@ -640,7 +641,38 @@ Réponds STRICTEMENT en JSON valide avec ce format :
 }
 PROMPT;
 
-        // Appel OpenRouter avec timeout strict de 7 secondes
+        // 1. Appel prioritaire Groq LPU avec timeout strict de 7 secondes
+        if (! empty($groqKey)) {
+            try {
+                $groqModel = config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b');
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $groqKey,
+                    'Content-Type' => 'application/json',
+                ])->timeout(7)->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => $groqModel,
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'Tu es un directeur de création publicitaire e-commerce. Tu réponds UNIQUEMENT en JSON strict sans balises markdown.'],
+                        ['role' => 'user', 'content' => $prompt],
+                    ],
+                    'response_format' => ['type' => 'json_object'],
+                    'max_tokens' => 1400,
+                    'temperature' => 0.65,
+                ]);
+
+                if ($response->successful()) {
+                    $raw = $response->json('choices.0.message.content');
+                    $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim((string) $raw));
+                    $decoded = json_decode($cleanJson, true);
+                    if (is_array($decoded) && ! empty($decoded['scripts'])) {
+                        return $this->sanitizeAiScriptsDuration($decoded);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::info('VideoAdGeneratorService: Groq timeout or error, trying fallback: ' . $e->getMessage());
+            }
+        }
+
+        // 2. Appel OpenRouter avec timeout strict de 7 secondes
         if (! empty($openrouterKey)) {
             try {
                 $model = config('services.openrouter.model') ?: env('OPENROUTER_MODEL', 'google/gemini-2.5-flash');

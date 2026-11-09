@@ -71,7 +71,7 @@
                         <th style="padding:1rem">Évaluation</th>
                         <th style="padding:1rem;width:40%">Extrait du Message IA Évalué</th>
                         <th style="padding:1rem">Commentaire Commerçant</th>
-                        <th style="padding:1rem">Catégorie</th>
+                        <th style="padding:1rem">Validation & RAG</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -90,7 +90,7 @@
                                 @elseif($fb->rating === 'incomplete')
                                     <span class="badge" style="background:rgba(245,158,11,0.12);color:#f59e0b;font-weight:600">Incomplet</span>
                                 @else
-                                    <span class="badge" style="background:rgba(100,116,139,0.12);color:#64748b;font-weight:600">Hors-sujet</span>
+                                    <span class="badge" style="background:rgba(100,116,139,0.12);color:#64748b;font-weight:600">Peu pertinent</span>
                                 @endif
                             </td>
                             <td style="padding:1rem;color:var(--text)">
@@ -106,9 +106,15 @@
                                 @endif
                             </td>
                             <td style="padding:1rem;white-space:nowrap">
-                                <span class="badge" style="background:var(--surface-muted);color:var(--text-soft);font-size:0.75rem">
-                                    {{ $fb->category ?: 'Général' }}
-                                </span>
+                                @if($fb->admin_reviewed)
+                                    <span class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;font-size:0.75rem">✓ Révisé</span>
+                                @else
+                                    <form method="POST" action="{{ route('admin.ai_feedbacks.resolve', $fb->id) }}" style="display:inline">
+                                        @csrf
+                                        <input type="hidden" name="admin_notes" value="Validé depuis le cockpit qualité">
+                                        <button type="submit" class="btn btn-ghost btn-sm" style="font-size:0.75rem">Marquer révisé</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty

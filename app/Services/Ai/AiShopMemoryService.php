@@ -258,5 +258,27 @@ class AiShopMemoryService
                 'conversation_extraction'
             );
         }
+
+        // AXE 5 : Dernières stratégies recommandées par l'IA (past_recommendation)
+        $respLower = mb_strtolower($assistantResponse);
+        if (str_contains($respLower, 'pack duo') || str_contains($respLower, 'lot de 2')) {
+            $this->storeMemory(
+                $shop,
+                AiShopMemory::CAT_RECOMMENDATION,
+                'derniere_strategie_proposee',
+                "Recommandation d'Offre Pack Duo pour augmenter le panier moyen et préserver la marge",
+                0.85,
+                'assistant_recommendation'
+            );
+        } elseif (str_contains($respLower, '30 minutes') && str_contains($respLower, 'cod')) {
+            $this->storeMemory(
+                $shop,
+                AiShopMemory::CAT_RECOMMENDATION,
+                'derniere_strategie_proposee',
+                "Protocole de reconfirmation vocale WhatsApp sous 30 minutes pour sécuriser les commandes COD",
+                0.85,
+                'assistant_recommendation'
+            );
+        }
     }
 }

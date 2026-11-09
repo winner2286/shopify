@@ -84,16 +84,16 @@
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:1rem">
-            <!-- OpenRouter IA -->
+            <!-- Groq IA & Relais -->
             <div class="card" style="padding:1.25rem;border-left:4px solid {{ $health['openrouter']['status'] === 'ok' ? '#10b981' : '#f59e0b' }}">
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                    <span style="font-weight:700;font-size:.92rem">OpenRouter IA (Gemini)</span>
+                    <span style="font-weight:700;font-size:.92rem">Groq IA (LPU Haute Vitesse)</span>
                     <span class="badge {{ $health['openrouter']['status'] === 'ok' ? 'badge-ok' : 'badge-warning' }}">
                         {{ $health['openrouter']['status'] === 'ok' ? 'Opérationnel' : 'À surveiller' }}
                     </span>
                 </div>
                 <div style="font-size:1.15rem;font-weight:800;margin:.4rem 0">{{ $health['openrouter']['message'] }}</div>
-                <div style="font-size:.8rem;color:var(--text-soft)">Moteur IA souverain pour création de boutiques et fiches produits.</div>
+                <div style="font-size:.8rem;color:var(--text-soft)">Moteur IA souverain ultra-rapide pour le copilote e-commerce, les fiches produits et le studio publicitaire.</div>
             </div>
 
             <!-- Passerelle FeexPay -->

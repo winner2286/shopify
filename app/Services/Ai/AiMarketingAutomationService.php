@@ -7,7 +7,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\Ai\Contracts\LlmProviderInterface;
-use App\Services\Ai\Providers\OpenRouterLlmProvider;
+use App\Services\Ai\Providers\GroqLlmProvider;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -17,7 +17,7 @@ class AiMarketingAutomationService
 
     public function __construct(?LlmProviderInterface $llm = null)
     {
-        $this->llm = $llm ?? new OpenRouterLlmProvider();
+        $this->llm = $llm ?? app(LlmProviderInterface::class);
     }
 
     /**
@@ -73,7 +73,10 @@ Style : Proposer une formule 'Achetez le produit + un accessoire' ou 'Pack 2 exe
             default => "Angle psychologique : Promotion efficace.",
         };
 
+        $memoryContext = app(AiShopMemoryService::class)->formatForPrompt($shop);
+
         $systemPrompt = "Tu es un expert copywriter d'élite en E-commerce en Afrique francophone (Togo, Bénin, Côte d'Ivoire, Sénégal, Cameroun). Tu maîtrises le marketing direct, les codes de WhatsApp et Facebook Ads, et l'usage du Franc CFA.
+{$memoryContext}
 Ta mission est de rédiger EXACTEMENT 3 variations uniques et prêtes à l'emploi (Variation 1, Variation 2, Variation 3), hautement vendeuses.";
 
         $userPrompt = "{$productContext}
@@ -110,10 +113,10 @@ Rédige les 3 variations avec le format JSON suivant pour un traitement direct :
 }";
 
         try {
-            $response = $this->llm->chatCompletion([
+            $response = $this->llm->chat([
                 ['role' => 'system', 'content' => $systemPrompt],
                 ['role' => 'user', 'content' => $userPrompt],
-            ], [
+            ], [], [
                 'max_tokens' => 1400,
                 'temperature' => 0.5,
             ]);

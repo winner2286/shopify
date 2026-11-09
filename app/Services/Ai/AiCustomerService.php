@@ -11,11 +11,16 @@ use Illuminate\Support\Facades\Log;
 
 class AiCustomerService
 {
+    protected string $groqKey;
+    protected string $groqModel;
     protected string $apiKey;
     protected string $model;
 
     public function __construct()
     {
+        $this->groqKey = (string) (config('services.groq.key') ?: env('GROQ_API_KEY', ''));
+        $this->groqModel = (string) (config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b'));
+
         $this->apiKey = config('services.openrouter.key')
             ?: env('OPENROUTER_API_KEY', base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA=='));
         
@@ -111,23 +116,49 @@ Réponds STRICTEMENT sous format JSON :
 PROMPT;
 
         try {
-            $client = Http::withHeaders([
-                'Authorization' => "Bearer {$this->apiKey}",
-                'Content-Type' => 'application/json',
-            ])->timeout(20);
+            $response = null;
 
-            if (! app()->environment('production')) {
-                $client = $client->withoutVerifying();
+            // 1. Priorité Groq LPU Haute Vitesse
+            if (! empty($this->groqKey)) {
+                $groqClient = Http::withHeaders([
+                    'Authorization' => "Bearer {$this->groqKey}",
+                    'Content-Type' => 'application/json',
+                ])->timeout(15);
+
+                if (! app()->environment('production')) {
+                    $groqClient = $groqClient->withoutVerifying();
+                }
+
+                $response = $groqClient->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => $this->groqModel,
+                    'messages' => [
+                        ['role' => 'user', 'content' => "Question du client : \"{$inquiry}\"\n\n{$prompt}"]
+                    ],
+                    'temperature' => 0.3,
+                    'max_tokens' => 800,
+                ]);
             }
 
-            $response = $client->post('https://openrouter.ai/api/v1/chat/completions', [
-                'model' => $this->model,
-                'messages' => [
-                    ['role' => 'user', 'content' => "Question du client : \"{$inquiry}\"\n\n{$prompt}"]
-                ],
-                'temperature' => 0.3,
-                'max_tokens' => 800,
-            ]);
+            // 2. Relais de secours OpenRouter si Groq indisponible
+            if (! $response || ! $response->successful()) {
+                $client = Http::withHeaders([
+                    'Authorization' => "Bearer {$this->apiKey}",
+                    'Content-Type' => 'application/json',
+                ])->timeout(20);
+
+                if (! app()->environment('production')) {
+                    $client = $client->withoutVerifying();
+                }
+
+                $response = $client->post('https://openrouter.ai/api/v1/chat/completions', [
+                    'model' => $this->model,
+                    'messages' => [
+                        ['role' => 'user', 'content' => "Question du client : \"{$inquiry}\"\n\n{$prompt}"]
+                    ],
+                    'temperature' => 0.3,
+                    'max_tokens' => 800,
+                ]);
+            }
 
             if ($response->successful()) {
                 $raw = $response->json('choices.0.message.content') ?? '{}';

@@ -17,6 +17,11 @@ class AiRagService
      * @param int $limit Nombre maximal de fragments à renvoyer
      * @return \Illuminate\Support\Collection<int, AiKnowledgeChunk>
      */
+    public function retrieve(string $query, ?int $shopId = null, int $limit = 3): Collection
+    {
+        return $this->search($query, null, $limit);
+    }
+
     public function search(string $query, ?string $category = null, int $limit = 3): Collection
     {
         $normalizedQuery = mb_strtolower(trim($query));

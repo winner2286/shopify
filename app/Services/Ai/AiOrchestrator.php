@@ -8,6 +8,7 @@ use App\Models\AiMessage;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\Contracts\LlmProviderInterface;
+use App\Services\Ai\Providers\GroqLlmProvider;
 use App\Services\Ai\Providers\OpenRouterLlmProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -30,7 +31,7 @@ class AiOrchestrator
         ?AiProactiveAdvisorService $proactiveAdvisor = null,
         ?ActionTokenService $tokenService = null
     ) {
-        $this->llm = $llm ?? new OpenRouterLlmProvider();
+        $this->llm = $llm ?? app(LlmProviderInterface::class);
         $this->tools = $tools ?? new ToolRegistry();
         $this->rag = $rag ?? new AiRagService();
         $this->memory = $memory ?? new AiShopMemoryService();
@@ -153,7 +154,7 @@ class AiOrchestrator
 
         $totalTokensInput = $response['tokens_input'] ?? 0;
         $totalTokensOutput = $response['tokens_output'] ?? 0;
-        $modelUsed = $response['model_used'] ?? 'openrouter';
+        $modelUsed = $response['model_used'] ?? ('groq:' . config('services.groq.model', 'openai/gpt-oss-120b'));
 
         // 8. Boucle Multi-Step ReAct (Raisonnement Itératif & Tool Calling)
         $maxIterations = (int) ($options['max_iterations'] ?? 4);

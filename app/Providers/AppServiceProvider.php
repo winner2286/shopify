@@ -11,7 +11,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(\App\Services\Ai\Contracts\LlmProviderInterface::class, function ($app) {
+            $provider = strtolower((string) config('services.ai.provider', 'groq'));
+            if ($provider === 'openrouter') {
+                return new \App\Services\Ai\Providers\OpenRouterLlmProvider();
+            }
+
+            return new \App\Services\Ai\Providers\GroqLlmProvider();
+        });
     }
 
     /**

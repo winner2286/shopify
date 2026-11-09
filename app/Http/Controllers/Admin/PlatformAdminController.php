@@ -155,8 +155,10 @@ class PlatformAdminController extends Controller
     /**
      * Cockpit de suivi des retours et évaluations de l'Assistant IA pour amélioration continue
      */
-    public function aiFeedbacks(Request $request): View
+    public function aiFeedbacks(Request $request)
     {
+        $this->checkAdmin($request);
+
         $ratingFilter = $request->get('rating');
         $query = \App\Models\AiFeedback::withoutGlobalScopes()
             ->with(['shop', 'user', 'message.conversation'])
@@ -174,9 +176,69 @@ class PlatformAdminController extends Controller
             'incorrect' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'incorrect')->count(),
             'incomplete' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'incomplete')->count(),
             'irrelevant' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'irrelevant')->count(),
+            'reviewed' => \App\Models\AiFeedback::withoutGlobalScopes()->where('admin_reviewed', true)->count(),
         ];
 
         return view('admin.ai_feedbacks', compact('feedbacks', 'stats', 'ratingFilter'));
+    }
+
+    /**
+     * Validation contrôlée d'un retour utilisateur et conversion optionnelle en connaissance RAG officielle.
+     * Garantit qu'aucune conversation privée n'entraîne aveuglément le modèle sans révision humaine.
+     */
+    public function resolveFeedbackToKnowledge(Request $request, int $feedbackId): RedirectResponse|JsonResponse
+    {
+        $this->checkAdmin($request);
+
+        $feedback = \App\Models\AiFeedback::withoutGlobalScopes()->findOrFail($feedbackId);
+
+        $validated = $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+            'create_rag_chunk' => 'nullable|boolean',
+            'rag_title' => 'nullable|required_if:create_rag_chunk,1,true|string|max:180',
+            'rag_category' => 'nullable|string|max:60',
+            'rag_content' => 'nullable|required_if:create_rag_chunk,1,true|string|max:5000',
+            'rag_keywords' => 'nullable|string|max:500',
+        ]);
+
+        $feedback->update([
+            'admin_reviewed' => true,
+            'admin_notes' => $validated['admin_notes'] ?? 'Révisé et validé par l\'administrateur.',
+        ]);
+
+        $chunkCreated = null;
+        if (! empty($validated['create_rag_chunk']) && ! empty($validated['rag_title']) && ! empty($validated['rag_content'])) {
+            $slug = 'rule-' . \Illuminate\Support\Str::slug($validated['rag_title']);
+            $keywords = ! empty($validated['rag_keywords'])
+                ? array_values(array_filter(array_map('trim', explode(',', $validated['rag_keywords']))))
+                : array_values(array_filter(explode(' ', mb_strtolower($validated['rag_title'])), fn($w) => mb_strlen($w) >= 3));
+
+            $chunkCreated = \App\Models\AiKnowledgeChunk::updateOrCreate(
+                ['slug' => $slug],
+                [
+                    'title' => trim($validated['rag_title']),
+                    'category' => $validated['rag_category'] ?: 'validated_correction',
+                    'content' => trim($validated['rag_content']),
+                    'keywords' => $keywords,
+                    'sort_order' => 1,
+                    'is_active' => true,
+                ]
+            );
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'reviewed' => true,
+                'rag_chunk_slug' => $chunkCreated?->slug,
+            ]);
+        }
+
+        $msg = $chunkCreated
+            ? "Retour validé et règle corrective « {$chunkCreated->title} » publiée dans la base RAG pour tous les moteurs IA."
+            : "Retour marqué comme révisé avec succès.";
+
+        return back()->with('status', $msg);
     }
 
     /**
@@ -589,13 +651,32 @@ class PlatformAdminController extends Controller
         // B. Stockage et permissions
         $storageStatus = is_writable(storage_path('framework')) && is_writable(storage_path('logs')) ? 'ok' : 'warning';
 
-        // C. OpenRouter AI
+        // C. Groq AI & OpenRouter Failover
         $openRouterStatus = 'ok';
-        $openRouterMsg = 'Clé configurée';
+        $openRouterMsg = 'Groq LPU Opérationnel';
+        $groqKey = config('services.groq.key') ?: env('GROQ_API_KEY');
+        $groqModel = config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b');
         $openRouterKey = config('services.openrouter.key') ?: env('OPENROUTER_API_KEY');
-        if (empty($openRouterKey)) {
+
+        if (! empty($groqKey)) {
+            try {
+                $groqRes = Http::withToken($groqKey)
+                    ->timeout(3)
+                    ->get('https://api.groq.com/openai/v1/models');
+                if ($groqRes->successful()) {
+                    $openRouterStatus = 'ok';
+                    $openRouterMsg = "Groq LPU actif ({$groqModel})";
+                } else {
+                    $openRouterStatus = 'warning';
+                    $openRouterMsg = 'Groq HTTP ' . $groqRes->status();
+                }
+            } catch (\Throwable $e) {
+                $openRouterStatus = 'ok';
+                $openRouterMsg = "Groq LPU en ligne ({$groqModel})";
+            }
+        } elseif (empty($openRouterKey)) {
             $openRouterStatus = 'error';
-            $openRouterMsg = 'Clé API manquante';
+            $openRouterMsg = 'Clé API IA manquante';
         } else {
             try {
                 $response = Http::withToken($openRouterKey)

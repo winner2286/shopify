@@ -349,24 +349,17 @@ class ProductStudioService
             }
         }
 
-        // 2. Détection multimodale via LLM Vision (Gemini / OpenRouter)
+        // 2. Détection multimodale via LLM Vision (Groq LPU Vision puis OpenRouter)
+        $groqKey = (string) (config('services.groq.key') ?: env('GROQ_API_KEY', ''));
+        $groqVisionModel = (string) (config('services.groq.vision_model') ?: env('GROQ_VISION_MODEL', 'meta-llama/llama-4-scout-17b-16e-instruct'));
         $apiKey = (string) (config('services.openrouter.key') ?: env('OPENROUTER_API_KEY', ''));
         $model = (string) (config('services.openrouter.model') ?: env('OPENROUTER_MODEL', 'google/gemini-2.5-flash'));
 
-        if (! empty($apiKey)) {
+        if (! empty($groqKey) || ! empty($apiKey)) {
             try {
                 $dataUrl = str_starts_with($imageBinary, 'data:image')
                     ? $imageBinary
                     : 'data:image/jpeg;base64,' . base64_encode($imageBinary);
-
-                $client = Http::withHeaders([
-                    'Authorization' => "Bearer {$apiKey}",
-                    'Content-Type' => 'application/json',
-                ])->timeout(8);
-
-                if (! app()->environment('production')) {
-                    $client = $client->withoutVerifying();
-                }
 
                 $prompt = <<<PROMPT
 Analyse ce produit e-commerce. Détermine précisément product_category parmi STRICTEMENT :
@@ -384,20 +377,58 @@ Donne aussi un titre commercial vendeur court en français (max 50 caractères).
 Réponds STRICTEMENT en JSON : {"product_category": "...", "title": "..."}
 PROMPT;
 
-                $response = $client->post('https://openrouter.ai/api/v1/chat/completions', [
-                    'model' => $model,
-                    'messages' => [
-                        [
-                            'role' => 'user',
-                            'content' => [
-                                ['type' => 'text', 'text' => $prompt],
-                                ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
+                $response = null;
+                if (! empty($groqKey)) {
+                    $groqClient = Http::withHeaders([
+                        'Authorization' => "Bearer {$groqKey}",
+                        'Content-Type' => 'application/json',
+                    ])->timeout(8);
+
+                    if (! app()->environment('production')) {
+                        $groqClient = $groqClient->withoutVerifying();
+                    }
+
+                    $response = $groqClient->post('https://api.groq.com/openai/v1/chat/completions', [
+                        'model' => $groqVisionModel,
+                        'messages' => [
+                            [
+                                'role' => 'user',
+                                'content' => [
+                                    ['type' => 'text', 'text' => $prompt],
+                                    ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
+                                ],
                             ],
                         ],
-                    ],
-                    'temperature' => 0.1,
-                    'max_tokens' => 150,
-                ]);
+                        'temperature' => 0.1,
+                        'max_tokens' => 150,
+                    ]);
+                }
+
+                if ((! $response || ! $response->successful()) && ! empty($apiKey)) {
+                    $client = Http::withHeaders([
+                        'Authorization' => "Bearer {$apiKey}",
+                        'Content-Type' => 'application/json',
+                    ])->timeout(8);
+
+                    if (! app()->environment('production')) {
+                        $client = $client->withoutVerifying();
+                    }
+
+                    $response = $client->post('https://openrouter.ai/api/v1/chat/completions', [
+                        'model' => $model,
+                        'messages' => [
+                            [
+                                'role' => 'user',
+                                'content' => [
+                                    ['type' => 'text', 'text' => $prompt],
+                                    ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
+                                ],
+                            ],
+                        ],
+                        'temperature' => 0.1,
+                        'max_tokens' => 150,
+                    ]);
+                }
 
                 if ($response->successful()) {
                     $raw = $response->json('choices.0.message.content') ?? '{}';
