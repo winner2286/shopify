@@ -96,6 +96,9 @@ if [ "$AUTO_MIGRATE" = "true" ] || [ "$1" = "start-web" ] || [ -n "$RENDER" ]; t
     echo "Initialisation des formules d'abonnement (PlanSeeder)..."
     php artisan db:seed --class=PlanSeeder --force || true
 
+    echo "Initialisation de la base de connaissances RAG IA (AiKnowledgeSeeder)..."
+    php artisan db:seed --class=AiKnowledgeSeeder --force || true
+
     echo "Vérification et restauration persistante des médias..."
     php artisan media:restore-defaults || true
 fi
