@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AiConversation;
 use App\Models\AiMessage;
 use App\Models\Plan;
+use App\Models\Product;
 use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\User;
@@ -312,5 +313,52 @@ class AiConversationThreadTest extends TestCase
         $this->assertMatchesRegularExpression('/^- Fonctionnalités réellement actives :[^\n]*Scripts vidéo TikTok \/ Instagram Reels/m', $prompt);
         $this->assertDoesNotMatchRegularExpression('/^- Fonctionnalités NON disponibles[^\n]*Codes promotionnels/m', $prompt);
         $this->assertMatchesRegularExpression('/^- Fonctionnalités NON disponibles[^\n]*Exports comptables PDF automatisés/m', $prompt);
+        $this->assertMatchesRegularExpression('/^- Fonctionnalités NON disponibles[^\n]*Mode précommande automatique/m', $prompt);
+    }
+
+    public function test_short_greeting_cc_is_recognized_without_dumping_stock_alerts_or_preorder(): void
+    {
+        Product::withoutGlobalScopes()->create([
+            'shop_id' => $this->shop->id,
+            'title' => 'Mules à Talon Bordeaux',
+            'slug' => 'mules-talon-bordeaux',
+            'price' => 15000,
+            'stock' => 0,
+            'track_stock' => true,
+            'status' => Product::STATUS_ACTIVE,
+        ]);
+
+        $spyLlm = new class implements LlmProviderInterface {
+            public string $capturedSystemPrompt = '';
+
+            public function chat(array $messages, array $tools = [], array $options = []): array
+            {
+                $this->capturedSystemPrompt = (string) ($messages[0]['content'] ?? '');
+
+                return [
+                    'content' => 'Coucou ! Comment puis-je t’aider pour la boutique Boutique Test Thread aujourd’hui ?',
+                    'tool_calls' => null,
+                    'tokens_input' => 10,
+                    'tokens_output' => 12,
+                    'model_used' => 'test-model',
+                    'raw' => [],
+                ];
+            }
+        };
+
+        $orchestrator = new AiOrchestrator($spyLlm);
+        $result = $orchestrator->sendMessage($this->shop, $this->user, 'CC');
+
+        $this->assertEquals('success', $result['status']);
+        // Le nettoyeur ne doit pas couper "Coucou" quand l'utilisateur dit "CC"
+        $this->assertStringStartsWith('Coucou !', $result['message']['content']);
+
+        // Sur une salutation simple ("CC"), le prompt ne doit pas déverser les alertes de rupture de stock ni proposer de précommande
+        $prompt = $spyLlm->capturedSystemPrompt;
+        $this->assertStringContainsString('BAVARDAGE / SALUTATION SIMPLE', $prompt);
+        $this->assertStringNotContainsString('DIRECTIVE DE RÉPONSE DIRECTE SANS PRÉAMBULE', $prompt);
+        $this->assertStringNotContainsString('ALERTES COMMERCIALES PROACTIVES DU MOMENT', $prompt);
+        $this->assertStringNotContainsString('Mules à Talon Bordeaux', $prompt);
+        $this->assertStringNotContainsString('restock_or_preorder', $prompt);
     }
 }

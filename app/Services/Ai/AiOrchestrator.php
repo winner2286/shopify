@@ -425,6 +425,7 @@ class AiOrchestrator
 
         $restrictedFeatures = [
             'Exports comptables PDF automatisés (seuls les exports CSV commandes/statistiques existent sur Zanika)',
+            'Mode précommande automatique sur la vitrine (seule la mise à jour du stock ou la désactivation du produit existent)',
             'Connexion de nom de domaine personnalisé ou gestion multi-collaborateurs directement depuis le chat IA',
         ];
 
@@ -481,16 +482,18 @@ class AiOrchestrator
         // 2. Formatage des chunks de connaissances RAG
         $ragText = $this->rag->formatForPrompt($ragChunks);
 
-        // 3. Détection des alertes proactives du moment (seulement au 1er message ou si demandé pour éviter l'effet perroquet)
-        if ($priorMessagesCount === 0) {
+        // 3. Instructions de continuité conversationnelle et gestion des salutations simples
+        $hasGreeting = $this->messageContainsGreeting($userMessage);
+        $isPureGreeting = $this->isPureGreetingMessage($userMessage);
+
+        // 4. Détection des alertes proactives (jamais sur une simple salutation ni en boucle)
+        if ($isPureGreeting) {
+            $proactiveText = "--- BAVARDAGE / SALUTATION SIMPLE ---\nLe commerçant t'adresse une simple salutation sans poser de question opérationnelle.\nRÈGLE OBLIGATOIRE : Réponds chaleureusement et brièvement (1 à 2 phrases naturelles, avec le nom de sa boutique) et demande-lui comment tu peux l'aider aujourd'hui. N'affiche AUCUN rapport d'alertes ou de ruptures de stock non sollicité.\n--- FIN ---";
+        } elseif ($priorMessagesCount === 0) {
             $proactiveText = $this->proactiveAdvisor->formatForPrompt($shop);
         } else {
             $proactiveText = "--- NOTE SUR LES ALERTES DU MOMENT ---\nLa discussion est déjà en cours. Ne répète PAS les alertes de rupture de stock ou d'indicateurs déjà mentionnées au message précédent, sauf si le commerçant te pose expressément une question dessus.\n--- FIN NOTE ---";
         }
-
-        // 4. Instructions de continuité conversationnelle
-        $userMsgLower = mb_strtolower(trim($userMessage));
-        $hasGreeting = (bool) preg_match('/\b(bonjour|salut|hello|bonsoir|coucou|salam|marhaba|ahlan|hey)\b/ui', $userMsgLower);
 
         if ($hasGreeting && $priorMessagesCount > 0) {
             $threadingDirective = <<<THREAD
@@ -648,7 +651,7 @@ PROMPT;
 
         $userMsgLower = mb_strtolower(trim($userMessage));
 
-        $hasGreetingInUser = (bool) preg_match('/\b(bonjour|salut|hello|bonsoir|coucou|salam|marhaba|ahlan|hey)\b/ui', $userMsgLower);
+        $hasGreetingInUser = $this->messageContainsGreeting($userMessage);
         $hasHowAreYouInUser = (bool) preg_match('/\b(comment\s+(vas|allez|tu\s+vas|vous\s+allez)|(ça|ca)\s+va)\b/ui', $userMsgLower);
 
         // 1. Si l'utilisateur n'a pas expressément demandé comment va l'IA, supprimer "Je vais très bien...", "Ravi de vous retrouver"
@@ -678,6 +681,39 @@ PROMPT;
         }
 
         return trim($content);
+    }
+
+    /**
+     * Détermine si le message du commerçant contient une salutation explicite (y compris abréviations courantes comme CC/slt).
+     */
+    protected function messageContainsGreeting(string $message): bool
+    {
+        $normalized = mb_strtolower(trim($message));
+        if ($normalized === '') {
+            return false;
+        }
+
+        return (bool) preg_match(
+            '/\b(bonjour|bjr|bonsoir|bsr|salut|slt|coucou|cc|hello|hey|yo|salam|marhaba|ahlan)\b/ui',
+            $normalized
+        );
+    }
+
+    /**
+     * Vérifie si le message est uniquement une salutation courte sans demande opérationnelle.
+     */
+    protected function isPureGreetingMessage(string $message): bool
+    {
+        $stripped = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', mb_strtolower(trim($message)));
+        $stripped = trim((string) preg_replace('/\s+/', ' ', (string) $stripped));
+        if ($stripped === '') {
+            return false;
+        }
+
+        return (bool) preg_match(
+            '/^(bonjour|bjr|bonsoir|bsr|salut|slt|coucou|cc|hello|hey|yo|salam|marhaba|ahlan)(?:\s+(?:zanika|l\s+équipe|lequipe|la\s+team|tout\s+le\s+monde|ça\s+va|ca\s+va|comment\s+vas\s+tu|comment\s+tu\s+vas|comment\s+allez\s+vous))?$/ui',
+            $stripped
+        );
     }
 
     /**

@@ -176,4 +176,25 @@ class AiAgentPhase4Test extends TestCase
         $this->assertNotNull($memory);
         $this->assertStringContainsString('Briefing', $memory->memory_value);
     }
+
+    public function test_proactive_advisor_stock_alert_does_not_invent_preorder_or_trigger_on_greetings(): void
+    {
+        Product::withoutGlobalScopes()->create([
+            'shop_id' => $this->shop->id,
+            'title' => 'Robe Édition Limitée',
+            'slug' => 'robe-edition-limitee',
+            'price' => 25000,
+            'stock' => 0,
+            'track_stock' => true,
+            'status' => Product::STATUS_ACTIVE,
+        ]);
+
+        $advisor = new AiProactiveAdvisorService();
+        $formatted = $advisor->formatForPrompt($this->shop);
+
+        $this->assertStringContainsString('Robe Édition Limitée', $formatted);
+        $this->assertStringNotContainsStringIgnoringCase('précommande', $formatted);
+        $this->assertStringNotContainsStringIgnoringCase('restock_or_preorder', $formatted);
+        $this->assertStringNotContainsString('Si le commerçant te salue', $formatted);
+    }
 }

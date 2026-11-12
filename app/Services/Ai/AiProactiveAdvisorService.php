@@ -48,8 +48,8 @@ class AiProactiveAdvisorService
                 'title' => "Baisse de chiffre d'affaires (-{$dropPct}%) sur 7 jours",
                 'explanation' => "Le chiffre d'affaires de cette semaine est de " . number_format($revCurrent, 0, ',', ' ') . " {$shop->currency} contre " . number_format($revPrevious, 0, ',', ' ') . " {$shop->currency} la semaine précédente. Un ralentissement des ventes est constaté.",
                 'suggested_action' => [
-                    'action' => 'launch_whatsapp_broadcast',
-                    'label' => "Relancer les clients fidèles avec une offre flash WhatsApp",
+                    'action' => 'prepare_whatsapp_promo',
+                    'label' => "Préparer un message promotionnel WhatsApp à partager à vos clients fidèles",
                 ],
             ];
         }
@@ -104,10 +104,10 @@ class AiProactiveAdvisorService
                 'insight_type' => 'stock_critical',
                 'severity' => $severity,
                 'title' => $outOfStock->isNotEmpty() ? "Alerte : Ruptures de stock avérées" : "Alerte : Stocks proches de l'épuisement",
-                'explanation' => "{$lowStockProducts->count()} produit(s) nécessitent un réassort immédiat : {$names}." . ($lowStockProducts->count() > 3 ? " et d'autres." : ""),
+                'explanation' => "{$lowStockProducts->count()} produit(s) nécessitent une mise à jour de stock : {$names}." . ($lowStockProducts->count() > 3 ? " et d'autres." : ""),
                 'suggested_action' => [
-                    'action' => 'restock_or_preorder',
-                    'label' => "Lancer un réassort ou passer les articles en précommande sur la vitrine",
+                    'action' => 'update_product_stock',
+                    'label' => "Mettre à jour les quantités en stock depuis le catalogue (ou désactiver temporairement les articles épuisés)",
                 ],
             ];
         }
@@ -248,7 +248,7 @@ class AiProactiveAdvisorService
             $lines[] = "";
         }
 
-        $lines[] = "DIRECTIVE DE PROACTIVITÉ : Si le commerçant te salue ou te demande un point sur sa boutique, mentionne chaleureusement l'alerte prioritaire ci-dessus en lui proposant la solution d'action sans l'alarmer inutilement.";
+        $lines[] = "DIRECTIVE DE PROACTIVITÉ : N'évoque ces alertes QUE si le commerçant te demande un bilan de sa boutique, ses priorités, ses ventes ou ses stocks. Ne les mentionne JAMAIS en réponse à une simple salutation (ex: « Bonjour », « Salut », « CC »).";
         $lines[] = "--- FIN DES ALERTES PROACTIVES ---";
 
         return implode("\n", $lines);
