@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\AiConversation;
 use App\Models\AiMessage;
+use App\Models\Plan;
 use App\Models\Shop;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Ai\AiOrchestrator;
 use App\Services\Ai\Contracts\LlmProviderInterface;
@@ -186,5 +188,129 @@ class AiConversationThreadTest extends TestCase
 
         $this->assertEquals('success', $result['status']);
         $this->assertNotEquals($existingConv->id, $result['conversation_id']);
+    }
+
+    public function test_orchestrator_system_prompt_injects_plan_credits_features_and_strips_leaked_react_tags(): void
+    {
+        $essentielPlan = Plan::firstOrCreate(
+            ['slug' => 'essentiel'],
+            [
+                'name' => 'Essentiel',
+                'monthly_price' => 10000,
+                'max_products' => 50,
+                'storage_mb' => 2048,
+                'ai_credits' => 80,
+                'full_generations' => 1,
+                'active' => true,
+            ]
+        );
+
+        Subscription::create([
+            'shop_id' => $this->shop->id,
+            'plan_id' => $essentielPlan->id,
+            'status' => 'active',
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addMonth(),
+        ]);
+
+        $this->shop->update(['ai_credits_used' => 12]);
+        $this->shop->unsetRelation('subscription');
+
+        $spyLlm = new class implements LlmProviderInterface {
+            public string $capturedSystemPrompt = '';
+
+            public function chat(array $messages, array $tools = [], array $options = []): array
+            {
+                $this->capturedSystemPrompt = (string) ($messages[0]['content'] ?? '');
+
+                return [
+                    'content' => "Thought: Je vérifie les chiffres.\nAction: get_orders_summary\nAnswer: Voici votre résumé du jour.",
+                    'tool_calls' => null,
+                    'tokens_input' => 20,
+                    'tokens_output' => 15,
+                    'model_used' => 'test-model',
+                    'raw' => [],
+                ];
+            }
+        };
+
+        $orchestrator = new AiOrchestrator($spyLlm);
+        $result = $orchestrator->sendMessage($this->shop, $this->user, 'Fais-moi un résumé');
+
+        $this->assertEquals('success', $result['status']);
+        $this->assertSame('Voici votre résumé du jour.', $result['message']['content']);
+        $this->assertStringNotContainsString('Thought:', $result['message']['content']);
+        $this->assertStringNotContainsString('Answer:', $result['message']['content']);
+
+        $prompt = $spyLlm->capturedSystemPrompt;
+        $this->assertStringContainsString('Boutique Test Thread', $prompt);
+        $this->assertStringContainsString('Forfait actuel : Essentiel (essentiel)', $prompt);
+        $this->assertStringContainsString('Crédits IA restants : 68 / 80', $prompt);
+        $this->assertStringContainsString('Fonctionnalités réellement actives :', $prompt);
+        $this->assertStringContainsString('Gestion du catalogue & produits (0/50 produits utilisés)', $prompt);
+        $this->assertStringContainsString('Fonctionnalités NON disponibles', $prompt);
+        $this->assertStringContainsString('Codes promotionnels et réductions (réservés aux formules Pro et Premium)', $prompt);
+        $this->assertStringContainsString('Scripts vidéo TikTok / Instagram Reels', $prompt);
+        $this->assertStringContainsString('Exports comptables PDF automatisés', $prompt);
+        $this->assertStringContainsString('Contrôle des crédits', $prompt);
+        $this->assertStringContainsString('Anti-Hallucination & Respect du forfait', $prompt);
+        $this->assertStringContainsString('Confidentialité & Sécurité', $prompt);
+    }
+
+    public function test_orchestrator_system_prompt_unlocks_pro_features_on_pro_plan(): void
+    {
+        $proPlan = Plan::firstOrCreate(
+            ['slug' => 'pro'],
+            [
+                'name' => 'Pro',
+                'monthly_price' => 15000,
+                'max_products' => 300,
+                'storage_mb' => 8192,
+                'ai_credits' => 350,
+                'full_generations' => 2,
+                'active' => true,
+            ]
+        );
+
+        Subscription::create([
+            'shop_id' => $this->shop->id,
+            'plan_id' => $proPlan->id,
+            'status' => 'active',
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addMonth(),
+        ]);
+
+        $this->shop->unsetRelation('subscription');
+
+        $spyLlm = new class implements LlmProviderInterface {
+            public string $capturedSystemPrompt = '';
+
+            public function chat(array $messages, array $tools = [], array $options = []): array
+            {
+                $this->capturedSystemPrompt = (string) ($messages[0]['content'] ?? '');
+
+                return [
+                    'content' => 'Vos outils Pro sont prêts.',
+                    'tool_calls' => null,
+                    'tokens_input' => 15,
+                    'tokens_output' => 10,
+                    'model_used' => 'test-model',
+                    'raw' => [],
+                ];
+            }
+        };
+
+        $orchestrator = new AiOrchestrator($spyLlm);
+        $result = $orchestrator->sendMessage($this->shop, $this->user, 'Quelles options sont actives ?');
+
+        $this->assertEquals('success', $result['status']);
+
+        $prompt = $spyLlm->capturedSystemPrompt;
+        $this->assertStringContainsString('Forfait actuel : Pro (pro)', $prompt);
+        $this->assertStringContainsString('Crédits IA restants : 350 / 350', $prompt);
+        $this->assertMatchesRegularExpression('/^- Fonctionnalités réellement actives :[^\n]*Codes promotionnels et réductions \(\/codes-promo\)/m', $prompt);
+        $this->assertMatchesRegularExpression('/^- Fonctionnalités réellement actives :[^\n]*Scripts vidéo TikTok \/ Instagram Reels/m', $prompt);
+        $this->assertDoesNotMatchRegularExpression('/^- Fonctionnalités NON disponibles[^\n]*Codes promotionnels/m', $prompt);
+        $this->assertMatchesRegularExpression('/^- Fonctionnalités NON disponibles[^\n]*Exports comptables PDF automatisés/m', $prompt);
     }
 }

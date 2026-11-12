@@ -71,6 +71,15 @@ class GenerateVideoAdScriptTool implements AiToolInterface
         $productId = isset($arguments['product_id']) ? (int) $arguments['product_id'] : null;
         $customMessage = trim((string) ($arguments['custom_message'] ?? ''));
 
+        if (in_array($platform, ['tiktok', 'instagram'], true)
+            && ! $shop->canUseFeature('tiktok_ads')
+            && ! ($user?->isAdmin() || $shop->owner?->isAdmin())) {
+            return [
+                'status' => 'feature_restricted',
+                'error' => "La génération de scripts vidéo TikTok et Instagram est réservée aux formules Pro et Premium de Zanika. Votre boutique est actuellement sur la formule « {$shop->currentPlan()->name} ».",
+            ];
+        }
+
         // Vérification de sécurité multi-tenant sur le product_id
         if ($productId) {
             $productExists = Product::withoutGlobalScopes()

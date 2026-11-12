@@ -47,12 +47,12 @@ class AiOrchestrator
         $startTime = microtime(true);
 
         // 1. Vérification des crédits IA de la boutique (Illimité pour le Super-Admin)
-        $isAdmin = $user->isAdmin();
+        $isAdmin = $user->isAdmin() || (bool) $shop->owner?->isAdmin();
         $remainingCredits = $isAdmin ? 9999 : $shop->aiCreditsRemaining();
         if (! $isAdmin && $remainingCredits <= 0) {
             return [
                 'status' => 'quota_exceeded',
-                'message' => "Votre forfait actuel ne dispose plus de crédits IA disponibles pour ce mois. Veuillez passer à un forfait supérieur pour continuer à utiliser votre assistant ECOM AI.",
+                'message' => "Votre forfait actuel ne dispose plus de crédits IA disponibles pour ce mois. Veuillez recharger votre compte ou passer à un forfait supérieur pour continuer à utiliser votre copilote Zanika AI.",
                 'remaining_credits' => 0,
             ];
         }
@@ -98,8 +98,8 @@ class AiOrchestrator
         // 4. Recherche de connaissances RAG pertinentes pour la question
         $ragChunks = $this->rag->search($userMessage, null, 3);
 
-        // 5. Construction du System Prompt enrichi (RAG + Mémoire + Rôle + Contexte de fil)
-        $systemPrompt = $this->buildSystemPrompt($shop, $userMessage, $ragChunks, $priorMessagesCount);
+        // 5. Construction du System Prompt enrichi (Plan/Crédits/Droits + RAG + Mémoire + Contexte de fil)
+        $systemPrompt = $this->buildSystemPrompt($shop, $userMessage, $ragChunks, $priorMessagesCount, $user);
 
         // 6. Assemblage de l'historique des messages récents (16 derniers pour conserver du contexte)
         $history = $conversation->messages()
@@ -248,6 +248,7 @@ class AiOrchestrator
             ->whereNotNull('content')
             ->latest('id')
             ->first();
+        $finalContent = $this->cleanLeakedReActTags($finalContent);
         $finalContent = $this->cleanDuplicatedContent($finalContent, $prevAssistantMsg?->content);
         $finalContent = $this->cleanUnwantedGreetings($finalContent, $userMessage, $priorMessagesCount);
 
@@ -397,14 +398,82 @@ class AiOrchestrator
     }
 
     /**
-     * Assemble le System Prompt enrichi avec le profil boutique, la mémoire long terme, les alertes proactives et les documents RAG.
+     * Calcule le forfait actif, les crédits IA restants et les fonctionnalités autorisées ou restreintes de la boutique.
+     *
+     * @return array{plan_name: string, plan_slug: string, credits_display: string, active_features: string, restricted_features: string}
      */
-    protected function buildSystemPrompt(Shop $shop, string $userMessage, $ragChunks, int $priorMessagesCount = 0): string
+    protected function resolveShopCapabilities(Shop $shop, ?User $user = null): array
+    {
+        $isAdmin = (bool) ($user?->isAdmin() || $shop->owner?->isAdmin());
+        $plan = $shop->currentPlan();
+        $planName = $plan->name ?: 'Essentiel';
+        $planSlug = $plan->slug ?: 'essentiel';
+        $monthlyCredits = (int) $plan->ai_credits;
+        $remainingCredits = $isAdmin ? 9999 : $shop->aiCreditsRemaining();
+        $creditsDisplay = $isAdmin ? 'Illimité (Super-Admin)' : "{$remainingCredits} / {$monthlyCredits}";
+
+        $maxProducts = (int) $plan->max_products;
+        $productsCount = $shop->products()->count();
+
+        $activeFeatures = [
+            "Gestion du catalogue & produits ({$productsCount}/{$maxProducts} produits utilisés)",
+            'Suivi des commandes, statuts de livraison, risque COD et zones de livraison',
+            'Service client (réponses SAV et brouillons de messages WhatsApp/SMS)',
+            'Copies marketing simples (WhatsApp, Facebook, SMS, offres bundle)',
+            'Statistiques de ventes de base et export CSV (/commandes/exporter, /statistiques/exporter)',
+        ];
+
+        $restrictedFeatures = [
+            'Exports comptables PDF automatisés (seuls les exports CSV commandes/statistiques existent sur Zanika)',
+            'Connexion de nom de domaine personnalisé ou gestion multi-collaborateurs directement depuis le chat IA',
+        ];
+
+        $planGatedCatalog = [
+            'promo_codes' => [
+                'active' => 'Codes promotionnels et réductions (/codes-promo)',
+                'restricted' => 'Codes promotionnels et réductions (réservés aux formules Pro et Premium)',
+            ],
+            'tiktok_ads' => [
+                'active' => 'Scripts vidéo TikTok / Instagram Reels et visuels publicitaires IA',
+                'restricted' => 'Scripts vidéo TikTok / Instagram Reels et visuels publicitaires IA (réservés aux formules Pro et Premium)',
+            ],
+            'stock_alerts' => [
+                'active' => 'Alertes critiques de rupture et seuils de stock',
+                'restricted' => 'Alertes critiques automatisées de rupture de stock (réservées aux formules Pro et Premium)',
+            ],
+            'advanced_stats' => [
+                'active' => 'Analyses avancées et comparaison de périodes',
+                'restricted' => 'Analyses avancées et comparaison de périodes (réservées aux formules Pro et Premium)',
+            ],
+        ];
+
+        foreach ($planGatedCatalog as $featureKey => $labels) {
+            if ($isAdmin || $shop->canUseFeature($featureKey)) {
+                $activeFeatures[] = $labels['active'];
+            } else {
+                $restrictedFeatures[] = $labels['restricted'];
+            }
+        }
+
+        return [
+            'plan_name' => $planName,
+            'plan_slug' => $planSlug,
+            'credits_display' => $creditsDisplay,
+            'active_features' => implode(' ; ', $activeFeatures),
+            'restricted_features' => implode(' ; ', $restrictedFeatures),
+        ];
+    }
+
+    /**
+     * Assemble le System Prompt enrichi avec le profil boutique, le forfait/crédits/droits, la mémoire long terme, les alertes proactives et les documents RAG.
+     */
+    protected function buildSystemPrompt(Shop $shop, string $userMessage, $ragChunks, int $priorMessagesCount = 0, ?User $user = null): string
     {
         $shopName = $shop->name ?: 'Votre boutique';
         $currency = $shop->currency ?: 'FCFA';
         $category = $shop->business_category ?: 'Commerce de détail';
         $subdomain = $shop->subdomain ? "{$shop->subdomain}.zanika.shop" : 'Non configuré';
+        $capabilities = $this->resolveShopCapabilities($shop, $user);
 
         // 1. Récupération de la mémoire persistante de la boutique
         $memoryText = $this->memory->formatForPrompt($shop);
@@ -451,10 +520,27 @@ THREAD;
         }
 
         return <<<PROMPT
-Tu es **ZANIKA AI**, le copilote de direction commerciale et opérationnelle intégré à la plateforme E-Commerce Zanika.
-Tu travailles en binôme direct avec le commerçant propriétaire de la boutique **"{$shopName}"**.
+Tu es **ZANIKA AI**, l'assistant copilote IA officiel intégré à la plateforme e-commerce Zanika.
+Tu travailles en binôme direct avec le marchand propriétaire de la boutique **"{$shopName}"** pour gérer son catalogue, ses commandes, ses livraisons et son marketing.
 
 {$threadingDirective}
+
+CONTEXTE VÉRIFIÉ DE LA BOUTIQUE :
+- Nom commercial : {$shopName}
+- Secteur d'activité : {$category}
+- Forfait actuel : {$capabilities['plan_name']} ({$capabilities['plan_slug']})
+- Crédits IA restants : {$capabilities['credits_display']}
+- Fonctionnalités réellement actives : {$capabilities['active_features']}
+- Fonctionnalités NON disponibles (interdit de les proposer, promettre ou simuler) : {$capabilities['restricted_features']}
+- Devise monétaire officielle : {$currency}
+- URL publique vitrine : https://{$subdomain}
+- Marché principal : Afrique de l'Ouest (Togo, Bénin, Côte d'Ivoire, Sénégal...), avec forte prévalence du Paiement à la Livraison (Cash on Delivery - COD) et du Mobile Money.
+
+RÈGLES STRICTES DE GARDE-FOU (PRIORITÉ ABSOLUE) :
+1. **Contrôle des crédits** : Si les « Crédits IA restants » sont à 0, refuse poliment d'exécuter des actions de génération (textes, images, pubs, créations assistées) et invite le marchand à recharger son compte ou passer à un forfait supérieur.
+2. **Anti-Hallucination & Respect du forfait** : Ne propose, ne promets et n'exécute JAMAIS une fonctionnalité qui ne figure pas dans « Fonctionnalités réellement actives » (ex : n'invente jamais d'exports comptables PDF ni de codes promo ou scripts vidéo TikTok si la boutique n'y a pas accès selon son forfait ; oriente avec tact vers le forfait adapté si le marchand le demande).
+3. **Confidentialité & Sécurité** : Tu ne dois JAMAIS exposer de mots de passe, clés API, secrets, variables d'environnement, jetons de validation (`action_token`) ni d'identifiants techniques internes de Zanika.
+4. **Raisonnement ReAct via Outils Natifs (Sans balises internes)** : Raisonne étape par étape avant d'agir, appelle uniquement les outils JSON déclarés (`tool_calls`) pour lire ou modifier les données réelles de la boutique, appuie-toi strictement sur leurs résultats observés sans jamais inventer de chiffres, et formule ta réponse finale au marchand en français naturel (ou dans sa langue) **sans jamais afficher de balises techniques (`Thought:`, `Action:`, `Action Input:`, `Observation:`, `Answer:`) ni de JSON brut**.
 
 IDENTITÉ & POSTURE RELATIONNELLE NATURELLE :
 - Tu es un véritable collaborateur d'affaires professionnel, chaleureux, accessible et clairvoyant.
@@ -483,13 +569,6 @@ FLUIDITÉ CONVERSATIONNELLE & RÈGLES STRICTES DU FIL DE DISCUSSION :
 - **PAS DE PRÉAMBULE ROBOTIQUE NI DE RAPPEL DE RÔLE EN BOUCLE** : Une fois la conversation engagée, ne recommence pas tes messages par « Je suis une IA spécialisée... », « En tant que copilote Zanika... », ou en ramenant un sujet clos d'un message passé.
 - **PAS DE FORMULE DE CLÔTURE AUTOMATIQUE** : Ne colle pas la phrase « Dis-moi, comment puis-je t'aider aujourd'hui ? Y a-t-il quelque chose... » à la fin de chaque message. Termine simplement ta réponse ou pose une question pertinente liée uniquement au sujet en cours.
 - **RÉPONSE DIRECTE AUX QUESTIONS HORS-SUJET OU INAPPROPRIÉES (ex: pirater)** : Si le commerçant teste tes limites ou te demande une action illégale ou de pirater (« Tu peux me pirater un truc!? »), réponds en 1 à 2 phrases directes, calmes et avec une pointe d'humour sans moraliser (ex: « Haha non, je ne pirate rien du tout ! Mon seul super-pouvoir, c'est de booster les ventes et la gestion de ta boutique. Sur quel produit ou commande veux-tu qu'on avance ? »). Ne rejoue JAMAIS l'historique d'avant.
-
-INFORMATIONS TEMPS RÉEL SUR LA BOUTIQUE :
-- Nom commercial : {$shopName}
-- Secteur d'activité : {$category}
-- Devise monétaire officielle : {$currency}
-- URL publique vitrine : https://{$subdomain}
-- Marché principal : Afrique de l'Ouest (Togo, Bénin, Côte d'Ivoire, Sénégal...), avec forte prévalence du Paiement à la Livraison (Cash on Delivery - COD) et du Mobile Money.
 
 {$memoryText}
 
@@ -599,5 +678,25 @@ PROMPT;
         }
 
         return trim($content);
+    }
+
+    /**
+     * Supprime d'éventuelles balises ReAct brutes (Thought/Action/Observation/Answer) si un LLM de secours en génère.
+     */
+    public function cleanLeakedReActTags(string $content): string
+    {
+        $content = trim($content);
+        if ($content === '') {
+            return '';
+        }
+
+        if (preg_match('/(?:^|\n)\s*(?:Thought|Action|Observation)\s*:/i', $content)
+            && preg_match('/(?:^|\n)\s*Answer\s*:\s*(.+)$/is', $content, $matches)) {
+            return trim($matches[1]);
+        }
+
+        $cleaned = preg_replace('/^\s*Answer\s*:\s*/i', '', $content);
+
+        return trim((string) $cleaned);
     }
 }

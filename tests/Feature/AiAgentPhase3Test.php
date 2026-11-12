@@ -197,4 +197,40 @@ class AiAgentPhase3Test extends TestCase
         $this->assertEquals('error', $result['status']);
         $this->assertStringContainsString('n\'appartient pas à cette boutique', $result['message']);
     }
+
+    public function test_generate_video_ad_script_blocks_tiktok_on_essentiel_plan_but_allows_whatsapp(): void
+    {
+        $essentielPlan = Plan::firstOrCreate(
+            ['slug' => 'essentiel'],
+            [
+                'name' => 'Essentiel',
+                'monthly_price' => 10000,
+                'max_products' => 50,
+                'storage_mb' => 2048,
+                'ai_credits' => 80,
+                'full_generations' => 1,
+                'active' => true,
+            ]
+        );
+
+        $this->shop->subscription()->update(['plan_id' => $essentielPlan->id]);
+        $this->shop->unsetRelation('subscription');
+
+        $tool = new GenerateVideoAdScriptTool();
+
+        $blockedTikTok = $tool->execute($this->shop, [
+            'platform' => 'tiktok',
+            'angle' => 'nouveautes',
+        ], $this->user);
+
+        $this->assertEquals('feature_restricted', $blockedTikTok['status']);
+        $this->assertStringContainsString('Pro et Premium', $blockedTikTok['error']);
+
+        $allowedWhatsapp = $tool->execute($this->shop, [
+            'platform' => 'whatsapp',
+            'angle' => 'boutique',
+        ], $this->user);
+
+        $this->assertEquals('success', $allowedWhatsapp['status']);
+    }
 }
