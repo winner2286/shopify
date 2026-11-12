@@ -308,5 +308,10 @@ Artisan::command('ai:run-automations', function (\App\Services\Ai\AiMarketingAut
     ->name('ai-run-hourly-automations')
     ->withoutOverlapping();
 
+// Réinitialisation mensuelle des crédits IA le 1er jour de chaque mois à minuit
+\Illuminate\Support\Facades\Schedule::call(function () {
+    \App\Models\Shop::withoutGlobalScopes()->update(['ai_credits_used' => 0]);
+})->monthlyOn(1, '00:00')->name('reset-monthly-ai-credits');
+
 
 

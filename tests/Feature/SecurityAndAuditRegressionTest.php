@@ -670,4 +670,18 @@ class SecurityAndAuditRegressionTest extends TestCase
         $this->assertSame(4, $product->fresh()->stock);
         $this->assertSame(1, Order::withoutGlobalScopes()->where('shop_id', $proShop->id)->count());
     }
+
+    public function test_feexpay_renewal_resets_monthly_ai_credits_used(): void
+    {
+        [$merchant, $shop, $sub, $proPlan] = $this->createMerchantWithShop('renew-credit@test.tg', 'renew-shop', 'pro');
+
+        $shop->update(['ai_credits_used' => 250]);
+        $this->assertSame(250, (int) $shop->fresh()->ai_credits_used);
+
+        $feexPayService = app(\App\Services\FeexPayService::class);
+        $feexPayService->handleSubscriptionPaymentSuccess($sub, 'TX-RENEW-CREDIT-01', $proPlan);
+
+        $this->assertSame(0, (int) $shop->fresh()->ai_credits_used);
+        $this->assertSame(350, $shop->fresh()->aiCreditsRemaining());
+    }
 }
