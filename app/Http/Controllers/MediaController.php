@@ -471,8 +471,8 @@ SVG;
         $text = preg_replace('/-(\d+)\s*%/u', 'moins $1 pour cent', $text);
         $text = preg_replace('/(\d+)\s*%/u', '$1 pour cent', $text);
 
-        // 2. Prix avec devise explicite (ex: 1 000 FCFA, 15000 CFA, 2 500 F, 500 francs, etc.)
-        $currencyPattern = '/\b(\d[\d\s\xc2\xa0\x{202f}]*)\s*(FCFA|F\s*CFA|CFA|XOF|XAF|francs?|F)\b/iu';
+        // 2. Prix avec devise explicite (ex: 1 000 FCFA, 250 DH, 49 €, 15000 CFA, etc.)
+        $currencyPattern = '/\b(\d[\d\s\xc2\xa0\x{202f}]*)\s*(FCFA|F\s*CFA|CFA|XOF|XAF|francs?|F|MAD|DH|dirhams?|EUR|€|euros?|USD|\$|dollars?|GHS|GH₵|cedis?|GNF|FG)\b/iu';
         $text = preg_replace_callback($currencyPattern, function ($m) {
             $cleanDigits = preg_replace('/[\s\xc2\xa0\x{202f}]+/u', '', $m[1]);
             if (! is_numeric($cleanDigits)) {
@@ -480,9 +480,19 @@ SVG;
             }
             $val = (int) $cleanDigits;
             $words = $this->frenchNumberToWords($val);
+            $unitRaw = mb_strtoupper(trim($m[2]));
+
+            $spokenUnit = match (true) {
+                in_array($unitRaw, ['MAD', 'DH', 'DIRHAM', 'DIRHAMS'], true) => 'dirhams',
+                in_array($unitRaw, ['EUR', '€', 'EURO', 'EUROS'], true) => 'euros',
+                in_array($unitRaw, ['USD', '$', 'DOLLAR', 'DOLLARS'], true) => 'dollars',
+                in_array($unitRaw, ['GHS', 'GH₵', 'CEDI', 'CEDIS'], true) => 'cedis',
+                in_array($unitRaw, ['GNF', 'FG'], true) => 'francs guinéens',
+                default => 'francs',
+            };
 
             // Formulation orale naturelle pour la voix-off publicitaire
-            return $words . ' francs';
+            return $words . ' ' . $spokenUnit;
         }, $text);
 
         // 3. Nombres isolés formatés avec séparateurs de milliers (ex: 1 000, 15 000, 100 000)
@@ -497,8 +507,9 @@ SVG;
             return $this->frenchNumberToWords((int) $cleanDigits);
         }, $text);
 
-        // 4. Sigles monétaires orphelins (ex: "prix en FCFA")
+        // 4. Sigles monétaires orphelins (ex: "prix en FCFA" ou "en DH")
         $text = preg_replace('/(?<!francs\s)\b(?:FCFA|F\s*CFA)\b/iu', 'francs', $text);
+        $text = preg_replace('/\b(?:MAD|DH)\b/u', 'dirhams', $text);
 
         return trim($text);
     }

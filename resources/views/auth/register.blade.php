@@ -26,14 +26,52 @@
                 @enderror
             </div>
 
-            <div class="field">
-                <label for="country">Pays</label>
-                <select id="country" name="country" class="select">
-                    @foreach ($countries as $code => $label)
-                        <option value="{{ $code === 'OTHER' ? 'XX' : $code }}" @selected(old('country', 'TG') === $code)>{{ $label }}</option>
-                    @endforeach
-                </select>
+            @php
+                $currencies = $currencies ?? config('platform.currencies', []);
+                $countryProfiles = $countryProfiles ?? config('platform.country_profiles', []);
+                $countryCurrencyMap = [];
+                foreach ($countryProfiles as $cCode => $cProfile) {
+                    $countryCurrencyMap[$cCode === 'OTHER' ? 'XX' : $cCode] = $cProfile['currency'] ?? 'XOF';
+                }
+            @endphp
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem">
+                <div class="field">
+                    <label for="country">Pays</label>
+                    <select id="country" name="country" class="select">
+                        @foreach ($countries as $code => $label)
+                            @php $optVal = $code === 'OTHER' ? 'XX' : $code; @endphp
+                            <option value="{{ $optVal }}" @selected(old('country', 'TG') === $optVal || old('country', 'TG') === $code)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="currency">Devise de la boutique</label>
+                    <select id="currency" name="currency" class="select">
+                        @foreach ($currencies as $currCode => $currMeta)
+                            <option value="{{ $currCode }}" @selected(old('currency', 'XOF') === $currCode)>{{ $currMeta['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
+            <div class="hint" style="margin-top:-.4rem;margin-bottom:.85rem">La devise, les zones de livraison et les moyens de paiement s'adaptent automatiquement à votre pays.</div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const countrySelect = document.getElementById('country');
+                    const currencySelect = document.getElementById('currency');
+                    const map = @json($countryCurrencyMap);
+                    if (countrySelect && currencySelect) {
+                        countrySelect.addEventListener('change', function () {
+                            const targetCurrency = map[this.value];
+                            if (targetCurrency) {
+                                currencySelect.value = targetCurrency;
+                            }
+                        });
+                    }
+                });
+            </script>
 
             <div class="field">
                 <label for="password">Mot de passe</label>

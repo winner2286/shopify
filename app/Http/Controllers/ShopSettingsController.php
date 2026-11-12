@@ -35,6 +35,7 @@ class ShopSettingsController extends Controller
     {
         $shop = $request->user()->shop;
         $reserved = config('platform.reserved_subdomains', []);
+        $validCurrencies = array_keys(config('platform.currencies', ['XOF' => []]));
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -50,6 +51,8 @@ class ShopSettingsController extends Controller
             'description' => ['nullable', 'string', 'max:500'],
             'brand_color' => ['required', 'string', 'regex:/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/'],
             'business_category' => ['nullable', 'string', 'max:60'],
+            'country' => ['nullable', 'string', 'max:5'],
+            'currency' => ['nullable', 'string', Rule::in($validCurrencies)],
             'phone' => ['nullable', 'string', 'max:30'],
             'whatsapp' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:100'],
@@ -66,12 +69,25 @@ class ShopSettingsController extends Controller
             'logo.max' => 'La taille maximale du logo est de 5 Mo.',
         ]);
 
+        $previousCountry = $shop->countryCode();
+        $newCountry = ! empty($validated['country'])
+            ? strtoupper(trim($validated['country']))
+            : $previousCountry;
+        if ($newCountry === 'XX') {
+            $newCountry = 'OTHER';
+        }
+        $profile = config("platform.country_profiles.{$newCountry}") ?? config('platform.country_profiles.TG');
+        $newCurrency = ! empty($validated['currency'])
+            ? strtoupper(trim($validated['currency']))
+            : ($newCountry !== $previousCountry ? ($profile['currency'] ?? 'XOF') : $shop->currencyCode());
+
         $contact = $shop->contact ?? [];
+        $contact['country'] = $newCountry;
         $contact['phone'] = $validated['phone'] ?? null;
         $contact['whatsapp'] = $validated['whatsapp'] ?? null;
         $contact['email'] = $validated['email'] ?? null;
         $contact['address'] = $validated['address'] ?? null;
-        $contact['city'] = $validated['city'] ?? 'Lomé';
+        $contact['city'] = ! empty($validated['city']) ? $validated['city'] : ($profile['city'] ?? 'Lomé');
         $contact['maps_url'] = $validated['maps_url'] ?? null;
 
         $updateData = [
@@ -80,8 +96,13 @@ class ShopSettingsController extends Controller
             'description' => $validated['description'] ?? null,
             'brand_color' => $validated['brand_color'],
             'business_category' => $validated['business_category'] ?? $shop->business_category,
+            'currency' => $newCurrency,
             'contact' => $contact,
         ];
+
+        if ($request->user() && $newCountry !== $previousCountry) {
+            $request->user()->update(['country' => $newCountry === 'OTHER' ? 'XX' : $newCountry]);
+        }
 
         // Gestion de l'upload du logo personnalisé
         if ($request->hasFile('logo')) {

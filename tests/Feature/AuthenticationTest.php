@@ -287,4 +287,61 @@ class AuthenticationTest extends TestCase
         $this->post('/deconnexion-totale')->assertRedirect('/');
         $this->assertGuest();
     }
+
+    public function test_inscription_adapte_devise_ville_et_zones_de_livraison_selon_pays(): void
+    {
+        Mail::fake();
+
+        $this->post('/inscription', $this->payload([
+            'email' => 'casa@example.test',
+            'country' => 'MA',
+        ]))->assertRedirect('/verification');
+
+        $user = User::where('email', 'casa@example.test')->firstOrFail();
+        $shop = $user->shop()->firstOrFail();
+
+        $this->assertSame('MA', $user->country);
+        $this->assertSame('MA', $shop->countryCode());
+        $this->assertSame('MAD', $shop->currencyCode());
+        $this->assertSame('DH', $shop->currencyLabel());
+        $this->assertSame('Casablanca', $shop->city);
+
+        $zoneNames = $shop->shippingZones()->pluck('name')->all();
+        $this->assertContains('Casablanca & Rabat Intra-muros', $zoneNames);
+    }
+
+    public function test_parametres_boutique_permettent_de_changer_pays_et_devise_et_adaptent_ia(): void
+    {
+        $user = $this->verifiedUser();
+        $shop = \App\Models\Shop::create([
+            'user_id' => $user->id,
+            'name' => 'Boutique Abidjan',
+            'subdomain' => 'boutique-abidjan',
+            'status' => \App\Models\Shop::DRAFT,
+            'brand_color' => '#6d3df2',
+            'currency' => 'XOF',
+        ]);
+
+        $this->actingAs($user)->post(route('shop.settings.update'), [
+            'name' => 'Boutique Casa',
+            'subdomain' => 'boutique-casa',
+            'brand_color' => '#6d3df2',
+            'country' => 'MA',
+            'currency' => 'MAD',
+        ])->assertRedirect(route('shop.settings'));
+
+        $shop->refresh();
+        $this->assertSame('MA', $shop->countryCode());
+        $this->assertSame('MAD', $shop->currencyCode());
+        $this->assertSame('DH', $shop->currencyLabel());
+        $this->assertSame('Casablanca', $shop->city);
+
+        $orchestrator = app(\App\Services\AI\AiOrchestrator::class);
+        $ref = new \ReflectionMethod($orchestrator, 'buildSystemPrompt');
+        $ref->setAccessible(true);
+        $prompt = $ref->invoke($orchestrator, $shop, 'Quels sont mes tarifs ?', collect(), 0, $user->fresh());
+
+        $this->assertStringContainsString('Maroc (Casablanca)', $prompt);
+        $this->assertStringContainsString('DH (MAD)', $prompt);
+    }
 }

@@ -189,7 +189,7 @@ class StorefrontController extends Controller
         $cartCount = $this->cartService->getItemsCount($shop);
 
         // Message WhatsApp pré-rempli pour commande rapide
-        $waMessage = urlencode("Bonjour {$shop->name}, je souhaite commander l'article suivant :\n- {$product->title}\n- Prix : " . number_format($product->price, 0, ',', ' ') . " FCFA\nLien : " . url()->current());
+        $waMessage = urlencode("Bonjour {$shop->name}, je souhaite commander l'article suivant :\n- {$product->title}\n- Prix : " . number_format($product->price, 0, ',', ' ') . ' ' . $shop->currencyLabel() . "\nLien : " . url()->current());
         $waUrl = $shop->whatsapp_formatted ? "https://wa.me/{$shop->whatsapp_formatted}?text={$waMessage}" : null;
 
         return view('storefront.product', compact('shop', 'product', 'relatedProducts', 'preview', 'cartCount', 'waUrl'));
@@ -260,7 +260,7 @@ class StorefrontController extends Controller
         if ($request->wantsJson()) {
             $result['count'] = $this->cartService->getItemsCount($shop);
             $result['subtotal'] = $this->cartService->getSubtotal($shop);
-            $result['subtotal_formatted'] = number_format($result['subtotal'], 0, ',', ' ') . ' FCFA';
+            $result['subtotal_formatted'] = number_format($result['subtotal'], 0, ',', ' ') . ' ' . $shop->currencyLabel();
             return response()->json($result);
         }
 

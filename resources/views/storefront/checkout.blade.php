@@ -3,6 +3,10 @@
 @section('title', 'Finaliser ma commande - ' . $shop->name)
 
 @section('content')
+@php
+    $currencyLabel = $shop->currencyLabel();
+    $countryProfile = $shop->countryProfile();
+@endphp
 <div class="container" style="max-width:960px;padding-top:2.5rem;padding-bottom:4rem">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
         <div>
@@ -51,7 +55,7 @@
 
                         <div>
                             <label for="customer_phone" class="label">Numéro de Téléphone (WhatsApp) *</label>
-                            <input id="customer_phone" type="tel" name="customer_phone" value="{{ old('customer_phone') }}" required placeholder="Ex. 90 12 34 56" class="input">
+                            <input id="customer_phone" type="tel" name="customer_phone" value="{{ old('customer_phone') }}" required placeholder="Ex. {{ $countryProfile['phone_placeholder'] ?? '90 12 34 56' }}" class="input">
                             <p class="hint">Indispensable pour que le livreur puisse vous joindre.</p>
                         </div>
 
@@ -87,7 +91,7 @@
                                     </div>
 
                                     <div style="font-weight:700;font-size:1rem;color:{{ $fee === 0 ? 'var(--ok)' : 'var(--text)' }}">
-                                        {{ $fee === 0 ? 'Gratuit' : number_format($fee, 0, ',', ' ') . ' FCFA' }}
+                                        {{ $fee === 0 ? 'Gratuit' : number_format($fee, 0, ',', ' ') . ' ' . $currencyLabel }}
                                     </div>
                                 </label>
                             @endforeach
@@ -105,7 +109,7 @@
                             </button>
                         </div>
 
-                        <input id="delivery_address" type="text" name="delivery_address" value="{{ old('delivery_address') }}" placeholder="Ex. Tokoin Doumasséssé, près de la pharmacie" class="input">
+                        <input id="delivery_address" type="text" name="delivery_address" value="{{ old('delivery_address') }}" placeholder="{{ $countryProfile['address_placeholder'] ?? 'Ex. Tokoin Doumasséssé, près de la pharmacie' }}" class="input">
 
                         <!-- Cadre de retour visuel et carte interactive Maps -->
                         <div id="geo-feedback-box" style="display:none;margin-top:.6rem;padding:.75rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm)">
@@ -156,7 +160,7 @@
                                     <span class="badge" style="background:#FF2D6D;color:#fff;font-size:.72rem;font-weight:700;padding:.15rem .45rem">Recommandé</span>
                                 </div>
                                 <div style="font-size:.84rem;color:var(--text-soft);margin-top:.2rem">
-                                    T-Money, Flooz, MTN, Moov, Orange, Wave et Cartes bancaires (Visa / Mastercard).
+                                    {{ $countryProfile['feexpay_subtitle'] ?? 'T-Money, Flooz, MTN, Moov, Orange, Wave et Cartes bancaires (Visa / Mastercard).' }}
                                 </div>
                             </div>
                         </label>
@@ -165,23 +169,23 @@
                             <input type="radio" name="payment_method" value="cash_on_delivery" {{ old('payment_method') === 'cash_on_delivery' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
                             <div style="flex:1">
                                 <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="wallet" size="16" /> Espèces à la livraison</div>
-                                <div style="font-size:.85rem;color:var(--text-soft)">Réglez directement en espèces au livreur lors de la réception de votre colis.</div>
+                                <div style="font-size:.85rem;color:var(--text-soft)">Réglez directement en espèces ({{ $currencyLabel }}) au livreur lors de la réception de votre colis.</div>
                             </div>
                         </label>
 
                         <label style="display:flex;align-items:center;gap:.75rem;padding:.9rem 1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer">
                             <input type="radio" name="payment_method" value="tmoney" {{ old('payment_method') === 'tmoney' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
                             <div style="flex:1">
-                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> T-Money direct (Togocom)</div>
-                                <div style="font-size:.85rem;color:var(--text-soft)">Paiement manuel direct par transfert T-Money.</div>
+                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> {{ $countryProfile['mobile_primary_label'] ?? 'T-Money direct (Togocom)' }}</div>
+                                <div style="font-size:.85rem;color:var(--text-soft)">{{ $countryProfile['mobile_primary_desc'] ?? 'Paiement manuel direct par transfert T-Money.' }}</div>
                             </div>
                         </label>
 
                         <label style="display:flex;align-items:center;gap:.75rem;padding:.9rem 1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer">
                             <input type="radio" name="payment_method" value="flooz" {{ old('payment_method') === 'flooz' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
                             <div style="flex:1">
-                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> Flooz direct (Moov Africa)</div>
-                                <div style="font-size:.85rem;color:var(--text-soft)">Paiement manuel direct par compte Flooz.</div>
+                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> {{ $countryProfile['mobile_secondary_label'] ?? 'Flooz direct (Moov Africa)' }}</div>
+                                <div style="font-size:.85rem;color:var(--text-soft)">{{ $countryProfile['mobile_secondary_desc'] ?? 'Paiement manuel direct par compte Flooz.' }}</div>
                             </div>
                         </label>
                     </div>
@@ -206,7 +210,7 @@
                                 </span>
                             </div>
                             <div style="font-weight:600;font-family:var(--font-display)">
-                                {{ number_format($it['price'] * $it['quantity'], 0, ',', ' ') }} FCFA
+                                {{ number_format($it['price'] * $it['quantity'], 0, ',', ' ') }} {{ $currencyLabel }}
                             </div>
                         </div>
                     @endforeach
@@ -232,13 +236,13 @@
                 <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;flex-direction:column;gap:.6rem;font-size:.95rem">
                     <div style="display:flex;justify-content:space-between;color:var(--text-soft)">
                         <span>Sous-total :</span>
-                        <span style="font-weight:600;color:var(--text)">{{ number_format($subtotal, 0, ',', ' ') }} FCFA</span>
+                        <span style="font-weight:600;color:var(--text)">{{ number_format($subtotal, 0, ',', ' ') }} {{ $currencyLabel }}</span>
                     </div>
 
                     @if (($discountAmount ?? 0) > 0 && ! empty($appliedPromo))
                         <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:600">
                             <span>Code promo ({{ $appliedPromo->code }}) :</span>
-                            <span>-{{ number_format($discountAmount, 0, ',', ' ') }} FCFA</span>
+                            <span>-{{ number_format($discountAmount, 0, ',', ' ') }} {{ $currencyLabel }}</span>
                         </div>
                     @endif
 
@@ -250,14 +254,14 @@
                     <div style="display:flex;justify-content:space-between;color:var(--text-soft)">
                         <span>Frais de livraison :</span>
                         <span id="shipping-display" style="font-weight:600;color:var(--text)">
-                            {{ $firstFee === 0 ? 'Gratuit' : number_format($firstFee, 0, ',', ' ') . ' FCFA' }}
+                            {{ $firstFee === 0 ? 'Gratuit' : number_format($firstFee, 0, ',', ' ') . ' ' . $currencyLabel }}
                         </span>
                     </div>
 
                     <div style="border-top:2px dashed var(--border);padding-top:.9rem;margin-top:.4rem;display:flex;justify-content:space-between;align-items:baseline">
                         <span style="font-size:1.15rem;font-weight:700">Total à payer :</span>
                         <span id="total-display" style="font-size:1.7rem;font-weight:700;font-family:var(--font-display);color:var(--text)">
-                            {{ number_format($initialTotal, 0, ',', ' ') }} FCFA
+                            {{ number_format($initialTotal, 0, ',', ' ') }} {{ $currencyLabel }}
                         </span>
                     </div>
                 </div>
@@ -278,10 +282,11 @@
 <script>
     const subtotal = {{ $subtotal }};
     const promoDiscount = {{ (int) ($discountAmount ?? 0) }};
+    const currencyLabel = @json($currencyLabel);
     function updateShipping(fee) {
         const total = Math.max(0, subtotal - promoDiscount) + fee;
-        document.getElementById('shipping-display').innerText = fee === 0 ? 'Gratuit' : fee.toLocaleString('fr-FR') + ' FCFA';
-        document.getElementById('total-display').innerText = total.toLocaleString('fr-FR') + ' FCFA';
+        document.getElementById('shipping-display').innerText = fee === 0 ? 'Gratuit' : fee.toLocaleString('fr-FR') + ' ' + currencyLabel;
+        document.getElementById('total-display').innerText = total.toLocaleString('fr-FR') + ' ' + currencyLabel;
     }
 
     function useCurrentLocation() {

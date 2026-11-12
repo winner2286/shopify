@@ -3,6 +3,10 @@
 @section('title', 'Mon panier - ' . $shop->name)
 
 @section('content')
+@php
+    $currencyLabel = $shop->currencyLabel();
+    $countryProfile = $shop->countryProfile();
+@endphp
 <style>
     .cart-wrapper {
         max-width: 760px;
@@ -466,7 +470,7 @@
                             </div>
 
                             <div class="cart-product-unit">
-                                Prix unitaire : {{ number_format($item['price'], 0, ',', ' ') }} FCFA
+                                Prix unitaire : {{ number_format($item['price'], 0, ',', ' ') }} {{ $currencyLabel }}
                             </div>
 
                             <div class="cart-product-bottom">
@@ -479,7 +483,7 @@
                                 </form>
 
                                 <div class="cart-product-total">
-                                    {{ number_format($item['price'] * $item['quantity'], 0, ',', ' ') }} FCFA
+                                    {{ number_format($item['price'] * $item['quantity'], 0, ',', ' ') }} {{ $currencyLabel }}
                                 </div>
                             </div>
                         </div>
@@ -497,7 +501,7 @@
                 </form>
 
                 <div class="cart-secure-text">
-                    <x-icon name="check-circle" size="13" style="color:var(--ok)" /> Paiement T-Money, Flooz ou à la livraison
+                    <x-icon name="check-circle" size="13" style="color:var(--ok)" /> {{ $countryProfile['feexpay_subtitle'] ?? 'Paiement Mobile Money ou à la livraison' }}
                 </div>
             </div>
         </div>
@@ -510,7 +514,7 @@
 
             <div class="cart-summary-row">
                 <span>Sous-total des articles :</span>
-                <strong>{{ number_format($subtotal, 0, ',', ' ') }} FCFA</strong>
+                <strong>{{ number_format($subtotal, 0, ',', ' ') }} {{ $currencyLabel }}</strong>
             </div>
 
             <div class="cart-summary-row">
@@ -523,7 +527,7 @@
             <div class="cart-summary-total-row">
                 <span class="cart-summary-total-label">Total à régler :</span>
                 <span class="cart-summary-total-value">
-                    {{ number_format($subtotal, 0, ',', ' ') }} FCFA
+                    {{ number_format($subtotal, 0, ',', ' ') }} {{ $currencyLabel }}
                 </span>
             </div>
 
@@ -531,9 +535,9 @@
             @php
                 $waSummary = "Bonjour {$shop->name}, je souhaite valider mon panier :\n";
                 foreach ($cart as $it) {
-                    $waSummary .= "- {$it['quantity']}x {$it['title']} (" . number_format($it['price'] * $it['quantity'], 0, ',', ' ') . " FCFA)\n";
+                    $waSummary .= "- {$it['quantity']}x {$it['title']} (" . number_format($it['price'] * $it['quantity'], 0, ',', ' ') . " {$currencyLabel})\n";
                 }
-                $waSummary .= "TOTAL : " . number_format($subtotal, 0, ',', ' ') . " FCFA\n";
+                $waSummary .= "TOTAL : " . number_format($subtotal, 0, ',', ' ') . " {$currencyLabel}\n";
                 $waUrl = $shop->whatsapp_formatted ? "https://wa.me/{$shop->whatsapp_formatted}?text=" . urlencode($waSummary) : null;
             @endphp
 

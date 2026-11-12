@@ -5,6 +5,8 @@
 
 @section('content')
 @php
+    $currencyLabel = $shop->currencyLabel();
+    $countryProfile = $shop->countryProfile();
     $images = $product->images;
     $firstImg = $images->first();
     $hasDiscount = $product->compare_at_price && $product->compare_at_price > $product->price;
@@ -92,11 +94,11 @@
             <div style="background:var(--surface);border:1px solid color-mix(in srgb, var(--store-primary) 22%, var(--border));border-radius:var(--radius-sm);padding:1.3rem;margin-bottom:1.5rem;box-shadow:0 6px 20px rgba(0,0,0,0.08)">
                 <div style="display:flex;align-items:baseline;gap:.8rem">
                     <span style="font-size:2.2rem;font-weight:800;font-family:var(--font-display);color:var(--text);letter-spacing:-.02em">
-                        {{ number_format($product->price, 0, ',', ' ') }} FCFA
+                        {{ number_format($product->price, 0, ',', ' ') }} {{ $currencyLabel }}
                     </span>
                     @if ($hasDiscount)
                         <span style="font-size:1.15rem;color:var(--text-faint);text-decoration:line-through">
-                            {{ number_format($product->compare_at_price, 0, ',', ' ') }} FCFA
+                            {{ number_format($product->compare_at_price, 0, ',', ' ') }} {{ $currencyLabel }}
                         </span>
                     @endif
                 </div>
@@ -164,11 +166,11 @@
             <div style="background:var(--bg-soft);border:1px solid color-mix(in srgb, var(--store-primary) 15%, var(--border));border-radius:var(--radius-sm);padding:1.1rem 1.3rem;margin-top:2rem;display:flex;flex-direction:column;gap:.75rem;font-size:.85rem">
                 <div style="display:flex;align-items:center;gap:.65rem">
                     <span style="color:var(--store-primary)"><x-icon name="truck" size="18" /></span>
-                    <span><strong>Livraison garantie :</strong> Expédition rapide à Lomé et dans toutes les régions du Togo.</span>
+                    <span><strong>Livraison garantie :</strong> Expédition rapide à {{ $shop->city ?: ($countryProfile['city'] ?? 'Lomé') }} et partout en {{ $countryProfile['name'] ?? 'Afrique' }}.</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:.65rem">
                     <span style="color:var(--store-primary)"><x-icon name="wallet" size="18" /></span>
-                    <span><strong>Paiement facile :</strong> T-Money, Flooz ou à la livraison en espèces.</span>
+                    <span><strong>Paiement facile :</strong> {{ $countryProfile['feexpay_subtitle'] ?? 'Mobile Money' }} ou à la livraison en espèces ({{ $currencyLabel }}).</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:.65rem">
                     <span style="color:var(--store-primary)"><x-icon name="shield" size="18" /></span>
@@ -198,14 +200,14 @@
                         $relHasDiscount = $rel->compare_at_price && $rel->compare_at_price > $rel->price;
                         $relDiscountPct = $relHasDiscount ? round((($rel->compare_at_price - $rel->price) / $rel->compare_at_price) * 100) : 0;
                         $relCat = $rel->categories->first()?->name ?? '';
-                        $relWaUrl = $shop->whatsapp_formatted ? 'https://wa.me/' . $shop->whatsapp_formatted . '?text=' . urlencode('Bonjour ' . $shop->name . ', je souhaite commander "' . $rel->title . '" à ' . number_format($rel->price, 0, ',', ' ') . ' FCFA : ' . url('/b/' . $shop->subdomain . '/produits/' . $rel->slug)) : null;
+                        $relWaUrl = $shop->whatsapp_formatted ? 'https://wa.me/' . $shop->whatsapp_formatted . '?text=' . urlencode('Bonjour ' . $shop->name . ', je souhaite commander "' . $rel->title . '" à ' . number_format($rel->price, 0, ',', ' ') . ' ' . $currencyLabel . ' : ' . url('/b/' . $shop->subdomain . '/produits/' . $rel->slug)) : null;
                     @endphp
                     <article class="product-card reveal-on-scroll in-view"
                         style="--delay: {{ $loop->index % 8 }}"
                         data-product-id="{{ $rel->id }}"
                         data-product-title="{{ $rel->title }}"
-                        data-product-price="{{ number_format($rel->price, 0, ',', ' ') }} FCFA"
-                        data-product-old-price="{{ $relHasDiscount ? number_format($rel->compare_at_price, 0, ',', ' ') . ' FCFA' : '' }}"
+                        data-product-price="{{ number_format($rel->price, 0, ',', ' ') }} {{ $currencyLabel }}"
+                        data-product-old-price="{{ $relHasDiscount ? number_format($rel->compare_at_price, 0, ',', ' ') . ' ' . $currencyLabel : '' }}"
                         data-product-discount="{{ $relDiscountPct }}"
                         data-product-description="{{ e($rel->description) }}"
                         data-product-category="{{ $relCat }}"
@@ -254,9 +256,9 @@
                                 </a>
                             </h3>
                             <div class="product-price-box">
-                                <span class="product-price">{{ number_format($rel->price, 0, ',', ' ') }} FCFA</span>
+                                <span class="product-price">{{ number_format($rel->price, 0, ',', ' ') }} {{ $currencyLabel }}</span>
                                 @if ($relHasDiscount)
-                                    <span class="product-old-price">{{ number_format($rel->compare_at_price, 0, ',', ' ') }} FCFA</span>
+                                    <span class="product-old-price">{{ number_format($rel->compare_at_price, 0, ',', ' ') }} {{ $currencyLabel }}</span>
                                 @endif
                             </div>
                             <div style="margin-top:.85rem;display:flex;align-items:center;gap:.45rem">
@@ -293,7 +295,7 @@
                 {{ $product->title }}
             </div>
             <div style="font-size:.88rem;font-weight:800;color:var(--store-primary)">
-                {{ number_format($product->price, 0, ',', ' ') }} FCFA
+                {{ number_format($product->price, 0, ',', ' ') }} {{ $currencyLabel }}
             </div>
         </div>
     </div>

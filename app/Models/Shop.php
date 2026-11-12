@@ -210,7 +210,81 @@ class Shop extends Model
     }
 
     /**
-     * Initialise les zones de livraison types pour le Togo si aucune n'est configurée
+     * Retourne le code pays ISO-2 de la boutique (ex: TG, CI, SN, MA, FR...)
+     */
+    public function countryCode(): string
+    {
+        $code = strtoupper(trim((string) ($this->contact['country'] ?? $this->owner?->country ?? 'TG')));
+        if ($code === 'XX' || $code === '') {
+            $code = 'OTHER';
+        }
+        $profiles = config('platform.country_profiles', []);
+
+        return isset($profiles[$code]) ? $code : 'TG';
+    }
+
+    /**
+     * Retourne le profil complet du pays de la boutique (devise par défaut, ville, indicatif, zones, Mobile Money)
+     */
+    public function countryProfile(): array
+    {
+        $profiles = config('platform.country_profiles', []);
+        $code = $this->countryCode();
+
+        return $profiles[$code] ?? $profiles['TG'] ?? [
+            'name' => 'Togo',
+            'currency' => 'XOF',
+            'city' => 'Lomé',
+            'phone_prefix' => '+228',
+            'phone_placeholder' => '+228 90 00 00 00',
+            'address_placeholder' => 'Ex. Tokoin Doumasséssé, près de la pharmacie',
+            'feexpay_subtitle' => 'T-Money, Flooz, MTN, Moov, Orange, Wave et Cartes bancaires.',
+            'mobile_primary_label' => 'T-Money direct (Togocom)',
+            'mobile_primary_desc' => 'Paiement manuel direct par transfert T-Money.',
+            'mobile_secondary_label' => 'Flooz direct (Moov Africa)',
+            'mobile_secondary_desc' => 'Paiement manuel direct par compte Flooz.',
+            'shipping_zones' => [],
+        ];
+    }
+
+    /**
+     * Retourne le code ISO de la devise (XOF, XAF, MAD, GHS, GNF, EUR, USD)
+     */
+    public function currencyCode(): string
+    {
+        $raw = strtoupper(trim((string) ($this->currency ?? '')));
+        $currencies = config('platform.currencies', []);
+        if (isset($currencies[$raw])) {
+            return $raw;
+        }
+        if ($raw === 'FCFA' || $raw === '') {
+            return $this->countryProfile()['currency'] ?? 'XOF';
+        }
+
+        return $raw;
+    }
+
+    /**
+     * Retourne le symbole / libellé court d'affichage de la devise (ex: FCFA, DH, GH₵, FG, €, $)
+     */
+    public function currencyLabel(): string
+    {
+        $code = $this->currencyCode();
+        $currencies = config('platform.currencies', []);
+
+        return $currencies[$code]['symbol'] ?? ($this->currency ?: 'FCFA');
+    }
+
+    /**
+     * Formate un montant numérique avec la devise de la boutique
+     */
+    public function formatAmount(int|float $amount): string
+    {
+        return number_format((float) $amount, 0, ',', ' ') . ' ' . $this->currencyLabel();
+    }
+
+    /**
+     * Initialise les zones de livraison types selon le pays de la boutique si aucune n'est configurée
      */
     public function ensureDefaultShippingZones(): void
     {
@@ -218,7 +292,8 @@ class Shop extends Model
             return;
         }
 
-        $defaults = [
+        $profile = $this->countryProfile();
+        $defaults = ! empty($profile['shipping_zones']) ? $profile['shipping_zones'] : [
             [
                 'name' => 'Lomé Intra-muros',
                 'price' => 1000,
@@ -301,7 +376,7 @@ class Shop extends Model
 
     public function getCityAttribute(): ?string
     {
-        return $this->contact['city'] ?? 'Lomé';
+        return $this->contact['city'] ?? $this->countryProfile()['city'] ?? 'Lomé';
     }
 
     public function getMapsUrlAttribute(): ?string
@@ -313,7 +388,8 @@ class Shop extends Model
             return $matches[0];
         }
         if (! empty($this->address)) {
-            $query = trim($this->address . ($this->city ? ', ' . $this->city : ', Lomé'));
+            $defaultCity = $this->countryProfile()['city'] ?? 'Lomé';
+            $query = trim($this->address . ($this->city ? ', ' . $this->city : ', ' . $defaultCity));
             return 'https://www.google.com/maps/search/?api=1&query=' . urlencode($query);
         }
         return null;
@@ -377,19 +453,20 @@ class Shop extends Model
             $errors[] = 'Le sous-domaine de la boutique est invalide ou réservé.';
         }
 
-        // 4. Au moins 1 produit actif avec prix > 0 FCFA (CDC B-07)
+        // 4. Au moins 1 produit actif avec prix > 0 (CDC B-07)
+        $currencyLabel = $this->currencyLabel();
         $validProductsCount = $this->products()
             ->where('status', Product::STATUS_ACTIVE)
             ->where('price', '>', 0)
             ->count();
         $hasValidProduct = $validProductsCount >= 1;
         $checks['products'] = [
-            'label' => 'Au moins un produit actif avec un prix défini (> 0 FCFA)',
+            'label' => "Au moins un produit actif avec un prix défini (> 0 {$currencyLabel})",
             'passed' => $hasValidProduct,
             'count' => $validProductsCount,
         ];
         if (! $hasValidProduct) {
-            $errors[] = 'Vous devez configurer au moins un produit actif avec un prix supérieur à 0 FCFA avant de publier.';
+            $errors[] = "Vous devez configurer au moins un produit actif avec un prix supérieur à 0 {$currencyLabel} avant de publier.";
         }
 
         return [

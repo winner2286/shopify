@@ -283,33 +283,94 @@
 
             <h3 style="font-size:1.15rem;margin:2rem 0 1rem;border-top:1px solid var(--border);padding-top:1.5rem;display:flex;align-items:center;gap:.5rem">
                 <x-icon name="phone" size="18" style="color:var(--brand-primary)" />
-                Coordonnées de Contact & Localisation
+                Pays, Devise & Coordonnées de Contact
             </h3>
+
+            @php
+                $countriesList = config('platform.countries', []);
+                $currenciesList = config('platform.currencies', []);
+                $countryProfilesList = config('platform.country_profiles', []);
+                $selectedCountry = old('country', $shop->countryCode());
+                $selectedCurrency = old('currency', $shop->currencyCode());
+                $shopProfile = $shop->countryProfile();
+                $settingsCurrencyMap = [];
+                $settingsCityMap = [];
+                $settingsPhoneMap = [];
+                foreach ($countryProfilesList as $cKey => $cProf) {
+                    $settingsCurrencyMap[$cKey] = $cProf['currency'] ?? 'XOF';
+                    $settingsCityMap[$cKey] = $cProf['city'] ?? 'Lomé';
+                    $settingsPhoneMap[$cKey] = $cProf['phone_placeholder'] ?? '+228 90 00 00 00';
+                }
+            @endphp
+
+            <div class="form-grid-2" style="margin-bottom:1.2rem">
+                <div>
+                    <label for="country" class="label">Pays de la boutique *</label>
+                    <select id="country" name="country" class="input">
+                        @foreach ($countriesList as $code => $label)
+                            <option value="{{ $code }}" @selected($selectedCountry === $code)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <p class="hint">Adapte les moyens de paiement Mobile Money, l'indicatif et les zones de livraison.</p>
+                </div>
+
+                <div>
+                    <label for="currency" class="label">Devise d'affichage et de facturation *</label>
+                    <select id="currency" name="currency" class="input">
+                        @foreach ($currenciesList as $currCode => $currMeta)
+                            <option value="{{ $currCode }}" @selected($selectedCurrency === $currCode)>{{ $currMeta['label'] }}</option>
+                        @endforeach
+                    </select>
+                    <p class="hint">Affichée sur votre vitrine publique, vos factures et l'assistant IA ({{ $shop->currencyLabel() }}).</p>
+                </div>
+            </div>
 
             <div class="form-grid-2">
                 <div>
                     <label for="whatsapp" class="label">Numéro WhatsApp (recommandé)</label>
-                    <input id="whatsapp" type="text" name="whatsapp" class="input" value="{{ old('whatsapp', $shop->whatsapp) }}" placeholder="Ex. +228 90 00 00 00">
+                    <input id="whatsapp" type="text" name="whatsapp" class="input" value="{{ old('whatsapp', $shop->whatsapp) }}" placeholder="Ex. {{ $shopProfile['phone_placeholder'] ?? '+228 90 00 00 00' }}">
                     <p class="hint">Vos clients pourront vous contacter et passer commande en 1 clic via WhatsApp.</p>
                 </div>
 
                 <div>
                     <label for="phone" class="label">Téléphone d'appel</label>
-                    <input id="phone" type="text" name="phone" class="input" value="{{ old('phone', $shop->phone) }}" placeholder="Ex. +228 91 00 00 00">
+                    <input id="phone" type="text" name="phone" class="input" value="{{ old('phone', $shop->phone) }}" placeholder="Ex. {{ $shopProfile['phone_placeholder'] ?? '+228 91 00 00 00' }}">
                 </div>
             </div>
 
             <div class="form-grid-2" style="margin-top:1.2rem">
                 <div>
                     <label for="email" class="label">Email de contact</label>
-                    <input id="email" type="email" name="email" class="input" value="{{ old('email', $shop->email_contact) }}" placeholder="contact@maboutique.tg">
+                    <input id="email" type="email" name="email" class="input" value="{{ old('email', $shop->email_contact) }}" placeholder="contact@maboutique.com">
                 </div>
 
                 <div>
                     <label for="city" class="label">Ville / Commune</label>
-                    <input id="city" type="text" name="city" class="input" value="{{ old('city', $shop->city) }}" placeholder="Lomé, Togo">
+                    <input id="city" type="text" name="city" class="input" value="{{ old('city', $shop->city) }}" placeholder="{{ $shopProfile['city'] ?? 'Lomé' }}">
                 </div>
             </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const cSel = document.getElementById('country');
+                    const curSel = document.getElementById('currency');
+                    const cityIn = document.getElementById('city');
+                    const waIn = document.getElementById('whatsapp');
+                    const phIn = document.getElementById('phone');
+                    const curMap = @json($settingsCurrencyMap);
+                    const cityMap = @json($settingsCityMap);
+                    const phoneMap = @json($settingsPhoneMap);
+                    if (cSel && curSel) {
+                        cSel.addEventListener('change', function () {
+                            const k = this.value;
+                            if (curMap[k]) curSel.value = curMap[k];
+                            if (cityIn && cityMap[k]) cityIn.placeholder = cityMap[k];
+                            if (waIn && phoneMap[k]) waIn.placeholder = 'Ex. ' + phoneMap[k];
+                            if (phIn && phoneMap[k]) phIn.placeholder = 'Ex. ' + phoneMap[k];
+                        });
+                    }
+                });
+            </script>
 
             <div style="margin-top:1.2rem;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm)">
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:.5rem">

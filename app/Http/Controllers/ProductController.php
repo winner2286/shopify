@@ -127,7 +127,7 @@ class ProductController extends Controller
         ], [
             'title.required' => 'Le titre du produit est obligatoire.',
             'price.required' => 'Le prix est obligatoire.',
-            'price.min' => 'Le prix doit être supérieur à 0 FCFA.',
+            'price.min' => 'Le prix doit être supérieur à 0 ' . $shop->currencyLabel() . '.',
             'category_ids.max' => 'Vous pouvez choisir au maximum 3 catégories.',
             'photos.max' => 'Vous ne pouvez pas ajouter plus de 8 photos.',
         ]);

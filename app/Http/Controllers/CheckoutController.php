@@ -99,8 +99,8 @@ class CheckoutController extends Controller
             session()->forget("checkout_promo_{$shop->id}");
 
             if ($discount && $discount->min_order_amount && $subtotal < $discount->min_order_amount) {
-                $minFormatted = number_format($discount->min_order_amount, 0, ',', ' ');
-                return back()->withInput()->with('promo_error', "Minimum d'achat requis : {$minFormatted} FCFA.");
+                $minFormatted = number_format($discount->min_order_amount, 0, ',', ' ') . ' ' . $shop->currencyLabel();
+                return back()->withInput()->with('promo_error', "Minimum d'achat requis : {$minFormatted}.");
             }
 
             return back()->withInput()->with('promo_error', "Le code promo « {$codeInput} » est invalide, expiré ou épuisé.");
@@ -108,7 +108,7 @@ class CheckoutController extends Controller
 
         session(["checkout_promo_{$shop->id}" => $discount->code]);
 
-        return back()->withInput()->with('promo_status', "Code « {$discount->code} » appliqué (-" . number_format($discount->calculateDiscount($subtotal), 0, ',', ' ') . ' FCFA).');
+        return back()->withInput()->with('promo_status', "Code « {$discount->code} » appliqué (-" . number_format($discount->calculateDiscount($subtotal), 0, ',', ' ') . ' ' . $shop->currencyLabel() . ').');
     }
 
     /**

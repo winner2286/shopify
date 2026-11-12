@@ -116,7 +116,7 @@ class OrderController extends Controller
                 'customer_name' => $latest->customer_name,
                 'customer_phone' => $latest->customer_phone,
                 'total' => $latest->total,
-                'total_formatted' => number_format($latest->total, 0, ',', ' ') . ' FCFA',
+                'total_formatted' => number_format($latest->total, 0, ',', ' ') . ' ' . $shop->currencyLabel(),
                 'delivery_zone' => $latest->delivery_zone_name,
                 'items_count' => $latest->items->sum('quantity'),
                 'url' => route('orders.show', $latest),
@@ -380,14 +380,16 @@ class OrderController extends Controller
             'Content-Disposition' => 'attachment; filename="commandes-' . date('Y-m-d') . '.csv"',
         ];
 
-        return response()->stream(function () use ($orders) {
+        $currencyLabel = $shop->currencyLabel();
+
+        return response()->stream(function () use ($orders, $currencyLabel) {
             $handle = fopen('php://output', 'w');
             // BOM UTF-8 pour Excel
             fputs($handle, "\xEF\xBB\xBF");
 
             fputcsv($handle, [
                 'Numéro Commande', 'Date', 'Nom Client', 'Téléphone', 'Zone Livraison',
-                'Adresse', 'Articles', 'Sous-total (FCFA)', 'Livraison (FCFA)', 'Total (FCFA)',
+                'Adresse', 'Articles', "Sous-total ({$currencyLabel})", "Livraison ({$currencyLabel})", "Total ({$currencyLabel})",
                 'Moyen Paiement', 'Statut Paiement', 'Statut Commande',
             ], ';');
 

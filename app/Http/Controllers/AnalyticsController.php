@@ -90,11 +90,13 @@ class AnalyticsController extends Controller
             'Content-Disposition' => 'attachment; filename="statistiques-ventes-' . date('Y-m-d') . '.csv"',
         ];
 
-        return response()->stream(function () use ($orders) {
+        $currencyLabel = $shop->currencyLabel();
+
+        return response()->stream(function () use ($orders, $currencyLabel) {
             $handle = fopen('php://output', 'w');
             fputs($handle, "\xEF\xBB\xBF"); // UTF-8 BOM
 
-            fputcsv($handle, ['Date', 'N° Commande', 'Client', 'Articles', 'Total (FCFA)', 'Paiement', 'Statut'], ';');
+            fputcsv($handle, ['Date', 'N° Commande', 'Client', 'Articles', "Total ({$currencyLabel})", 'Paiement', 'Statut'], ';');
 
             foreach ($orders as $o) {
                 fputcsv($handle, [

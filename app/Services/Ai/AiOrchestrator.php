@@ -471,7 +471,13 @@ class AiOrchestrator
     protected function buildSystemPrompt(Shop $shop, string $userMessage, $ragChunks, int $priorMessagesCount = 0, ?User $user = null): string
     {
         $shopName = $shop->name ?: 'Votre boutique';
-        $currency = $shop->currency ?: 'FCFA';
+        $currencyLabel = $shop->currencyLabel();
+        $currencyCode = $shop->currencyCode();
+        $currency = $currencyLabel === $currencyCode ? $currencyLabel : "{$currencyLabel} ({$currencyCode})";
+        $countryProfile = $shop->countryProfile();
+        $countryName = $countryProfile['name'] ?? 'Togo';
+        $shopCity = $shop->city ?: ($countryProfile['city'] ?? 'Lomé');
+        $localPaymentInfo = $countryProfile['feexpay_subtitle'] ?? 'T-Money, Flooz, Mobile Money et Cartes bancaires';
         $category = $shop->business_category ?: 'Commerce de détail';
         $subdomain = $shop->subdomain ? "{$shop->subdomain}.zanika.shop" : 'Non configuré';
         $capabilities = $this->resolveShopCapabilities($shop, $user);
@@ -531,13 +537,14 @@ Tu travailles en binôme direct avec le marchand propriétaire de la boutique **
 CONTEXTE VÉRIFIÉ DE LA BOUTIQUE :
 - Nom commercial : {$shopName}
 - Secteur d'activité : {$category}
+- Pays & Ville de la boutique : {$countryName} ({$shopCity})
 - Forfait actuel : {$capabilities['plan_name']} ({$capabilities['plan_slug']})
 - Crédits IA restants : {$capabilities['credits_display']}
 - Fonctionnalités réellement actives : {$capabilities['active_features']}
 - Fonctionnalités NON disponibles (interdit de les proposer, promettre ou simuler) : {$capabilities['restricted_features']}
-- Devise monétaire officielle : {$currency}
+- Devise monétaire officielle : {$currency} (utilise TOUJOURS l'unité « {$currencyLabel} » pour exprimer les prix et montants de cette boutique)
 - URL publique vitrine : https://{$subdomain}
-- Marché principal : Afrique de l'Ouest (Togo, Bénin, Côte d'Ivoire, Sénégal...), avec forte prévalence du Paiement à la Livraison (Cash on Delivery - COD) et du Mobile Money.
+- Marché & Paiements locaux : {$countryName} ({$shopCity}) — {$localPaymentInfo} + Paiement à la livraison (Cash on Delivery - COD).
 
 RÈGLES STRICTES DE GARDE-FOU (PRIORITÉ ABSOLUE) :
 1. **Contrôle des crédits** : Si les « Crédits IA restants » sont à 0, refuse poliment d'exécuter des actions de génération (textes, images, pubs, créations assistées) et invite le marchand à recharger son compte ou passer à un forfait supérieur.
