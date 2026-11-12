@@ -112,6 +112,13 @@ class AiSpecializationAndGroqTest extends TestCase
         ], $this->shop);
         $this->assertStringContainsString('/produits', $resAdd['content']);
 
+        // Prise de nouvelles : "tu vas bien?" ne doit pas renvoyer le chunk "Ajouter un produit"
+        $resGreeting = $localEngine->respond([
+            ['role' => 'user', 'content' => 'tu vas bien?'],
+        ], $this->shop);
+        $this->assertStringContainsString('Je vais très bien', $resGreeting['content']);
+        $this->assertStringNotContainsString('Comment ajouter un nouveau produit', $resGreeting['content']);
+
         // 2. Question diagnostic causal : Beaucoup de commandes mais bénéfices faibles
         Order::withoutGlobalScopes()->create([
             'shop_id' => $this->shop->id,

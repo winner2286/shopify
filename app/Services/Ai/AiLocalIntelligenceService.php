@@ -120,8 +120,13 @@ class AiLocalIntelligenceService
             : 0;
         $formattedGmv = number_format($totalGmv, 0, ',', ' ') . " {$currency}";
 
-        // 6. Salutations simples en début de conversation
-        if (in_array($normalized, ['cc', 'salut', 'bonjour', 'bonsoir', 'hello', 'yo', 'slt', 'coucou', 'ça va', 'ca va', 'bonjour !', 'salut !'], true)) {
+        // 6. Salutations simples et prise de nouvelles en début de conversation
+        $isGreeting = (bool) preg_match(
+            '/^(?:bonjour|bjr|bonsoir|bsr|salut|slt|coucou|cc|hello|hey|yo|salam|marhaba|ahlan)(?:\s+(?:zanika|l\s*équipe|lequipe|la\s+team|tout\s+le\s+monde))?[!?.]*$|^(?:comment\s+(?:vas|allez|tu\s+vas|vous\s+allez)|(?:ça|ca)\s+va|tu\s+vas\s+bien|vous\s+allez\s+bien)[!?.]*$/ui',
+            $normalized
+        );
+
+        if ($isGreeting) {
             $memoryNote = '';
             if ($shop) {
                 $goal = $this->memory->getFact($shop, 'objectif_financier');
@@ -131,8 +136,8 @@ class AiLocalIntelligenceService
             }
 
             $reply = $isOngoingThread
-                ? "Je suis toujours là avec toi pour **{$shopName}** !{$memoryNote} Sur quel produit, commande ou campagne veux-tu qu'on travaille ?"
-                : "Bonjour ! Ravi d'échanger avec toi sur **{$shopName}**.{$memoryNote} Tout est opérationnel de mon côté ({$productsCount} article(s) au catalogue, {$pendingOrders->count()} commande(s) en attente). Comment puis-je t'aider aujourd'hui ?";
+                ? "Je vais très bien et je suis toujours là avec toi pour **{$shopName}** !{$memoryNote} Sur quel produit, commande ou campagne veux-tu qu'on avance ?"
+                : "Bonjour ! Je vais très bien, merci, et ravi d'échanger avec toi sur **{$shopName}**.{$memoryNote} Tout est opérationnel ({$productsCount} article(s) au catalogue, {$pendingOrders->count()} commande(s) en attente). Comment puis-je t'aider aujourd'hui ?";
 
             return $this->buildResponse($reply, 'natural_greeting');
         }
