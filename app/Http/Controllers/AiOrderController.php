@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiGeneration;
 use App\Models\Order;
 use App\Services\Ai\AiCustomerService;
 use App\Services\Ai\AiOrderIntelligenceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AiOrderController extends Controller
@@ -63,15 +65,36 @@ class AiOrderController extends Controller
             'phone' => 'nullable|string|max:30',
         ]);
 
-        $shop = $request->user()->shop;
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
+        }
+
+        if (! $shop->hasEnoughAiCredits(1)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Crédits IA mensuels épuisés.',
+                'message' => 'Crédits IA mensuels épuisés.',
+            ], 402);
         }
 
         $question = $request->input('question');
         $phone = $request->input('phone');
 
         $result = $customerService->answerCustomerInquiry($shop, $question, $phone);
+        $shop->consumeAiCredits(1);
+        AiGeneration::create([
+            'shop_id' => $shop->id,
+            'type' => 'ai_customer_reply',
+            'step' => 'whatsapp_reply',
+            'model_used' => 'zanika-customer-ai',
+            'prompt_tokens' => 0,
+            'completion_tokens' => 0,
+            'cost_estimated_fcfa' => 1,
+            'status' => 'success',
+            'input_summary' => Str::limit($question, 120),
+        ]);
 
         return response()->json($result);
     }

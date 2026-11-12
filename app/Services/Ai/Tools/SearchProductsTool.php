@@ -57,9 +57,7 @@ class SearchProductsTool implements AiToolInterface
         if (! empty($arguments['query'])) {
             $term = trim($arguments['query']);
             $q->where(function ($sub) use ($term) {
-                $sub->where('title', 'like', "%{$term}%")
-                    ->orWhere('description', 'like', "%{$term}%")
-                    ->orWhere('sku', 'like', "%{$term}%");
+                \App\Support\SearchHelper::whereLike($sub, ['title', 'description', 'sku'], $term);
             });
         }
 

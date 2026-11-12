@@ -577,9 +577,9 @@ class VideoAdGeneratorService
         string $assetPhrase,
         bool $isStorePresentation
     ): ?array {
-        $groqKey = config('services.groq.key') ?: env('GROQ_API_KEY');
-        $openrouterKey = config('services.openrouter.key') ?: env('OPENROUTER_API_KEY', base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA=='));
-        $geminiKey = env('GEMINI_API_KEY');
+        $groqKey = (string) (config('services.groq.key') ?: '');
+        $openrouterKey = (string) (config('services.openrouter.key') ?: '');
+        $geminiKey = (string) (config('services.gemini.key') ?: '');
 
         if (empty($groqKey) && empty($openrouterKey) && empty($geminiKey)) {
             return null;

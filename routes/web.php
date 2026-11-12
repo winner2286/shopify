@@ -92,7 +92,14 @@ Route::middleware('auth')->group(function () {
     // Module G - Zones & Frais de Livraison (G-01)
     Route::resource('livraison', \App\Http\Controllers\ShippingZoneController::class)
         ->except(['create', 'show', 'edit'])
+        ->parameters(['livraison' => 'shippingZone'])
         ->names('shipping');
+
+    // Codes promo & réductions
+    Route::get('/codes-promo', [\App\Http\Controllers\DiscountCodeController::class, 'index'])->name('discounts.index');
+    Route::post('/codes-promo', [\App\Http\Controllers\DiscountCodeController::class, 'store'])->name('discounts.store');
+    Route::post('/codes-promo/{discountCode}/toggle', [\App\Http\Controllers\DiscountCodeController::class, 'toggle'])->name('discounts.toggle');
+    Route::delete('/codes-promo/{discountCode}', [\App\Http\Controllers\DiscountCodeController::class, 'destroy'])->name('discounts.destroy');
 
     // Module H - Publicité & Studio Affiches Promo (H-01 à H-05)
     Route::get('/publicite', [\App\Http\Controllers\AdvertisingController::class, 'index'])->name('ads.index');
@@ -198,54 +205,12 @@ Route::prefix('b/{subdomain}')->group(function () {
     // Tunnel de commande (Checkout) & Suivi
     Route::get('/commander', [\App\Http\Controllers\CheckoutController::class, 'show'])->name('storefront.checkout.show');
     Route::post('/commander', [\App\Http\Controllers\CheckoutController::class, 'process'])->name('storefront.checkout.process');
+    Route::post('/commander/code-promo', [\App\Http\Controllers\CheckoutController::class, 'applyPromoCode'])->name('storefront.checkout.apply_promo');
+    Route::post('/commander/code-promo/retirer', [\App\Http\Controllers\CheckoutController::class, 'removePromoCode'])->name('storefront.checkout.remove_promo');
     Route::get('/commandes/{orderNumber}', [\App\Http\Controllers\CheckoutController::class, 'showOrder'])->name('storefront.order.show');
     Route::post('/commandes/{orderNumber}/simuler-paiement', [\App\Http\Controllers\CheckoutController::class, 'simulateMobileMoney'])->name('storefront.order.simulate_mobile_money');
     Route::get('/suivi', [\App\Http\Controllers\CheckoutController::class, 'tracking'])->name('storefront.tracking');
 });
-
-// Route d'initialisation et de vérification des migrations Render
-Route::get('/migrate-now', function () {
-    try {
-        \Illuminate\Support\Facades\Artisan::call('config:clear');
-        \Illuminate\Support\Facades\Artisan::call('cache:clear');
-        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'PlanSeeder', '--force' => true]);
-        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'AiKnowledgeSeeder', '--force' => true]);
-        \Illuminate\Support\Facades\Artisan::call('media:restore-defaults');
-        $admin = \App\Models\User::updateOrCreate(
-            ['email' => 'admin@example.test'],
-            [
-                'name' => 'Super Admin',
-                'password' => \Illuminate\Support\Facades\Hash::make('password123'),
-                'role' => \App\Models\User::ROLE_ADMIN,
-                'email_verified_at' => now(),
-                'terms_accepted_at' => now(),
-            ]
-        );
-        \App\Models\Shop::firstOrCreate(
-            ['user_id' => $admin->id],
-            [
-                'name' => 'Boutique Principale',
-                'subdomain' => 'principale',
-                'status' => 'active',
-                'currency' => 'XOF',
-            ]
-        );
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Migrations, plans, médias et comptes Super-Admin initialisés avec succès.',
-            'output' => \Illuminate\Support\Facades\Artisan::output(),
-        ]);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'file' => $e->getFile() . ':' . $e->getLine(),
-        ], 500);
-    }
-});
-
 
 // API Keep-Alive anti-mise en veille (Render / Uptime monitors)
 Route::get('/api/keep-alive', function () {
@@ -279,18 +244,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/abonnement/paiement/{plan:slug}', [\App\Http\Controllers\FeexPayController::class, 'subscriptionCheckout'])->name('subscription.checkout');
     Route::post('/abonnement/simulate/{subscription}/{plan}', [\App\Http\Controllers\FeexPayController::class, 'simulateSubscriptionPayment'])->name('subscription.simulate');
 });
-
-Route::get('/dev-login-admin', function (\Illuminate\Http\Request $request) {
-    if ($request->query('token') !== 'zanika-test-2026') {
-        abort(403);
-    }
-    $user = \App\Models\User::where('email', 'admin@example.test')->first() ?? \App\Models\User::first();
-    if ($user) {
-        \Illuminate\Support\Facades\Auth::login($user);
-        return redirect()->route('ai.assistant');
-    }
-    return 'User not found';
-})->name('dev.login.admin');
 
 if (app()->environment('local')) {
     Route::get('/dev-login', function () {

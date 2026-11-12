@@ -39,8 +39,8 @@ return [
 
         'google_webhook' => [
             'transport' => 'google_webhook',
-            'endpoint' => env('GOOGLE_MAIL_WEBHOOK_URL', 'https://script.google.com/macros/s/AKfycbwGg02YFIw-1vnOZjCSGbybdZedMqp8JehT_AFRPdq1ifeAccVnO-Di6h3EibfHip6DRw/exec'),
-            'token' => env('GOOGLE_MAIL_WEBHOOK_TOKEN', 'ZanikaSecureMailToken2026'),
+            'endpoint' => env('GOOGLE_MAIL_WEBHOOK_URL'),
+            'token' => env('GOOGLE_MAIL_WEBHOOK_TOKEN'),
         ],
 
         'smtp' => [
@@ -50,8 +50,8 @@ return [
             'host' => env('MAIL_HOST', 'smtp.gmail.com'),
             'port' => (int) env('MAIL_PORT', 587),
             'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-            'username' => env('MAIL_USERNAME', 'kougnimag@gmail.com'),
-            'password' => env('MAIL_PASSWORD', 'jnurlkvpnejaqhar'),
+            'username' => env('MAIL_USERNAME'),
+            'password' => env('MAIL_PASSWORD'),
             'timeout' => 15,
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
@@ -118,7 +118,7 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME', 'kougnimag@gmail.com')),
+        'address' => env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME', 'noreply@zanika.shop')),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Zanika')),
     ],
 

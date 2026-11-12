@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiGeneration;
 use App\Services\Ai\AiAnalyticsAdvisorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,7 +60,7 @@ class AiAdvisorController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Boutique introuvable.'], 403);
         }
 
-        if ($shop->aiCreditsRemaining() <= 0) {
+        if (! $shop->hasEnoughAiCredits(1)) {
             return response()->json([
                 'status' => 'error',
                 'message' => "Vous avez épuisé vos crédits IA mensuels. Passez à un forfait supérieur pour continuer à générer des analyses exécutives.",
@@ -68,8 +69,19 @@ class AiAdvisorController extends Controller
 
         $diagnosis = $this->advisorService->generateBusinessDiagnosis($shop, true);
 
-        // Décompte de 1 crédit IA
-        $shop->increment('ai_credits_used');
+        // Décompte unifié de 1 crédit IA
+        $shop->consumeAiCredits(1);
+        AiGeneration::create([
+            'shop_id' => $shop->id,
+            'type' => 'ai_advisor_briefing',
+            'step' => 'executive_briefing',
+            'model_used' => 'zanika-advisor-ai',
+            'prompt_tokens' => 0,
+            'completion_tokens' => 0,
+            'cost_estimated_fcfa' => 1,
+            'status' => 'success',
+            'input_summary' => 'Briefing exécutif IA boutique',
+        ]);
 
         return response()->json([
             'status' => 'success',

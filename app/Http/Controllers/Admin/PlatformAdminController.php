@@ -13,6 +13,7 @@ use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\SystemAlert;
 use App\Models\User;
+use App\Support\SearchHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -78,10 +79,11 @@ class PlatformAdminController extends Controller
             ->latest();
 
         if ($search = trim((string) $request->input('q'))) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('subdomain', 'like', "%{$search}%")
-                  ->orWhereHas('owner', fn ($sq) => $sq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"));
+            $op = SearchHelper::likeOperator($query->getConnection());
+            $query->where(function ($q) use ($search, $op) {
+                $q->where('name', $op, "%{$search}%")
+                  ->orWhere('subdomain', $op, "%{$search}%")
+                  ->orWhereHas('owner', fn ($sq) => $sq->where('name', $op, "%{$search}%")->orWhere('email', $op, "%{$search}%"));
             });
         }
 
@@ -114,16 +116,6 @@ class PlatformAdminController extends Controller
     public function aiUsage(Request $request)
     {
         $this->checkAdmin($request);
-
-        // Recalibration automatique et sécurisée des coûts historiques (correction de l'erreur d'échelle 1000x)
-        if (AiGeneration::withoutGlobalScopes()->where('cost_estimated_fcfa', '>', 50)->exists()) {
-            foreach (AiGeneration::withoutGlobalScopes()->where('cost_estimated_fcfa', '>', 50)->get() as $g) {
-                $costInputUsd = (($g->prompt_tokens ?? 0) / 1000000) * 0.15;
-                $costOutputUsd = (($g->completion_tokens ?? 0) / 1000000) * 0.60;
-                $g->cost_estimated_fcfa = max(1, (int) round(($costInputUsd + $costOutputUsd) * 650));
-                $g->saveQuietly();
-            }
-        }
 
         $totalCalls = AiGeneration::withoutGlobalScopes()->count();
         $totalCostFcfa = (int) AiGeneration::withoutGlobalScopes()->sum('cost_estimated_fcfa');
@@ -249,7 +241,7 @@ class PlatformAdminController extends Controller
         $this->checkAdmin($request);
 
         $validated = $request->validate([
-            'bonus_credits' => 'required|integer',
+            'bonus_credits' => 'required|integer|min:1|max:100000',
             'action_type' => 'required|string|in:add,reset_used',
         ]);
 
@@ -386,10 +378,11 @@ class PlatformAdminController extends Controller
             ->latest();
 
         if ($search = trim((string) $request->input('q'))) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('subdomain', 'like', "%{$search}%")
-                  ->orWhereHas('owner', fn ($sq) => $sq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"));
+            $op = SearchHelper::likeOperator($query->getConnection());
+            $query->where(function ($q) use ($search, $op) {
+                $q->where('name', $op, "%{$search}%")
+                  ->orWhere('subdomain', $op, "%{$search}%")
+                  ->orWhereHas('owner', fn ($sq) => $sq->where('name', $op, "%{$search}%")->orWhere('email', $op, "%{$search}%"));
             });
         }
 
@@ -654,9 +647,9 @@ class PlatformAdminController extends Controller
         // C. Groq AI & OpenRouter Failover
         $openRouterStatus = 'ok';
         $openRouterMsg = 'Groq LPU Opérationnel';
-        $groqKey = config('services.groq.key') ?: env('GROQ_API_KEY');
-        $groqModel = config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b');
-        $openRouterKey = config('services.openrouter.key') ?: env('OPENROUTER_API_KEY');
+        $groqKey = config('services.groq.key');
+        $groqModel = config('services.groq.model', 'openai/gpt-oss-120b');
+        $openRouterKey = config('services.openrouter.key');
 
         if (! empty($groqKey)) {
             try {
@@ -732,7 +725,7 @@ class PlatformAdminController extends Controller
         // E. Délivrabilité Mail (Google Webhook Relay / SMTP)
         $mailStatus = 'ok';
         $mailDriver = config('mail.default');
-        $webhookUrl = env('GOOGLE_MAIL_WEBHOOK_URL');
+        $webhookUrl = config('mail.mailers.google_webhook.endpoint');
         if ($mailDriver === 'google_webhook' && empty($webhookUrl)) {
             $mailStatus = 'error';
             $mailMsg = 'Webhook Google Apps Script non renseigné';

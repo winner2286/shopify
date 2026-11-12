@@ -34,23 +34,33 @@ class MediaController extends Controller
      */
     public function serve(Request $request, string $path): BinaryFileResponse|Response
     {
-        // Nettoyage de sécurité contre les traversées de répertoires
-        $cleanPath = ltrim(str_replace(['../', '..\\'], '', $path), '/');
-        $diskPath = Storage::disk('public')->path($cleanPath);
+        // Nettoyage strict et rejet explicite de toute tentative de traversée de répertoires
+        $normalized = str_replace('\\', '/', $path);
+        if (str_contains($normalized, "\0") || in_array('..', explode('/', $normalized), true)) {
+            abort(403, 'Chemin média invalide.');
+        }
 
-        // 1. Si le fichier existe déjà physiquement sur disque, le servir immédiatement
-        if (file_exists($diskPath) && filesize($diskPath) > 0) {
+        $cleanPath = ltrim($normalized, '/');
+        $diskPath = Storage::disk('public')->path($cleanPath);
+        $publicRoot = realpath(Storage::disk('public')->path(''));
+        $realDiskPath = realpath($diskPath);
+
+        if ($publicRoot !== false && $realDiskPath !== false) {
+            if (! str_starts_with($realDiskPath, $publicRoot . DIRECTORY_SEPARATOR)) {
+                abort(403, 'Accès refusé.');
+            }
+            if (is_file($realDiskPath) && filesize($realDiskPath) > 0) {
+                return response()->file($realDiskPath, $this->imageHeaders());
+            }
+        } elseif (is_file($diskPath) && filesize($diskPath) > 0) {
             return response()->file($diskPath, $this->imageHeaders());
         }
 
-        // 2. Recherche en base de données pour restauration persistante
-        $basename = basename($cleanPath);
+        // 2. Recherche en base de données limitée au chemin exact demandé (sans fuite inter-boutiques par basename)
         $productImage = ProductImage::where('path', $cleanPath)
             ->orWhere('thumbnail_path', $cleanPath)
             ->orWhere('path', '/' . $cleanPath)
             ->orWhere('thumbnail_path', '/' . $cleanPath)
-            ->orWhere('path', 'like', '%' . $basename)
-            ->orWhere('thumbnail_path', 'like', '%' . $basename)
             ->first();
 
         if ($productImage && ! empty($productImage->image_data)) {
@@ -142,7 +152,10 @@ class MediaController extends Controller
         }
 
         $svg = $this->buildSvgContent($title, $cat, $color);
-        return response($svg, 200, $this->imageHeaders(86400, 'image/svg+xml'));
+        return response($svg, 200, array_merge(
+            $this->imageHeaders(86400, 'image/svg+xml'),
+            ['Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'"]
+        ));
     }
 
     /**
@@ -276,15 +289,17 @@ class MediaController extends Controller
 
     private function buildSvgContent(string $title, string $category, string $color): string
     {
-        $safeTitle = htmlspecialchars(mb_substr($title, 0, 34), ENT_QUOTES, 'UTF-8');
-        $safeCat = htmlspecialchars(mb_strtoupper(mb_substr($category, 0, 24)), ENT_QUOTES, 'UTF-8');
-        $initial = htmlspecialchars(mb_strtoupper(mb_substr($safeTitle, 0, 1)), ENT_QUOTES, 'UTF-8') ?: 'B';
+        $safeColor = preg_match('/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', trim($color)) ? trim($color) : '#10b981';
+        $rawTitle = trim($title) !== '' ? $title : 'Article Signature';
+        $safeTitle = htmlspecialchars(mb_substr($rawTitle, 0, 34), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safeCat = htmlspecialchars(mb_strtoupper(mb_substr($category, 0, 24)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $initial = htmlspecialchars(mb_strtoupper(mb_substr($rawTitle, 0, 1)) ?: 'B', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         return <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
     <defs>
         <radialGradient id="halo" cx="50%" cy="40%" r="50%">
-            <stop offset="0%" stop-color="{$color}" stop-opacity="0.35"/>
+            <stop offset="0%" stop-color="{$safeColor}" stop-opacity="0.35"/>
             <stop offset="100%" stop-color="#0a0a0f" stop-opacity="0"/>
         </radialGradient>
         <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -292,7 +307,7 @@ class MediaController extends Controller
             <stop offset="100%" stop-color="#0b0b10"/>
         </linearGradient>
         <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="{$color}"/>
+            <stop offset="0%" stop-color="{$safeColor}"/>
             <stop offset="100%" stop-color="#ffffff" stop-opacity="0.8"/>
         </linearGradient>
     </defs>
@@ -313,7 +328,7 @@ class MediaController extends Controller
 
     <!-- Médaillon central d'icône -->
     <g transform="translate(300, 240)">
-        <circle r="90" fill="rgba(255,255,255,0.04)" stroke="{$color}" stroke-width="2" stroke-opacity="0.4"/>
+        <circle r="90" fill="rgba(255,255,255,0.04)" stroke="{$safeColor}" stroke-width="2" stroke-opacity="0.4"/>
         <circle r="76" fill="rgba(0,0,0,0.4)"/>
         
         <!-- Lettre initiale / Monogramme élégant -->
@@ -324,8 +339,8 @@ class MediaController extends Controller
 
     <!-- Badge Catégorie -->
     <g transform="translate(300, 420)">
-        <rect x="-110" y="-16" width="220" height="32" rx="16" fill="rgba(255,255,255,0.06)" stroke="{$color}" stroke-width="1" stroke-opacity="0.6"/>
-        <text y="5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="700" fill="{$color}" letter-spacing="1.5" text-anchor="middle">
+        <rect x="-110" y="-16" width="220" height="32" rx="16" fill="rgba(255,255,255,0.06)" stroke="{$safeColor}" stroke-width="1" stroke-opacity="0.6"/>
+        <text y="5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="700" fill="{$safeColor}" letter-spacing="1.5" text-anchor="middle">
             {$safeCat}
         </text>
     </g>
@@ -573,8 +588,8 @@ SVG;
                         'timeout' => 5,
                     ],
                     'ssl' => [
-                        'verify_peer' => false,
-                        'verify_peer_name' => false,
+                        'verify_peer' => true,
+                        'verify_peer_name' => true,
                     ],
                 ]);
                 $mp3 = @file_get_contents($url, false, $context);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Support\SearchHelper;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -21,11 +22,7 @@ class CustomerController extends Controller
         $query = Customer::withCount('orders')->latest('last_order_at');
 
         if ($search = trim((string) $request->input('q'))) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
+            SearchHelper::whereLike($query, ['name', 'phone', 'email'], $search);
         }
 
         $customers = $query->paginate(20)->withQueryString();

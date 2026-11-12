@@ -32,8 +32,8 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Mail::extend('google_webhook', function (array $config = []) {
             return new \App\Mail\Transports\GoogleWebhookTransport(
-                $config['endpoint'] ?? $config['url'] ?? (string) env('GOOGLE_MAIL_WEBHOOK_URL'),
-                $config['token'] ?? (string) env('GOOGLE_MAIL_WEBHOOK_TOKEN', 'ZanikaSecureMailToken2026')
+                (string) ($config['endpoint'] ?? $config['url'] ?? config('mail.mailers.google_webhook.endpoint', '')),
+                (string) ($config['token'] ?? config('mail.mailers.google_webhook.token', ''))
             );
         });
 

@@ -212,13 +212,41 @@
                     @endforeach
                 </div>
 
+                <div style="margin-bottom:1rem;padding-top:.75rem;border-top:1px solid var(--border)">
+                    <label for="promo_code" style="display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem">Code promo (optionnel)</label>
+                    <div style="display:flex;gap:.5rem">
+                        <input id="promo_code" name="promo_code" type="text" class="input" value="{{ old('promo_code', $appliedPromo?->code) }}" placeholder="Ex: NOEL15" style="flex:1;text-transform:uppercase">
+                        <button type="submit" formaction="{{ route('storefront.checkout.apply_promo', $shop->subdomain) }}" formnovalidate class="btn btn-ghost btn-sm">Appliquer</button>
+                        @if (! empty($appliedPromo))
+                            <button type="submit" formaction="{{ route('storefront.checkout.remove_promo', $shop->subdomain) }}" formnovalidate class="btn btn-ghost btn-sm" style="color:var(--danger)">Retirer</button>
+                        @endif
+                    </div>
+                    @if (session('promo_status'))
+                        <div style="font-size:.82rem;color:#16a34a;margin-top:.35rem">{{ session('promo_status') }}</div>
+                    @endif
+                    @if (session('promo_error'))
+                        <div style="font-size:.82rem;color:var(--danger);margin-top:.35rem">{{ session('promo_error') }}</div>
+                    @endif
+                </div>
+
                 <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;flex-direction:column;gap:.6rem;font-size:.95rem">
                     <div style="display:flex;justify-content:space-between;color:var(--text-soft)">
                         <span>Sous-total :</span>
                         <span style="font-weight:600;color:var(--text)">{{ number_format($subtotal, 0, ',', ' ') }} FCFA</span>
                     </div>
 
-                    @php $firstFee = $zones->first() ? $zones->first()->calculateFee($subtotal) : 0; @endphp
+                    @if (($discountAmount ?? 0) > 0 && ! empty($appliedPromo))
+                        <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:600">
+                            <span>Code promo ({{ $appliedPromo->code }}) :</span>
+                            <span>-{{ number_format($discountAmount, 0, ',', ' ') }} FCFA</span>
+                        </div>
+                    @endif
+
+                    @php
+                        $discountVal = (int) ($discountAmount ?? 0);
+                        $firstFee = $zones->first() ? $zones->first()->calculateFee($subtotal) : 0;
+                        $initialTotal = max(0, $subtotal - $discountVal) + $firstFee;
+                    @endphp
                     <div style="display:flex;justify-content:space-between;color:var(--text-soft)">
                         <span>Frais de livraison :</span>
                         <span id="shipping-display" style="font-weight:600;color:var(--text)">
@@ -229,7 +257,7 @@
                     <div style="border-top:2px dashed var(--border);padding-top:.9rem;margin-top:.4rem;display:flex;justify-content:space-between;align-items:baseline">
                         <span style="font-size:1.15rem;font-weight:700">Total à payer :</span>
                         <span id="total-display" style="font-size:1.7rem;font-weight:700;font-family:var(--font-display);color:var(--text)">
-                            {{ number_format($subtotal + $firstFee, 0, ',', ' ') }} FCFA
+                            {{ number_format($initialTotal, 0, ',', ' ') }} FCFA
                         </span>
                     </div>
                 </div>
@@ -249,8 +277,9 @@
 
 <script>
     const subtotal = {{ $subtotal }};
+    const promoDiscount = {{ (int) ($discountAmount ?? 0) }};
     function updateShipping(fee) {
-        const total = subtotal + fee;
+        const total = Math.max(0, subtotal - promoDiscount) + fee;
         document.getElementById('shipping-display').innerText = fee === 0 ? 'Gratuit' : fee.toLocaleString('fr-FR') + ' FCFA';
         document.getElementById('total-display').innerText = total.toLocaleString('fr-FR') + ' FCFA';
     }

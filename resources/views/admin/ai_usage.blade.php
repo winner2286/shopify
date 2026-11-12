@@ -112,8 +112,8 @@
                         @php
                             $allocated = $s->aiCreditsMonthly();
                             $remaining = $s->aiCreditsRemaining();
-                            $used = $s->ai_credits_used;
-                            $pctUsed = $allocated > 0 ? round(($used / $allocated) * 100) : 0;
+                            $used = $s->aiCreditsUsedThisMonth();
+                            $pctUsed = $allocated > 0 ? min(100, round(($used / $allocated) * 100)) : 0;
                         @endphp
                         <tr style="border-bottom:1px solid var(--border)">
                             <td style="padding:.75rem;font-weight:600">

@@ -29,18 +29,24 @@ class AnalyticsController extends Controller
         $averageCart = $totalOrdersCount > 0 ? (int) round($totalRevenue / $totalOrdersCount) : 0;
         $totalCustomersCount = $shop->customers()->count();
 
-        // Évolution des ventes sur les 7 derniers jours (données pour graphique SVG léger)
+        // Évolution des ventes sur les 7 derniers jours (requête agrégée unique, compatible SQLite/PostgreSQL)
+        $startDate = today()->subDays(6)->startOfDay();
+        $endDate = today()->endOfDay();
+
+        $salesByDay = $shop->orders()
+            ->selectRaw('DATE(created_at) as sale_date, COALESCE(SUM(total), 0) as total_amount')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->where('status', '!=', Order::STATUS_CANCELLED)
+            ->groupByRaw('DATE(created_at)')
+            ->pluck('total_amount', 'sale_date');
+
         $dailySales = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = today()->subDays($i);
-            $amount = (int) $shop->orders()
-                ->whereDate('created_at', $date)
-                ->where('status', '!=', Order::STATUS_CANCELLED)
-                ->sum('total');
-
+            $key = $date->format('Y-m-d');
             $dailySales[] = [
                 'day' => $date->translatedFormat('D d'),
-                'amount' => $amount,
+                'amount' => (int) ($salesByDay[$key] ?? 0),
             ];
         }
 

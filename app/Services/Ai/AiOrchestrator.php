@@ -292,6 +292,7 @@ class AiOrchestrator
             ],
         ]);
 
+        $shop->consumeAiCredits(1);
         $conversation->update(['last_message_at' => now()]);
 
         return [

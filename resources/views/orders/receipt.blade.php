@@ -739,6 +739,12 @@
                         <span>Frais de livraison :</span>
                         <span>{{ $order->shipping_cost === 0 ? 'Offerte (0 FCFA)' : number_format($order->shipping_cost, 0, ',', ' ') . ' FCFA' }}</span>
                     </div>
+                    @if (($order->discount_amount ?? 0) > 0)
+                    <div class="tot-row" style="color:#16a34a;font-weight:600">
+                        <span>Code promo ({{ $order->discount_code ?? 'Réduction' }}) :</span>
+                        <span>-{{ number_format($order->discount_amount, 0, ',', ' ') }} FCFA</span>
+                    </div>
+                    @endif
                     <div class="tot-row grand-total">
                         <span>TOTAL NET :</span>
                         <span class="val">{{ number_format($order->total, 0, ',', ' ') }} FCFA</span>

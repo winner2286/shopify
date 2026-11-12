@@ -53,7 +53,7 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        $superAdminEmails = config('platform.super_admin_emails', ['kougnimag@gmail.com', 'kougnima@icloud.com', 'admin@example.test']);
+        $superAdminEmails = config('platform.super_admin_emails', ['kougnimag@gmail.com', 'kougnima@icloud.com']);
         $normalizedEmail = strtolower(trim((string) $this->email));
 
         if (in_array($normalizedEmail, $superAdminEmails, true) && ($this->isVerified() || app()->environment('testing', 'local'))) {

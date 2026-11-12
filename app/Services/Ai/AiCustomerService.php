@@ -18,11 +18,10 @@ class AiCustomerService
 
     public function __construct()
     {
-        $this->groqKey = (string) (config('services.groq.key') ?: env('GROQ_API_KEY', ''));
-        $this->groqModel = (string) (config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b'));
+        $this->groqKey = (string) (config('services.groq.key') ?: '');
+        $this->groqModel = (string) (config('services.groq.model') ?: 'openai/gpt-oss-120b');
 
-        $this->apiKey = config('services.openrouter.key')
-            ?: env('OPENROUTER_API_KEY', base64_decode('c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA=='));
+        $this->apiKey = (string) (config('services.openrouter.key') ?: '');
         
         $this->model = 'google/gemini-2.5-flash';
     }

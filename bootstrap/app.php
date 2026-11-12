@@ -20,7 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'connexion',
             'deconnexion',
             'up',
-            'migrate-now',
             'zanika-admin-bypass',
         ]);
         $middleware->validateCsrfTokens(except: [

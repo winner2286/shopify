@@ -94,7 +94,8 @@
             </div>
         </div>
 
-        <!-- Simulation pour démonstration et tests de développement (CDC) -->
+        <!-- Simulation pour démonstration et tests locaux Sandbox uniquement -->
+        @if (app()->environment('local', 'testing') && config('feexpay.mode', 'SANDBOX') !== 'LIVE')
         <form method="POST" action="{{ route('subscription.simulate', [$subscription->id, $plan->id]) }}" style="background:var(--bg-soft);padding:1.1rem;border-radius:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;border:1px dashed var(--border);margin-top:1.5rem">
             @csrf
             <div>
@@ -105,6 +106,7 @@
                 <x-icon name="zap" :size="15" /> Simuler l'activation (Test)
             </button>
         </form>
+        @endif
     </div>
 </div>
 
@@ -113,13 +115,15 @@
     document.addEventListener('DOMContentLoaded', function() {
         const triggerBtn = document.getElementById('feexpay-trigger-sub-btn');
         const kycNotice = document.getElementById('feexpay-sub-kyc-notice');
+        const feexShopId = @json(config('feexpay.shop_id'));
+        const feexToken = @json(config('feexpay.token'));
 
-        if (typeof FeexPayButton !== 'undefined') {
+        if (typeof FeexPayButton !== 'undefined' && feexShopId && feexToken) {
             try {
                 FeexPayButton.init('feexpay-btn-sub', {
-                    id: '{{ config('feexpay.shop_id', '698dd650a7ffb88696f5id86') }}',
+                    id: feexShopId,
                     amount: {{ (int) $plan->monthly_price }},
-                    token: '{{ config('feexpay.token', 'test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn') }}',
+                    token: feexToken,
                     callback_url: '{{ route('feexpay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}',
                     mode: '{{ config('feexpay.mode', 'SANDBOX') }}',
                     custom_id: 'SUB:{{ $subscription->id }}:{{ $plan->id }}',

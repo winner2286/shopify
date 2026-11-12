@@ -286,7 +286,7 @@ Artisan::command('admin:maintenance {action=status : on, off ou status} {--messa
 // Commande et planification des Automatisations IA (Module 10)
 Artisan::command('ai:run-automations', function (\App\Services\Ai\AiMarketingAutomationService $service) {
     $this->info("Exécution des règles d'automatisation IA ECOM pour toutes les boutiques...");
-    $shops = \App\Models\Shop::where('is_active', true)->get();
+    $shops = \App\Models\Shop::where('status', \App\Models\Shop::PUBLISHED)->get();
     $totalTriggered = 0;
 
     foreach ($shops as $shop) {

@@ -81,7 +81,7 @@ class UpdateOrderStatusTool implements AiToolInterface
         if ($orderId > 0) {
             $query->where('id', $orderId);
         } elseif (! empty($orderNumber)) {
-            $query->where('order_number', 'like', "%{$orderNumber}%");
+            $query->where('order_number', \App\Support\SearchHelper::likeOperator(), "%{$orderNumber}%");
         } else {
             return ['error' => 'Veuillez spécifier l\'ID ou le numéro officiel de la commande.'];
         }

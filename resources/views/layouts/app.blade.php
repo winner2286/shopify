@@ -124,12 +124,13 @@
 
                         <!-- Liens secondaires (visibles directement sur écran large >= 1240px) -->
                         <a id="nav-categories" href="{{ route('categories.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('categories.*') ? 'btn-primary' : '' }}">Catégories</a>
+                        <a id="nav-discounts" href="{{ route('discounts.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('discounts.*') ? 'btn-primary' : '' }}">Codes Promo</a>
                         <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
                         <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Paramètres</a>
 
                         <!-- Menu déroulant "Plus ▾" (actif sur écran compact 769px à 1239px) -->
                         <div class="nav-more-dropdown" id="nav-more-dropdown">
-                            <button type="button" class="btn btn-ghost btn-sm nav-more-trigger {{ (request()->routeIs('categories.*') || request()->routeIs('analytics.*') || request()->routeIs('shop.*')) ? 'active-section' : '' }}" aria-haspopup="true" aria-expanded="false" onclick="toggleNavMoreMenu(event)">
+                            <button type="button" class="btn btn-ghost btn-sm nav-more-trigger {{ (request()->routeIs('categories.*') || request()->routeIs('discounts.*') || request()->routeIs('analytics.*') || request()->routeIs('shop.*')) ? 'active-section' : '' }}" aria-haspopup="true" aria-expanded="false" onclick="toggleNavMoreMenu(event)">
                                 <span>Plus</span>
                                 <x-icon name="chevron-down" :size="12" />
                             </button>
@@ -137,6 +138,10 @@
                                 <a href="{{ route('categories.index') }}" class="nav-more-item {{ request()->routeIs('categories.*') ? 'active' : '' }}">
                                     <x-icon name="folder" :size="15" />
                                     <span>Catégories</span>
+                                </a>
+                                <a href="{{ route('discounts.index') }}" class="nav-more-item {{ request()->routeIs('discounts.*') ? 'active' : '' }}">
+                                    <x-icon name="tag" :size="15" />
+                                    <span>Codes Promo</span>
                                 </a>
                                 <a href="{{ route('analytics.index') }}" class="nav-more-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}">
                                     <x-icon name="trending-up" :size="15" />
@@ -314,6 +319,17 @@
                     <div class="mobile-plus-info">
                         <strong>Gestion des Catégories</strong>
                         <span>Rayons, organisation et classement des articles</span>
+                    </div>
+                    <x-icon name="arrow-right" :size="16" />
+                </a>
+
+                <a href="{{ route('discounts.index') }}" class="mobile-plus-item {{ request()->routeIs('discounts.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                    <div class="mobile-plus-icon" style="background:rgba(16, 185, 129, 0.12);color:#10b981">
+                        <x-icon name="tag" :size="22" />
+                    </div>
+                    <div class="mobile-plus-info">
+                        <strong>Codes Promo &amp; Réductions</strong>
+                        <span>Coupons, remises % ou FCFA et dates de validité</span>
                     </div>
                     <x-icon name="arrow-right" :size="16" />
                 </a>

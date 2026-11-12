@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Subscription;
 use Exception;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -19,26 +20,28 @@ class FeexPayService
 
     public function __construct()
     {
-        $this->shopId = (string) (config('feexpay.shop_id') ?: env('FEEXPAY_SHOP_ID', '698dd650a7ffb88696f5id86'));
-        $this->token = (string) (config('feexpay.token') ?: env('FEEXPAY_TOKEN', 'test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn'));
-        $this->mode = strtoupper((string) (config('feexpay.mode') ?: env('FEEXPAY_MODE', 'SANDBOX')));
-        $this->baseUrl = rtrim((string) (config('feexpay.base_url') ?: env('FEEXPAY_BASE_URL', 'https://api-v2.feexpay.me')), '/');
+        $this->shopId = (string) (config('feexpay.shop_id') ?: '');
+        $this->token = (string) (config('feexpay.token') ?: '');
+        $this->mode = strtoupper((string) (config('feexpay.mode') ?: 'SANDBOX'));
+        $this->baseUrl = rtrim((string) (config('feexpay.base_url') ?: 'https://api-v2.feexpay.me'), '/');
         $this->currency = (string) (config('feexpay.currency') ?: 'XOF');
     }
 
     public function getShopId(): string
     {
-        return $this->shopId;
+        return (string) (config('feexpay.shop_id') ?: $this->shopId);
     }
 
     public function getToken(): string
     {
-        return $this->token;
+        return (string) (config('feexpay.token') ?: $this->token);
     }
 
     public function getMode(): string
     {
-        return $this->mode === 'LIVE' ? 'LIVE' : 'SANDBOX';
+        $mode = strtoupper((string) (config('feexpay.mode') ?: $this->mode));
+
+        return $mode === 'LIVE' ? 'LIVE' : 'SANDBOX';
     }
 
     public function isSandbox(): bool
@@ -56,6 +59,10 @@ class FeexPayService
      */
     public function checkTransactionStatus(string $reference): array
     {
+        if (empty($this->token)) {
+            return ['status' => 'ERROR', 'error' => 'FEEXPAY_TOKEN non configuré'];
+        }
+
         try {
             $response = Http::withHeaders([
                 'Authorization' => "Bearer {$this->token}",
@@ -117,6 +124,12 @@ class FeexPayService
      */
     public function handleOrderPaymentSuccess(Order $order, string $transactionRef, ?string $payerPhone = null): void
     {
+        if ($order->payment_status === Order::PAYMENT_STATUS_PAID) {
+            return;
+        }
+
+        $previousStatus = $order->status;
+
         $order->update([
             'payment_status' => Order::PAYMENT_STATUS_PAID,
             'paid_at' => now(),
@@ -124,18 +137,31 @@ class FeexPayService
         ]);
 
         /** @var Payment|null $payment */
-        $payment = $order->payments()->latest()->first();
+        $payment = $order->payments()->withoutGlobalScopes()->latest()->first();
         if ($payment) {
             $payment->update([
                 'status' => Payment::STATUS_PAID,
                 'paid_at' => now(),
-                'transaction_id' => $transactionRef,
+                'operator_reference' => $transactionRef,
                 'payer_phone' => $payerPhone ?: $payment->payer_phone,
+            ]);
+        } else {
+            Payment::withoutGlobalScopes()->create([
+                'shop_id' => $order->shop_id,
+                'order_id' => $order->id,
+                'payment_reference' => 'PAY-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4))),
+                'method' => $order->payment_method ?: Order::PAYMENT_FEEXPAY,
+                'amount' => (int) round((float) $order->total),
+                'currency' => $this->currency ?: 'XOF',
+                'status' => Payment::STATUS_PAID,
+                'operator_reference' => $transactionRef,
+                'payer_phone' => $payerPhone ?: $order->customer_phone,
+                'paid_at' => now(),
             ]);
         }
 
         $order->statusHistories()->create([
-            'from_status' => Order::STATUS_PENDING,
+            'from_status' => $previousStatus,
             'to_status' => $order->status,
             'author_type' => 'system',
             'comment' => "Paiement en ligne validé avec succès par FeexPay (Réf: {$transactionRef}).",
@@ -147,6 +173,10 @@ class FeexPayService
      */
     public function handleSubscriptionPaymentSuccess(Subscription $subscription, string $transactionRef, ?\App\Models\Plan $newPlan = null): void
     {
+        if ($transactionRef !== '' && ! Cache::add("feexpay_sub_tx:{$transactionRef}", $subscription->id, now()->addYears(2))) {
+            return;
+        }
+
         $plan = $newPlan ?? $subscription->plan;
 
         $currentEnd = ($subscription->ends_at && $subscription->ends_at->isFuture())

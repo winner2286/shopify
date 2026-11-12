@@ -56,9 +56,7 @@ class OrderController extends Controller
         $search = trim((string) $request->input('q'));
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhere('customer_name', 'like', "%{$search}%")
-                  ->orWhere('customer_phone', 'like', "%{$search}%");
+                \App\Support\SearchHelper::whereLike($q, ['order_number', 'customer_name', 'customer_phone'], $search);
             });
         }
 
@@ -162,7 +160,7 @@ class OrderController extends Controller
         $deliveryDispatchWaUrl = $this->whatsAppService->getDeliveryDispatchWhatsAppUrl($order);
 
         // Option 2 : Reçu / Facture WhatsApp & URL publique vérifiable
-        $publicReceiptUrl = route('orders.public_receipt', $order->order_number);
+        $publicReceiptUrl = $order->publicReceiptUrl();
         $customerInvoiceWaUrl = $this->whatsAppService->getCustomerInvoiceWhatsAppUrl($order);
 
         return view('orders.show', compact(
@@ -240,7 +238,7 @@ class OrderController extends Controller
 
         $order->load(['items.product', 'customer', 'payments', 'shippingZone']);
 
-        $publicReceiptUrl = route('orders.public_receipt', $order->order_number);
+        $publicReceiptUrl = $order->publicReceiptUrl();
         $customerInvoiceWaUrl = $this->whatsAppService->getCustomerInvoiceWhatsAppUrl($order);
 
         return view('orders.receipt', [
@@ -255,15 +253,24 @@ class OrderController extends Controller
     /**
      * Option 2 : Reçu / Facture public en ligne certifié accessible par le client ou via scan QR Code
      */
-    public function publicReceipt(string $orderNumber)
+    public function publicReceipt(Request $request, string $orderNumber)
     {
         $order = Order::withoutGlobalScopes()
             ->where('order_number', $orderNumber)
             ->with(['shop', 'items.product', 'payments', 'shippingZone'])
             ->firstOrFail();
 
+        $token = (string) $request->query('token', '');
+        $user = $request->user();
+        $isOwnerOrAdmin = $user && ($user->isAdmin() || $user->shop?->id === $order->shop_id);
+        $hasValidToken = $token !== '' && hash_equals($order->receiptToken(), $token);
+
+        if (! $hasValidToken && ! $isOwnerOrAdmin) {
+            abort(403, 'Accès refusé : lien de reçu invalide ou expiré.');
+        }
+
         $shop = $order->shop;
-        $publicReceiptUrl = route('orders.public_receipt', $order->order_number);
+        $publicReceiptUrl = $order->publicReceiptUrl();
 
         return view('orders.receipt', [
             'shop' => $shop,

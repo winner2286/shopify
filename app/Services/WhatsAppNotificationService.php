@@ -229,7 +229,10 @@ class WhatsAppNotificationService
             ? "✅ *RÉGLÉ (Payé)*"
             : "⏳ *À PAYER À LA LIVRAISON*";
 
-        $receiptUrl = route('orders.public_receipt', $order->order_number);
+        $discountLine = ($order->discount_amount ?? 0) > 0
+            ? "🏷️ Code promo ({$order->discount_code}) : -" . number_format($order->discount_amount, 0, ',', ' ') . " FCFA\n"
+            : '';
+        $receiptUrl = $order->publicReceiptUrl();
 
         return "🧾 *REÇU DE COMMANDE — {$shop->name}*\n"
             . "━━━━━━━━━━━━━━━━━━━━\n"
@@ -240,6 +243,7 @@ class WhatsAppNotificationService
             . "{$itemsText}\n"
             . "💰 Sous-total : {$subtotal} FCFA\n"
             . "🚚 Livraison ({$order->delivery_zone_name}) : {$shipping}\n"
+            . $discountLine
             . "────────────────────\n"
             . "💵 *TOTAL NET : {$totalFormatted} FCFA*\n"
             . "💳 Mode : {$order->payment_method_label}\n"

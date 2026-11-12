@@ -105,8 +105,7 @@ class StorefrontController extends Controller
         // Recherche par titre ou description
         if ($search = trim((string) $request->input('q'))) {
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                \App\Support\SearchHelper::whereLike($q, ['title', 'description'], $search);
             });
         }
 

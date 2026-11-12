@@ -46,7 +46,7 @@ class ShippingZoneController extends Controller
             'shop_id' => $shop->id,
             'name' => $validated['name'],
             'price' => (int) $validated['price'],
-            'free_shipping_threshold' => $validated['free_shipping_threshold'] ? (int) $validated['free_shipping_threshold'] : null,
+            'free_shipping_threshold' => isset($validated['free_shipping_threshold']) ? (int) $validated['free_shipping_threshold'] : null,
             'delivery_estimate' => $validated['delivery_estimate'],
             'is_pickup' => $request->boolean('is_pickup', false),
             'is_active' => true,
@@ -79,7 +79,7 @@ class ShippingZoneController extends Controller
         $shippingZone->update([
             'name' => $validated['name'],
             'price' => (int) $validated['price'],
-            'free_shipping_threshold' => $validated['free_shipping_threshold'] ? (int) $validated['free_shipping_threshold'] : null,
+            'free_shipping_threshold' => isset($validated['free_shipping_threshold']) ? (int) $validated['free_shipping_threshold'] : null,
             'delivery_estimate' => $validated['delivery_estimate'],
             'is_pickup' => $request->boolean('is_pickup', false),
             'is_active' => $request->boolean('is_active', true),

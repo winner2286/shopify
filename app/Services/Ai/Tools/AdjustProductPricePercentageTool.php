@@ -76,7 +76,7 @@ class AdjustProductPricePercentageTool implements AiToolInterface
 
         if (! $product && ! empty($productName)) {
             $product = Product::withoutGlobalScopes()->where('shop_id', $shop->id)
-                ->where('title', 'like', "%{$productName}%")
+                ->where('title', \App\Support\SearchHelper::likeOperator(), "%{$productName}%")
                 ->first();
         }
 

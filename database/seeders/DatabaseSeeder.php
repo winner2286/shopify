@@ -14,7 +14,11 @@ class DatabaseSeeder extends Seeder
         $this->call(PlanSeeder::class);
         $this->call(AiKnowledgeSeeder::class);
 
-        // Compte administrateur de développement
+        if (! app()->environment('local', 'testing')) {
+            return;
+        }
+
+        // Compte administrateur de développement local uniquement
         User::updateOrCreate(['email' => 'admin@example.test'], [
             'name' => 'Administrateur',
             'password' => Hash::make('password'),

@@ -15,9 +15,10 @@ class BelongsToShopScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
-        // Si l'utilisateur connecté est un commerçant ayant une boutique, on filtre obligatoirement sur sa boutique.
-        if (Auth::check() && Auth::user()->isMerchant() && Auth::user()->shop) {
-            $builder->where($model->qualifyColumn('shop_id'), Auth::user()->shop->id);
+        // Isolation multi-tenant fail-closed : tout utilisateur non-admin est strictement borné à sa boutique.
+        if (Auth::check() && ! Auth::user()->isAdmin()) {
+            $shopId = Auth::user()->shop?->id ?? -1;
+            $builder->where($model->qualifyColumn('shop_id'), $shopId);
         }
     }
 }

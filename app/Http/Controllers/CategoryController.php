@@ -47,6 +47,9 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category): RedirectResponse
     {
         $shop = $request->user()->shop;
+        if (! $shop || $category->shop_id !== $shop->id) {
+            abort(403);
+        }
 
         $validated = $request->validate([
             'name' => [
@@ -70,6 +73,9 @@ class CategoryController extends Controller
     public function destroy(Request $request, Category $category): RedirectResponse
     {
         $shop = $request->user()->shop;
+        if (! $shop || $category->shop_id !== $shop->id) {
+            abort(403);
+        }
 
         // Si la catégorie contient des produits, possibilité de réattribuer (C-03)
         $newCategoryId = $request->input('replacement_category_id');

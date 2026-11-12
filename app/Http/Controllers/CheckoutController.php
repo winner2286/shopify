@@ -54,7 +54,72 @@ class CheckoutController extends Controller
         $subtotal = $this->cartService->getSubtotal($shop);
         $cartCount = $this->cartService->getItemsCount($shop);
 
-        return view('storefront.checkout', compact('shop', 'cart', 'zones', 'subtotal', 'cartCount'));
+        $appliedPromo = null;
+        $discountAmount = 0;
+        $sessionCode = trim((string) session("checkout_promo_{$shop->id}", ''));
+        if ($sessionCode !== '') {
+            $candidate = \App\Models\DiscountCode::withoutGlobalScopes()
+                ->where('shop_id', $shop->id)
+                ->whereRaw('UPPER(code) = ?', [strtoupper($sessionCode)])
+                ->first();
+
+            if ($candidate && $candidate->isValid($subtotal)) {
+                $appliedPromo = $candidate;
+                $discountAmount = $candidate->calculateDiscount($subtotal);
+            } else {
+                session()->forget("checkout_promo_{$shop->id}");
+            }
+        }
+
+        return view('storefront.checkout', compact('shop', 'cart', 'zones', 'subtotal', 'cartCount', 'appliedPromo', 'discountAmount'));
+    }
+
+    /**
+     * Applique un code promo en session sur le tunnel de commande
+     */
+    public function applyPromoCode(Request $request, string $subdomain): RedirectResponse
+    {
+        $shop = $this->resolveShop($subdomain);
+        $subtotal = $this->cartService->getSubtotal($shop);
+
+        $request->validate([
+            'promo_code' => ['required', 'string', 'max:50'],
+        ], [
+            'promo_code.required' => 'Veuillez saisir un code promo.',
+        ]);
+
+        $codeInput = strtoupper(trim((string) $request->input('promo_code')));
+
+        $discount = \App\Models\DiscountCode::withoutGlobalScopes()
+            ->where('shop_id', $shop->id)
+            ->whereRaw('UPPER(code) = ?', [$codeInput])
+            ->first();
+
+        if (! $discount || ! $discount->isValid($subtotal)) {
+            session()->forget("checkout_promo_{$shop->id}");
+
+            if ($discount && $discount->min_order_amount && $subtotal < $discount->min_order_amount) {
+                $minFormatted = number_format($discount->min_order_amount, 0, ',', ' ');
+                return back()->withInput()->with('promo_error', "Minimum d'achat requis : {$minFormatted} FCFA.");
+            }
+
+            return back()->withInput()->with('promo_error', "Le code promo « {$codeInput} » est invalide, expiré ou épuisé.");
+        }
+
+        session(["checkout_promo_{$shop->id}" => $discount->code]);
+
+        return back()->withInput()->with('promo_status', "Code « {$discount->code} » appliqué (-" . number_format($discount->calculateDiscount($subtotal), 0, ',', ' ') . ' FCFA).');
+    }
+
+    /**
+     * Retire le code promo actif du panier
+     */
+    public function removePromoCode(Request $request, string $subdomain): RedirectResponse
+    {
+        $shop = $this->resolveShop($subdomain);
+        session()->forget("checkout_promo_{$shop->id}");
+
+        return back()->withInput()->with('promo_status', 'Code promo retiré.');
     }
 
     /**
@@ -72,6 +137,7 @@ class CheckoutController extends Controller
             'delivery_address' => ['nullable', 'string', 'max:500'],
             'delivery_notes' => ['nullable', 'string', 'max:500'],
             'payment_method' => ['required', 'in:cash_on_delivery,tmoney,flooz,card,feexpay'],
+            'promo_code' => ['nullable', 'string', 'max:50'],
         ], [
             'customer_name.required' => 'Veuillez saisir votre nom complet.',
             'customer_phone.required' => 'Le numéro de téléphone est obligatoire pour la livraison.',
@@ -88,6 +154,10 @@ class CheckoutController extends Controller
             ])->with('status', 'Votre commande a été enregistrée avec succès !');
 
         } catch (Exception $e) {
+            if (str_contains($e->getMessage(), 'code promo')) {
+                session()->forget("checkout_promo_{$shop->id}");
+            }
+
             return back()->withInput()->with('error', $e->getMessage());
         }
     }
@@ -124,6 +194,10 @@ class CheckoutController extends Controller
      */
     public function simulateMobileMoney(Request $request, string $subdomain, string $orderNumber): RedirectResponse
     {
+        if (! app()->environment('local', 'testing')) {
+            abort(403, 'La simulation de paiement est uniquement disponible en environnement de test.');
+        }
+
         $shop = $this->resolveShop($subdomain);
 
         /** @var Order|null $order */
@@ -156,7 +230,7 @@ class CheckoutController extends Controller
             $order = Order::withoutGlobalScopes()
                 ->where('shop_id', $shop->id)
                 ->where('order_number', $orderNumber)
-                ->where('customer_phone', 'like', "%{$phone}%")
+                ->where('customer_phone', \App\Support\SearchHelper::likeOperator(), "%{$phone}%")
                 ->with(['items', 'statusHistories'])
                 ->first();
 

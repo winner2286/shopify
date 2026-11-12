@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AiAutomation;
+use App\Models\AiGeneration;
 use App\Models\Product;
 use App\Services\Ai\AiMarketingAutomationService;
 use Illuminate\Http\JsonResponse;
@@ -52,7 +53,7 @@ class AiMarketingController extends Controller
             return response()->json(['status' => 'error', 'message' => "Boutique introuvable."], 403);
         }
 
-        if ($shop->aiCreditsRemaining() <= 0) {
+        if (! $shop->hasEnoughAiCredits(1)) {
             return response()->json([
                 'status' => 'error',
                 'message' => "Vous avez épuisé vos crédits IA mensuels. Passez à un forfait supérieur pour continuer à générer des campagnes publicitaires.",
@@ -70,7 +71,18 @@ class AiMarketingController extends Controller
         $result = $this->marketingService->generateCampaignCopy($shop, $validated);
 
         if (($result['status'] ?? '') === 'success') {
-            $shop->increment('ai_credits_used');
+            $shop->consumeAiCredits(1);
+            AiGeneration::create([
+                'shop_id' => $shop->id,
+                'type' => 'ai_marketing_copy',
+                'step' => $validated['channel'],
+                'model_used' => 'zanika-marketing-ai',
+                'prompt_tokens' => 0,
+                'completion_tokens' => 0,
+                'cost_estimated_fcfa' => 1,
+                'status' => 'success',
+                'input_summary' => "Campagne {$validated['channel']} ({$validated['angle']})",
+            ]);
             $result['credits_remaining'] = $shop->aiCreditsRemaining();
 
             return response()->json($result);

@@ -46,27 +46,67 @@ class OrderService
             throw new Exception('Zone de livraison non valide.');
         }
 
-        // 1. Vérification stricte des stocks disponibles (CDC D-04, D-05)
-        foreach ($cart as $productId => $item) {
-            /** @var Product|null $product */
-            $product = Product::withoutGlobalScopes()
+        $promoCodeInput = array_key_exists('promo_code', $data)
+            ? trim((string) ($data['promo_code'] ?? ''))
+            : trim((string) session("checkout_promo_{$shop->id}", ''));
+
+        $order = DB::transaction(function () use ($shop, $cart, $zone, $data, $promoCodeInput) {
+            $productIds = collect(array_keys($cart))
+                ->map(fn ($id) => (int) $id)
+                ->sort()
+                ->values()
+                ->all();
+
+            // 1. Verrouillage pessimiste et vérification stricte des stocks disponibles (CDC D-04, D-05)
+            $lockedProducts = Product::withoutGlobalScopes()
                 ->where('shop_id', $shop->id)
                 ->where('status', Product::STATUS_ACTIVE)
-                ->find($productId);
+                ->whereIn('id', $productIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
 
-            if (! $product) {
-                throw new Exception("L'article « {$item['title']} » n'est plus disponible.");
+            foreach ($cart as $productId => $item) {
+                /** @var Product|null $product */
+                $product = $lockedProducts->get((int) $productId);
+
+                if (! $product) {
+                    throw new Exception("L'article « {$item['title']} » n'est plus disponible.");
+                }
+
+                if ($product->track_stock && $product->stock < (int) $item['quantity']) {
+                    throw new Exception("Stock insuffisant pour « {$product->title} ». Disponible : {$product->stock} exemplaire(s).");
+                }
             }
 
-            if ($product->track_stock && $product->stock < $item['quantity']) {
-                throw new Exception("Stock insuffisant pour « {$product->title} ». Disponible : {$product->stock} exemplaire(s).");
-            }
-        }
-
-        return DB::transaction(function () use ($shop, $cart, $zone, $data) {
             $subtotal = $this->cartService->getSubtotal($shop);
             $shippingCost = $zone->calculateFee($subtotal);
-            $total = $subtotal + $shippingCost;
+
+            $discountCode = null;
+            $discountAmount = 0;
+
+            if ($promoCodeInput !== '') {
+                /** @var \App\Models\DiscountCode|null $discountCode */
+                $discountCode = \App\Models\DiscountCode::withoutGlobalScopes()
+                    ->where('shop_id', $shop->id)
+                    ->whereRaw('UPPER(code) = ?', [strtoupper($promoCodeInput)])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $discountCode || ! $discountCode->isValid($subtotal)) {
+                    if ($discountCode && $discountCode->min_order_amount && $subtotal < $discountCode->min_order_amount) {
+                        $minFormatted = number_format($discountCode->min_order_amount, 0, ',', ' ');
+                        throw new Exception("Le code promo « {$discountCode->code} » nécessite un minimum d'achat de {$minFormatted} FCFA.");
+                    }
+
+                    throw new Exception("Le code promo « {$promoCodeInput} » est invalide, expiré ou a atteint sa limite d'utilisations.");
+                }
+
+                $discountAmount = $discountCode->calculateDiscount($subtotal);
+            }
+
+            $total = max(0, $subtotal - $discountAmount) + $shippingCost;
 
             // 2. Gestion de la fiche client (CDC E-04)
             $phone = trim($data['customer_phone']);
@@ -113,12 +153,19 @@ class OrderService
                 'delivery_address' => $zone->is_pickup ? 'Retrait en boutique' : ($data['delivery_address'] ?? 'Non spécifiée'),
                 'delivery_notes' => $data['delivery_notes'] ?? null,
                 'subtotal' => $subtotal,
+                'discount_code_id' => $discountCode?->id,
+                'discount_code' => $discountCode?->code,
+                'discount_amount' => $discountAmount,
                 'shipping_cost' => $shippingCost,
                 'total' => $total,
                 'payment_method' => $data['payment_method'],
                 'payment_status' => Order::PAYMENT_STATUS_PENDING,
                 'status' => Order::STATUS_PENDING,
             ]);
+
+            if ($discountCode) {
+                $discountCode->increment('used_count');
+            }
 
             // 4. Création des lignes de commande et décrémentation des stocks (CDC C-04, E-01)
             foreach ($cart as $productId => $item) {
@@ -135,7 +182,7 @@ class OrderService
 
                 // Décrémentation du stock avec traçabilité
                 /** @var Product|null $product */
-                $product = Product::withoutGlobalScopes()->find($productId);
+                $product = $lockedProducts->get((int) $productId);
                 if ($product && $product->track_stock) {
                     $product->decrement('stock', $item['quantity']);
                     $newStock = $product->fresh()->stock;
@@ -173,8 +220,9 @@ class OrderService
                 'comment' => "Commande passée par {$order->customer_name} via la vitrine.",
             ]);
 
-            // 7. Vidage du panier
+            // 7. Vidage du panier et code promo appliqué
             $this->cartService->clear($shop);
+            session()->forget("checkout_promo_{$shop->id}");
 
             return $order;
         });

@@ -480,14 +480,18 @@ class AdvertisingController extends Controller
         }
 
         $request->validate([
-            'audio' => ['required', 'file', 'max:25600'], // max 25MB
+            'audio' => ['required', 'file', 'mimes:mp3,wav,ogg,m4a,aac,webm,mp4', 'max:25600'], // max 25MB
             'type' => ['required', 'string', 'in:voice,music'],
         ]);
 
         $file = $request->file('audio');
         $type = $request->input('type');
 
-        $ext = $file->getClientOriginalExtension() ?: ($type === 'music' ? 'mp3' : 'webm');
+        $allowedExtensions = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'webm', 'mp4'];
+        $guessed = strtolower((string) ($file->guessExtension() ?: $file->getClientOriginalExtension()));
+        $extMap = ['mpga' => 'mp3', 'weba' => 'webm', 'm4a' => 'm4a'];
+        $normalized = $extMap[$guessed] ?? $guessed;
+        $ext = in_array($normalized, $allowedExtensions, true) ? $normalized : ($type === 'music' ? 'mp3' : 'webm');
         $fileName = 'ad_' . $ad->id . '_' . $type . '_' . time() . '.' . $ext;
         $path = $file->storeAs('ads/audio', $fileName, 'public');
 

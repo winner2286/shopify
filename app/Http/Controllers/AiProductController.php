@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Services\Ai\AiVisionService;
 use App\Services\ImageService;
+use App\Support\SearchHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -32,6 +33,14 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
+        if (! $shop->hasEnoughAiCredits(1)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Crédits IA mensuels épuisés.',
+                'message' => 'Crédits IA mensuels épuisés.',
+            ], 402);
+        }
+
         $imageBinary = null;
         $tempPhotoUrl = null;
         $tempPhotoPath = null;
@@ -41,7 +50,9 @@ class AiProductController extends Controller
             $imageBinary = file_get_contents($file->getRealPath());
 
             // Sauvegarder la photo pour pouvoir l'attacher au produit lors de la soumission finale
-            $filename = 'ai_draft_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $guessedExt = strtolower((string) ($file->guessExtension() ?: $file->getClientOriginalExtension()));
+            $ext = in_array($guessedExt, ['jpg', 'jpeg', 'png', 'webp'], true) ? $guessedExt : 'jpg';
+            $filename = 'ai_draft_' . uniqid() . '.' . $ext;
             $tempPhotoPath = "shops/{$shop->id}/products/{$filename}";
             Storage::disk('public')->put($tempPhotoPath, $imageBinary);
             $tempPhotoUrl = Storage::disk('public')->url($tempPhotoPath);
@@ -61,13 +72,14 @@ class AiProductController extends Controller
 
         $userHint = $request->input('user_hint');
         $analysis = $visionService->analyzeProductPhoto($imageBinary, $shop, $userHint);
+        $shop->consumeAiCredits(1);
 
         // Si une catégorie correspondante existe dans la boutique, renvoyer son ID
         $matchedCategoryId = null;
         if (! empty($analysis['category_name'])) {
-            $cat = Category::where('shop_id', $shop->id)
-                ->where('name', 'like', '%' . trim($analysis['category_name']) . '%')
-                ->first();
+            $catQuery = Category::where('shop_id', $shop->id);
+            SearchHelper::whereLike($catQuery, 'name', trim($analysis['category_name']));
+            $cat = $catQuery->first();
             $matchedCategoryId = $cat?->id;
         }
 
@@ -100,14 +112,27 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
+        if (! $shop->hasEnoughAiCredits(12)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Crédits IA insuffisants (12 crédits requis pour le studio packshot).',
+            ], 402);
+        }
+
         $imageBinary = null;
         if ($request->hasFile('photo')) {
             $imageBinary = file_get_contents($request->file('photo')->getRealPath());
         } elseif ($request->filled('photo_base64')) {
             $base64 = $request->input('photo_base64');
             $imageBinary = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64));
-        } elseif ($request->filled('photo_path') && Storage::disk('public')->exists($request->input('photo_path'))) {
-            $imageBinary = Storage::disk('public')->get($request->input('photo_path'));
+        } elseif ($request->filled('photo_path')) {
+            $photoPath = (string) $request->input('photo_path');
+            if (! $shop->ownsPublicPath($photoPath)) {
+                return response()->json(['error' => 'Chemin photo non autorisé.'], 403);
+            }
+            if (Storage::disk('public')->exists($photoPath)) {
+                $imageBinary = Storage::disk('public')->get($photoPath);
+            }
         }
 
         if (! $imageBinary) {
@@ -118,7 +143,7 @@ class AiProductController extends Controller
         $studioResult = $studioService->processProductPhoto($shop, $imageBinary, $categoryHint);
 
         // Journalisation de la vérification qualité (+12 crédits)
-        $shop->increment('ai_credits_used', 12);
+        $shop->consumeAiCredits(12);
         AiGeneration::create([
             'shop_id' => $shop->id,
             'type' => 'ai_quality_check',
@@ -166,18 +191,37 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
+        if (! $shop->hasEnoughAiCredits(6)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Crédits IA insuffisants (6 crédits requis pour générer une variante studio).',
+            ], 402);
+        }
+
         $cutoutPngBinary = null;
 
         // 1. Récupérer le PNG détouré si déjà disponible
-        if ($request->filled('cutout_path') && Storage::disk('public')->exists($request->input('cutout_path'))) {
-            $cutoutPngBinary = Storage::disk('public')->get($request->input('cutout_path'));
+        if ($request->filled('cutout_path')) {
+            $cutoutPath = (string) $request->input('cutout_path');
+            if (! $shop->ownsPublicPath($cutoutPath)) {
+                return response()->json(['error' => 'Chemin détourage non autorisé.'], 403);
+            }
+            if (Storage::disk('public')->exists($cutoutPath)) {
+                $cutoutPngBinary = Storage::disk('public')->get($cutoutPath);
+            }
         }
 
         // 2. Sinon extraire le détourage depuis la photo
         if (! $cutoutPngBinary) {
             $binary = null;
-            if ($request->filled('photo_path') && Storage::disk('public')->exists($request->input('photo_path'))) {
-                $binary = Storage::disk('public')->get($request->input('photo_path'));
+            if ($request->filled('photo_path')) {
+                $photoPath = (string) $request->input('photo_path');
+                if (! $shop->ownsPublicPath($photoPath)) {
+                    return response()->json(['error' => 'Chemin photo non autorisé.'], 403);
+                }
+                if (Storage::disk('public')->exists($photoPath)) {
+                    $binary = Storage::disk('public')->get($photoPath);
+                }
             } elseif ($request->filled('photo_base64')) {
                 $base64 = $request->input('photo_base64');
                 $binary = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64));
@@ -198,7 +242,7 @@ class AiProductController extends Controller
             $variation = $studioService->renderVariant($shop, $cutoutPngBinary, $style, $category);
 
             if ($variation) {
-                $shop->increment('ai_credits_used', 6);
+                $shop->consumeAiCredits(6);
                 AiGeneration::create([
                     'shop_id' => $shop->id,
                     'type' => 'ai_quality_check',
@@ -232,7 +276,17 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Non autorisé.'], 403);
         }
 
+        if (! $shop->hasEnoughAiCredits(1)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Crédits IA mensuels épuisés.',
+            ], 402);
+        }
+
         $result = $visionService->optimizeExistingProduct($product, $shop);
+        if (($result['status'] ?? '') === 'success') {
+            $shop->consumeAiCredits(1);
+        }
 
         // Si l'utilisateur a cliqué sur "Appliquer directement"
         if ($request->boolean('apply') && $result['status'] === 'success') {
@@ -298,7 +352,17 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
+        if (! $shop->hasEnoughAiCredits(1)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Crédits IA mensuels épuisés.',
+            ], 402);
+        }
+
         $result = $visionService->generateMarketingVisual($shop, $request->all());
+        if (($result['status'] ?? '') === 'success') {
+            $shop->consumeAiCredits(1);
+        }
 
         return response()->json($result);
     }

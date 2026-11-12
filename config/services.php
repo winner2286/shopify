@@ -59,9 +59,9 @@ return [
     ],
 
     'webpush' => [
-        'public_key' => env('VAPID_PUBLIC_KEY', 'BGKwSjr1JTOEHbpn_kAevk39d1yAae-i0qYZVhYo7pKiPVe0pFhCDzuTdymr931C-LTOTJ9RpXWzpLRcHrxyDA8'),
-        'private_key' => env('VAPID_PRIVATE_KEY', '76-U4KpznuWle7-wCIW6d6DLIHAKjq8tBr2rc4gcW88'),
-        'subject' => env('VAPID_SUBJECT', 'mailto:kougnimag@gmail.com'),
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT', env('MAIL_FROM_ADDRESS') ? 'mailto:' . env('MAIL_FROM_ADDRESS') : null),
     ],
 
 ];

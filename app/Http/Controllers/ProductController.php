@@ -6,12 +6,14 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Shop;
+use App\Support\SearchHelper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -37,11 +39,8 @@ class ProductController extends Controller
             $query = $shop->products()->with(['categories', 'images'])->latest('id');
 
             // Filtre par recherche textuelle (titre ou sku)
-            if ($search = $request->input('search')) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('sku', 'like', "%{$search}%");
-                });
+            if ($search = trim((string) $request->input('search'))) {
+                SearchHelper::whereLike($query, ['title', 'sku'], $search);
             }
 
             // Filtre par statut (active, hidden, archived)
@@ -122,7 +121,7 @@ class ProductController extends Controller
             'status' => ['required', 'in:active,hidden'],
             'sku' => ['nullable', 'string', 'max:50'],
             'category_ids' => ['nullable', 'array', 'max:3'], // 1 à 3 catégories max (C-01)
-            'category_ids.*' => ['exists:categories,id'],
+            'category_ids.*' => [Rule::exists('categories', 'id')->where('shop_id', $shop->id)],
             'photos' => ['nullable', 'array', 'max:8'], // 1 à 8 photos (C-01)
             'photos.*' => ['image', 'mimes:jpeg,png,webp,jpg', 'max:5120'], // Max 5 Mo par photo
         ], [
@@ -180,12 +179,12 @@ class ProductController extends Controller
                 ]);
             }
         } elseif ($request->filled('ai_temp_photo_path')) {
-            $tempPath = $request->input('ai_temp_photo_path');
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($tempPath)) {
+            $tempPath = (string) $request->input('ai_temp_photo_path');
+            if ($shop->ownsPublicPath($tempPath) && Storage::disk('public')->exists($tempPath)) {
                 $product->images()->create([
                     'path' => $tempPath,
                     'sort_order' => 0,
-                    'size_bytes' => \Illuminate\Support\Facades\Storage::disk('public')->size($tempPath),
+                    'size_bytes' => Storage::disk('public')->size($tempPath),
                 ]);
             }
         }
@@ -200,7 +199,10 @@ class ProductController extends Controller
     public function edit(Request $request, Product $product)
     {
         $user = $request->user();
-        $shop = $user->shop ?? Shop::firstOrCreate(['user_id' => $user->id], ['name' => 'Ma Boutique', 'status' => Shop::DRAFT]);
+        $shop = $user->shop;
+        if (! $shop || $product->shop_id !== $shop->id) {
+            abort(403);
+        }
         $categories = $shop->categories()->get();
         $product->load(['categories', 'images', 'stockMovements.author']);
 
@@ -210,7 +212,10 @@ class ProductController extends Controller
     public function update(Request $request, Product $product): RedirectResponse
     {
         $user = $request->user();
-        $shop = $user->shop ?? Shop::firstOrCreate(['user_id' => $user->id], ['name' => 'Ma Boutique', 'status' => Shop::DRAFT]);
+        $shop = $user->shop;
+        if (! $shop || $product->shop_id !== $shop->id) {
+            abort(403);
+        }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:120'],
@@ -222,7 +227,7 @@ class ProductController extends Controller
             'status' => ['required', 'in:active,hidden,archived'],
             'sku' => ['nullable', 'string', 'max:50'],
             'category_ids' => ['nullable', 'array', 'max:3'],
-            'category_ids.*' => ['exists:categories,id'],
+            'category_ids.*' => [Rule::exists('categories', 'id')->where('shop_id', $shop->id)],
             'photos' => ['nullable', 'array', 'max:8'],
             'photos.*' => ['image', 'mimes:jpeg,png,webp,jpg', 'max:5120'],
             'stock_adjustment' => ['nullable', 'integer'],
@@ -281,8 +286,8 @@ class ProductController extends Controller
                 $currentCount++;
             }
         } elseif ($request->filled('ai_temp_photo_path')) {
-            $tempPath = $request->input('ai_temp_photo_path');
-            if (Storage::disk('public')->exists($tempPath)) {
+            $tempPath = ltrim((string) $request->input('ai_temp_photo_path'), '/');
+            if ($shop->ownsPublicPath($tempPath) && Storage::disk('public')->exists($tempPath)) {
                 $product->images()->create([
                     'path' => $tempPath,
                     'sort_order' => $product->images()->count(),
@@ -298,8 +303,13 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('status', $statusMessage);
     }
 
-    public function destroy(Product $product): RedirectResponse
+    public function destroy(Request $request, Product $product): RedirectResponse
     {
+        $shop = $request->user()?->shop;
+        if (! $shop || $product->shop_id !== $shop->id) {
+            abort(403);
+        }
+
         // Règle RG-14 : si présent dans des commandes futures, on archive.
         // Sinon, suppression ou archivage.
         $product->update(['status' => Product::STATUS_ARCHIVED]);

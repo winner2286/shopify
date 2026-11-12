@@ -60,7 +60,7 @@ class DispatchOrderToCourierTool implements AiToolInterface
         if ($orderId > 0) {
             $query->where('id', $orderId);
         } elseif (! empty($orderNumber)) {
-            $query->where('order_number', 'like', "%{$orderNumber}%");
+            $query->where('order_number', \App\Support\SearchHelper::likeOperator(), "%{$orderNumber}%");
         } else {
             // Prend la dernière commande en attente
             $query->where('status', Order::STATUS_PENDING)->latest();

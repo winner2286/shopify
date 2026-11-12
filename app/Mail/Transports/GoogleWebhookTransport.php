@@ -12,15 +12,15 @@ class GoogleWebhookTransport extends AbstractTransport
 {
     public function __construct(
         private string $webhookUrl,
-        private string $token = 'ZanikaSecureMailToken2026'
+        private string $token = ''
     ) {
         parent::__construct();
     }
 
     protected function doSend(SentMessage $message): void
     {
-        if (empty($this->webhookUrl)) {
-            throw new \RuntimeException('GOOGLE_MAIL_WEBHOOK_URL n\'est pas configurée.');
+        if (empty($this->webhookUrl) || empty($this->token)) {
+            throw new \RuntimeException('GOOGLE_MAIL_WEBHOOK_URL ou GOOGLE_MAIL_WEBHOOK_TOKEN n\'est pas configuré.');
         }
 
         $email = MessageConverter::toEmail($message->getOriginalMessage());

@@ -96,9 +96,7 @@ class Shop extends Model
 
     public function aiCreditsUsedThisMonth(): int
     {
-        return (int) $this->aiGenerations()
-            ->where('created_at', '>=', now()->subDays(30))
-            ->count();
+        return max(0, (int) $this->ai_credits_used);
     }
 
     public function aiCreditsRemaining(): int
@@ -107,7 +105,28 @@ class Shop extends Model
             return 9999;
         }
 
-        return max(0, $this->aiCreditsMonthly() - $this->aiCreditsUsedThisMonth());
+        return max(0, $this->aiCreditsMonthly() - (int) $this->ai_credits_used);
+    }
+
+    public function hasEnoughAiCredits(int $cost = 1): bool
+    {
+        return $this->aiCreditsRemaining() >= max(1, $cost);
+    }
+
+    public function consumeAiCredits(int $cost = 1): void
+    {
+        $this->increment('ai_credits_used', max(1, $cost));
+        $this->refresh();
+    }
+
+    public function ownsPublicPath(string $path): bool
+    {
+        $normalized = ltrim(str_replace('\\', '/', trim($path)), '/');
+        if ($normalized === '' || str_contains($normalized, '..') || str_contains($normalized, "\0")) {
+            return false;
+        }
+
+        return str_starts_with($normalized, "shops/{$this->id}/");
     }
 
     public function categories(): HasMany

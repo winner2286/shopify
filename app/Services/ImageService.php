@@ -38,33 +38,26 @@ class ImageService
             ];
         }
 
+        $extension = strtolower((string) pathinfo($filePath, PATHINFO_EXTENSION));
+        $normalizedMime = strtolower((string) $mime);
+        $head = ltrim((string) @file_get_contents($filePath, false, null, 0, 256));
+        if (
+            $extension === 'svg'
+            || str_contains($normalizedMime, 'svg')
+            || str_starts_with(strtolower($head), '<svg')
+            || (str_starts_with(strtolower($head), '<?xml') && str_contains(strtolower($head), '<svg'))
+        ) {
+            throw new \InvalidArgumentException('Les images SVG ne sont pas autorisées.');
+        }
+
         if (! function_exists('imagecreatetruecolor')) {
-            // Fallback si l'extension GD est désactivée
-            $filename = 'img_' . Str::random(20) . '.' . (pathinfo($filePath, PATHINFO_EXTENSION) ?: 'jpg');
-            $fullPath = trim($directory, '/') . '/' . $filename;
-            $content = file_get_contents($filePath);
-            Storage::disk('public')->put($fullPath, $content);
-            return [
-                'path' => $fullPath,
-                'thumbnail_path' => null,
-                'size_bytes' => filesize($filePath),
-                'image_data' => base64_encode($content),
-            ];
+            throw new \RuntimeException('L\'extension GD est requise pour traiter les images.');
         }
 
         $sourceImage = $this->createImageFromFile($filePath, $mime);
 
         if (! $sourceImage) {
-            $filename = 'img_' . Str::random(20) . '.' . (pathinfo($filePath, PATHINFO_EXTENSION) ?: 'jpg');
-            $fullPath = trim($directory, '/') . '/' . $filename;
-            $content = file_get_contents($filePath);
-            Storage::disk('public')->put($fullPath, $content);
-            return [
-                'path' => $fullPath,
-                'thumbnail_path' => null,
-                'size_bytes' => filesize($filePath),
-                'image_data' => base64_encode($content),
-            ];
+            throw new \InvalidArgumentException('Fichier image invalide ou format non supporté.');
         }
 
         // 1. Correction orientation EXIF (photos smartphone)

@@ -53,7 +53,8 @@
                     Effectuez le transfert du montant de <strong>{{ number_format($order->total, 0, ',', ' ') }} FCFA</strong> vers le numéro marchand de la boutique ({{ $shop->phone ?: '+228 90 00 00 00' }}) en indiquant votre numéro de commande <strong>{{ $order->order_number }}</strong> en référence.
                 </p>
 
-                <!-- Bouton de simulation pour tests et démonstration immédiate (CDC F-01) -->
+                <!-- Bouton de simulation pour tests et démonstration immédiate (local/test uniquement) -->
+                @if (app()->environment('local', 'testing'))
                 <form method="POST" action="{{ route('storefront.order.simulate_mobile_money', ['subdomain' => $shop->subdomain, 'orderNumber' => $order->order_number]) }}" style="background:var(--bg-soft);padding:1rem;border-radius:var(--radius-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
                     @csrf
                     <div>
@@ -64,6 +65,7 @@
                         <x-icon name="zap" size="16" /> Simuler la validation du paiement
                     </button>
                 </form>
+                @endif
             @endif
         </div>
     @elseif ($order->payment_method === 'feexpay')
@@ -101,7 +103,8 @@
                     </div>
                 </div>
 
-                <!-- Simulation de test direct si en mode test/sandbox -->
+                <!-- Simulation de test direct uniquement en environnement local/test Sandbox -->
+                @if (app()->environment('local', 'testing') && config('feexpay.mode', 'SANDBOX') !== 'LIVE')
                 <form method="POST" action="{{ route('storefront.order.simulate_mobile_money', ['subdomain' => $shop->subdomain, 'orderNumber' => $order->order_number]) }}" style="background:var(--bg-soft);padding:1rem;border-radius:var(--radius-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-top:1.5rem;border:1px dashed var(--border)">
                     @csrf
                     <div>
@@ -112,19 +115,22 @@
                         <x-icon name="zap" size="16" /> Valider le test FeexPay
                     </button>
                 </form>
+                @endif
 
                 <script src="https://api-v2.feexpay.me/feexpay-javascript-sdk/index.js"></script>
                 <script>
                     document.addEventListener('DOMContentLoaded', function() {
                         const triggerBtn = document.getElementById('feexpay-trigger-btn');
                         const kycNotice = document.getElementById('feexpay-kyc-notice');
+                        const feexShopId = @json(config('feexpay.shop_id'));
+                        const feexToken = @json(config('feexpay.token'));
 
-                        if (typeof FeexPayButton !== 'undefined') {
+                        if (typeof FeexPayButton !== 'undefined' && feexShopId && feexToken) {
                             try {
                                 FeexPayButton.init('feexpay-btn-order', {
-                                    id: '{{ config('feexpay.shop_id', '698dd650a7ffb88696f5id86') }}',
+                                    id: feexShopId,
                                     amount: {{ (int) $order->total }},
-                                    token: '{{ config('feexpay.token', 'test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn') }}',
+                                    token: feexToken,
                                     callback_url: '{{ route('feexpay.callback') }}?custom_id=ORDER:{{ $order->id }}',
                                     mode: '{{ config('feexpay.mode', 'SANDBOX') }}',
                                     custom_id: 'ORDER:{{ $order->id }}',
@@ -213,6 +219,12 @@
                     <span>Livraison :</span>
                     <span>{{ $order->shipping_cost === 0 ? 'Gratuit' : number_format($order->shipping_cost, 0, ',', ' ') . ' FCFA' }}</span>
                 </div>
+                @if (($order->discount_amount ?? 0) > 0)
+                <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:600">
+                    <span>Réduction ({{ $order->discount_code ?? 'Promo' }}) :</span>
+                    <span>-{{ number_format($order->discount_amount, 0, ',', ' ') }} FCFA</span>
+                </div>
+                @endif
                 <div style="display:flex;justify-content:space-between;font-size:1.2rem;font-weight:700;border-top:1px solid var(--border);padding-top:.5rem;margin-top:.3rem">
                     <span>Total :</span>
                     <span style="color:var(--text)">{{ number_format($order->total, 0, ',', ' ') }} FCFA</span>

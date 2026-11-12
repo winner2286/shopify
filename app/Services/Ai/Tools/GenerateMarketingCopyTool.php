@@ -70,7 +70,7 @@ class GenerateMarketingCopyTool implements AiToolInterface
                 $productId = $p?->id;
             } else {
                 $p = Product::where('shop_id', $shop->id)
-                    ->where('title', 'like', "%{$identifier}%")
+                    ->where('title', \App\Support\SearchHelper::likeOperator(), "%{$identifier}%")
                     ->first();
                 $productId = $p?->id;
             }

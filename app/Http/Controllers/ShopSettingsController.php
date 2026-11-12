@@ -56,13 +56,13 @@ class ShopSettingsController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
             'maps_url' => ['nullable', 'string', 'max:500'],
-            'logo' => ['nullable', 'image', 'mimes:jpeg,png,webp,jpg,svg', 'max:5120'],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,png,webp,jpg', 'max:5120'],
         ], [
             'subdomain.regex' => 'Le sous-domaine doit contenir uniquement des lettres minuscules, chiffres ou tirets (sans tiret au début ou à la fin).',
             'subdomain.not_in' => 'Ce sous-domaine est réservé par la plateforme.',
             'subdomain.unique' => 'Ce sous-domaine est déjà réservé par une autre boutique.',
             'brand_color.regex' => 'Veuillez spécifier une couleur hexadécimale valide (ex. #6d3df2).',
-            'logo.image' => 'Le logo doit être une image valide (PNG, JPG, WebP ou SVG).',
+            'logo.image' => 'Le logo doit être une image valide (PNG, JPG ou WebP).',
             'logo.max' => 'La taille maximale du logo est de 5 Mo.',
         ]);
 

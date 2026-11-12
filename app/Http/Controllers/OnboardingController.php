@@ -239,10 +239,10 @@ class OnboardingController extends Controller
         $shop = $request->user()->shop;
 
         $request->validate([
-            'custom_logo' => ['required', 'image', 'mimes:jpeg,png,webp,jpg,svg', 'max:5120'],
+            'custom_logo' => ['required', 'image', 'mimes:jpeg,png,webp,jpg', 'max:5120'],
         ], [
             'custom_logo.required' => 'Veuillez sélectionner votre fichier de logo.',
-            'custom_logo.image' => 'Le fichier sélectionné doit être une image (PNG, JPG, WebP ou SVG).',
+            'custom_logo.image' => 'Le fichier sélectionné doit être une image valide (PNG, JPG ou WebP).',
             'custom_logo.max' => 'La taille maximale autorisée est de 5 Mo.',
         ]);
 

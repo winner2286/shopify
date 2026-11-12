@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'shop_id', 'customer_id', 'order_number',
     'customer_name', 'customer_phone', 'customer_email',
-    'shipping_zone_id', 'delivery_zone_name', 'delivery_address', 'delivery_notes',
-    'subtotal', 'shipping_cost', 'total',
+    'shipping_zone_id', 'discount_code_id', 'discount_code', 'delivery_zone_name', 'delivery_address', 'delivery_notes',
+    'subtotal', 'discount_amount', 'shipping_cost', 'total',
     'payment_method', 'payment_status', 'paid_at',
     'status', 'cancellation_reason', 'cancelled_at',
 ])]
@@ -41,6 +41,7 @@ class Order extends Model
     {
         return [
             'subtotal' => 'integer',
+            'discount_amount' => 'integer',
             'shipping_cost' => 'integer',
             'total' => 'integer',
             'paid_at' => 'datetime',
@@ -51,6 +52,11 @@ class Order extends Model
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class);
+    }
+
+    public function discountCode(): BelongsTo
+    {
+        return $this->belongsTo(DiscountCode::class);
     }
 
     public function customer(): BelongsTo
@@ -153,5 +159,29 @@ class Order extends Model
         }
 
         return $candidate;
+    }
+
+    /**
+     * Génère un jeton HMAC déterministe pour sécuriser le lien du reçu public.
+     */
+    public function receiptToken(): string
+    {
+        $key = (string) config('app.key');
+        if ($key === '') {
+            throw new \RuntimeException('APP_KEY manquante pour signer les reçus publics.');
+        }
+
+        return hash_hmac('sha256', "receipt:{$this->id}:{$this->order_number}:{$this->shop_id}", $key);
+    }
+
+    /**
+     * Retourne l'URL publique signée du reçu de commande.
+     */
+    public function publicReceiptUrl(): string
+    {
+        return route('orders.public_receipt', [
+            'orderNumber' => $this->order_number,
+            'token' => $this->receiptToken(),
+        ]);
     }
 }

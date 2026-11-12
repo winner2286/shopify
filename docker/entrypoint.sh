@@ -11,41 +11,10 @@ if [ ! -f /var/www/html/.env ]; then
     fi
 fi
 
-# Export automatique de la clé OpenRouter pour Google Gemini 2.5 Flash
-export OPENROUTER_DEFAULT_KEY=$(echo "c2stb3ItdjEtZGY0YTZkMWM1OWNjM2YwOTA0MWU0MThkODNjZTdlNjgxYTE5Y2IzNGNmMjZiYzQ0MjBhYTM2ZTI4YjliNDNlOA==" | base64 -d)
-if [ -z "$OPENROUTER_API_KEY" ]; then
-    export OPENROUTER_API_KEY="$OPENROUTER_DEFAULT_KEY"
-fi
 export OPENROUTER_MODEL="${OPENROUTER_MODEL:-google/gemini-2.5-flash}"
-if [ -f /var/www/html/.env ]; then
-    if grep -q "^OPENROUTER_API_KEY=" /var/www/html/.env; then
-        CURRENT_KEY=$(grep "^OPENROUTER_API_KEY=" /var/www/html/.env | cut -d '=' -f2-)
-        if [ -z "$CURRENT_KEY" ]; then
-            sed -i "s|^OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=${OPENROUTER_API_KEY}|g" /var/www/html/.env
-        fi
-    else
-        echo "OPENROUTER_API_KEY=${OPENROUTER_API_KEY}" >> /var/www/html/.env
-    fi
-    if ! grep -q "^OPENROUTER_MODEL=" /var/www/html/.env; then
-        echo "OPENROUTER_MODEL=${OPENROUTER_MODEL}" >> /var/www/html/.env
-    fi
-fi
-
-# Export automatique des identifiants FeexPay (Sandbox / Test)
-export FEEXPAY_SHOP_ID="${FEEXPAY_SHOP_ID:-698dd650a7ffb88696f5id86}"
-export FEEXPAY_TOKEN="${FEEXPAY_TOKEN:-test_Hg7Kjl3ZAM63UuIUpuudD9nKuu3ZAM67Kjl3Uuhn}"
 export FEEXPAY_MODE="${FEEXPAY_MODE:-SANDBOX}"
 export FEEXPAY_BASE_URL="${FEEXPAY_BASE_URL:-https://api-v2.feexpay.me}"
 export FEEXPAY_CURRENCY="${FEEXPAY_CURRENCY:-XOF}"
-
-if [ -f /var/www/html/.env ]; then
-    for var in FEEXPAY_SHOP_ID FEEXPAY_TOKEN FEEXPAY_MODE FEEXPAY_BASE_URL FEEXPAY_CURRENCY; do
-        eval val=\$$var
-        if ! grep -q "^${var}=" /var/www/html/.env; then
-            echo "${var}=${val}" >> /var/www/html/.env
-        fi
-    done
-fi
 
 # 2. Validation et génération de la clé d'application
 case "$APP_KEY" in

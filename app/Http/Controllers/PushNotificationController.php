@@ -68,7 +68,9 @@ class PushNotificationController extends Controller
             'endpoint' => ['required', 'string'],
         ]);
 
-        PushSubscription::where('endpoint', $request->input('endpoint'))->delete();
+        PushSubscription::where('user_id', $request->user()->id)
+            ->where('endpoint', $request->input('endpoint'))
+            ->delete();
 
         return response()->json([
             'success' => true,

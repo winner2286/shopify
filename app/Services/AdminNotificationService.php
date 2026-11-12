@@ -256,7 +256,7 @@ class AdminNotificationService
         try {
             // Anti-spam : vérifier si une alerte similaire a déjà été émise dans les 6 dernières heures
             $recentAlert = SystemAlert::where('type', 'system_health')
-                ->where('title', 'like', '%OpenRouter%')
+                ->where('title', \App\Support\SearchHelper::likeOperator(), '%OpenRouter%')
                 ->where('created_at', '>=', now()->subHours(6))
                 ->exists();
 

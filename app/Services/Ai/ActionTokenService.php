@@ -36,8 +36,7 @@ class ActionTokenService
         ];
 
         $encodedPayload = rtrim(strtr(base64_encode(json_encode($payload)), '+/', '-_'), '=');
-        $secretKey = (string) (config('app.key') ?: 'zanika-default-action-secret');
-        $signature = hash_hmac('sha256', $encodedPayload, $secretKey);
+        $signature = hash_hmac('sha256', $encodedPayload, $this->signingKey());
 
         return "{$encodedPayload}.{$signature}";
     }
@@ -61,8 +60,7 @@ class ActionTokenService
 
         [$encodedPayload, $providedSignature] = $parts;
 
-        $secretKey = (string) (config('app.key') ?: 'zanika-default-action-secret');
-        $expectedSignature = hash_hmac('sha256', $encodedPayload, $secretKey);
+        $expectedSignature = hash_hmac('sha256', $encodedPayload, $this->signingKey());
 
         if (! hash_equals($expectedSignature, $providedSignature)) {
             return ['valid' => false, 'error' => 'Signature de sécurité invalide ou jeton corrompu.'];
@@ -132,5 +130,18 @@ class ActionTokenService
         }
 
         return $params;
+    }
+
+    /**
+     * Retourne la clé secrète HMAC applicative (refus fail-closed si absente).
+     */
+    private function signingKey(): string
+    {
+        $key = (string) config('app.key');
+        if ($key === '') {
+            throw new \RuntimeException('APP_KEY doit être configuré pour signer les jetons d\'action IA.');
+        }
+
+        return $key;
     }
 }
