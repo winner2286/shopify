@@ -684,4 +684,20 @@ class SecurityAndAuditRegressionTest extends TestCase
         $this->assertSame(0, (int) $shop->fresh()->ai_credits_used);
         $this->assertSame(350, $shop->fresh()->aiCreditsRemaining());
     }
+
+    public function test_http_security_headers_and_geniuspay_webhook_protection(): void
+    {
+        $response = $this->get('/');
+        $response->assertStatus(200);
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->assertHeader('Permissions-Policy');
+
+        // Un webhook GeniusPay sans référence valide est rejeté
+        $this->postJson(route('geniuspay.webhook'), [
+            'reference' => '',
+            'custom_id' => 'ORDER:999999',
+        ])->assertStatus(400);
+    }
 }

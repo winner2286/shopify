@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->isAdmin() ? route('admin.dashboard') : route('dashboard'));
         $middleware->preventRequestsDuringMaintenance(except: [
             'admin',
@@ -23,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'zanika-admin-bypass',
         ]);
         $middleware->validateCsrfTokens(except: [
+            'api/geniuspay/webhook',
+            'geniuspay/webhook',
+            'geniuspay/callback',
             'api/feexpay/webhook',
             'feexpay/webhook',
             'feexpay/callback',

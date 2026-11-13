@@ -110,7 +110,10 @@ class MediaController extends Controller
 
         // 5. Fallback vectoriel SVG pur
         $svg = $this->generateSvgPlaceholder($product);
-        return response($svg, 200, $this->imageHeaders(86400, 'image/svg+xml'));
+        return response($svg, 200, array_merge(
+            $this->imageHeaders(86400, 'image/svg+xml'),
+            ['Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'"]
+        ));
     }
 
     /**

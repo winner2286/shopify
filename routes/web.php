@@ -204,11 +204,11 @@ Route::prefix('b/{subdomain}')->group(function () {
 
     // Tunnel de commande (Checkout) & Suivi
     Route::get('/commander', [\App\Http\Controllers\CheckoutController::class, 'show'])->name('storefront.checkout.show');
-    Route::post('/commander', [\App\Http\Controllers\CheckoutController::class, 'process'])->name('storefront.checkout.process');
-    Route::post('/commander/code-promo', [\App\Http\Controllers\CheckoutController::class, 'applyPromoCode'])->name('storefront.checkout.apply_promo');
+    Route::post('/commander', [\App\Http\Controllers\CheckoutController::class, 'process'])->middleware('throttle:30,1')->name('storefront.checkout.process');
+    Route::post('/commander/code-promo', [\App\Http\Controllers\CheckoutController::class, 'applyPromoCode'])->middleware('throttle:30,1')->name('storefront.checkout.apply_promo');
     Route::post('/commander/code-promo/retirer', [\App\Http\Controllers\CheckoutController::class, 'removePromoCode'])->name('storefront.checkout.remove_promo');
     Route::get('/commandes/{orderNumber}', [\App\Http\Controllers\CheckoutController::class, 'showOrder'])->name('storefront.order.show');
-    Route::post('/commandes/{orderNumber}/simuler-paiement', [\App\Http\Controllers\CheckoutController::class, 'simulateMobileMoney'])->name('storefront.order.simulate_mobile_money');
+    Route::post('/commandes/{orderNumber}/simuler-paiement', [\App\Http\Controllers\CheckoutController::class, 'simulateMobileMoney'])->middleware('throttle:15,1')->name('storefront.order.simulate_mobile_money');
     Route::get('/suivi', [\App\Http\Controllers\CheckoutController::class, 'tracking'])->name('storefront.tracking');
 });
 
@@ -233,13 +233,14 @@ Route::get('/api/placeholder-image', [\App\Http\Controllers\MediaController::cla
 
 // API Synthèse vocale IA (Voix-off pour le studio vidéo)
 Route::get('/api/tts', [\App\Http\Controllers\MediaController::class, 'tts'])
+    ->middleware('throttle:60,1')
     ->name('api.tts');
 
 // Passerelle de paiement GeniusPay (Mobile Money & Cartes Bancaires) + rétrocompatibilité FeexPay
-Route::match(['get', 'post'], '/geniuspay/callback', [\App\Http\Controllers\FeexPayController::class, 'callback'])->name('geniuspay.callback');
-Route::post('/api/geniuspay/webhook', [\App\Http\Controllers\FeexPayController::class, 'webhook'])->name('geniuspay.webhook');
-Route::match(['get', 'post'], '/feexpay/callback', [\App\Http\Controllers\FeexPayController::class, 'callback'])->name('feexpay.callback');
-Route::post('/api/feexpay/webhook', [\App\Http\Controllers\FeexPayController::class, 'webhook'])->name('feexpay.webhook');
+Route::match(['get', 'post'], '/geniuspay/callback', [\App\Http\Controllers\FeexPayController::class, 'callback'])->middleware('throttle:60,1')->name('geniuspay.callback');
+Route::post('/api/geniuspay/webhook', [\App\Http\Controllers\FeexPayController::class, 'webhook'])->middleware('throttle:60,1')->name('geniuspay.webhook');
+Route::match(['get', 'post'], '/feexpay/callback', [\App\Http\Controllers\FeexPayController::class, 'callback'])->middleware('throttle:60,1')->name('feexpay.callback');
+Route::post('/api/feexpay/webhook', [\App\Http\Controllers\FeexPayController::class, 'webhook'])->middleware('throttle:60,1')->name('feexpay.webhook');
 
 // Paiements et abonnements SaaS commerçant via FeexPay
 Route::middleware('auth')->group(function () {

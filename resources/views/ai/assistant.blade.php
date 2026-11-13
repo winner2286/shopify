@@ -182,7 +182,7 @@
                                 </div>
                                 <div class="ai-bubble assistant-bubble">
                                     <div class="ai-bubble-content markdown-rendered">
-                                        {!! Str::markdown($msg->content ?? '') !!}
+                                        {!! Str::markdown($msg->content ?? '', ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                     </div>
 
                                     @if($msg->hasActionRequired())
