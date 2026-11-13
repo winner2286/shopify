@@ -2301,6 +2301,11 @@ button.bottom-nav-item {
     -webkit-transform: translate3d(0, 0, 0) !important;
     transform: translate3d(0, 0, 0) !important;
   }
+
+  body.ai-input-focused .bottom-nav,
+  body.ai-chat-open .bottom-nav {
+    display: none !important;
+  }
   
   /* Cacher les liens du header pour les marchands et admin connectés sur mobile */
   /* Le bouton Cockpit est déjà présent dans la barre de navigation inférieure */

@@ -1103,12 +1103,13 @@ body.ai-assistant-active main {
     outline: none;
     resize: none;
     color: #ffffff;
-    font-size: 15px;
+    font-size: 16px !important; /* 16px obligatoire pour éviter l'auto-zoom iOS Safari */
     font-family: inherit;
     line-height: 1.5;
-    min-height: 40px;
-    max-height: 160px;
+    min-height: 42px;
+    max-height: 140px;
     padding: 0;
+    overflow-y: auto;
 }
 
 #ai-user-input::placeholder {
@@ -1259,15 +1260,37 @@ body.ai-assistant-active main {
 
 @media (max-width: 768px) {
     body.has-bottom-nav main:has(.ai-assistant-wrapper),
+    body:has(.bottom-nav) main:has(.ai-assistant-wrapper),
+    body:has(.ai-assistant-wrapper) main,
     body.ai-assistant-active main {
-        height: calc(100dvh - 60px - 72px) !important;
-        max-height: calc(100dvh - 60px - 72px) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
 
+    /* Ancrage fixe entre le header (58px) et le bord exact de la bottom-nav mobile */
     .ai-assistant-wrapper {
-        height: 100% !important;
-        max-height: 100% !important;
+        position: fixed !important;
+        top: 58px !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: calc(64px + max(12px, env(safe-area-inset-bottom, 12px))) !important;
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
         min-height: 0 !important;
+        z-index: 50;
+    }
+
+    /* Quand l'utilisateur écrit sur mobile, masquer la barre de navigation inférieure pour libérer tout l'écran */
+    body.ai-input-focused .bottom-nav {
+        display: none !important;
+    }
+
+    body.ai-input-focused .ai-assistant-wrapper {
+        bottom: 0 !important;
     }
 
     .ai-container {
@@ -1276,11 +1299,11 @@ body.ai-assistant-active main {
     }
 
     .ai-chat-header {
-        padding: 0.65rem 0.85rem;
+        padding: 0.6rem 0.85rem;
     }
 
     .ai-chat-title {
-        font-size: 0.98rem;
+        font-size: 0.96rem;
     }
 
     .ai-chat-subtitle {
@@ -1288,7 +1311,7 @@ body.ai-assistant-active main {
     }
 
     .ai-chat-input-wrapper {
-        padding: 0.5rem 0.65rem 0.65rem;
+        padding: 0.5rem 0.7rem 0.7rem;
     }
 
     .ai-input-quick-chips {
@@ -1802,6 +1825,10 @@ async function handleChatSubmit(e) {
     appendMessageToUi('user', message, new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
     input.value = '';
     autoResizeTextarea(input);
+    if (window.innerWidth <= 768) {
+        input.blur();
+        syncAssistantMobileViewport();
+    }
 
     // Activer l'indicateur de typing
     isSending = true;
@@ -2102,10 +2129,66 @@ function submitModalFeedback() {
     }
 }
 
+function syncAssistantMobileViewport() {
+    const wrapper = document.querySelector('.ai-assistant-wrapper');
+    if (!wrapper) return;
+
+    if (window.innerWidth > 768) {
+        wrapper.style.removeProperty('top');
+        wrapper.style.removeProperty('bottom');
+        wrapper.style.removeProperty('height');
+        document.body.classList.remove('ai-input-focused');
+        return;
+    }
+
+    const input = document.getElementById('ai-user-input');
+    const isInputFocused = document.activeElement === input;
+    const vv = window.visualViewport;
+    const isKeyboardOpen = vv ? (vv.height < window.innerHeight * 0.82) : false;
+
+    if (isInputFocused || isKeyboardOpen) {
+        document.body.classList.add('ai-input-focused');
+        if (vv) {
+            const headerEl = document.querySelector('.site-header');
+            const headerHeight = headerEl ? Math.max(0, headerEl.getBoundingClientRect().bottom) : 58;
+            const topOffset = Math.max(headerHeight, vv.offsetTop);
+            const availableHeight = Math.max(200, vv.height + vv.offsetTop - topOffset);
+            wrapper.style.setProperty('top', `${topOffset}px`, 'important');
+            wrapper.style.setProperty('height', `${availableHeight}px`, 'important');
+            wrapper.style.setProperty('bottom', 'auto', 'important');
+        }
+        scrollToBottom();
+    } else {
+        document.body.classList.remove('ai-input-focused');
+        wrapper.style.removeProperty('top');
+        wrapper.style.removeProperty('bottom');
+        wrapper.style.removeProperty('height');
+    }
+}
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncAssistantMobileViewport);
+    window.visualViewport.addEventListener('scroll', syncAssistantMobileViewport);
+}
+window.addEventListener('resize', syncAssistantMobileViewport);
+
 document.addEventListener('DOMContentLoaded', () => {
     scrollToBottom();
     const input = document.getElementById('ai-user-input');
-    if (input) input.focus();
+    if (input) {
+        if (window.innerWidth > 768) {
+            input.focus();
+        }
+        input.addEventListener('focus', () => {
+            document.body.classList.add('ai-input-focused');
+            setTimeout(syncAssistantMobileViewport, 50);
+            setTimeout(syncAssistantMobileViewport, 250);
+        });
+        input.addEventListener('blur', () => {
+            setTimeout(syncAssistantMobileViewport, 120);
+        });
+    }
+    syncAssistantMobileViewport();
 });
 </script>
 
