@@ -3,7 +3,7 @@
 @section('title', 'Audit, Contrôle & Alertes Système - '.config('platform.name'))
 
 @section('content')
-<div class="container" style="max-width:1180px;padding:2rem 1rem">
+<div class="container" style="max-width:1180px;padding:1.5rem 1rem 5.5rem 1rem;box-sizing:border-box;width:100%;overflow-x:hidden">
     
     <!-- En-tête Cockpit Admin -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1.5rem;margin-bottom:2rem">
@@ -184,7 +184,7 @@
     </div>
 
     <!-- SECTION 3 : JOURNAL DES AUDITS & ALERTES SYSTÈME -->
-    <div class="card" style="padding:1.5rem">
+    <div class="card" style="padding:1.25rem 1rem;box-sizing:border-box;max-width:100%;overflow:hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem">
             <div>
                 <h2 style="font-size:1.2rem;margin:0 0 .25rem 0">Journal des Alertes & Activités</h2>
@@ -221,61 +221,70 @@
                 <p style="font-size:.85rem;margin-top:.25rem">Tout fonctionne parfaitement sur la plateforme Zanika.</p>
             </div>
         @else
-            <div style="display:flex;flex-direction:column;gap:.75rem">
+            <div style="display:flex;flex-direction:column;gap:.75rem;width:100%;box-sizing:border-box">
                 @foreach ($alerts as $alert)
-                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1rem;border-radius:12px;background:var(--bg-soft);border:1px solid {{ $alert->is_read ? 'var(--border)' : 'rgba(255, 45, 109, 0.3)' }};flex-wrap:wrap;transition:all .15s ease">
-                        <div style="display:flex;align-items:flex-start;gap:.85rem;flex:1;min-width:280px">
+                    <div style="display:flex;flex-direction:column;gap:.75rem;padding:1rem;border-radius:12px;background:var(--bg-soft);border:1px solid {{ $alert->is_read ? 'var(--border)' : 'rgba(255, 45, 109, 0.3)' }};box-sizing:border-box;width:100%;max-width:100%;overflow:hidden;word-break:break-word;transition:all .15s ease">
+                        <div style="display:flex;align-items:flex-start;gap:.75rem;width:100%;min-width:0;box-sizing:border-box">
                             <!-- Icône par catégorie -->
-                            <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ $alert->severity === 'critical' ? 'rgba(239, 68, 68, 0.15)' : ($alert->severity === 'warning' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)') }}">
+                            <div style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ $alert->severity === 'critical' ? 'rgba(239, 68, 68, 0.15)' : ($alert->severity === 'warning' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)') }}">
                                 @if ($alert->category === 'merchant_registered')
-                                    <span style="font-size:1.2rem">🚀</span>
+                                    <span style="font-size:1.15rem">🚀</span>
                                 @elseif ($alert->category === 'shop_created')
-                                    <span style="font-size:1.2rem">🏪</span>
+                                    <span style="font-size:1.15rem">🏪</span>
                                 @elseif ($alert->category === 'order_fraud')
-                                    <span style="font-size:1.2rem">💰</span>
+                                    <span style="font-size:1.15rem">💰</span>
                                 @else
-                                    <span style="font-size:1.2rem">⚙️</span>
+                                    <span style="font-size:1.15rem">⚙️</span>
                                 @endif
                             </div>
 
-                            <div style="flex:1">
-                                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-                                    <strong style="font-size:.95rem;color:var(--text)">{{ $alert->title }}</strong>
+                            <div style="flex:1;min-width:0;width:100%;box-sizing:border-box">
+                                <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:.3rem">
+                                    <strong style="font-size:.95rem;color:var(--text);word-break:break-word">{{ $alert->title }}</strong>
                                     
                                     @if (!$alert->is_read)
-                                        <span class="badge" style="background:#ef4444;color:#ffffff;font-size:.7rem;padding:1px 6px">NOUVEAU</span>
+                                        <span class="badge" style="background:#ef4444;color:#ffffff;font-size:.68rem;padding:1px 6px">NOUVEAU</span>
                                     @endif
 
-                                    <span class="badge {{ $alert->severity === 'critical' ? 'badge-error' : ($alert->severity === 'warning' ? 'badge-warning' : 'badge-ok') }}" style="font-size:.7rem">
+                                    <span class="badge {{ $alert->severity === 'critical' ? 'badge-error' : ($alert->severity === 'warning' ? 'badge-warning' : 'badge-ok') }}" style="font-size:.68rem">
                                         {{ strtoupper($alert->severity) }}
-                                    </span>
-
-                                    <span style="font-size:.78rem;color:var(--text-soft)">
-                                        {{ $alert->created_at ? $alert->created_at->diffForHumans() . ' (' . $alert->created_at->format('d/m/Y à H:i') . ')' : 'Récemment' }}
                                     </span>
                                 </div>
 
-                                <p style="margin:.35rem 0 .5rem 0;font-size:.88rem;color:var(--text-soft);line-height:1.45">
+                                <div style="font-size:.76rem;color:var(--text-soft);margin-bottom:.4rem">
+                                    {{ $alert->created_at ? $alert->created_at->diffForHumans() . ' (' . $alert->created_at->format('d/m/Y à H:i') . ')' : 'Récemment' }}
+                                </div>
+
+                                <p style="margin:0 0 .5rem 0;font-size:.88rem;color:var(--text-soft);line-height:1.45;word-break:break-word;overflow-wrap:anywhere">
                                     {{ $alert->message }}
                                 </p>
 
                                 @if (!empty($alert->data))
-                                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:.75rem">
-                                        @foreach ($alert->data as $key => $val)
-                                            @if (is_scalar($val))
-                                                <span style="background:var(--bg);padding:2px 7px;border-radius:6px;border:1px solid var(--border)">
-                                                    <strong>{{ $key }}:</strong> {{ $val }}
-                                                </span>
-                                            @endif
-                                        @endforeach
-                                    </div>
+                                    @php
+                                        // On masque les clés techniques déjà affichées dans l'en-tête ou le bouton d'action
+                                        $displayData = collect($alert->data)->reject(function ($val, $key) {
+                                            return in_array($key, ['action_url', 'alerted_at', 'system_event']);
+                                        });
+                                    @endphp
+                                    @if ($displayData->isNotEmpty())
+                                        <div style="display:flex;gap:.4rem;flex-wrap:wrap;font-size:.75rem;margin-top:.4rem">
+                                            @foreach ($displayData as $key => $val)
+                                                @if (is_scalar($val))
+                                                    <span style="background:var(--bg);padding:2px 7px;border-radius:6px;border:1px solid var(--border);word-break:break-all;overflow-wrap:anywhere;max-width:100%">
+                                                        <strong>{{ $key }}:</strong> {{ $val }}
+                                                    </span>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    @endif
                                 @endif
                             </div>
                         </div>
 
-                        <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                        <!-- Barre d'actions en bas de la carte : propre, alignée, sans débordement -->
+                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:.5rem;width:100%;box-sizing:border-box;padding-top:.5rem;border-top:1px solid var(--border)">
                             @if ($alert->action_url)
-                                <a href="{{ $alert->action_url }}" target="_blank" class="btn btn-xs btn-ghost" style="display:inline-flex;align-items:center;gap:.3rem">
+                                <a href="{{ $alert->action_url }}" target="_blank" class="btn btn-xs btn-ghost" style="display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--border)">
                                     <span>Consulter</span>
                                     <x-icon name="external-link" size="12" />
                                 </a>
@@ -284,8 +293,9 @@
                             @if (!$alert->is_read)
                                 <form method="POST" action="{{ route('admin.audit.read', $alert) }}" style="margin:0">
                                     @csrf
-                                    <button type="submit" class="btn btn-xs btn-ghost" title="Marquer comme lu">
+                                    <button type="submit" class="btn btn-xs btn-ghost" title="Marquer comme lu" style="display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--border)">
                                         <x-icon name="check" size="13" />
+                                        <span>Marquer lu</span>
                                     </button>
                                 </form>
                             @endif

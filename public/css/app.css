@@ -1684,6 +1684,26 @@ html[data-theme='light'] .bottom-nav-item.admin-cockpit-link,
   margin-top: 1px;
 }
 
+/* Navigation avec Cockpit Admin (6 items au lieu de 5) : ajustement pour éviter toute troncature de texte (ex: Commandes) */
+.bottom-nav.has-admin-cockpit .bottom-nav-item span:not(.icon),
+.bottom-nav-inner:has(.admin-cockpit-link) .bottom-nav-item span:not(.icon) {
+  font-size: 0.65rem;
+  letter-spacing: -0.025em;
+}
+
+.bottom-nav.has-admin-cockpit .bottom-nav-item,
+.bottom-nav-inner:has(.admin-cockpit-link) .bottom-nav-item {
+  padding: 2px 0;
+}
+
+@media (max-width: 390px) {
+  .bottom-nav.has-admin-cockpit .bottom-nav-item span:not(.icon),
+  .bottom-nav-inner:has(.admin-cockpit-link) .bottom-nav-item span:not(.icon) {
+    font-size: 0.61rem;
+    letter-spacing: -0.035em;
+  }
+}
+
 /* Espacement garanti sous le contenu pour la barre mobile (appliqué uniquement à main pour éviter le double padding de 200px) */
 body.has-bottom-nav,
 body:has(.bottom-nav) {

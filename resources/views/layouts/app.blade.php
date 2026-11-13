@@ -216,7 +216,7 @@
 
     @auth
         <!-- Navigation mobile inférieure (Section 9 du CDC : Accueil, Commandes, Produits, Publicité, Plus) -->
-        <nav class="bottom-nav" aria-label="Navigation mobile">
+        <nav class="bottom-nav {{ auth()->user()->isAdmin() ? 'has-admin-cockpit' : '' }}" aria-label="Navigation mobile">
             <div class="bottom-nav-inner">
                 @if (auth()->user()->isAdmin())
                     <a href="{{ route('admin.dashboard') }}" class="bottom-nav-item admin-cockpit-link {{ request()->routeIs('admin.*') ? 'active' : '' }}">
