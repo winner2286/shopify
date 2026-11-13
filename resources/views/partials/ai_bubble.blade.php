@@ -945,67 +945,92 @@ body.ai-chat-open {
 <script>
 (function() {
     let currentConversationId = {{ $bubbleInitialConvId ? (int) $bubbleInitialConvId : 'null' }};
-    if (!currentConversationId) {
+    if (currentConversationId) {
+        localStorage.setItem('zanika_ai_bubble_conv_id', currentConversationId);
+    } else {
         const saved = localStorage.getItem('zanika_ai_bubble_conv_id');
         if (saved) currentConversationId = parseInt(saved, 10);
     }
     let isSending = false;
     let hasLoadedHistory = false;
+    let historyLoadPromise = null;
 
     let savedScrollY = 0;
 
     async function loadActiveConversationIfNeeded() {
-        if (hasLoadedHistory) return;
+        if (hasLoadedHistory) {
+            return historyLoadPromise;
+        }
         hasLoadedHistory = true;
 
-        let targetConvId = currentConversationId;
-        if (!targetConvId) {
-            const saved = localStorage.getItem('zanika_ai_bubble_conv_id');
-            if (saved) targetConvId = parseInt(saved, 10);
-        }
+        historyLoadPromise = (async () => {
+            let targetConvId = currentConversationId;
+            if (!targetConvId) {
+                const saved = localStorage.getItem('zanika_ai_bubble_conv_id');
+                if (saved) targetConvId = parseInt(saved, 10);
+            }
 
-        let fetchUrl = targetConvId 
-            ? "{{ url('/assistant-ia/conversations') }}/" + targetConvId
-            : "{{ route('ai.conversations.active') }}";
+            let fetchUrl = targetConvId 
+                ? "{{ url('/assistant-ia/conversations') }}/" + targetConvId
+                : "{{ route('ai.conversations.active') }}";
 
-        try {
-            const resp = await fetch(fetchUrl, {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                }
-            });
-            if (resp.ok) {
-                const data = await resp.json();
-                if (data.id) {
-                    currentConversationId = data.id;
-                    localStorage.setItem('zanika_ai_bubble_conv_id', data.id);
-                }
-                if (data.remaining_credits !== undefined) {
-                    const credEl = document.getElementById('ai-bubble-credits-val');
-                    if (credEl) credEl.textContent = data.remaining_credits;
-                }
-                if (data.messages && data.messages.length > 0) {
-                    const welcome = document.getElementById('ai-bubble-welcome');
-                    if (welcome) welcome.style.display = 'none';
+            try {
+                let resp = await fetch(fetchUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    }
+                });
 
-                    const msgContainer = document.getElementById('ai-bubble-messages');
-                    const existing = msgContainer.querySelectorAll('.ai-bubble-msg');
-                    existing.forEach(el => el.remove());
-
-                    data.messages.forEach(m => {
-                        if (m.role === 'user' || m.role === 'assistant') {
-                            if (m.content) {
-                                appendAiBubbleMessage(m.role, m.content, m.action_required, m.id);
-                            }
+                // Si la conversation mémorisée localement n'existe plus ou appartient à une autre session, basculer sur la conversation active
+                if (!resp.ok && targetConvId) {
+                    localStorage.removeItem('zanika_ai_bubble_conv_id');
+                    currentConversationId = null;
+                    resp = await fetch("{{ route('ai.conversations.active') }}", {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': "{{ csrf_token() }}"
                         }
                     });
-                    scrollAiBubbleToBottom();
                 }
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.id) {
+                        currentConversationId = data.id;
+                        localStorage.setItem('zanika_ai_bubble_conv_id', data.id);
+                    } else if (data.active === false) {
+                        currentConversationId = null;
+                        localStorage.removeItem('zanika_ai_bubble_conv_id');
+                    }
+                    if (data.remaining_credits !== undefined) {
+                        const credEl = document.getElementById('ai-bubble-credits-val');
+                        if (credEl) credEl.textContent = data.remaining_credits;
+                    }
+                    if (!isSending && data.messages && data.messages.length > 0) {
+                        const welcome = document.getElementById('ai-bubble-welcome');
+                        if (welcome) welcome.style.display = 'none';
+
+                        const msgContainer = document.getElementById('ai-bubble-messages');
+                        const existing = msgContainer.querySelectorAll('.ai-bubble-msg');
+                        existing.forEach(el => el.remove());
+
+                        data.messages.forEach(m => {
+                            if (m.role === 'user' || m.role === 'assistant') {
+                                if (m.content) {
+                                    appendAiBubbleMessage(m.role, m.content, m.action_required, m.id);
+                                }
+                            }
+                        });
+                        scrollAiBubbleToBottom();
+                    }
+                }
+            } catch (err) {
+                console.warn('Erreur chargement conversation active copilote:', err);
             }
-        } catch (err) {
-            console.warn('Erreur chargement conversation active copilote:', err);
-        }
+        })();
+
+        return historyLoadPromise;
     }
 
     function syncWithVisualViewport() {
@@ -1166,6 +1191,13 @@ body.ai-chat-open {
             input.blur(); // Ferme le clavier sur mobile pour libérer tout l'écran
         } else {
             input.focus();
+        }
+
+        // Si le chargement initial de l'historique est en cours, attendre sa fin pour éviter tout conflit d'affichage
+        if (historyLoadPromise) {
+            try {
+                await historyLoadPromise;
+            } catch (_) {}
         }
 
         // Masquer l'écran d'accueil s'il est encore présent

@@ -75,6 +75,7 @@ class AiAssistantController extends Controller
 
         $messages = $conversation->messages()
             ->orderBy('created_at', 'asc')
+            ->orderBy('id', 'asc')
             ->get()
             ->map(function (AiMessage $m) {
                 return [
@@ -116,6 +117,7 @@ class AiAssistantController extends Controller
 
         $messages = $activeConversation->messages()
             ->orderBy('created_at', 'asc')
+            ->orderBy('id', 'asc')
             ->get()
             ->map(function (AiMessage $m) {
                 return [
@@ -155,14 +157,9 @@ class AiAssistantController extends Controller
         }
 
         $messageText = trim($request->input('message'));
-        $conversationId = $request->input('conversation_id');
+        $rawConvId = $request->input('conversation_id');
+        $conversationId = ! empty($rawConvId) ? (int) $rawConvId : null;
         $forceNew = (bool) $request->input('force_new', false);
-
-        // Si aucun conversation_id n'est fourni, créer impérativement un nouvel échange indépendant
-        if (empty($conversationId)) {
-            $forceNew = true;
-            $conversationId = null;
-        }
 
         $options = [
             'force_new_conversation' => $forceNew,

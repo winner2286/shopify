@@ -40,7 +40,7 @@ class AiConversation extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(AiMessage::class)->orderBy('created_at', 'asc');
+        return $this->hasMany(AiMessage::class)->orderBy('created_at', 'asc')->orderBy('id', 'asc');
     }
 
     public function latestMessage()

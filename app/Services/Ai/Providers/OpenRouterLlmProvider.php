@@ -166,7 +166,7 @@ class OpenRouterLlmProvider implements LlmProviderInterface
                 }
 
                 // 3. Cascade de Secours Échelon 2 : API Groq (Llama 3.3 70B ultra-rapide)
-                if ($response->status() === 402) {
+                if ($response->status() === 402 && empty($options['skip_groq_primary'])) {
                     $groqResult = $this->callGroqDirect($messages, $formattedTools, $maxTokens);
                     if ($groqResult !== null) {
                         return $groqResult;
@@ -211,9 +211,11 @@ class OpenRouterLlmProvider implements LlmProviderInterface
                 return $emergencyGemini;
             }
 
-            $emergencyGroq = $this->callGroqDirect($messages, $formattedTools, $maxTokens);
-            if ($emergencyGroq !== null) {
-                return $emergencyGroq;
+            if (empty($options['skip_groq_primary'])) {
+                $emergencyGroq = $this->callGroqDirect($messages, $formattedTools, $maxTokens);
+                if ($emergencyGroq !== null) {
+                    return $emergencyGroq;
+                }
             }
 
             // Alerte proactive du Super-Admin pour réapprovisionnement sans coupure

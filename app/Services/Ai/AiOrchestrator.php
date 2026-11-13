@@ -101,13 +101,14 @@ class AiOrchestrator
         // 5. Construction du System Prompt enrichi (Plan/Crédits/Droits + RAG + Mémoire + Contexte de fil)
         $systemPrompt = $this->buildSystemPrompt($shop, $userMessage, $ragChunks, $priorMessagesCount, $user);
 
-        // 6. Assemblage de l'historique des messages récents (16 derniers pour conserver du contexte)
+        // 6. Assemblage de l'historique des messages récents (16 derniers dans l'ordre chronologique exact)
         $history = $conversation->messages()
             ->where('id', '!=', $userMsgRecord->id)
-            ->latest('id')
+            ->reorder('id', 'desc')
             ->take(16)
             ->get()
-            ->reverse();
+            ->reverse()
+            ->values();
 
         $messagesPayload = [
             ['role' => 'system', 'content' => $systemPrompt],
@@ -148,8 +149,8 @@ class AiOrchestrator
 
         $messagesPayload[] = ['role' => 'user', 'content' => $userMessage];
 
-        // 7. Premier appel LLM avec déclaration des outils
-        $toolsSchema = $this->tools->getToolsSchema();
+        // 7. Premier appel LLM avec déclaration des outils (désactivés sur une simple salutation pour éviter latence/erreurs de schéma)
+        $toolsSchema = $this->isPureGreetingMessage($userMessage) ? [] : $this->tools->getToolsSchema();
         $response = $this->llm->chat($messagesPayload, $toolsSchema, $options);
 
         $totalTokensInput = $response['tokens_input'] ?? 0;
@@ -246,7 +247,7 @@ class AiOrchestrator
         $prevAssistantMsg = $conversation->messages()
             ->where('role', 'assistant')
             ->whereNotNull('content')
-            ->latest('id')
+            ->reorder('id', 'desc')
             ->first();
         $finalContent = $this->cleanLeakedReActTags($finalContent);
         $finalContent = $this->cleanDuplicatedContent($finalContent, $prevAssistantMsg?->content);
@@ -624,7 +625,10 @@ PROMPT;
         // Si le nouveau message commence exactement par l'un des paragraphes du message précédent (ex: intro darija répétée)
         foreach ($prevParagraphs as $prevPara) {
             if (str_starts_with($newContent, $prevPara)) {
-                $newContent = trim(mb_substr($newContent, mb_strlen($prevPara)));
+                $candidate = trim(mb_substr($newContent, mb_strlen($prevPara)));
+                if ($candidate !== '') {
+                    $newContent = $candidate;
+                }
             }
         }
 
@@ -659,13 +663,16 @@ PROMPT;
         $userMsgLower = mb_strtolower(trim($userMessage));
 
         $hasGreetingInUser = $this->messageContainsGreeting($userMessage);
-        $hasHowAreYouInUser = (bool) preg_match('/\b(comment\s+(vas|allez|tu\s+vas|vous\s+allez)|(ça|ca)\s+va)\b/ui', $userMsgLower);
+        $hasHowAreYouInUser = (bool) preg_match('/\b(comment\s+(vas|allez|tu\s+vas|vous\s+allez)|(ça|ca)\s+va|tu\s+vas\s+bien|vous\s+allez\s+bien)\b/ui', $userMsgLower);
 
         // 1. Si l'utilisateur n'a pas expressément demandé comment va l'IA, supprimer "Je vais très bien...", "Ravi de vous retrouver"
         if (! $hasHowAreYouInUser) {
-            // "Bonjour ! Je vais très bien, merci, et ravi de te retrouver aussi !"
-            $content = preg_replace('/^(?:bonjour\s*!?,?\s*)?(?:je\s+vais\s+tr[eèé]s\s+bien,?\s*merci(?:,?\s*et\s+ravi\s+de\s+(?:te|vous)\s+retrouver(?:\s+aussi)?)?\s*!?[.]?\s*)/ui', '', $content);
-            $content = preg_replace('/^(?:je\s+vais\s+bien,?\s*merci(?:,?\s*et\s+ravi\s+de\s+(?:te|vous)\s+retrouver(?:\s+aussi)?)?\s*!?[.]?\s*)/ui', '', $content);
+            if (! $hasGreetingInUser) {
+                $content = preg_replace('/^(?:bonjour\s*!?,?\s*)?(?:je\s+vais\s+tr[eèé]s\s+bien,?\s*merci(?:,?\s*et\s+ravi\s+de\s+(?:te|vous)\s+retrouver(?:\s+aussi)?)?\s*!?[.]?\s*)/ui', '', $content);
+            }
+            $content = preg_replace('/^((?:(?:bonjour|salut|bonsoir|coucou|hello|hey)\s*!?,?\s*)?)(?:je\s+vais\s+(?:tr[eèé]s\s+)?bien(?:,?\s*merci)?,?\s*et\s+ravi\s+de\s+(?:te|vous)\s+retrouver(?:\s+aussi)?\s*!?[.]?\s*)/ui', '$1', $content);
+            $content = preg_replace('/^((?:(?:bonjour|salut|bonsoir|coucou|hello|hey)\s*!?,?\s*)?)(?:je\s+vais\s+(?:tr[eèé]s\s+)?bien(?:,?\s*merci)?,?\s+et\s+)/ui', '$1', $content);
+            $content = preg_replace('/^((?:(?:bonjour|salut|bonsoir|coucou|hello|hey)\s*!?,?\s*)?)(?:je\s+vais\s+(?:tr[eèé]s\s+)?bien,?\s*merci\s*!?[.]?\s*)/ui', '$1', $content);
             $content = preg_replace('/^(?:ravi\s+de\s+(?:te|vous)\s+retrouver(?:\s+aussi)?\s*!?[.]?\s*)/ui', '', $content);
         }
 
@@ -681,10 +688,15 @@ PROMPT;
         // 3. Nettoyer les résidus de ponctuation ou sauts de ligne orphelins en début
         $content = preg_replace('/^[\s\r\n\.,;:!-]+/', '', $content);
 
-        // 4. Mettre en majuscule le premier caractère
+        // 4. Mettre en majuscule le premier caractère (et après une salutation conservée)
         if (! empty($content)) {
             $firstChar = mb_substr($content, 0, 1);
             $content = mb_strtoupper($firstChar) . mb_substr($content, 1);
+            $content = (string) preg_replace_callback(
+                '/^((?:Bonjour|Salut|Bonsoir|Coucou|Hello|Hey)\s*!\s+)(\p{Ll})/u',
+                fn($m) => $m[1] . mb_strtoupper($m[2]),
+                $content
+            );
         }
 
         return trim($content);

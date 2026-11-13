@@ -361,4 +361,59 @@ class AiConversationThreadTest extends TestCase
         $this->assertStringNotContainsString('Mules à Talon Bordeaux', $prompt);
         $this->assertStringNotContainsString('restock_or_preorder', $prompt);
     }
+
+    public function test_multi_turn_history_is_passed_in_chronological_order_and_greetings_do_not_repeat(): void
+    {
+        $localService = new \App\Services\Ai\AiLocalIntelligenceService();
+        $localLlm = new class($localService, $this->shop) implements LlmProviderInterface {
+            public array $capturedMessages = [];
+
+            public function __construct(
+                protected \App\Services\Ai\AiLocalIntelligenceService $local,
+                protected Shop $shop
+            ) {}
+
+            public function chat(array $messages, array $tools = [], array $options = []): array
+            {
+                $this->capturedMessages = $messages;
+                return $this->local->respond($messages, $this->shop);
+            }
+        };
+
+        $orchestrator = new AiOrchestrator($localLlm);
+
+        // Tour 1 : l'utilisateur envoie "cc"
+        $turn1 = $orchestrator->sendMessage($this->shop, $this->user, 'cc');
+        $convId = $turn1['conversation_id'];
+        $reply1 = $turn1['message']['content'];
+
+        $this->assertStringStartsWith('Coucou !', $reply1);
+        $this->assertStringNotContainsString('Je vais très bien', $reply1);
+
+        // Tour 2 : l'utilisateur envoie "bonjour" dans la même conversation (scénario exact de la capture d'écran)
+        $turn2 = $orchestrator->sendMessage($this->shop, $this->user, 'bonjour', $convId);
+        $reply2 = $turn2['message']['content'];
+
+        $this->assertStringStartsWith('Bonjour !', $reply2);
+        $this->assertStringNotContainsString('Je vais très bien', $reply2);
+        $this->assertNotSame($reply1, $reply2, 'Le copilote ne doit jamais répéter mot pour mot la même phrase sur deux tours consécutifs.');
+
+        // Tour 3 : l'utilisateur répond "1" pour suivre la proposition sur les stocks
+        $turn3 = $orchestrator->sendMessage($this->shop, $this->user, '1', $convId);
+        $reply3 = $turn3['message']['content'];
+
+        $this->assertStringContainsString('État des Stocks', $reply3);
+
+        // Vérifier que l'historique transmis au LLM est bien dans l'ordre chronologique (cc -> reply1 -> bonjour -> reply2 -> 1)
+        $nonSystemRoles = array_values(array_filter(
+            $localLlm->capturedMessages,
+            fn($m) => ($m['role'] ?? '') !== 'system'
+        ));
+        $this->assertCount(5, $nonSystemRoles);
+        $this->assertSame('cc', $nonSystemRoles[0]['content']);
+        $this->assertSame($reply1, $nonSystemRoles[1]['content']);
+        $this->assertSame('bonjour', $nonSystemRoles[2]['content']);
+        $this->assertSame($reply2, $nonSystemRoles[3]['content']);
+        $this->assertSame('1', $nonSystemRoles[4]['content']);
+    }
 }

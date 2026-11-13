@@ -77,7 +77,7 @@ class GroqLlmProvider implements LlmProviderInterface
 
         // 2. Cascade de Secours : OpenRouter / Gemini / Moteur Métier Local
         $fallbackProvider = new OpenRouterLlmProvider();
-        return $fallbackProvider->chat($messages, $tools, array_merge($options, ['skip_groq_primary' => true]));
+        return $fallbackProvider->chat($formattedMessages, $tools, array_merge($options, ['skip_groq_primary' => true]));
     }
 
     /**
