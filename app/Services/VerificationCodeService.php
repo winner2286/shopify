@@ -35,12 +35,8 @@ class VerificationCodeService
             \Illuminate\Support\Facades\Log::error('Erreur envoi email OTP Zanika: ' . $e->getMessage());
         }
 
-        // Si l'envoi email a échoué ou si le système d'envoi n'est pas encore configuré, secours en session
-        $isLocalOrUnconfigured = (config('mail.default') === 'log')
-            || (config('mail.default') === 'smtp' && (empty(config('mail.mailers.smtp.username')) || config('mail.mailers.smtp.host') === '127.0.0.1'))
-            || (config('mail.default') === 'google_webhook' && empty(config('mail.mailers.google_webhook.url')));
-
-        if (! $mailSent || $isLocalOrUnconfigured) {
+        // Secours uniquement en environnement de test unitaire automatisé
+        if (app()->environment('testing') && ! $mailSent) {
             session()->flash('dev_code', $code);
         }
     }
