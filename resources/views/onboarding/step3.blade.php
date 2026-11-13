@@ -50,14 +50,45 @@
         <form method="POST" action="{{ route('onboarding.step3.store') }}" enctype="multipart/form-data" data-once>
             @csrf
 
-            <!-- Bannière Retouche & Ajustement automatique Studio -->
-            <div style="background:rgba(234, 88, 12, 0.08);border:1px solid rgba(234, 88, 12, 0.25);border-radius:12px;padding:.85rem 1rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:.75rem">
-                <div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg, #ea580c, #f97316);display:grid;place-items:center;color:#fff;flex-shrink:0">
-                    <x-icon name="sparkles" size="20" />
-                </div>
-                <div style="font-size:.88rem;line-height:1.35">
-                    <strong style="color:var(--text);display:block">Ajustement & Retouche automatique activés</strong>
-                    <span style="color:var(--text-soft)">Prenez vos photos directement au téléphone : l'IA et le système équilibrent la lumière, renforcent la netteté et cadrent vos articles au format studio blanc.</span>
+            <!-- Choix du traitement des photos : Sublimation Studio IA ou Conservation d'origine -->
+            <div style="margin-bottom:1.5rem">
+                <label style="display:block;font-weight:700;font-size:.95rem;margin-bottom:.6rem;color:var(--text)">
+                    Traitement des photos par l'IA :
+                </label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:.85rem">
+                    <!-- Option 1 : Sublimer avec l'IA (Recommandé) -->
+                    <label id="card-enhancement-studio" class="photo-opt-card" style="display:flex;align-items:flex-start;gap:.8rem;padding:1rem;border-radius:12px;border:2px solid var(--brand-primary);background:rgba(158, 27, 50, 0.05);cursor:pointer;transition:all .15s ease;position:relative">
+                        <input type="radio" name="photo_enhancement" value="studio" checked style="margin-top:.25rem;accent-color:var(--brand-primary);cursor:pointer">
+                        <div style="flex:1;min-width:0">
+                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-bottom:.3rem">
+                                <strong style="font-size:.95rem;color:var(--text);display:inline-flex;align-items:center;gap:.35rem">
+                                    <x-icon name="sparkles" size="16" style="color:var(--brand-primary)" />
+                                    Sublimer avec l'IA
+                                </strong>
+                                <span class="badge" style="background:var(--brand-primary);color:#fff;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:6px">Recommandé</span>
+                            </div>
+                            <p style="margin:0;font-size:.82rem;color:var(--text-soft);line-height:1.4">
+                                L'IA nettoie l'arrière-plan, équilibre la lumière et applique un format studio blanc propre et professionnel.
+                            </p>
+                        </div>
+                    </label>
+
+                    <!-- Option 2 : Garder les photos d'origine -->
+                    <label id="card-enhancement-original" class="photo-opt-card" style="display:flex;align-items:flex-start;gap:.8rem;padding:1rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-soft);cursor:pointer;transition:all .15s ease;position:relative">
+                        <input type="radio" name="photo_enhancement" value="original" style="margin-top:.25rem;accent-color:var(--brand-primary);cursor:pointer">
+                        <div style="flex:1;min-width:0">
+                            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-bottom:.3rem">
+                                <strong style="font-size:.95rem;color:var(--text);display:inline-flex;align-items:center;gap:.35rem">
+                                    <x-icon name="image" size="16" style="color:var(--text-soft)" />
+                                    Garder telles quelles
+                                </strong>
+                                <span class="badge" style="background:var(--border);color:var(--text-soft);font-size:.68rem;font-weight:600;padding:2px 7px;border-radius:6px">Original brut</span>
+                            </div>
+                            <p style="margin:0;font-size:.82rem;color:var(--text-soft);line-height:1.4">
+                                Conserve vos photos brutes d'origine exactement comme prises, sans retouche ni modification de l'arrière-plan.
+                            </p>
+                        </div>
+                    </label>
                 </div>
             </div>
 
@@ -99,19 +130,78 @@
                 </span>
             </div>
 
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2.5rem">
-                <a href="{{ route('onboarding.step2') }}" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:.4rem">
+            <div class="step3-actions-bar">
+                <a href="{{ route('onboarding.step2') }}" class="btn btn-ghost step-btn-prev">
                     <x-icon name="arrow-left" size="16" />
-                    Précédent
+                    <span>Précédent</span>
                 </a>
-                <button id="step3-submit" type="submit" class="btn btn-primary" style="min-width:200px;display:inline-flex;align-items:center;justify-content:center;gap:.5rem">
-                    Lancer la génération IA
+                <button id="step3-submit" type="submit" class="btn btn-primary step-btn-next">
+                    <span>Lancer la génération IA</span>
                     <x-icon name="sparkles" size="16" />
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<style>
+.step3-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 2.2rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.step3-actions-bar .step-btn-prev {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    padding: .85rem 1.4rem;
+    font-weight: 600;
+}
+
+.step3-actions-bar .step-btn-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: .9rem 1.8rem;
+    font-weight: 700;
+    box-shadow: 0 4px 16px rgba(158, 27, 50, 0.25);
+}
+
+@media (max-width: 640px) {
+    .step3-actions-bar {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+        gap: .8rem !important;
+        margin-top: 1.8rem !important;
+        padding-bottom: 5.5rem !important; /* Dégagement de la bulle IA et barre mobile */
+    }
+    .step3-actions-bar .step-btn-next,
+    .step3-actions-bar .step-btn-prev {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: .95rem 1rem !important;
+        font-size: .98rem !important;
+    }
+    .step3-actions-bar .step-btn-next {
+        order: 1 !important;
+    }
+    .step3-actions-bar .step-btn-prev {
+        order: 2 !important;
+    }
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -260,6 +350,32 @@ document.addEventListener('DOMContentLoaded', function() {
         img.src = url;
     };
 
+    // Synchronisation interactive des cartes d'options de traitement photo
+    const enhancementRadios = document.querySelectorAll('input[name="photo_enhancement"]');
+    enhancementRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const isStudio = this.value === 'studio';
+            const cardStudio = document.getElementById('card-enhancement-studio');
+            const cardOriginal = document.getElementById('card-enhancement-original');
+            if (cardStudio && cardOriginal) {
+                if (isStudio) {
+                    cardStudio.style.border = '2px solid var(--brand-primary)';
+                    cardStudio.style.background = 'rgba(158, 27, 50, 0.05)';
+                    cardOriginal.style.border = '1px solid var(--border)';
+                    cardOriginal.style.background = 'var(--bg-soft)';
+                } else {
+                    cardOriginal.style.border = '2px solid var(--brand-primary)';
+                    cardOriginal.style.background = 'rgba(158, 27, 50, 0.05)';
+                    cardStudio.style.border = '1px solid var(--border)';
+                    cardStudio.style.background = 'var(--bg-soft)';
+                }
+            }
+            if (selectedFiles.length > 0) {
+                renderPreviews();
+            }
+        });
+    });
+
     function renderPreviews() {
         if (!previewGrid || !counterBadge) return;
         const count = selectedFiles.length;
@@ -307,6 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
             badge.textContent = idx === 0 ? '★ Photo 1' : '#' + (idx + 1);
             item.appendChild(badge);
 
+            const isStudio = (document.querySelector('input[name="photo_enhancement"]:checked')?.value || 'studio') === 'studio';
             const studioBadge = document.createElement('span');
             studioBadge.style.position = 'absolute';
             studioBadge.style.bottom = '6px';
@@ -315,9 +432,9 @@ document.addEventListener('DOMContentLoaded', function() {
             studioBadge.style.fontWeight = '600';
             studioBadge.style.padding = '2px 5px';
             studioBadge.style.borderRadius = '4px';
-            studioBadge.style.background = 'rgba(16, 185, 129, 0.9)';
+            studioBadge.style.background = isStudio ? 'rgba(16, 185, 129, 0.95)' : 'rgba(100, 116, 139, 0.95)';
             studioBadge.style.color = '#fff';
-            studioBadge.textContent = 'Studio';
+            studioBadge.textContent = isStudio ? 'Studio IA' : 'Original';
             studioBadge.style.zIndex = '2';
             item.appendChild(studioBadge);
 

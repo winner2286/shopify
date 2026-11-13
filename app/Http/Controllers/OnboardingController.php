@@ -143,9 +143,12 @@ class OnboardingController extends Controller
         $request->validate([
             'photos' => ['nullable', 'array', 'max:20'],
             'photos.*' => ['image', 'mimes:jpeg,png,webp,jpg', 'max:5120'], // Max 5 Mo par photo
+            'photo_enhancement' => ['nullable', 'string', 'in:studio,original'],
         ], [
             'photos.max' => 'Vous pouvez envoyer au maximum 20 photos.',
         ]);
+
+        $enhancementMode = $request->input('photo_enhancement', 'studio');
 
         $storedPaths = [];
         if ($request->hasFile('photos')) {
@@ -158,6 +161,7 @@ class OnboardingController extends Controller
 
         $data = $shop->onboarding_data ?? [];
         $data['uploaded_photos'] = array_merge($data['uploaded_photos'] ?? [], $storedPaths);
+        $data['photo_enhancement'] = $enhancementMode;
 
         $shop->update([
             'onboarding_step' => max($shop->onboarding_step, 4),

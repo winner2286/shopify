@@ -80,12 +80,14 @@ class OnboardingAiTest extends TestCase
 
         $response = $this->actingAs($merchant)->post('/onboarding/photos', [
             'photos' => [$photo1, $photo2],
+            'photo_enhancement' => 'original',
         ]);
 
         $response->assertRedirect('/onboarding/generation');
         $shop->refresh();
         $this->assertSame(4, $shop->onboarding_step);
         $this->assertCount(2, $shop->onboarding_data['uploaded_photos']);
+        $this->assertSame('original', $shop->onboarding_data['photo_enhancement']);
     }
 
     public function test_chaine_ia_complete_genere_boutique_logos_produits_pages_et_logs_b04(): void

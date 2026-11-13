@@ -67,11 +67,11 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('onboarding.generate') }}" onsubmit="startLoader(this)">
+        <form method="POST" action="{{ route('onboarding.generate') }}" onsubmit="startLoader(this)" style="margin-bottom:3.5rem">
             @csrf
-            <button id="btn-run-ai" type="submit" class="btn btn-primary" style="padding:1rem 2.5rem;font-size:1.1rem;display:inline-flex;align-items:center;justify-content:center;gap:.6rem;margin:0 auto">
+            <button id="btn-run-ai" type="submit" class="btn btn-primary" style="width:100%;max-width:380px;padding:1rem 1.8rem;font-size:1.05rem;display:inline-flex;align-items:center;justify-content:center;gap:.6rem;margin:0 auto;box-sizing:border-box">
                 <x-icon name="zap" size="20" />
-                Lancer la création automatique
+                <span>Lancer la création automatique</span>
             </button>
         </form>
     </div>

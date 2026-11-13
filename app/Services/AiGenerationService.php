@@ -267,13 +267,17 @@ class AiGenerationService
             $thumbPath = $opt['thumbnail_path'] ?? null;
             $sizeBytes = $opt['size_bytes'] ?? 0;
 
+            $enhancementMode = $data['photo_enhancement'] ?? 'studio';
+            $imageData = $opt['image_data'] ?? [];
+            $imageData['enhancement_mode'] = $enhancementMode;
+
             // Lier l'image
             $product->images()->create([
                 'path' => $finalPath,
                 'thumbnail_path' => $thumbPath,
                 'sort_order' => 0,
                 'size_bytes' => $sizeBytes,
-                'image_data' => $opt['image_data'] ?? null,
+                'image_data' => $imageData,
             ]);
 
             // Distribuer intelligemment dans les catégories créées
