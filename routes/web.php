@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\ShopPageController;
 use App\Http\Controllers\ShopSettingsController;
 use App\Http\Controllers\StorefrontController;
@@ -38,6 +39,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/tableau-de-bord', DashboardController::class)->name('dashboard');
     Route::post('/deconnexion', [LoginController::class, 'destroy'])->name('logout');
     Route::post('/deconnexion-totale', [LoginController::class, 'destroyAll'])->name('logout.all');
+
+    // Création rapide de boutique & Gestion multi-boutiques (selo.ci style)
+    Route::get('/boutiques/creer', [ShopController::class, 'create'])->name('shops.create');
+    Route::post('/boutiques', [ShopController::class, 'store'])->name('shops.store');
+    Route::post('/boutiques/{shop}/basculer', [ShopController::class, 'switchShop'])->name('shops.switch');
 
     // Module B - Création de boutique par l'IA (Onboarding)
     Route::get('/onboarding/activite', [OnboardingController::class, 'step1'])->name('onboarding.step1');

@@ -23,8 +23,35 @@
         <div>
             <p style="margin:0">Bonjour,</p>
             <h1>{{ $user->name }}</h1>
+            @if ($userShops->count() > 1)
+                <div style="display:flex;align-items:center;gap:.5rem;margin-top:.4rem;flex-wrap:wrap">
+                    <span style="font-size:.82rem;color:var(--text-soft)">Boutique active :</span>
+                    <form method="POST" action="" id="switch-shop-form" style="margin:0">
+                        @csrf
+                        <select onchange="if(this.value){ document.getElementById('switch-shop-form').action = this.value; document.getElementById('switch-shop-form').submit(); }" class="input" style="padding:.25rem .6rem;height:32px;font-size:.82rem;font-weight:700;border-radius:8px">
+                            @foreach ($userShops as $s)
+                                <option value="{{ route('shops.switch', $s) }}" @selected($shop && $shop->id === $s->id)>
+                                    {{ $s->name ?: 'Sans nom' }} ({{ $s->subdomain ?? 'brouillon' }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                </div>
+            @endif
         </div>
         <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            @if ($canCreateShop)
+                <a href="{{ route('shops.create') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
+                    <x-icon name="plus" :size="15" />
+                    <span>Nouvelle boutique</span>
+                </a>
+            @else
+                <a href="{{ route('shops.create') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.35rem;border-color:rgba(197, 34, 61, 0.35);color:var(--brand-3, #c5223d)" title="Passer au plan supérieur pour débloquer plus de boutiques">
+                    <x-icon name="plus" :size="15" />
+                    <span>Nouvelle boutique</span>
+                    <span class="badge" style="background:var(--brand-1, #9e1b32);color:#fff;font-size:.65rem;padding:1px 5px">PRO</span>
+                </a>
+            @endif
             @if ($shop && $shop->subdomain)
                 <a href="{{ url('/b/' . $shop->subdomain) }}" target="_blank" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
                     <x-icon name="eye" :size="15" />
@@ -42,7 +69,7 @@
             </a>
             @if ($shop)
                 <span class="pill" style="border-color:color-mix(in srgb, var(--brand-primary) 35%, var(--border));background:color-mix(in srgb, var(--brand-primary) 10%, transparent)">
-                    Formule : <strong>{{ $shop->currentPlan()->name }}</strong>
+                    Formule : <strong>{{ $currentPlan->name }}</strong>
                     <span style="font-size:.78rem;opacity:.85">({{ $shop->products()->count() }}/{{ $shop->maxProducts() }} arts • {{ $shop->aiCreditsRemaining() }} crédits IA)</span>
                 </span>
             @endif
@@ -51,10 +78,10 @@
     </div>
 
     <!-- Bannière d'activation des Notifications Mobiles Instantanées (Commandes & Alertes) -->
-    <div class="card push-banner" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(109, 61, 242, 0.12), rgba(255, 45, 109, 0.08));border:1px solid rgba(109, 61, 242, 0.3);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <div class="card push-banner" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(158, 27, 50, 0.08), rgba(115, 16, 34, 0.04));border:1px solid rgba(158, 27, 50, 0.25);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
         <div style="display:flex;align-items:center;gap:.85rem">
-            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg, var(--brand-1, #ff2d6d), var(--brand-2, #6d3df2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;box-shadow:0 4px 12px rgba(255, 45, 109, 0.3);flex-shrink:0">
-                🔔
+            <div style="width:42px;height:42px;border-radius:12px;background:color-mix(in srgb, var(--brand-1, #9e1b32) 15%, transparent);color:var(--brand-3, #c5223d);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(158, 27, 50, 0.15);flex-shrink:0">
+                <x-icon name="bell" size="20" />
             </div>
             <div>
                 <div style="font-weight:700;font-size:1rem;color:var(--text);display:flex;align-items:center;gap:.5rem">
@@ -69,10 +96,13 @@
                 <x-icon name="bell" size="14" /> Activer sur ce téléphone
             </button>
             <button type="button" class="btn btn-sm btn-ghost" data-push-action="test" style="display:none;align-items:center;gap:.4rem;border:1px solid var(--border)">
-                <span>🔔 Tester</span>
+                <x-icon name="bell" size="13" /> <span>Tester</span>
             </button>
             <button type="button" class="btn btn-sm btn-ghost" data-push-action="disable" style="display:none;align-items:center;gap:.4rem;color:var(--text-soft)">
                 <span>Désactiver</span>
+            </button>
+        </div>
+    </div>
             </button>
         </div>
     </div>

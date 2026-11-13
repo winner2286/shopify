@@ -33,7 +33,71 @@ class User extends Authenticatable
 
     public function shop(): HasOne
     {
-        return $this->hasOne(Shop::class);
+        return $this->hasOne(Shop::class)->latestOfMany();
+    }
+
+    public function shops(): HasMany
+    {
+        return $this->hasMany(Shop::class);
+    }
+
+    /**
+     * Récupère la boutique active dans la session ou la boutique par défaut.
+     */
+    public function activeShop(): ?Shop
+    {
+        $shopId = session('active_shop_id');
+        if ($shopId) {
+            $selected = $this->shops()->find($shopId);
+            if ($selected) {
+                return $selected;
+            }
+        }
+
+        return $this->shop;
+    }
+
+    /**
+     * Forfait actif de l'utilisateur (via ses abonnements ou Essentiel par défaut).
+     */
+    public function currentPlan(): Plan
+    {
+        $activeSub = Subscription::whereIn('shop_id', $this->shops()->pluck('id'))
+            ->whereIn('status', ['active', 'trial', 'grace'])
+            ->with('plan')
+            ->latest('id')
+            ->first();
+
+        if ($activeSub && $activeSub->plan) {
+            return $activeSub->plan;
+        }
+
+        return Plan::where('slug', 'essentiel')->first() 
+            ?? new Plan(['slug' => 'essentiel', 'name' => 'Essentiel', 'max_shops' => 1]);
+    }
+
+    /**
+     * Nombre maximum de boutiques allouées au compte.
+     */
+    public function maxShops(): int
+    {
+        return $this->currentPlan()->maxShops();
+    }
+
+    /**
+     * Nombre actuel de boutiques créées par ce compte.
+     */
+    public function shopsCount(): int
+    {
+        return $this->shops()->count();
+    }
+
+    /**
+     * Vérifie si le compte a le droit de créer une nouvelle boutique.
+     */
+    public function canCreateShop(): bool
+    {
+        return $this->shopsCount() < $this->maxShops();
     }
 
     public function verificationCodes(): HasMany

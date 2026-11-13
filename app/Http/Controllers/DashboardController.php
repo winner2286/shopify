@@ -15,7 +15,12 @@ class DashboardController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        $shop = $user->shop;
+        $shop = $user->activeShop() ?? $user->shop;
+        $userShops = $user->shops()->get();
+        $canCreateShop = $user->canCreateShop();
+        $maxShops = $user->maxShops();
+        $currentPlan = $user->currentPlan();
+
         $productsCount = $shop ? $shop->products()->where('status', '!=', 'archived')->count() : 0;
         $lowStockCount = $shop ? $shop->products()->where('track_stock', true)->where('stock', '>', 0)->whereColumn('stock', '<=', 'low_stock_threshold')->count() : 0;
         $outOfStockCount = $shop ? $shop->products()->where('track_stock', true)->where('stock', '<=', 0)->count() : 0;
@@ -35,7 +40,8 @@ class DashboardController extends Controller
         ];
 
         return view('dashboard', compact(
-            'user', 'shop', 'checklist', 'productsCount', 'lowStockCount',
+            'user', 'shop', 'userShops', 'canCreateShop', 'maxShops', 'currentPlan',
+            'checklist', 'productsCount', 'lowStockCount',
             'outOfStockCount', 'ordersCount', 'pendingOrdersCount', 'totalRevenue', 'recentOrders'
         ));
     }
