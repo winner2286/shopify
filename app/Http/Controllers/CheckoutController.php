@@ -148,6 +148,11 @@ class CheckoutController extends Controller
         try {
             $order = $this->orderService->createFromCart($shop, $validated);
 
+            // Autorise uniquement ce navigateur à consulter la page de confirmation de la commande
+            $placed = (array) session('placed_orders', []);
+            $placed[] = $order->order_number;
+            session(['placed_orders' => array_slice(array_values(array_unique($placed)), -20)]);
+
             return redirect()->route('storefront.order.show', [
                 'subdomain' => $shop->subdomain,
                 'orderNumber' => $order->order_number,
@@ -178,6 +183,18 @@ class CheckoutController extends Controller
 
         if (! $order) {
             abort(404, 'Commande introuvable.');
+        }
+
+        // Contrôle d'accès : empêche la consultation des données client par énumération des numéros de commande
+        $user = $request->user();
+        $token = (string) $request->query('token', '');
+        $isPlacedInSession = in_array($order->order_number, (array) session('placed_orders', []), true);
+        $hasValidToken = $token !== '' && hash_equals($order->receiptToken(), $token);
+        $isOwnerOrAdmin = $user && ($user->isAdmin() || $user->shop?->id === $order->shop_id);
+
+        if (! $isPlacedInSession && ! $hasValidToken && ! $isOwnerOrAdmin) {
+            return redirect()->route('storefront.tracking', ['subdomain' => $shop->subdomain, 'numero' => $order->order_number])
+                ->with('error', 'Pour consulter cette commande, veuillez saisir le numéro de téléphone utilisé lors de l\'achat.');
         }
 
         $payment = $order->payments->first();
@@ -227,12 +244,26 @@ class CheckoutController extends Controller
         $phone = trim((string) $request->input('telephone'));
 
         if ($orderNumber && $phone) {
-            $order = Order::withoutGlobalScopes()
-                ->where('shop_id', $shop->id)
-                ->where('order_number', $orderNumber)
-                ->where('customer_phone', \App\Support\SearchHelper::likeOperator(), "%{$phone}%")
-                ->with(['items', 'statusHistories'])
-                ->first();
+            // Correspondance stricte sur les chiffres du téléphone (au moins 8) pour éviter toute recherche partielle
+            $inputDigits = preg_replace('/\D+/', '', $phone);
+            $candidate = strlen($inputDigits) >= 8
+                ? Order::withoutGlobalScopes()
+                    ->where('shop_id', $shop->id)
+                    ->where('order_number', $orderNumber)
+                    ->with(['items', 'statusHistories'])
+                    ->first()
+                : null;
+
+            if ($candidate) {
+                $orderDigits = preg_replace('/\D+/', '', (string) $candidate->customer_phone);
+                $suffixLen = min(8, strlen($orderDigits));
+                if ($suffixLen >= 8 && substr($orderDigits, -$suffixLen) === substr($inputDigits, -$suffixLen)) {
+                    $order = $candidate;
+                    $placed = (array) session('placed_orders', []);
+                    $placed[] = $order->order_number;
+                    session(['placed_orders' => array_slice(array_values(array_unique($placed)), -20)]);
+                }
+            }
 
             if (! $order) {
                 session()->flash('error', 'Aucune commande ne correspond à ce numéro et téléphone.');

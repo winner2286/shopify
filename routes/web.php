@@ -209,7 +209,7 @@ Route::prefix('b/{subdomain}')->group(function () {
     Route::post('/commander/code-promo/retirer', [\App\Http\Controllers\CheckoutController::class, 'removePromoCode'])->name('storefront.checkout.remove_promo');
     Route::get('/commandes/{orderNumber}', [\App\Http\Controllers\CheckoutController::class, 'showOrder'])->name('storefront.order.show');
     Route::post('/commandes/{orderNumber}/simuler-paiement', [\App\Http\Controllers\CheckoutController::class, 'simulateMobileMoney'])->middleware('throttle:15,1')->name('storefront.order.simulate_mobile_money');
-    Route::get('/suivi', [\App\Http\Controllers\CheckoutController::class, 'tracking'])->name('storefront.tracking');
+    Route::get('/suivi', [\App\Http\Controllers\CheckoutController::class, 'tracking'])->middleware('throttle:20,1')->name('storefront.tracking');
 });
 
 // API Keep-Alive anti-mise en veille (Render / Uptime monitors)

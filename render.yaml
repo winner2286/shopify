@@ -62,7 +62,20 @@ services:
         sync: false
       - key: MAIL_FROM_NAME
         value: "Zanika"
-      # Passerelle de paiement FeexPay (Mobile Money & Carte Bancaire)
+      # Passerelle de paiement GeniusPay (Mobile Money & Carte Bancaire)
+      - key: GENIUSPAY_SHOP_ID
+        sync: false
+      - key: GENIUSPAY_TOKEN
+        sync: false
+      - key: GENIUSPAY_WEBHOOK_SECRET
+        sync: false
+      - key: GENIUSPAY_MODE
+        value: "SANDBOX"
+      - key: GENIUSPAY_BASE_URL
+        value: "https://api-v2.feexpay.me"
+      - key: GENIUSPAY_CURRENCY
+        value: "XOF"
+      # Passerelle de paiement FeexPay (Rétrocompatibilité)
       - key: FEEXPAY_SHOP_ID
         sync: false
       - key: FEEXPAY_TOKEN
