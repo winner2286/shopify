@@ -204,6 +204,30 @@ class AiLocalIntelligenceService
             return $this->buildResponse($reply, 'courtesy_acknowledgement', $lastAssistantText);
         }
 
+        // 8b. Questions affectives, humour ou déclarations décalées (« Tu m'aimes !? », « Je t'aime », « Tu as des sentiments ? »)
+        if (preg_match('/\b(tu\s+m\s*[\'’]?\s*aimes?|je\s+t\s*[\'’]?\s*aime|amour|amoureux|sentiment|mari[eé]|petit[e]?\s+ami|t\s*[\'’]?\s*es\s+(?:mignon|belle?|beau))\b/ui', $normalized)) {
+            $reply = "Haha, je suis ton copilote IA dédié à faire décoller **{$shopName}** ! Pas d'histoires de cœur au programme, mais je mets toute mon énergie pour t'aider à maximiser tes ventes et gérer ta boutique. Que puis-je faire pour toi aujourd'hui ?";
+            return $this->buildResponse($reply, 'humor_affection', $lastAssistantText);
+        }
+
+        // 8c. Questions d'identité & existence (« Qui es-tu ? », « Tu sers à quoi ? », « C'est quoi ton nom ? », « Tu es un robot ? »)
+        if (preg_match('/\b(qui\s*[- ]\s*es\s*[- ]\s*tu|tu\s+es\s+qui|c\s*[\'’]?\s*est\s+quoi\s+ton\s+nom|ton\s+nom|qui\s+t\s*[\'’]?\s*a\s+cr[eé][eé]|tu\s+sers\s+[aà]\s+quoi|tu\s+es\s+(?:un\s+)?robot|tu\s+es\s+(?:une\s+)?ia)\b/ui', $normalized)) {
+            $reply = "Je suis **Zanika AI**, ton copilote e-commerce intelligent. Je suis à tes côtés pour gérer ton catalogue, relancer tes clients WhatsApp, surveiller tes stocks et développer **{$shopName}**.";
+            return $this->buildResponse($reply, 'identity_presentation', $lastAssistantText);
+        }
+
+        // 8d. Rires, complicité et réactions (« haha », « mdr », « lol », « t'es trop fort »)
+        if (preg_match('/\b(haha+|mdr+|lol+|ptdr+|ah\s*ah|t\s*[\'’]?\s*es\s+(?:fort|trop\s+fort|dr[oô]le|marrant|g[eé]nial|un\s+chef))\b/ui', $normalized)) {
+            $reply = "Ravi de te faire sourire ! 😊 Je reste concentré pour t'aider à faire grandir **{$shopName}**. Dis-moi dès que tu as besoin d'un coup de main.";
+            return $this->buildResponse($reply, 'humor_acknowledgement', $lastAssistantText);
+        }
+
+        // 8e. Présence & disponibilité (« Tu es là ? », « Tu dors ? », « Allô », « Tu m'entends ? »)
+        if (preg_match('/\b(tu\s+es\s+l[aà]|tu\s+dors|all[oô]|tu\s+m\s*[\'’]?\s*entends|debout)\b/ui', $normalized)) {
+            $reply = "Toujours fidèle au poste et 100% opérationnel pour **{$shopName}** ! De quoi as-tu besoin ?";
+            return $this->buildResponse($reply, 'presence_check', $lastAssistantText);
+        }
+
         // 9. Suivi contextuel multi-tours : réponses courtes (« oui », « ok », « vas-y », « 1 », « 2 », « 3 », « montre-moi »)
         $followUpReply = $this->resolveContextualFollowUp(
             $normalized,
@@ -269,12 +293,12 @@ class AiLocalIntelligenceService
             return $this->buildResponse($reply, 'rag_contextual:' . $topChunk->slug, $lastAssistantText);
         }
 
-        // 15. Demande ambiguë ou ouverte : poser une question de clarification pertinente
-        $reply = "Je suis prêt à t'aider sur **{$shopName}** ({$productsCount} produits actifs, {$formattedGmv} de volume d'affaires).\n\n"
-            . "Pour te donner une réponse ou une action ultra-précise, préfères-tu qu'on regarde :\n"
-            . "1. **Ton catalogue & tes stocks** (ajout de produit, ajustement de prix ou alertes de rupture) ?\n"
-            . "2. **Tes commandes & livraisons COD** (relance client WhatsApp, feuille de route coursier) ?\n"
-            . "3. **Ta rentabilité & ton marketing** (diagnostic de marges, code promo ou script vidéo TikTok/WhatsApp) ?";
+        // 15. Demande ambiguë ou ouverte : poser une question naturelle et légère
+        if (! $isOngoingThread) {
+            $reply = "Je suis là avec toi pour faire décoller **{$shopName}** ! Dis-moi directement ce que tu veux faire : ajouter un produit, vérifier tes stocks, suivre tes commandes ou préparer une relance WhatsApp ?";
+        } else {
+            $reply = "Je t'écoute ! Sur quoi souhaites-tu qu'on avance pour **{$shopName}** : tes stocks, tes commandes en cours, ou une action marketing ?";
+        }
 
         return $this->buildResponse($reply, 'clarification_prompt', $lastAssistantText);
     }

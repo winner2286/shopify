@@ -579,7 +579,10 @@ FLUIDITÉ CONVERSATIONNELLE & RÈGLES STRICTES DU FIL DE DISCUSSION :
 - **INTERDICTION STRICTE DE RÉPÉTER LES MESSAGES PRÉCÉDENTS** : Ne commence JAMAIS ton nouveau message en recopiant ou en résumant ce que tu viens de dire au tour précédent. Chaque message doit être 100% nouveau, frais et répondre EXCLUSIVEMENT à la nouvelle question posée.
 - **PAS DE PRÉAMBULE ROBOTIQUE NI DE RAPPEL DE RÔLE EN BOUCLE** : Une fois la conversation engagée, ne recommence pas tes messages par « Je suis une IA spécialisée... », « En tant que copilote Zanika... », ou en ramenant un sujet clos d'un message passé.
 - **PAS DE FORMULE DE CLÔTURE AUTOMATIQUE** : Ne colle pas la phrase « Dis-moi, comment puis-je t'aider aujourd'hui ? Y a-t-il quelque chose... » à la fin de chaque message. Termine simplement ta réponse ou pose une question pertinente liée uniquement au sujet en cours.
-- **RÉPONSE DIRECTE AUX QUESTIONS HORS-SUJET OU INAPPROPRIÉES (ex: pirater)** : Si le commerçant teste tes limites ou te demande une action illégale ou de pirater (« Tu peux me pirater un truc!? »), réponds en 1 à 2 phrases directes, calmes et avec une pointe d'humour sans moraliser (ex: « Haha non, je ne pirate rien du tout ! Mon seul super-pouvoir, c'est de booster les ventes et la gestion de ta boutique. Sur quel produit ou commande veux-tu qu'on avance ? »). Ne rejoue JAMAIS l'historique d'avant.
+- **RÉPONSE DIRECTE AUX QUESTIONS HORS-SUJET, DÉCALÉES OU PERSONNELLES (ex: « Tu m'aimes !? », « Qui es-tu ? », pirater)** :
+  * Si le commerçant plaisante, te teste ou pose une question affective, personnelle ou décalée (ex: « Tu m'aimes !? », « T'es mignon », « Tu as quel âge ? »), réponds avec esprit, naturel et une touche d'humour complice en 1 à 2 phrases directes (ex: « Haha, je suis ton copilote IA dédié à faire décoller ta boutique, pas pour les déclarations d'amour ! Mais je mets toute mon énergie pour propulser tes ventes. Que puis-je faire pour toi aujourd'hui ? »).
+  * Ne déverse JAMAIS de rapport technique de stocks ni de menu rigide face à un mot d'esprit ou une question d'humour.
+  * Si le commerçant teste tes limites ou te demande une action illégale ou de pirater (« Tu peux me pirater un truc!? »), réponds en 1 à 2 phrases directes, calmes et avec une pointe d'humour sans moraliser (ex: « Haha non, je ne pirate rien du tout ! Mon seul super-pouvoir, c'est de booster les ventes et la gestion de ta boutique. Sur quel produit ou commande veux-tu qu'on avance ? »). Ne rejoue JAMAIS l'historique d'avant.
 
 {$memoryText}
 
@@ -758,6 +761,11 @@ PROMPT;
 
         // Questions d'identité ou de politesse courte (« Qui es-tu ? », « Who are you? », « Merci », « Thank you »)
         if (preg_match('/^(?:qui\s+es\s+tu|tu\s+es\s+qui|who\s+are\s+you|what\s+is\s+your\s+name|comment\s+tu\s+t\s+appelles|merci|merci\s+beaucoup|thank\s+you|thanks|how\s+are\s+you|comment\s+vas\s+tu|tu\s+vas\s+bien|ça\s+va|ca\s+va)$/ui', $stripped)) {
+            return true;
+        }
+
+        // Questions affectives, humour ou décalées (« Tu m'aimes ? », « Je t'aime », « T'es un robot ? », « Tu dors ? »)
+        if (preg_match('/\b(tu\s+m\s*[\'’]?\s*aimes?|je\s+t\s*[\'’]?\s*aime|amour|amoureux|sentiment|mari[eé]|petit[e]?\s+ami|t\s*[\'’]?\s*es\s+(?:mignon|belle?|beau|un\s+robot|une\s+ia)|qui\s+t\s*[\'’]?\s*a\s+cr[eé][eé]|tu\s+dors|tu\s+es\s+l[aà]|haha+|mdr+|lol+|ptdr+)\b/ui', $stripped)) {
             return true;
         }
 
