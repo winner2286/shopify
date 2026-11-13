@@ -2144,9 +2144,9 @@ function syncAssistantMobileViewport() {
     const input = document.getElementById('ai-user-input');
     const isInputFocused = document.activeElement === input;
     const vv = window.visualViewport;
-    const isKeyboardOpen = vv ? (vv.height < window.innerHeight * 0.82) : false;
+    const isKeyboardOpen = vv ? (vv.height < window.innerHeight * 0.82) : isInputFocused;
 
-    if (isInputFocused || isKeyboardOpen) {
+    if (isKeyboardOpen) {
         document.body.classList.add('ai-input-focused');
         if (vv) {
             const headerEl = document.querySelector('.site-header');
@@ -2180,9 +2180,8 @@ document.addEventListener('DOMContentLoaded', () => {
             input.focus();
         }
         input.addEventListener('focus', () => {
-            document.body.classList.add('ai-input-focused');
-            setTimeout(syncAssistantMobileViewport, 50);
-            setTimeout(syncAssistantMobileViewport, 250);
+            setTimeout(syncAssistantMobileViewport, 60);
+            setTimeout(syncAssistantMobileViewport, 280);
         });
         input.addEventListener('blur', () => {
             setTimeout(syncAssistantMobileViewport, 120);

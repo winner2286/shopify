@@ -63,13 +63,26 @@ class GroqLlmProvider implements LlmProviderInterface
                 }
             }
 
-            // Si l'erreur provient d'un schéma d'outil (tool_use_failed), réessayer sans outils sur Groq pour garantir une réponse
+            // Si l'erreur provient d'un schéma d'outil (tool_use_failed ou limite TPM avec 24 outils), réessayer sans outils sur le modèle principal puis secondaire
             if (! empty($formattedTools)) {
                 Log::warning('GroqLlmProvider: Nouvel essai Groq sans outils (mode conversation directe).');
-                $noToolResult = $this->sendGroqRequest($this->fallbackModel, $formattedMessages, [], $temperature, $maxTokens, $timeout, $options);
-                if ($noToolResult !== null) {
-                    return $noToolResult;
+                $primaryNoToolResult = $this->sendGroqRequest($model, $formattedMessages, [], $temperature, $maxTokens, $timeout, $options);
+                if ($primaryNoToolResult !== null) {
+                    return $primaryNoToolResult;
                 }
+
+                if ($model !== $this->fallbackModel) {
+                    $noToolResult = $this->sendGroqRequest($this->fallbackModel, $formattedMessages, [], $temperature, $maxTokens, $timeout, $options);
+                    if ($noToolResult !== null) {
+                        return $noToolResult;
+                    }
+                }
+            }
+
+            // Repli ultra-léger sur llama-3.1-8b-instant (quota Groq indépendant et très haute disponibilité)
+            $instantResult = $this->sendGroqRequest('llama-3.1-8b-instant', $formattedMessages, [], $temperature, $maxTokens, $timeout, $options);
+            if ($instantResult !== null) {
+                return $instantResult;
             }
         } else {
             Log::warning('GroqLlmProvider: Clé GROQ_API_KEY absente, bascule vers le fournisseur de secours.');

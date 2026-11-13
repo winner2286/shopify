@@ -149,8 +149,8 @@ class AiOrchestrator
 
         $messagesPayload[] = ['role' => 'user', 'content' => $userMessage];
 
-        // 7. Premier appel LLM avec déclaration des outils (désactivés sur une simple salutation pour éviter latence/erreurs de schéma)
-        $toolsSchema = $this->isPureGreetingMessage($userMessage) ? [] : $this->tools->getToolsSchema();
+        // 7. Premier appel LLM avec déclaration des outils (désactivés sur les salutations et questions conversationnelles pour éviter latence/erreurs de schéma)
+        $toolsSchema = $this->isConversationalWithoutTools($userMessage) ? [] : $this->tools->getToolsSchema();
         $response = $this->llm->chat($messagesPayload, $toolsSchema, $options);
 
         $totalTokensInput = $response['tokens_input'] ?? 0;
@@ -730,9 +730,38 @@ PROMPT;
         }
 
         return (bool) preg_match(
-            '/^(bonjour|bjr|bonsoir|bsr|salut|slt|coucou|cc|hello|hey|yo|salam|marhaba|ahlan)(?:\s+(?:zanika|l\s+équipe|lequipe|la\s+team|tout\s+le\s+monde|ça\s+va|ca\s+va|comment\s+vas\s+tu|comment\s+tu\s+vas|comment\s+allez\s+vous))?$/ui',
+            '/^(bonjour|bjr|bonsoir|bsr|salut|slt|coucou|cc|hello|hey|yo|salam|marhaba|ahlan)(?:\s+(?:zanika|l\s+équipe|lequipe|la\s+team|tout\s+le\s+monde|ça\s+va|ca\s+va|comment\s+vas\s+tu|comment\s+tu\s+vas|comment\s+allez\s+vous|how\s+are\s+you))?$/ui',
             $stripped
         );
+    }
+
+    /**
+     * Détecte si le message est purement conversationnel (salutation, langue parlée, identité, remerciement)
+     * et ne nécessite aucun appel d'outil en base de données.
+     */
+    protected function isConversationalWithoutTools(string $message): bool
+    {
+        if ($this->isPureGreetingMessage($message)) {
+            return true;
+        }
+
+        $stripped = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', mb_strtolower(trim($message)));
+        $stripped = trim((string) preg_replace('/\s+/', ' ', (string) $stripped));
+        if ($stripped === '') {
+            return false;
+        }
+
+        // Questions de langue (« Are you speak english!? », « Do you speak english? », « Tu parles anglais ? », « Wach katfhem darija ? »)
+        if (preg_match('/\b(speak\s+english|english|anglais|darija|wolof|langue|language|parles?\s+tu|comprenez\s+vous|do\s+you\s+speak|are\s+you\s+speak|can\s+you\s+speak)\b/ui', $stripped)) {
+            return true;
+        }
+
+        // Questions d'identité ou de politesse courte (« Qui es-tu ? », « Who are you? », « Merci », « Thank you »)
+        if (preg_match('/^(?:qui\s+es\s+tu|tu\s+es\s+qui|who\s+are\s+you|what\s+is\s+your\s+name|comment\s+tu\s+t\s+appelles|merci|merci\s+beaucoup|thank\s+you|thanks|how\s+are\s+you|comment\s+vas\s+tu|tu\s+vas\s+bien|ça\s+va|ca\s+va)$/ui', $stripped)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

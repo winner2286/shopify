@@ -119,6 +119,13 @@ class AiSpecializationAndGroqTest extends TestCase
         $this->assertStringContainsString('Je vais très bien', $resGreeting['content']);
         $this->assertStringNotContainsString('Comment ajouter un nouveau produit', $resGreeting['content']);
 
+        // Question en anglais : "Are you speak english!?" ne doit jamais renvoyer le chunk "Comment ajouter un nouveau produit"
+        $resEnglish = $localEngine->respond([
+            ['role' => 'user', 'content' => 'Are you speak english!?'],
+        ], $this->shop);
+        $this->assertStringContainsString('English', $resEnglish['content']);
+        $this->assertStringNotContainsString('Comment ajouter un nouveau produit', $resEnglish['content']);
+
         // 2. Question diagnostic causal : Beaucoup de commandes mais bénéfices faibles
         Order::withoutGlobalScopes()->create([
             'shop_id' => $this->shop->id,

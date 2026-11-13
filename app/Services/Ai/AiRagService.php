@@ -56,16 +56,20 @@ class AiRagService
             $chunkKeywords = array_map('mb_strtolower', (array) ($chunk->keywords ?? []));
 
             // 1. Correspondance exacte sur l'expression complète
-            if (str_contains($titleLower, $normalizedQuery)) {
-                $score += 30.0;
-            } elseif (str_contains($contentLower, $normalizedQuery)) {
-                $score += 15.0;
+            if (mb_strlen($normalizedQuery) >= 4) {
+                if (str_contains($titleLower, $normalizedQuery)) {
+                    $score += 30.0;
+                } elseif (str_contains($contentLower, $normalizedQuery)) {
+                    $score += 15.0;
+                }
             }
 
-            // 2. Similarité n-gram (résistance aux fautes de frappe & lemmatisation)
+            // 2. Similarité n-gram (résistance aux fautes de frappe, ignorée sous 0.18 pour éviter le bruit)
             $titleTrigrams = $this->extractTrigrams($titleLower);
             $titleFuzzySimilarity = $this->calculateDiceSimilarity($queryTrigrams, $titleTrigrams);
-            $score += ($titleFuzzySimilarity * 20.0);
+            if ($titleFuzzySimilarity >= 0.18) {
+                $score += ($titleFuzzySimilarity * 20.0);
+            }
 
             // 3. Scoring lexical BM25-like saturé
             foreach ($keywords as $kw) {
@@ -73,7 +77,7 @@ class AiRagService
                 foreach ($chunkKeywords as $ckw) {
                     if ($ckw === $kw) {
                         $score += 12.0;
-                    } elseif (str_contains($ckw, $kw) || str_contains($kw, $ckw)) {
+                    } elseif (mb_strlen($kw) >= 4 && mb_strlen($ckw) >= 4 && (str_contains($ckw, $kw) || str_contains($kw, $ckw))) {
                         $score += 7.0;
                     }
                 }
@@ -85,7 +89,7 @@ class AiRagService
                 }
 
                 // Slug
-                if (str_contains($slugLower, $kw)) {
+                if (mb_strlen($kw) >= 4 && str_contains($slugLower, $kw)) {
                     $score += 5.0;
                 }
 
@@ -96,16 +100,18 @@ class AiRagService
                 }
             }
 
-            // 4. Bonus pour l'ordre de priorité éditorial
-            $score += max(0, 5 - ($chunk->sort_order ?? 0));
+            // 4. Bonus pour l'ordre de priorité éditorial uniquement s'il existe une vraie pertinence lexicale
+            if ($score >= 8.0) {
+                $score += max(0, 5 - ($chunk->sort_order ?? 0));
+            }
 
             $chunk->relevance_score = round($score, 2);
             return $chunk;
         });
 
-        // Filtrer les chunks avec un score minimal et ordonner
+        // Filtrer les chunks avec un score minimal réel et ordonner
         return $scored
-            ->filter(fn($c) => $c->relevance_score >= 4.0)
+            ->filter(fn($c) => $c->relevance_score >= 8.0)
             ->sortByDesc('relevance_score')
             ->take($limit)
             ->values();

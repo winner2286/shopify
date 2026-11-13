@@ -62,12 +62,28 @@ class AiLocalIntelligenceService
             );
         }
 
-        // 2. Support Darija / Multilingue naturel
+        // 2. Support Darija / Anglais / Multilingue naturel
         if (preg_match('/\b(darija|kifash|kayn|mzyan|labas|salam|marhaba|bghit|chhal)\b/ui', $normalized)) {
             $prefix = $isOngoingThread ? '' : 'Marhaba ! ';
             return $this->buildResponse(
                 "{$prefix}Ahlan ! Bien sûr, je comprends et je parle le Darija marocain avec plaisir (kanfhem darija mzyan !). Ana m3ak bach n3awnek f l-boutique dialk **{$shopName}** : gestion dial les produits, les commandes, les stocks w le marketing sur WhatsApp. Ach bghiti nchoufou daba ?",
                 'darija_multilingual',
+                $lastAssistantText
+            );
+        }
+
+        if (preg_match('/\b(speak\s+english|english|do\s+you\s+speak|are\s+you\s+speak|can\s+you\s+speak|how\s+are\s+you|who\s+are\s+you|help\s+me)\b/ui', $normalized)) {
+            return $this->buildResponse(
+                "Yes, of course! I speak English fluently (as well as French and Darija). I'm **Zanika AI**, your e-commerce copilot connected live to **{$shopName}**. Would you like to check your **inventory**, review your **pending COD orders**, or boost your **sales & WhatsApp marketing**?",
+                'english_multilingual',
+                $lastAssistantText
+            );
+        }
+
+        if (preg_match('/\b(parles?\s+anglais|en\s+anglais|quelles?\s+langues?)\b/ui', $normalized)) {
+            return $this->buildResponse(
+                "Oui, bien sûr ! Je parle couramment **français**, **anglais** et **darija**. Tu peux échanger avec moi dans la langue qui te convient le mieux pour piloter **{$shopName}** !",
+                'language_capability',
                 $lastAssistantText
             );
         }
@@ -245,8 +261,8 @@ class AiLocalIntelligenceService
             return $this->buildResponse($reply, 'sales_and_marketing_summary', $lastAssistantText);
         }
 
-        // 14. Si un fragment RAG pertinent existe même pour une question générale
-        if ($topChunk) {
+        // 14. Si un fragment RAG pertinent existe avec un score de correspondance élevé (>= 14.0)
+        if ($topChunk && ($topChunk->relevance_score ?? 0) >= 14.0) {
             $reply = "Pour t'accompagner sur **« {$topChunk->title} »** dans ta boutique **{$shopName}** :\n\n"
                 . trim($topChunk->content);
 
