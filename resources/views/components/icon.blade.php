@@ -8,6 +8,10 @@
 @php
     $sizeAttr = is_numeric($size) ? "width=\"{$size}\" height=\"{$size}\"" : '';
     $classes = $class ?? '';
+    $baseStyle = is_numeric($size)
+        ? "width:{$size}px;height:{$size}px;min-width:{$size}px;min-height:{$size}px;flex-shrink:0;max-width:none;"
+        : 'flex-shrink:0;max-width:none;';
+    $style = $baseStyle . ($style ?? '');
 @endphp
 
 @switch($name)

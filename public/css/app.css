@@ -423,7 +423,11 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   border: 1px solid transparent; border-radius: var(--radius-pill);
   font: 600 0.96rem var(--font); cursor: pointer; color: var(--text);
   transition: transform .2s var(--ease), box-shadow .2s var(--ease), background .2s, border-color .2s, color .2s;
-  white-space: nowrap;
+  white-space: nowrap; flex-shrink: 0;
+}
+.btn svg {
+  flex-shrink: 0;
+  max-width: none;
 }
 .btn:focus-visible { outline: none; box-shadow: var(--ring); }
 .btn:active { transform: scale(.98); }
@@ -505,6 +509,7 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
 }
 
 .btn-block { width: 100%; }
+.btn-xs { min-height: 32px; padding: .3rem .75rem; font-size: .8rem; border-radius: var(--radius-pill); }
 .btn-sm { min-height: 40px; padding: .45rem 1.1rem; font-size: .88rem; border-radius: var(--radius-pill); }
 .btn-lg { min-height: 52px; padding: .8rem 1.8rem; font-size: 1.05rem; }
 .icon-btn { width: 42px; min-height: 42px; padding: 0; border-radius: var(--radius-pill); }

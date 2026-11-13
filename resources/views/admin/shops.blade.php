@@ -94,8 +94,8 @@
                         </td>
                         <td style="padding:1rem;text-align:right">
                             <div style="display:flex;gap:.5rem;justify-content:flex-end;align-items:center">
-                                <a href="{{ url('/b/' . $shop->subdomain) }}" target="_blank" class="btn btn-ghost btn-sm" title="Voir la vitrine" style="display:inline-flex;align-items:center">
-                                    <x-icon name="eye" size="16" />
+                                <a href="{{ url('/b/' . $shop->subdomain) }}" target="_blank" class="btn btn-ghost btn-sm" title="Voir la vitrine" style="width:38px;height:38px;min-height:38px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+                                    <x-icon name="eye" size="18" />
                                 </a>
 
                                 <form method="POST" action="{{ route('admin.shops.impersonate', $shop) }}" style="display:inline">
