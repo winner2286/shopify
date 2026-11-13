@@ -235,7 +235,9 @@ Route::get('/api/placeholder-image', [\App\Http\Controllers\MediaController::cla
 Route::get('/api/tts', [\App\Http\Controllers\MediaController::class, 'tts'])
     ->name('api.tts');
 
-// Passerelle de paiement FeexPay (Mobile Money & Cartes Bancaires)
+// Passerelle de paiement GeniusPay (Mobile Money & Cartes Bancaires) + rétrocompatibilité FeexPay
+Route::match(['get', 'post'], '/geniuspay/callback', [\App\Http\Controllers\FeexPayController::class, 'callback'])->name('geniuspay.callback');
+Route::post('/api/geniuspay/webhook', [\App\Http\Controllers\FeexPayController::class, 'webhook'])->name('geniuspay.webhook');
 Route::match(['get', 'post'], '/feexpay/callback', [\App\Http\Controllers\FeexPayController::class, 'callback'])->name('feexpay.callback');
 Route::post('/api/feexpay/webhook', [\App\Http\Controllers\FeexPayController::class, 'webhook'])->name('feexpay.webhook');
 

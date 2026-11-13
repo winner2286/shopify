@@ -11,13 +11,13 @@ return [
     |
     */
 
-    'shop_id' => env('FEEXPAY_SHOP_ID'),
+    'shop_id' => env('GENIUSPAY_SHOP_ID', env('FEEXPAY_SHOP_ID')),
 
-    'token' => env('FEEXPAY_TOKEN'),
+    'token' => env('GENIUSPAY_TOKEN', env('FEEXPAY_TOKEN')),
 
-    'mode' => env('FEEXPAY_MODE', 'SANDBOX'), // 'SANDBOX' ou 'LIVE'
+    'mode' => env('GENIUSPAY_MODE', env('FEEXPAY_MODE', 'SANDBOX')), // 'SANDBOX' ou 'LIVE'
 
-    'base_url' => env('FEEXPAY_BASE_URL', 'https://api-v2.feexpay.me'),
+    'base_url' => env('GENIUSPAY_BASE_URL', env('FEEXPAY_BASE_URL', 'https://api-v2.feexpay.me')),
 
-    'currency' => env('FEEXPAY_CURRENCY', 'XOF'),
+    'currency' => env('GENIUSPAY_CURRENCY', env('FEEXPAY_CURRENCY', 'XOF')),
 ];

@@ -192,10 +192,10 @@ TEXT
             // 3. PAIEMENTS, STUDIO IA, CRM & PARAMÈTRES PLATEFORME
             // =========================================================================
             [
-                'category' => 'payments_feexpay',
-                'title' => 'Comment fonctionnent les paiements Mobile Money (FeexPay) et Cash on Delivery',
+                'category' => 'payments_geniuspay',
+                'title' => 'Comment fonctionnent les paiements Mobile Money (GeniusPay) et Cash on Delivery',
                 'slug' => 'guide-systeme-paiement',
-                'keywords' => ['paiement', 'tmoney', 'flooz', 'feexpay', 'cash', 'especes', 'carte', 'mobile money', 'wave', 'momo'],
+                'keywords' => ['paiement', 'tmoney', 'flooz', 'geniuspay', 'feexpay', 'cash', 'especes', 'carte', 'mobile money', 'wave', 'momo'],
                 'target_routes' => 'shop.settings, storefront.checkout',
                 'sort_order' => 9,
                 'content' => <<<TEXT
@@ -203,7 +203,7 @@ Zanika combine deux modes d'encaissement complémentaires :
 1. Paiement à la livraison (Cash on Delivery - COD) :
    - Le client valide sa commande en ligne et règle en espèces ou par transfert Mobile Money au moment où le livreur lui remet le colis.
    - Vous suivez vos encaissements COD en attente dans /assistant-ia/commandes-cod ou en demandant « Fais le point sur ma trésorerie COD en attente » (outil get_pending_cod_review).
-2. Paiement en ligne instantané via FeexPay :
+2. Paiement en ligne instantané via GeniusPay :
    - Compatible avec T-Money (Mixx by Yas), Moov Flooz, MTN Mobile Money, Orange Money, Wave et Cartes Bancaires (Visa / Mastercard).
    - Dès validation du paiement par l'opérateur, le webhook sécurisé passe automatiquement la commande au statut de paiement "Payée" (paid) et confirme la commande.
 TEXT

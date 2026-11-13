@@ -136,7 +136,7 @@ class CheckoutController extends Controller
             'shipping_zone_id' => ['required', 'integer'],
             'delivery_address' => ['nullable', 'string', 'max:500'],
             'delivery_notes' => ['nullable', 'string', 'max:500'],
-            'payment_method' => ['required', 'in:cash_on_delivery,tmoney,flooz,card,feexpay'],
+            'payment_method' => ['required', 'in:cash_on_delivery,tmoney,flooz,card,geniuspay,feexpay'],
             'promo_code' => ['nullable', 'string', 'max:50'],
         ], [
             'customer_name.required' => 'Veuillez saisir votre nom complet.',

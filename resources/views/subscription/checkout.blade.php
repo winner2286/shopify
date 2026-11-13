@@ -61,17 +61,17 @@
                 <span style="color:var(--ok)">✓</span> Intégration WhatsApp & Localisation GPS sur Google Maps
             </li>
             <li style="display:flex;align-items:center;gap:.5rem">
-                <span style="color:var(--ok)">✓</span> Passerelle de paiement FeexPay (Mobile Money & Cartes)
+                <span style="color:var(--ok)">✓</span> Passerelle de paiement GeniusPay (Mobile Money & Cartes)
             </li>
         </ul>
     </div>
 
-    <!-- Passerelle de paiement FeexPay -->
+    <!-- Passerelle de paiement GeniusPay -->
     <div class="card" style="padding:1.8rem;border-radius:16px;border-left:4px solid #FF2D6D">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.8rem;margin-bottom:1rem">
             <h3 style="margin:0;display:flex;align-items:center;gap:.5rem">
                 <x-icon name="credit-card" :size="20" style="color:#FF2D6D" />
-                Paiement Sécurisé via FeexPay
+                Paiement Sécurisé via GeniusPay
             </h3>
             <span class="badge" style="background:rgba(255,45,109,0.1);color:#FF2D6D;font-weight:700;padding:.25rem .6rem">
                 {{ config('feexpay.mode', 'SANDBOX') === 'LIVE' ? 'Production' : 'Sandbox (Mode Test)' }}
@@ -82,15 +82,15 @@
             Réglez instantanément avec vos comptes <strong>T-Money, Flooz, MTN Mobile Money, Moov Money, Orange Money, Wave ou Carte bancaire (Visa / Mastercard)</strong>.
         </p>
 
-        <!-- Conteneur SDK FeexPay -->
+        <!-- Conteneur SDK GeniusPay -->
         <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;margin:1.8rem 0">
             <div id="feexpay-btn-sub" style="width:100%;max-width:380px;min-height:50px;display:flex;align-items:center;justify-content:center">
                 <button type="button" id="feexpay-trigger-sub-btn" class="btn btn-primary" style="background:#FF2D6D;border-color:#FF2D6D;color:#fff;width:100%;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.4rem;border-radius:10px;box-shadow:0 6px 20px rgba(255,45,109,0.3)">
-                    <x-icon name="credit-card" :size="18" /> Payer {{ number_format($plan->monthly_price, 0, ',', ' ') }} FCFA via FeexPay
+                    <x-icon name="credit-card" :size="18" /> Payer {{ number_format($plan->monthly_price, 0, ',', ' ') }} FCFA via GeniusPay
                 </button>
             </div>
             <div id="feexpay-sub-kyc-notice" style="display:none;width:100%;max-width:440px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.85rem 1rem;font-size:.84rem;color:#92400e;line-height:1.45;text-align:center">
-                ⏳ <strong>Validation KYC en cours chez FeexPay :</strong> Pour activer les encaissements réels, soumettez vos informations dans votre tableau de bord FeexPay. Vous pouvez déjà tester l'activation instantanée avec le bouton ci-dessous.
+                ⏳ <strong>Validation KYC en cours chez GeniusPay :</strong> Pour activer les encaissements réels, soumettez vos informations dans votre tableau de bord GeniusPay. Vous pouvez déjà tester l'activation instantanée avec le bouton ci-dessous.
             </div>
         </div>
 
@@ -100,7 +100,7 @@
             @csrf
             <div>
                 <div style="font-weight:700;font-size:.92rem">Mode Test / Démonstration Sandbox</div>
-                <div style="font-size:.82rem;color:var(--text-soft)">Simuler la validation du paiement FeexPay pour activer immédiatement le forfait</div>
+                <div style="font-size:.82rem;color:var(--text-soft)">Simuler la validation du paiement GeniusPay pour activer immédiatement le forfait</div>
             </div>
             <button type="submit" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.4rem;color:#FF2D6D;border-color:rgba(255,45,109,0.4);font-weight:700">
                 <x-icon name="zap" :size="15" /> Simuler l'activation (Test)
@@ -124,20 +124,20 @@
                     id: feexShopId,
                     amount: {{ (int) $plan->monthly_price }},
                     token: feexToken,
-                    callback_url: '{{ route('feexpay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}',
+                    callback_url: '{{ route('geniuspay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}',
                     mode: '{{ config('feexpay.mode', 'SANDBOX') }}',
                     custom_id: 'SUB:{{ $subscription->id }}:{{ $plan->id }}',
                     description: 'Abonnement {{ addslashes($plan->name) }} Zanika ({{ $plan->monthly_price }} FCFA)',
                     currency: 'XOF',
-                    buttonText: 'Payer {{ number_format($plan->monthly_price, 0, ',', ' ') }} FCFA via FeexPay',
+                    buttonText: 'Payer {{ number_format($plan->monthly_price, 0, ',', ' ') }} FCFA via GeniusPay',
                     callback: function(response) {
                         if (response && (response.status === 'SUCCESSFUL' || response.status === 'SUCCESS')) {
-                            window.location.href = '{{ route('feexpay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}&reference=' + (response.reference || '');
+                            window.location.href = '{{ route('geniuspay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}&reference=' + (response.reference || '');
                         }
                     }
                 });
             } catch (e) {
-                console.error('Erreur init FeexPay subscription:', e);
+                console.error('Erreur init GeniusPay subscription:', e);
             }
         }
 

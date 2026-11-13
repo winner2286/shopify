@@ -164,12 +164,12 @@ class FeexPayService
             'from_status' => $previousStatus,
             'to_status' => $order->status,
             'author_type' => 'system',
-            'comment' => "Paiement en ligne validé avec succès par FeexPay (Réf: {$transactionRef}).",
+            'comment' => "Paiement en ligne validé avec succès par GeniusPay (Réf: {$transactionRef}).",
         ]);
     }
 
     /**
-     * Valide et active un abonnement suite à confirmation FeexPay
+     * Valide et active un abonnement suite à confirmation GeniusPay
      */
     public function handleSubscriptionPaymentSuccess(Subscription $subscription, string $transactionRef, ?\App\Models\Plan $newPlan = null): void
     {
@@ -194,6 +194,6 @@ class FeexPayService
         // Réapprovisionnement des crédits IA pour le nouveau cycle de facturation
         $subscription->shop?->update(['ai_credits_used' => 0]);
 
-        Log::info("Abonnement #{$subscription->id} activé/renouvelé avec succès via FeexPay (Réf: {$transactionRef}).");
+        Log::info("Abonnement #{$subscription->id} activé/renouvelé avec succès via GeniusPay (Réf: {$transactionRef}).");
     }
 }

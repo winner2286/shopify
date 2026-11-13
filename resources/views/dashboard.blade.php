@@ -98,7 +98,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
                 <a href="{{ route('subscription.checkout', $shop?->currentPlan()->slug ?? 'essentiel') }}" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;box-shadow:0 4px 14px rgba(245, 158, 11, 0.35);color:#fff">
-                    Renouveler via FeexPay ({{ number_format($shop?->currentPlan()->monthly_price ?? 10000, 0, ',', ' ') }} F) →
+                    Renouveler via GeniusPay ({{ number_format($shop?->currentPlan()->monthly_price ?? 10000, 0, ',', ' ') }} F) →
                 </a>
                 <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-ghost btn-sm" style="white-space:nowrap;font-size:.82rem">
                     Changer de formule

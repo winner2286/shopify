@@ -107,14 +107,14 @@ class FeexPayController extends Controller
                         return redirect()->route('storefront.order.show', [
                             'subdomain' => $order->shop->subdomain,
                             'orderNumber' => $order->order_number,
-                        ])->with('status', '🎉 Votre paiement en ligne FeexPay a été validé avec succès !');
+                        ])->with('status', '🎉 Votre paiement en ligne GeniusPay a été validé avec succès !');
                     }
                 }
 
                 return redirect()->route('storefront.order.show', [
                     'subdomain' => $order->shop->subdomain,
                     'orderNumber' => $order->order_number,
-                ])->with('warning', 'Le paiement est en cours de traitement ou n\'a pas pu être vérifié auprès de FeexPay.');
+                ])->with('warning', 'Le paiement est en cours de traitement ou n\'a pas pu être vérifié auprès de GeniusPay.');
             }
         }
 

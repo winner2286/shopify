@@ -148,14 +148,14 @@
                     </h3>
 
                     <div style="display:flex;flex-direction:column;gap:.6rem">
-                        <!-- Option FeexPay (Mobile Money & Carte Bancaire) -->
+                        <!-- Option GeniusPay (Mobile Money & Carte Bancaire) -->
                         <label style="display:flex;align-items:center;gap:.75rem;padding:1rem 1.2rem;background:linear-gradient(135deg, rgba(255, 45, 109, 0.08), rgba(139, 92, 246, 0.04));border:1.5px solid #FF2D6D;border-radius:var(--radius-sm);cursor:pointer">
-                            <input type="radio" name="payment_method" value="feexpay" {{ old('payment_method', 'feexpay') === 'feexpay' ? 'checked' : '' }} style="accent-color:#FF2D6D;width:18px;height:18px">
+                            <input type="radio" name="payment_method" value="geniuspay" {{ in_array(old('payment_method', 'geniuspay'), ['geniuspay', 'feexpay'], true) ? 'checked' : '' }} style="accent-color:#FF2D6D;width:18px;height:18px">
                             <div style="flex:1">
                                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem">
                                     <div style="font-weight:700;display:flex;align-items:center;gap:.45rem;color:var(--text)">
                                         <x-icon name="credit-card" size="17" style="color:#FF2D6D" />
-                                        <span>Paiement en ligne instantané (FeexPay)</span>
+                                        <span>Paiement en ligne instantané (GeniusPay)</span>
                                     </div>
                                     <span class="badge" style="background:#FF2D6D;color:#fff;font-size:.72rem;font-weight:700;padding:.15rem .45rem">Recommandé</span>
                                 </div>

@@ -929,7 +929,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 
                     @auth
                         <a href="{{ route('subscription.checkout', $plan->slug) }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block plan-cta-btn" style="font-weight:700">
-                            <span>Souscrire via FeexPay</span>
+                            <span>Souscrire via GeniusPay</span>
                             <span class="plan-btn-price" data-plan-btn-monthly="{{ $mPrice }}">({{ number_format($mPrice, 0, ',', ' ') }} F) →</span>
                         </a>
                     @else

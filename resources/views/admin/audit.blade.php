@@ -96,10 +96,10 @@
                 <div style="font-size:.8rem;color:var(--text-soft)">Moteur IA souverain ultra-rapide pour le copilote e-commerce, les fiches produits et le studio publicitaire.</div>
             </div>
 
-            <!-- Passerelle FeexPay -->
+            <!-- Passerelle GeniusPay -->
             <div class="card" style="padding:1.25rem;border-left:4px solid {{ $health['feexpay']['status'] === 'ok' ? '#10b981' : '#ef4444' }}">
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                    <span style="font-weight:700;font-size:.92rem">Paiement Mobile FeexPay</span>
+                    <span style="font-weight:700;font-size:.92rem">Paiement Mobile GeniusPay</span>
                     <span class="badge {{ $health['feexpay']['status'] === 'ok' ? 'badge-ok' : 'badge-error' }}">
                         {{ $health['feexpay']['status'] === 'ok' ? 'Opérationnel' : 'Erreur' }}
                     </span>

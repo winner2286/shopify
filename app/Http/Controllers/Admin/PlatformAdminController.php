@@ -740,7 +740,7 @@ class PlatformAdminController extends Controller
             'database' => ['status' => $dbStatus, 'latency_ms' => $dbLatency, 'label' => 'Base de Données'],
             'storage' => ['status' => $storageStatus, 'label' => 'Disque & Permissions'],
             'openrouter' => ['status' => $openRouterStatus, 'message' => $openRouterMsg, 'label' => 'OpenRouter IA'],
-            'feexpay' => ['status' => $feexPayStatus, 'message' => $feexPayMsg, 'label' => 'FeexPay Mobile Money'],
+            'feexpay' => ['status' => $feexPayStatus, 'message' => $feexPayMsg, 'label' => 'GeniusPay Mobile Money'],
             'mail' => ['status' => $mailStatus, 'message' => $mailMsg, 'label' => 'Délivrabilité Emails'],
             'vapid' => ['status' => $vapidStatus, 'label' => 'Notifications Push VAPID'],
             'maintenance' => ['status' => app()->isDownForMaintenance() ? 'warning' : 'ok', 'label' => 'Maintenance Publique'],
