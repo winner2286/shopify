@@ -151,3 +151,4 @@ class ShopController extends Controller
         return redirect()->route('dashboard')->with('status', 'Boutique active : ' . $shop->name);
     }
 }
+

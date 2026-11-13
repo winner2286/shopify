@@ -897,6 +897,16 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                     <ul class="plan-features">
                         <li>
                             <x-icon name="check" :size="16" />
+                            @if ($plan->slug === 'essentiel')
+                                <span><strong>1 boutique</strong> e-commerce incluse</span>
+                            @elseif ($plan->slug === 'pro')
+                                <span><strong>Jusqu'à 3 boutiques</strong> incluses</span>
+                            @else
+                                <span><strong>Boutiques illimitées</strong></span>
+                            @endif
+                        </li>
+                        <li>
+                            <x-icon name="check" :size="16" />
                             <span>Jusqu'à <strong>{{ number_format($maxP, 0, ',', ' ') }} produits</strong> en catalogue</span>
                         </li>
                         <li>

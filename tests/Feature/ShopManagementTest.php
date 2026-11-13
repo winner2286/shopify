@@ -124,3 +124,4 @@ class ShopManagementTest extends TestCase
         $this->assertSame($shop2->id, $user->activeShop()->id);
     }
 }
+

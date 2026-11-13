@@ -36,6 +36,10 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem">
             <div style="background:var(--bg-soft);padding:.9rem 1.1rem;border-radius:10px">
+                <div style="font-size:.82rem;color:var(--text-soft)">Boutiques autorisées</div>
+                <div style="font-weight:700;font-size:1.05rem;color:var(--brand-primary)">{{ $plan->maxShops() >= 999 ? 'Boutiques illimitées' : $plan->maxShops().' boutique'.($plan->maxShops() > 1 ? 's' : '').' incluse'.($plan->maxShops() > 1 ? 's' : '') }}</div>
+            </div>
+            <div style="background:var(--bg-soft);padding:.9rem 1.1rem;border-radius:10px">
                 <div style="font-size:.82rem;color:var(--text-soft)">Catalogue articles</div>
                 <div style="font-weight:700;font-size:1.05rem">Jusqu'à {{ number_format($plan->max_products, 0, ',', ' ') }} produits</div>
             </div>
@@ -47,21 +51,20 @@
                 <div style="font-size:.82rem;color:var(--text-soft)">Intelligence Artificielle</div>
                 <div style="font-weight:700;font-size:1.05rem">{{ $plan->ai_credits }} crédits / mois</div>
             </div>
-            <div style="background:var(--bg-soft);padding:.9rem 1.1rem;border-radius:10px">
-                <div style="font-size:.82rem;color:var(--text-soft)">Commission sur ventes</div>
-                <div style="font-weight:700;font-size:1.05rem;color:var(--ok)">0% (Zéro commission)</div>
-            </div>
         </div>
 
         <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.6rem;font-size:.95rem">
             <li style="display:flex;align-items:center;gap:.5rem">
-                <span style="color:var(--ok)">✓</span> Boutique en ligne personnalisée avec sous-domaine
+                <x-icon name="check" size="14" style="color:var(--ok)" /> <span>Boutique en ligne personnalisée avec sous-domaine</span>
             </li>
             <li style="display:flex;align-items:center;gap:.5rem">
-                <span style="color:var(--ok)">✓</span> Intégration WhatsApp & Localisation GPS sur Google Maps
+                <x-icon name="check" size="14" style="color:var(--ok)" /> <span>Intégration WhatsApp & Localisation GPS sur Google Maps</span>
             </li>
             <li style="display:flex;align-items:center;gap:.5rem">
-                <span style="color:var(--ok)">✓</span> Passerelle de paiement GeniusPay (Mobile Money & Cartes)
+                <x-icon name="check" size="14" style="color:var(--ok)" /> <span>Passerelle de paiement GeniusPay (Mobile Money & Cartes)</span>
+            </li>
+            <li style="display:flex;align-items:center;gap:.5rem">
+                <x-icon name="check" size="14" style="color:var(--ok)" /> <span>0% de commission sur l'ensemble de vos ventes</span>
             </li>
         </ul>
     </div>

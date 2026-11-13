@@ -53,3 +53,4 @@ return new class extends Migration
         } catch (\Throwable $e) {}
     }
 };
+

@@ -85,6 +85,10 @@
 
                     <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;flex-direction:column;gap:.55rem;font-size:.88rem">
                         <div style="display:flex;align-items:center;justify-content:space-between">
+                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="shop" size="15" /> Max Boutiques :</span>
+                            <strong style="color:var(--brand-primary)">{{ $p->maxShops() >= 999 ? 'Illimité' : $p->maxShops() }}</strong>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between">
                             <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="package" size="15" /> Max Produits :</span>
                             <strong>{{ number_format($p->max_products, 0, ',', ' ') }}</strong>
                         </div>
@@ -161,24 +165,30 @@
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
                             <div>
-                                <label class="label">Limite de produits en catalogue *</label>
-                                <input type="number" name="max_products" class="input" value="{{ old('max_products', $p->max_products) }}" required min="1">
+                                <label class="label">Boutiques autorisées *</label>
+                                <input type="number" name="max_shops" class="input" value="{{ old('max_shops', $p->max_shops ?? $p->maxShops()) }}" required min="1">
+                                <small style="color:var(--text-soft);font-size:.74rem">1 = Essentiel, 3 = Pro, 999 = Illimité</small>
                             </div>
                             <div>
-                                <label class="label">Stockage photos (en Mo) *</label>
-                                <input type="number" name="storage_mb" class="input" value="{{ old('storage_mb', $p->storage_mb) }}" required min="100">
+                                <label class="label">Limite de produits en catalogue *</label>
+                                <input type="number" name="max_products" class="input" value="{{ old('max_products', $p->max_products) }}" required min="1">
                             </div>
                         </div>
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
                             <div>
+                                <label class="label">Stockage photos (en Mo) *</label>
+                                <input type="number" name="storage_mb" class="input" value="{{ old('storage_mb', $p->storage_mb) }}" required min="100">
+                            </div>
+                            <div>
                                 <label class="label">Crédits d'IA par mois *</label>
                                 <input type="number" name="ai_credits" class="input" value="{{ old('ai_credits', $p->ai_credits) }}" required min="0">
                             </div>
-                            <div>
-                                <label class="label">Générations complètes boutique *</label>
-                                <input type="number" name="full_generations" class="input" value="{{ old('full_generations', $p->full_generations) }}" required min="1">
-                            </div>
+                        </div>
+
+                        <div style="margin-bottom:1rem">
+                            <label class="label">Générations complètes boutique *</label>
+                            <input type="number" name="full_generations" class="input" value="{{ old('full_generations', $p->full_generations) }}" required min="1">
                         </div>
 
                         <div style="margin-bottom:1rem">
