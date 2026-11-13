@@ -39,10 +39,10 @@
         <!-- Onglets du Studio (Comparateur vs Galerie de styles) -->
         <div style="display:flex;gap:.5rem;margin-bottom:1.1rem;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:.6rem">
             <button type="button" id="tab-btn-compare" onclick="switchAiStudioTab('compare')" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-weight:700;font-size:.86rem;padding:.45rem 1rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:all .15s">
-                <span>⚡ Comparatif Avant / Après</span>
+                <x-icon name="zap" :size="15" /> <span>Comparatif Avant / Après</span>
             </button>
             <button type="button" id="tab-btn-gallery" onclick="switchAiStudioTab('gallery')" style="background:transparent;border:1px solid transparent;color:var(--text-soft, #a1a1aa);font-weight:600;font-size:.86rem;padding:.45rem 1rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:all .15s">
-                <span>🖼️ Galerie des 4 Styles Studio</span>
+                <x-icon name="image" :size="15" /> <span>Galerie des 4 Styles Studio</span>
             </button>
         </div>
 

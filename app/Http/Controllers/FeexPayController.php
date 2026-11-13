@@ -211,7 +211,7 @@ class FeexPayController extends Controller
     public function subscriptionCheckout(Request $request, Plan $plan)
     {
         $user = $request->user();
-        $shop = $user->shop;
+        $shop = $user?->activeShop() ?? $user?->shop;
 
         if (! $shop) {
             return redirect()->route('dashboard')->with('error', 'Veuillez créer une boutique avant de souscrire à un forfait.');
@@ -249,6 +249,6 @@ class FeexPayController extends Controller
         $ref = 'SIM-SUB-' . strtoupper(bin2hex(random_bytes(4)));
         $this->feexPayService->handleSubscriptionPaymentSuccess($subscription, $ref, $plan);
 
-        return redirect()->route('dashboard')->with('status', "🎉 Simulation réussie ! Votre forfait {$plan->name} ({$plan->monthly_price} FCFA) a été activé avec succès pour 1 mois supplémentaire.");
+        return redirect()->route('dashboard')->with('status', "Simulation réussie : votre forfait {$plan->name} ({$plan->monthly_price} FCFA) a été activé avec succès pour 1 mois supplémentaire.");
     }
 }

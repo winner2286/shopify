@@ -93,7 +93,7 @@
                 </button>
             </div>
             <div id="feexpay-sub-kyc-notice" style="display:none;width:100%;max-width:440px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.85rem 1rem;font-size:.84rem;color:#92400e;line-height:1.45;text-align:center">
-                ⏳ <strong>Validation KYC en cours chez GeniusPay :</strong> Pour activer les encaissements réels, soumettez vos informations dans votre tableau de bord GeniusPay. Vous pouvez déjà tester l'activation instantanée avec le bouton ci-dessous.
+                <x-icon name="info" :size="16" style="vertical-align:-2px;margin-right:4px" /> <strong>Validation KYC en cours chez GeniusPay :</strong> Pour activer les encaissements réels, soumettez vos informations dans votre tableau de bord GeniusPay. Vous pouvez déjà tester l'activation instantanée avec le bouton ci-dessous.
             </div>
         </div>
 

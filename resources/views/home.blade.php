@@ -846,7 +846,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <!-- Sélecteur de formules pour mobile (Accès direct en 1 clic) -->
         <div class="mobile-plan-nav" id="mobile-plan-nav">
             <button type="button" class="mobile-plan-pill" data-plan-idx="0">Essentiel</button>
-            <button type="button" class="mobile-plan-pill active" data-plan-idx="1">⭐ Pro (Recommandé)</button>
+            <button type="button" class="mobile-plan-pill active" data-plan-idx="1">Pro (Recommandé)</button>
             <button type="button" class="mobile-plan-pill" data-plan-idx="2">Premium</button>
         </div>
         <div class="mobile-swipe-hint">

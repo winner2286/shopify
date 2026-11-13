@@ -9,7 +9,7 @@
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1.5rem;margin-bottom:2rem">
         <div>
             <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
-                <span style="font-size:1.8rem">🛡️</span>
+                <x-icon name="shield" :size="28" style="color:var(--brand-primary)" />
                 <h1 style="font-size:1.8rem;margin:0">Audit, Contrôle & Alertes Système</h1>
                 @if ($stats['unread_alerts'] > 0)
                     <span class="badge" style="background:#ef4444;color:#ffffff;font-weight:700">
@@ -78,7 +78,7 @@
     <div style="margin-bottom:2.5rem">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
             <h2 style="font-size:1.15rem;margin:0;display:flex;align-items:center;gap:.5rem">
-                <span>⚡</span> Diagnostic Technique en Direct
+                <x-icon name="activity" :size="20" style="color:var(--brand-primary)" /> Diagnostic Technique en Direct
             </h2>
             <span style="font-size:.8rem;color:var(--text-soft)">Contrôlé le {{ now()->format('d/m/Y à H:i:s') }}</span>
         </div>
@@ -151,7 +151,7 @@
     <!-- SECTION 2 : ACTIVITÉ & SÉCURITÉ DU JOUR -->
     <div style="margin-bottom:2.5rem">
         <h2 style="font-size:1.15rem;margin:0 0 1rem 0;display:flex;align-items:center;gap:.5rem">
-            <span>📊</span> Activité & Sécurité Aujourd'hui
+            <x-icon name="chart" :size="20" style="color:var(--brand-primary)" /> Activité & Sécurité Aujourd'hui
         </h2>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:1rem">
@@ -216,7 +216,7 @@
 
         @if ($alerts->isEmpty())
             <div style="text-align:center;padding:3rem 1rem;color:var(--text-soft)">
-                <div style="font-size:2.5rem;margin-bottom:.5rem">🎉</div>
+                <div style="margin-bottom:.5rem"><x-icon name="check-circle" :size="36" style="color:var(--ok)" /></div>
                 <div style="font-size:1.05rem;font-weight:700">Aucune alerte à afficher</div>
                 <p style="font-size:.85rem;margin-top:.25rem">Tout fonctionne parfaitement sur la plateforme Zanika.</p>
             </div>
@@ -228,13 +228,13 @@
                             <!-- Icône par catégorie -->
                             <div style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{ $alert->severity === 'critical' ? 'rgba(239, 68, 68, 0.15)' : ($alert->severity === 'warning' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)') }}">
                                 @if ($alert->category === 'merchant_registered')
-                                    <span style="font-size:1.15rem">🚀</span>
+                                    <x-icon name="user-plus" :size="18" style="color:var(--brand-primary)" />
                                 @elseif ($alert->category === 'shop_created')
-                                    <span style="font-size:1.15rem">🏪</span>
+                                    <x-icon name="shop" :size="18" style="color:var(--brand-primary)" />
                                 @elseif ($alert->category === 'order_fraud')
-                                    <span style="font-size:1.15rem">💰</span>
+                                    <x-icon name="alert-triangle" :size="18" style="color:#ef4444" />
                                 @else
-                                    <span style="font-size:1.15rem">⚙️</span>
+                                    <x-icon name="settings" :size="18" style="color:var(--text-soft)" />
                                 @endif
                             </div>
 

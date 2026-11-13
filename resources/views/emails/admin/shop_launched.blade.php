@@ -24,7 +24,7 @@
             <td style="background-color: #ffffff; border-radius: 16px; padding: 36px 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb;">
                 <div style="background: rgba(124, 58, 237, 0.1); border: 1px solid #8b5cf6; border-radius: 8px; padding: 10px 16px; text-align: center; margin-bottom: 24px;">
                     <span style="font-size: 14px; font-weight: 800; color: #6d28d9;">
-                        🚀 NOUVELLE BOUTIQUE PUBLIÉE EN LIGNE
+                        NOUVELLE BOUTIQUE PUBLIÉE EN LIGNE
                     </span>
                 </div>
 
@@ -69,7 +69,7 @@
                 <div style="text-align: center; margin-bottom: 16px;">
                     @if ($shop->subdomain)
                     <a href="{{ url('/b/' . $shop->subdomain) }}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #10B981, #059669); color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; padding: 12px 24px; border-radius: 99px; margin-right: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-                        👁️ Visiter la boutique en direct →
+                        Visiter la boutique en direct →
                     </a>
                     @endif
                     <a href="{{ route('admin.shops') }}" style="display: inline-block; background: #f3f4f6; color: #374151; font-size: 14px; font-weight: 700; text-decoration: none; padding: 12px 20px; border-radius: 99px; border: 1px solid #d1d5db;">

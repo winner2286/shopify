@@ -24,7 +24,7 @@
             <td style="background-color: #ffffff; border-radius: 16px; padding: 36px 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb;">
                 <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; border-radius: 8px; padding: 10px 16px; text-align: center; margin-bottom: 24px;">
                     <span style="font-size: 14px; font-weight: 800; color: #047857;">
-                        👤 NOUVEAU MARCHAND INSCRIT SUR LA PLATEFORME
+                        NOUVEAU MARCHAND INSCRIT SUR LA PLATEFORME
                     </span>
                 </div>
 
