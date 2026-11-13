@@ -105,7 +105,7 @@
                     </span>
                 </div>
                 <div style="font-size:1.15rem;font-weight:800;margin:.4rem 0">{{ $health['feexpay']['message'] }}</div>
-                <div style="font-size:.8rem;color:var(--text-soft)">T-Money, Flooz, Orange Money & Cartes bancaires (Devise XOF).</div>
+                <div style="font-size:.8rem;color:var(--text-soft)">T-Money, Moov Money, Orange Money & Cartes bancaires (Devise XOF).</div>
             </div>
 
             <!-- Délivrabilité Emails -->

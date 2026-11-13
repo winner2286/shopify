@@ -98,7 +98,7 @@ class AiBenchmarkAndDatasetService
                 'messages' => [
                     ['role' => 'system', 'content' => $systemInstruction],
                     ['role' => 'user', 'content' => 'Quels moyens de paiement et zones de livraison me conseilles-tu pour vendre à Lomé et Abidjan ?'],
-                    ['role' => 'assistant', 'content' => "Chaque marché a ses habitudes bien distinctes :\n- **À Lomé (Togo)** : active **T-Money (Mixx by Yas)** et **Moov Flooz** via GeniusPay en plus du paiement à la livraison. Découpe tes zones dans `/livraison` en *Lomé Intra-muros* (1 000 FCFA), *Grand Lomé — Agoè / Baguida / Adidogomé* (1 500 FCFA) et *Intérieur du pays* (3 000 FCFA).\n- **À Abidjan (Côte d'Ivoire)** : **Wave** est indispensable aux côtés d'Orange Money et MTN MoMo. Structure tes tarifs par communes (*Cocody / Plateau / Marcory* vs *Yopougon / Abobo*)."],
+                    ['role' => 'assistant', 'content' => "Chaque marché a ses habitudes bien distinctes :\n- **À Lomé (Togo)** : active **T-Money (Mixx by Yas)** et **Moov Money** via GeniusPay en plus du paiement à la livraison. Découpe tes zones dans `/livraison` en *Lomé Intra-muros* (1 000 FCFA), *Grand Lomé — Agoè / Baguida / Adidogomé* (1 500 FCFA) et *Intérieur du pays* (3 000 FCFA).\n- **À Abidjan (Côte d'Ivoire)** : **Wave** est indispensable aux côtés d'Orange Money et MTN MoMo. Structure tes tarifs par communes (*Cocody / Plateau / Marcory* vs *Yopougon / Abobo*)."],
                 ],
             ],
             // 9. Résolution de problèmes, ambiguïté & sécurité anti-injection

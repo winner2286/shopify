@@ -195,7 +195,7 @@ TEXT
                 'category' => 'payments_geniuspay',
                 'title' => 'Comment fonctionnent les paiements Mobile Money (GeniusPay) et Cash on Delivery',
                 'slug' => 'guide-systeme-paiement',
-                'keywords' => ['paiement', 'tmoney', 'flooz', 'geniuspay', 'feexpay', 'cash', 'especes', 'carte', 'mobile money', 'wave', 'momo'],
+                'keywords' => ['paiement', 'tmoney', 'moov', 'moov money', 'flooz', 'geniuspay', 'feexpay', 'cash', 'especes', 'carte', 'mobile money', 'wave', 'momo'],
                 'target_routes' => 'shop.settings, storefront.checkout',
                 'sort_order' => 9,
                 'content' => <<<TEXT
@@ -204,7 +204,7 @@ Zanika combine deux modes d'encaissement complémentaires :
    - Le client valide sa commande en ligne et règle en espèces ou par transfert Mobile Money au moment où le livreur lui remet le colis.
    - Vous suivez vos encaissements COD en attente dans /assistant-ia/commandes-cod ou en demandant « Fais le point sur ma trésorerie COD en attente » (outil get_pending_cod_review).
 2. Paiement en ligne instantané via GeniusPay :
-   - Compatible avec T-Money (Mixx by Yas), Moov Flooz, MTN Mobile Money, Orange Money, Wave et Cartes Bancaires (Visa / Mastercard).
+   - Compatible avec T-Money (Mixx by Yas), Moov Money, MTN Mobile Money, Orange Money, Wave et Cartes Bancaires (Visa / Mastercard).
    - Dès validation du paiement par l'opérateur, le webhook sécurisé passe automatiquement la commande au statut de paiement "Payée" (paid) et confirme la commande.
 TEXT
             ],
@@ -322,8 +322,8 @@ TEXT
                 'sort_order' => 15,
                 'content' => <<<TEXT
 Chaque marché africain possède ses propres codes monétaires, logistiques et culturels qu'il ne faut jamais confondre :
-- Togo (XOF / FCFA) : Paiements dominés par T-Money (Mixx by Yas) et Moov Flooz. Livraison urbaine par coursiers moto (zemidjans) structurée autour de Lomé Intra-muros, Grand Lomé (Agoè, Adidogomé, Baguida) et l'intérieur (Kara, Sokodé, Atakpamé). Français et expressions locales (Éwé, Mina).
-- Bénin (XOF / FCFA) : Paiements MTN Mobile Money et Moov Flooz. Logistique active sur Cotonou, Abomey-Calavi et Porto-Novo. Français, Fon, Yoruba.
+- Togo (XOF / FCFA) : Paiements dominés par T-Money (Mixx by Yas) et Moov Money. Livraison urbaine par coursiers moto (zemidjans) structurée autour de Lomé Intra-muros, Grand Lomé (Agoè, Adidogomé, Baguida) et l'intérieur (Kara, Sokodé, Atakpamé). Français et expressions locales (Éwé, Mina).
+- Bénin (XOF / FCFA) : Paiements MTN Mobile Money et Moov Money. Logistique active sur Cotonou, Abomey-Calavi et Porto-Novo. Français, Fon, Yoruba.
 - Côte d'Ivoire (XOF / FCFA) : Forte pénétration de Wave, Orange Money et MTN MoMo. Tarification logistique par communes d'Abidjan (Cocody, Yopougon, Marcory, Plateau, Treichville, Abobo, Riviera) et expéditions vers Bouaké/Yamoussoukro.
 - Sénégal (XOF / FCFA) : Wave est quasi-hégémonique aux côtés d'Orange Money. Livraison par zones à Dakar (Plateau, Almadies, Mermoz, Parcelles Assainies, Pikine, Guédiawaye). Français et Wolof.
 - Maroc (MAD / Dirham) : Paiement COD très répandu via sociétés de messagerie (Amana, Cathedis, Ozex) et paiement en ligne CMI. Communication commerciale fluide en Français et en Darija marocain.

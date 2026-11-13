@@ -238,11 +238,11 @@ class Shop extends Model
             'phone_prefix' => '+228',
             'phone_placeholder' => '+228 90 00 00 00',
             'address_placeholder' => 'Ex. Tokoin Doumasséssé, près de la pharmacie',
-            'feexpay_subtitle' => 'T-Money, Flooz, MTN, Moov, Orange, Wave et Cartes bancaires.',
-            'mobile_primary_label' => 'T-Money direct (Togocom)',
-            'mobile_primary_desc' => 'Paiement manuel direct par transfert T-Money.',
-            'mobile_secondary_label' => 'Flooz direct (Moov Africa)',
-            'mobile_secondary_desc' => 'Paiement manuel direct par compte Flooz.',
+            'feexpay_subtitle' => 'T-Money, Moov Money, MTN, Orange, Wave et Cartes bancaires.',
+            'mobile_primary_label' => 'T-Money (Mixx by Yas)',
+            'mobile_primary_desc' => 'Paiement instantané via GeniusPay.',
+            'mobile_secondary_label' => 'Moov Money (Moov Africa)',
+            'mobile_secondary_desc' => 'Paiement instantané par compte Moov Money via GeniusPay.',
             'shipping_zones' => [],
         ];
     }

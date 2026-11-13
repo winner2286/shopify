@@ -478,7 +478,7 @@ class AiOrchestrator
         $countryProfile = $shop->countryProfile();
         $countryName = $countryProfile['name'] ?? 'Togo';
         $shopCity = $shop->city ?: ($countryProfile['city'] ?? 'Lomé');
-        $localPaymentInfo = $countryProfile['feexpay_subtitle'] ?? 'T-Money, Flooz, Mobile Money et Cartes bancaires';
+        $localPaymentInfo = $countryProfile['feexpay_subtitle'] ?? 'T-Money, Moov Money, Mobile Money et Cartes bancaires';
         $category = $shop->business_category ?: 'Commerce de détail';
         $subdomain = $shop->subdomain ? "{$shop->subdomain}.zanika.shop" : 'Non configuré';
         $capabilities = $this->resolveShopCapabilities($shop, $user);
@@ -589,8 +589,8 @@ FLUIDITÉ CONVERSATIONNELLE & RÈGLES STRICTES DU FIL DE DISCUSSION :
 
 RÈGLES D'OR DU MÉTIER E-COMMERCE AFRIQUE :
 1. **Spécificités Pays & Réalités Locales (sans amalgame)** :
-   - **Togo** : Monnaie FCFA (XOF), paiements T-Money (Mixx by Yas) et Flooz, coursiers zemidjans sur Lomé et périphérie (Agoè, Baguida, Adidogomé).
-   - **Bénin** : Monnaie FCFA (XOF), paiements MTN Mobile Money (*880#) et Moov Flooz, conducteurs kékénons/motos (Cotonou, Calavi, Porto-Novo).
+   - **Togo** : Monnaie FCFA (XOF), paiements T-Money (Mixx by Yas) et Moov Money, coursiers zemidjans sur Lomé et périphérie (Agoè, Baguida, Adidogomé).
+   - **Bénin** : Monnaie FCFA (XOF), paiements MTN Mobile Money (*880#) et Moov Money, conducteurs kékénons/motos (Cotonou, Calavi, Porto-Novo).
    - **Côte d'Ivoire** : Monnaie FCFA (XOF), Wave (frais 1%), Orange Money, MTN MoMo, coursiers express Abidjan (Cocody, Yopougon, Marcory, Plateau).
    - **Sénégal** : Monnaie FCFA (XOF), Wave (ultra-dominant) et Orange Money, livraisons express Dakar (Plateau, Almadies, Pikine).
 2. **Gestion du Cash on Delivery (COD)** : Recommande toujours le protocole d'appel ou message vocal WhatsApp dans les 30 minutes suivant la commande pour reconfirmer la présence du client avec le montant exact et un repère géographique clair.

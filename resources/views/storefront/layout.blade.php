@@ -1356,7 +1356,7 @@
                     <div style="font-weight:600;margin-bottom:.8rem">Paiements acceptés</div>
                     <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem">
                         <span style="background:var(--surface);border:1px solid var(--border);padding:.3rem .6rem;border-radius:6px;font-size:.8rem;font-weight:600">T-Money</span>
-                        <span style="background:var(--surface);border:1px solid var(--border);padding:.3rem .6rem;border-radius:6px;font-size:.8rem;font-weight:600">Flooz</span>
+                        <span style="background:var(--surface);border:1px solid var(--border);padding:.3rem .6rem;border-radius:6px;font-size:.8rem;font-weight:600">Moov Money</span>
                         <span style="background:var(--surface);border:1px solid var(--border);padding:.3rem .6rem;border-radius:6px;font-size:.8rem;font-weight:600">Espèces à la livraison</span>
                     </div>
                     @if ($shop->phone)

@@ -160,7 +160,7 @@
                                     <span class="badge" style="background:#FF2D6D;color:#fff;font-size:.72rem;font-weight:700;padding:.15rem .45rem">Recommandé</span>
                                 </div>
                                 <div style="font-size:.84rem;color:var(--text-soft);margin-top:.2rem">
-                                    {{ $countryProfile['feexpay_subtitle'] ?? 'T-Money, Flooz, MTN, Moov, Orange, Wave et Cartes bancaires (Visa / Mastercard).' }}
+                                    {{ $countryProfile['feexpay_subtitle'] ?? 'T-Money, Moov Money, MTN, Orange, Wave et Cartes bancaires (Visa / Mastercard).' }}
                                 </div>
                             </div>
                         </label>
@@ -170,22 +170,6 @@
                             <div style="flex:1">
                                 <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="wallet" size="16" /> Espèces à la livraison</div>
                                 <div style="font-size:.85rem;color:var(--text-soft)">Réglez directement en espèces ({{ $currencyLabel }}) au livreur lors de la réception de votre colis.</div>
-                            </div>
-                        </label>
-
-                        <label style="display:flex;align-items:center;gap:.75rem;padding:.9rem 1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer">
-                            <input type="radio" name="payment_method" value="tmoney" {{ old('payment_method') === 'tmoney' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
-                            <div style="flex:1">
-                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> {{ $countryProfile['mobile_primary_label'] ?? 'T-Money direct (Togocom)' }}</div>
-                                <div style="font-size:.85rem;color:var(--text-soft)">{{ $countryProfile['mobile_primary_desc'] ?? 'Paiement manuel direct par transfert T-Money.' }}</div>
-                            </div>
-                        </label>
-
-                        <label style="display:flex;align-items:center;gap:.75rem;padding:.9rem 1.2rem;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer">
-                            <input type="radio" name="payment_method" value="flooz" {{ old('payment_method') === 'flooz' ? 'checked' : '' }} style="accent-color:var(--store-primary);width:18px;height:18px">
-                            <div style="flex:1">
-                                <div style="font-weight:600;display:flex;align-items:center;gap:.4rem"><x-icon name="phone" size="16" /> {{ $countryProfile['mobile_secondary_label'] ?? 'Flooz direct (Moov Africa)' }}</div>
-                                <div style="font-size:.85rem;color:var(--text-soft)">{{ $countryProfile['mobile_secondary_desc'] ?? 'Paiement manuel direct par compte Flooz.' }}</div>
                             </div>
                         </label>
                     </div>

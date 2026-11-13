@@ -136,7 +136,7 @@
                         La plateforme fonctionne normalement pour tous les utilisateurs.
                     </h2>
                     <p style="color:var(--text-soft);font-size:.95rem;line-height:1.6;max-width:640px">
-                        Toutes les vitrines de boutiques, le tunnel de paiement T-Money/Flooz et les espaces d'administration marchands sont 100% opérationnels.
+                        Toutes les vitrines de boutiques, le tunnel de paiement T-Money/Moov Money et les espaces d'administration marchands sont 100% opérationnels.
                     </p>
                 </div>
             </div>

@@ -302,11 +302,11 @@ RÈGLES CAPITALES :
 3. Pour la beauté : parle de teint éclatant, douceur, formule saine, soins.
 4. Pour la tech : parle de puissance, batterie, fiabilité, musique, son.
 5. Inclus expressément le nom exact du produit "{$title}" (écrit en toutes lettres avec ses espaces, pas seulement en hashtag), le prix exact "{$effectivePrice}" et le nom de la boutique "{$shop->name}".
-6. Mentionne le paiement Mobile Money (T-Money, Flooz) ou cash à la livraison à Lomé et la commande directe via WhatsApp.
+6. Mentionne le paiement Mobile Money (T-Money, Moov Money) ou cash à la livraison à Lomé et la commande directe via WhatsApp.
 7. Le format vidéo optimal est de 20 à 25 secondes pour donner TOUTES les informations nécessaires sans couper la parole :
    - Étape 1 (Accroche Flash ⚡, 0s - 5s) : 1 phrase percutante qui capte immédiatement l'attention et nomme le produit.
    - Étape 2 (Découverte & Prix 💎, 5s - 15s) : 1 à 2 phrases claires détaillant la qualité, le nom de la boutique "{$shop->name}" et le prix exact "{$effectivePrice}".
-   - Étape 3 (Appel à l'action WhatsApp 📱, 15s - 24s) : 1 phrase complète mentionnant la livraison partout à Lomé/Togo, le paiement sécurisé (T-Money, Flooz ou Cash à la livraison) et invitant à commander immédiatement sur WhatsApp.
+   - Étape 3 (Appel à l'action WhatsApp 📱, 15s - 24s) : 1 phrase complète mentionnant la livraison partout à Lomé/Togo, le paiement sécurisé (T-Money, Moov Money ou Cash à la livraison) et invitant à commander immédiatement sur WhatsApp.
 
 Réponds STRICTEMENT avec un objet JSON valide ayant cette structure :
 {
@@ -322,7 +322,7 @@ Réponds STRICTEMENT avec un objet JSON valide ayant cette structure :
       "steps": [
         {"time": "0s - 5s", "visual": "Plan dynamique...", "voiceover": "Phrase d'accroche captivante..."},
         {"time": "5s - 15s", "visual": "Présentation des qualités et prix...", "voiceover": "Détails complets, qualité et prix..."},
-        {"time": "15s - 24s", "visual": "Appel à l'action WhatsApp...", "voiceover": "Livraison Lomé, paiement T-Money/Flooz et commande WhatsApp..."}
+        {"time": "15s - 24s", "visual": "Appel à l'action WhatsApp...", "voiceover": "Livraison Lomé, paiement T-Money/Moov Money et commande WhatsApp..."}
       ]
     },
     {
@@ -502,14 +502,14 @@ PROMPT;
             if ($domain === 'food') {
                 return [
                     "🤤 Une envie irrésistible de vous régaler ? Craquez pour « {$title} » chez {$shop->name} ! {$priceText}\n\n🍟 Servi bien chaud, croustillant et plein de saveurs ! Livraison express partout à Lomé.\n\nCommandez directement en 1 clic via le lien en bio ou WhatsApp 📲\n\n{$hashtags}",
-                    "POV : Tu viens de trouver le meilleur plan gourmand de Lomé 😍 « {$title} » est prêt à être dégusté chez {$shop->name} !\n\n👉 {$priceText}\n🚚 Paiement T-Money, Flooz ou à la livraison !\n\n{$hashtags}",
+                    "POV : Tu viens de trouver le meilleur plan gourmand de Lomé 😍 « {$title} » est prêt à être dégusté chez {$shop->name} !\n\n👉 {$priceText}\n🚚 Paiement T-Money, Moov Money ou à la livraison !\n\n{$hashtags}",
                     "Stop au scrolling 🛑 Ce délice « {$title} » fait un carton aujourd'hui chez {$shop->name} ! {$priceText}\n\nCommandez vite avant la fin du service de livraison du jour 📲\n\n{$hashtags}",
                 ];
             }
 
             return [
                 "✨ Vous cherchiez la perfection ? Voici « {$title} » chez {$shop->name} ! {$priceText}\n\n📦 Livraison express partout à Lomé et au Togo ! Commandez directement via le lien en bio ou WhatsApp.\n\n{$hashtags}",
-                "POV : Tu viens de trouver le meilleur plan shopping à Lomé 😍 « {$title} » est enfin disponible chez {$shop->name} !\n\n👉 {$priceText}\n🚚 Paiement T-Money, Flooz ou à la livraison !\n\n{$hashtags}",
+                "POV : Tu viens de trouver le meilleur plan shopping à Lomé 😍 « {$title} » est enfin disponible chez {$shop->name} !\n\n👉 {$priceText}\n🚚 Paiement T-Money, Moov Money ou à la livraison !\n\n{$hashtags}",
                 "Stop au scrolling 🛑 Ce modèle « {$title} » fait fureur en ce moment chez {$shop->name} ! {$priceText}\n\nCliquez sur le lien pour commander avant rupture de stock 📲\n\n{$hashtags}",
             ];
         }
@@ -519,14 +519,14 @@ PROMPT;
             if ($domain === 'food') {
                 return [
                     "✦ *PLAISIR GOURMAND D'EXCEPTION* ✦\n\nOffrez-vous un moment de pure délectation avec « {$title} », préparé avec soin à partir d'ingrédients frais et sélectionnés par *{$shop->name}*.\n\n{$priceText}\n\n📍 Disponible dès aujourd'hui.\n🚚 Livraison soignée à votre bureau ou à domicile partout à Lomé.\n\n🔗 *Commander directement en ligne :*\n{$url}",
-                    "🌟 *LA SIGNATURE GOURMANDE DU CHEF*\n\nSublimez votre déjeuner ou votre pause avec « {$title} ». Fraîcheur irréprochable et saveurs intenses au rendez-vous chez *{$shop->name}*.\n\n{$priceText}\n\n💳 Paiement facile par T-Money, Flooz ou à la livraison.\n👉 Réservez votre commande ici :\n{$url}",
+                    "🌟 *LA SIGNATURE GOURMANDE DU CHEF*\n\nSublimez votre déjeuner ou votre pause avec « {$title} ». Fraîcheur irréprochable et saveurs intenses au rendez-vous chez *{$shop->name}*.\n\n{$priceText}\n\n💳 Paiement facile par T-Money, Moov Money ou à la livraison.\n👉 Réservez votre commande ici :\n{$url}",
                     "✨ *L'EXPÉRIENCE SAVEUR {$shop->name}*\n\nRedécouvrez le plaisir de savourer « {$title} » chaud et croustillant.\n\n{$priceText}\n\n📦 Livraison express en moins de 45 minutes.\n📲 Commandez en 1 clic :\n{$url}",
                 ];
             }
 
             return [
                 "✦ *ÉLÉGANCE & DISTINCTION* ✦\n\nNous avons le plaisir de vous présenter « {$title} », sélectionné avec le plus grand soin par *{$shop->name}*.\n\n{$priceText}\n\n📍 Disponible dès aujourd'hui chez *{$shop->name}*.\n🚚 Livraison soignée à Lomé et dans toutes les régions du Togo.\n\n🔗 *Découvrir et commander en ligne :*\n{$url}",
-                "💎 *LA PIÈCE MAÎTRESSE DE LA COLLECTION*\n\nOffrez-vous ce qu'il y a de meilleur avec « {$title} ». Finitions haut de gamme et qualité irréprochable au rendez-vous.\n\n{$priceText}\n\n💳 Paiement facile par T-Money, Flooz ou à la livraison.\n👉 Réservez votre exemplaire ici :\n{$url}",
+                "💎 *LA PIÈCE MAÎTRESSE DE LA COLLECTION*\n\nOffrez-vous ce qu'il y a de meilleur avec « {$title} ». Finitions haut de gamme et qualité irréprochable au rendez-vous.\n\n{$priceText}\n\n💳 Paiement facile par T-Money, Moov Money ou à la livraison.\n👉 Réservez votre exemplaire ici :\n{$url}",
                 "✨ *EXCLUSIVITÉ {$shop->name}*\n\nSublimez votre quotidien grâce à « {$title} ». Un style épuré, intemporel et moderne.\n\n{$priceText}\n\n📦 Expédition rapide sous 24h.\n📲 Commandez directement en 1 clic :\n{$url}",
             ];
         }
@@ -534,14 +534,14 @@ PROMPT;
         // Amical & Chaleureux (défaut WhatsApp Togo)
         if ($domain === 'food') {
             return [
-                "Coucou la famille ! 👋 Envie d'une bonne pause gourmande aujourd'hui ? Nos délicieuses « {$title} » chez *{$shop->name}* sont prêtes à être dégustées ! 😋\n\n{$priceText}\n\n🚚 On vous livre tout chaud au bureau ou à la maison à Lomé ! Paiement T-Money, Flooz ou à la livraison.\n\n👇 Commandez votre part maintenant :\n{$url}",
+                "Coucou la famille ! 👋 Envie d'une bonne pause gourmande aujourd'hui ? Nos délicieuses « {$title} » chez *{$shop->name}* sont prêtes à être dégustées ! 😋\n\n{$priceText}\n\n🚚 On vous livre tout chaud au bureau ou à la maison à Lomé ! Paiement T-Money, Moov Money ou à la livraison.\n\n👇 Commandez votre part maintenant :\n{$url}",
                 "Alerte régal ! 🔥 Ne passez pas à côté de « {$title} » tout chaud chez *{$shop->name}* !\n\n{$priceText}\n\n⚠️ Préparé frais à la commande, faites vite pour être servi(e) rapidement !\n\n📲 Passez votre commande tout de suite ici :\n{$url}",
                 "Hello ! Envie d'un snack savoureux qui fait plaisir ? 🍟 Craquez pour « {$title} » chez *{$shop->name}*.\n\n{$priceText}\n\nLivraison rapide et sécurisée sans tracas !\n🔗 Voir et commander :\n{$url}",
             ];
         }
 
         return [
-            "Coucou la famille ! 👋 Regardez cette merveille qui vient tout juste d'arriver chez *{$shop->name}* : « {$title} » 😍\n\n{$priceText}\n\n🚚 Livraison super rapide partout à Lomé ! Vous pouvez payer en espèces à la livraison ou par T-Money / Flooz.\n\n👇 Cliquez ici pour voir les photos et commander :\n{$url}",
+            "Coucou la famille ! 👋 Regardez cette merveille qui vient tout juste d'arriver chez *{$shop->name}* : « {$title} » 😍\n\n{$priceText}\n\n🚚 Livraison super rapide partout à Lomé ! Vous pouvez payer en espèces à la livraison ou par T-Money / Moov Money.\n\n👇 Cliquez ici pour voir les photos et commander :\n{$url}",
             "Alerte bon plan shopping ! 🔥 Ne passez pas à côté de « {$title} » chez *{$shop->name}* !\n\n{$priceText}\n\n⚠️ Les quantités sont très limitées, premier venu, premier servi !\n\n📲 Passez votre commande tout de suite ici :\n{$url}",
             "Hello ! Envie de vous faire plaisir ou d'offrir un joli cadeau ? 🎁 Découvrez « {$title} » chez *{$shop->name}*.\n\n{$priceText}\n\nLivraison à domicile assurée sans tracas !\n🔗 Voir les détails et commander :\n{$url}",
         ];

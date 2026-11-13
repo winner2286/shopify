@@ -88,7 +88,7 @@
                 </div>
             @else
                 <p style="color:var(--text-soft);margin-bottom:1.2rem;line-height:1.6">
-                    Cliquez sur le bouton ci-dessous pour payer instantanément par <strong>T-Money, Flooz, MTN, Moov, Orange, Wave ou Carte bancaire</strong> via la passerelle sécurisée GeniusPay.
+                    Cliquez sur le bouton ci-dessous pour payer instantanément par <strong>T-Money, Moov Money, MTN, Orange, Wave ou Carte bancaire</strong> via la passerelle sécurisée GeniusPay.
                 </p>
 
                 <!-- Bouton GeniusPay officiel et conteneur sécurisé -->

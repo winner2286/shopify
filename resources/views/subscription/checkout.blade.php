@@ -79,7 +79,7 @@
         </div>
 
         <p style="color:var(--text-soft);font-size:.95rem;line-height:1.55;margin-bottom:1.4rem">
-            Réglez instantanément avec vos comptes <strong>T-Money, Flooz, MTN Mobile Money, Moov Money, Orange Money, Wave ou Carte bancaire (Visa / Mastercard)</strong>.
+            Réglez instantanément avec vos comptes <strong>T-Money, Moov Money, MTN Mobile Money, Orange Money, Wave ou Carte bancaire (Visa / Mastercard)</strong>.
         </p>
 
         <!-- Conteneur SDK GeniusPay -->

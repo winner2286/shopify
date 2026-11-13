@@ -375,7 +375,7 @@ class AiGenerationService
             [
                 'type' => 'shipping',
                 'title' => 'Livraison et Paiement',
-                'content' => "Nous livrons rapidement à Lomé et dans les autres villes du Togo. Règlement facile et sécurisé par T-Money, Flooz ou à la livraison lors de la remise de votre colis.",
+                'content' => "Nous livrons rapidement à Lomé et dans les autres villes du Togo. Règlement facile et sécurisé par T-Money, Moov Money ou à la livraison lors de la remise de votre colis.",
             ],
             [
                 'type' => 'terms',

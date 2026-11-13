@@ -6,7 +6,7 @@ return [
     | FeexPay Configuration (Passerelle de paiement panafricaine)
     |--------------------------------------------------------------------------
     |
-    | Supporte Mobile Money (T-Money, Flooz, MTN, Moov, Orange, Wave, Celtiis)
+    | Supporte Mobile Money (T-Money, Moov Money, MTN, Orange, Wave, Celtiis)
     | et cartes bancaires (Visa, Mastercard).
     |
     */

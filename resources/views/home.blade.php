@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', config('platform.name') . ' : La plateforme de commerce tout-en-un pour développer votre entreprise')
-@section('description', 'Créez votre boutique en ligne, vendez sur WhatsApp et TikTok, encaissez par T-Money, Flooz et cartes, et gérez vos stocks et livraisons facilement.')
+@section('description', 'Créez votre boutique en ligne, vendez sur WhatsApp et TikTok, encaissez par T-Money, Moov Money et cartes, et gérez vos stocks et livraisons facilement.')
 
 @section('content')
 <!-- ==========================================================================
@@ -23,8 +23,8 @@
             <h1>La plateforme de commerce <span class="cypher-word" data-word="tout-en-un">tout-en-un</span> pour <span class="cypher-word" data-word="développer">développer</span> votre entreprise.</h1>
 
             <p class="lead">
-                <span class="desktop-only">Créez votre boutique en ligne en quelques minutes, vendez sur WhatsApp, TikTok et les réseaux sociaux, encaissez par T-Money, Flooz et cartes, et gérez vos stocks et livraisons sur une seule interface intuitive.</span>
-                <span class="mobile-only">Vendez sur le web et WhatsApp. Encaissez par T-Money & Flooz. Gérez tout facilement.</span>
+                <span class="desktop-only">Créez votre boutique en ligne en quelques minutes, vendez sur WhatsApp, TikTok et les réseaux sociaux, encaissez par T-Money, Moov Money et cartes, et gérez vos stocks et livraisons sur une seule interface intuitive.</span>
+                <span class="mobile-only">Vendez sur le web et WhatsApp. Encaissez par T-Money & Moov Money. Gérez tout facilement.</span>
             </p>
 
             @auth
@@ -131,7 +131,7 @@
                             <div class="mockup-kpi">
                                 <div class="mockup-kpi-label">Mobile Money</div>
                                 <div class="mockup-kpi-val">100%</div>
-                                <div class="mockup-kpi-badge">T-Money & Flooz</div>
+                                <div class="mockup-kpi-badge">T-Money & Moov Money</div>
                             </div>
                         </div>
 
@@ -293,7 +293,7 @@
 
                             <div class="mockup-ascii-stream">
                                 <div><span class="stream-ok">✓ [CORE]</span> Pipeline IA : Vectorisation des catalogues en cours...</div>
-                                <div><span class="stream-ok">✓ [PAY]</span> Passerelles T-Money & Flooz : Synchro temps réel <span style="color:#fb7185">99.98%</span></div>
+                                <div><span class="stream-ok">✓ [PAY]</span> Passerelles T-Money & Moov Money : Synchro temps réel <span style="color:#fb7185">99.98%</span></div>
                                 <div><span class="stream-ok">✓ [DATA]</span> Matrice Braille active : <span id="ascii-stream-coords">X: 128 Y: 64 • Matrice: ⠿⠷⠶</span></div>
                             </div>
                         </div>
@@ -310,7 +310,7 @@
 <div class="marquee-container" aria-hidden="true">
     <div class="marquee-track">
         <span class="marquee-item"><x-icon name="whatsapp" :size="16" /> Commande WhatsApp 1-clic</span>
-        <span class="marquee-item"><x-icon name="credit-card" :size="16" /> Encaissement T-Money & Flooz</span>
+        <span class="marquee-item"><x-icon name="credit-card" :size="16" /> Encaissement T-Money & Moov Money</span>
         <span class="marquee-item"><x-icon name="sparkles" :size="16" /> Fiches produits rédigées par l'IA</span>
         <span class="marquee-item"><x-icon name="truck" :size="16" /> Suivi de livraison en direct</span>
         <span class="marquee-item"><x-icon name="check-circle" :size="16" /> 0% de commission sur vos ventes</span>
@@ -320,7 +320,7 @@
     </div>
     <div class="marquee-track" aria-hidden="true">
         <span class="marquee-item"><x-icon name="whatsapp" :size="16" /> Commande WhatsApp 1-clic</span>
-        <span class="marquee-item"><x-icon name="credit-card" :size="16" /> Encaissement T-Money & Flooz</span>
+        <span class="marquee-item"><x-icon name="credit-card" :size="16" /> Encaissement T-Money & Moov Money</span>
         <span class="marquee-item"><x-icon name="sparkles" :size="16" /> Fiches produits rédigées par l'IA</span>
         <span class="marquee-item"><x-icon name="truck" :size="16" /> Suivi de livraison en direct</span>
         <span class="marquee-item"><x-icon name="check-circle" :size="16" /> 0% de commission sur vos ventes</span>
@@ -545,12 +545,12 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         <div class="pillar-content">
             <div class="pillar-tag"><x-icon name="credit-card" :size="16" /> 03. Paiements & Logistique</div>
             <h3>
-                <span class="desktop-only">Encaissez par T-Money, Flooz et livrez sans tracas partout au Togo</span>
-                <span class="mobile-only">Encaissez par T-Money, Flooz & Cash</span>
+                <span class="desktop-only">Encaissez par T-Money, Moov Money et livrez sans tracas partout au Togo</span>
+                <span class="mobile-only">Encaissez par T-Money, Moov Money & Cash</span>
             </h3>
             <p class="desktop-only">Intégrez immédiatement les modes de paiement préférés de vos clients d'Afrique de l'Ouest et organisez vos livraisons avec vos livreurs habituels en toute transparence.</p>
             <ul class="pillar-checklist">
-                <li><x-icon name="check" :size="16" /> <strong>Mobile Money T-Money, Flooz & Wave</strong> <span class="desktop-only">et cartes bancaires</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Mobile Money T-Money, Moov Money & Wave</strong> <span class="desktop-only">et cartes bancaires</span></li>
                 <li><x-icon name="check" :size="16" /> <strong>Paiement à la livraison</strong> <span class="desktop-only">(Cash on Delivery) supporté et sécurisé</span></li>
                 <li><x-icon name="check" :size="16" /> <strong>Zones de livraison personnalisées</strong> <span class="desktop-only">: Lomé, banlieues et régions</span></li>
                 <li><x-icon name="check" :size="16" /> <strong>Suivi de commande en direct</strong> <span class="desktop-only">envoyé par lien automatique au client</span></li>
@@ -570,7 +570,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                 <div style="background:var(--bg-soft);border:1px solid var(--border);border-radius:10px;padding:1rem;display:flex;align-items:center;gap:.75rem">
                     <x-icon name="phone" :size="20" style="color:#004c3f" />
                     <div>
-                        <div style="font-weight:700;font-size:.9rem">Flooz (Moov Togo)</div>
+                        <div style="font-weight:700;font-size:.9rem">Moov Money (Moov Africa)</div>
                         <div style="font-size:.75rem;color:var(--text-soft)">Validation immédiate</div>
                     </div>
                 </div>
@@ -739,8 +739,8 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 
         <div class="testimonial-card reveal">
             <blockquote class="testimonial-quote">
-                <span class="desktop-only">« La création de ma boutique n'a pris que 15 minutes avec l'IA. Elle a créé les fiches de mes écouteurs et montres connectées automatiquement. Les clients adorent le paiement par Flooz et le lien de suivi de livraison. C'est le Shopify togolais que nous attendions tous. »</span>
-                <span class="mobile-only">« Boutique créée en <strong>15 minutes</strong> avec l'IA. Les clients adorent payer par Flooz et suivre leur colis. C'est le Shopify togolais ! »</span>
+                <span class="desktop-only">« La création de ma boutique n'a pris que 15 minutes avec l'IA. Elle a créé les fiches de mes écouteurs et montres connectées automatiquement. Les clients adorent le paiement par Moov Money et le lien de suivi de livraison. C'est le Shopify togolais que nous attendions tous. »</span>
+                <span class="mobile-only">« Boutique créée en <strong>15 minutes</strong> avec l'IA. Les clients adorent payer par Moov Money et suivre leur colis. C'est le Shopify togolais ! »</span>
             </blockquote>
             <div class="testimonial-author">
                 <div class="author-avatar">KD</div>
@@ -913,7 +913,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />
-                            <span>Paiements T-Money, Flooz & Cash (0% com.)</span>
+                            <span>Paiements T-Money, Moov Money & Cash (0% com.)</span>
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />
@@ -960,11 +960,11 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
     <div class="faq-wrap">
         <div class="faq-item active reveal">
             <button type="button" class="faq-question">
-                <span>Comment mes clients règlent-ils leurs achats par T-Money ou Flooz ?</span>
+                <span>Comment mes clients règlent-ils leurs achats par T-Money ou Moov Money ?</span>
                 <span class="faq-chevron"><x-icon name="arrow-right" :size="16" /></span>
             </button>
             <div class="faq-answer">
-                Vos clients choisissent simplement T-Money ou Flooz lors de la validation de commande. Ils reçoivent les instructions directes avec votre numéro marchand ou le numéro de paiement, et le paiement est immédiatement validé et consigné dans votre tableau de bord.
+                Vos clients choisissent simplement le paiement en ligne via GeniusPay (T-Money, Moov Money ou Carte bancaire) ou le paiement en espèces à la livraison lors de la validation de commande. Le paiement est immédiatement vérifié et consigné dans votre tableau de bord.
             </div>
         </div>
 
@@ -1053,7 +1053,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                     La plateforme de commerce tout-en-un des entreprises et entrepreneurs en Afrique de l'Ouest.
                 </p>
                 <div style="display:flex;gap:.8rem;color:var(--text-soft);margin-top:1.2rem">
-                    <span title="T-Money & Flooz intégrés"><x-icon name="credit-card" :size="20" /></span>
+                    <span title="T-Money & Moov Money intégrés"><x-icon name="credit-card" :size="20" /></span>
                     <span title="WhatsApp Commerce"><x-icon name="whatsapp" :size="20" /></span>
                     <span title="Protection & Sécurité"><x-icon name="shield" :size="20" /></span>
                 </div>
@@ -1065,7 +1065,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                 <ul class="footer-col-links">
                     <li><a href="#solutions">Boutique en ligne</a></li>
                     <li><a href="#solutions">WhatsApp Commerce</a></li>
-                    <li><a href="#solutions">Paiements T-Money & Flooz</a></li>
+                    <li><a href="#solutions">Paiements T-Money & Moov Money</a></li>
                     <li><a href="#solutions">Studio Publicitaire IA</a></li>
                     <li><a href="#solutions">Gestion des livraisons</a></li>
                 </ul>

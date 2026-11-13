@@ -102,7 +102,7 @@ class Order extends Model
         return match ($this->payment_method) {
             self::PAYMENT_CASH => 'Espèces à la livraison',
             self::PAYMENT_TMONEY => 'T-Money Togo',
-            self::PAYMENT_FLOOZ => 'Flooz Moov',
+            self::PAYMENT_FLOOZ => 'Moov Money',
             self::PAYMENT_CARD => 'Carte bancaire',
             self::PAYMENT_GENIUSPAY, self::PAYMENT_FEEXPAY => 'GeniusPay (Mobile Money & Carte)',
             default => ucfirst($this->payment_method),

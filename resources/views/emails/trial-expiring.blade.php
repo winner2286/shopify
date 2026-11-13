@@ -66,7 +66,7 @@
                 </div>
 
                 <p style="margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.6;">
-                    Pour <strong>continuer à recevoir vos commandes clients sur WhatsApp</strong>, encaisser vos paiements par T-Money ou Flooz et utiliser les outils d'IA sans interruption, choisissez dès aujourd'hui votre formule adaptée :
+                    Pour <strong>continuer à recevoir vos commandes clients sur WhatsApp</strong>, encaisser vos paiements par T-Money ou Moov Money et utiliser les outils d'IA sans interruption, choisissez dès aujourd'hui votre formule adaptée :
                 </p>
 
                 <!-- Grille des formules -->
@@ -105,7 +105,7 @@
                         Règlements simples et instantanés :
                     </div>
                     <div style="font-size: 13px; color: #6b7280;">
-                        T-Money (Togo) • Flooz (Moov) • Cartes Bancaires Visa & Mastercard
+                        T-Money (Togo) • Moov Money • Cartes Bancaires Visa & Mastercard
                     </div>
                     <p style="margin: 14px 0 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">
                         <strong>Vos données sont protégées :</strong> Tous vos produits, photos et avis clients restent sauvegardés. Si vous ne renouvelez pas tout de suite, votre boutique sera simplement mise en pause temporaire sans aucune suppression.

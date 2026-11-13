@@ -62,7 +62,7 @@
                 <!-- Micro-puces de réassurance dans le Hero -->
                 <div class="hero-trust-bar">
                     <span class="hero-trust-item"><x-icon name="truck" size="14" /> Livraison express</span>
-                    <span class="hero-trust-item"><x-icon name="wallet" size="14" /> T-Money & Flooz acceptés</span>
+                    <span class="hero-trust-item"><x-icon name="wallet" size="14" /> T-Money & Moov Money acceptés</span>
                     <span class="hero-trust-item"><x-icon name="sparkles" size="14" /> 100% Qualité</span>
                 </div>
             </div>
@@ -359,7 +359,7 @@
                 <x-icon name="wallet" size="36" />
             </div>
             <h3 style="font-size:1.15rem;margin-bottom:.4rem;font-weight:700">Paiement Mobile Money</h3>
-            <p style="font-size:.9rem;color:var(--text-soft);margin:0;line-height:1.5">Règlement direct via T-Money, Flooz ou paiement à la livraison en espèces.</p>
+            <p style="font-size:.9rem;color:var(--text-soft);margin:0;line-height:1.5">Règlement en ligne via GeniusPay (T-Money, Moov Money, Carte) ou paiement à la livraison en espèces.</p>
         </div>
 
         <div class="card reveal-on-scroll" style="--delay: 3;text-align:center;padding:2rem 1.4rem;border-radius:14px">

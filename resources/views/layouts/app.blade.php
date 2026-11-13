@@ -87,7 +87,7 @@
     @endif
     @guest
         <div class="top-announcement">
-            <span>Plateforme e-commerce tout-en-un pour l'Afrique de l'Ouest • Paiements T-Money & Flooz intégrés • Essai gratuit 14 jours</span>
+            <span>Plateforme e-commerce tout-en-un pour l'Afrique de l'Ouest • Paiements T-Money & Moov Money intégrés • Essai gratuit 14 jours</span>
             <a href="{{ route('register') }}">Commencer maintenant →</a>
         </div>
     @endguest
@@ -285,7 +285,7 @@
                     </div>
                     <div class="mobile-plus-info">
                         <strong>Paramètres de la Boutique</strong>
-                        <span>Identité, logo, T-Money, Flooz & coordonnées</span>
+                        <span>Identité, logo, T-Money, Moov Money & coordonnées</span>
                     </div>
                     <x-icon name="arrow-right" :size="16" />
                 </a>
