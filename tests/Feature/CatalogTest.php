@@ -159,6 +159,40 @@ class CatalogTest extends TestCase
         ]);
     }
 
+    public function test_mise_a_jour_directe_stock_sans_justificatif(): void
+    {
+        [$merchant, $shop] = $this->createMerchant();
+
+        $product = Product::create([
+            'shop_id' => $shop->id,
+            'title' => 'Sac en cuir',
+            'slug' => 'sac-cuir',
+            'price' => 18000,
+            'stock' => 5,
+            'track_stock' => true,
+        ]);
+
+        // Mise à jour directe du stock à 18 sans fournir de motif ni de variation relative
+        $response = $this->actingAs($merchant)->put('/produits/' . $product->id, [
+            'title' => 'Sac en cuir',
+            'price' => 18000,
+            'status' => 'active',
+            'track_stock' => '1',
+            'stock' => 18,
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $product->refresh();
+        $this->assertSame(18, $product->stock);
+
+        $this->assertDatabaseHas('stock_movements', [
+            'product_id' => $product->id,
+            'quantity_change' => 13,
+            'new_stock' => 18,
+            'comment' => 'Mise à jour directe du stock',
+        ]);
+    }
+
     public function test_detection_stock_bas_et_epuise(): void
     {
         [$merchant, $shop] = $this->createMerchant();

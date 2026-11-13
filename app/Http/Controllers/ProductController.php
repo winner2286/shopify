@@ -223,6 +223,7 @@ class ProductController extends Controller
             'price' => ['required', 'integer', 'min:1'],
             'compare_at_price' => ['nullable', 'integer', 'min:1'],
             'track_stock' => ['nullable', 'boolean'],
+            'stock' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'status' => ['required', 'in:active,hidden,archived'],
             'sku' => ['nullable', 'string', 'max:50'],
@@ -247,14 +248,27 @@ class ProductController extends Controller
             'sku' => $validated['sku'] ?? null,
         ]);
 
-        // Ajustement de stock si spécifié (C-04)
-        if ($trackStock && ! empty($validated['stock_adjustment']) && $validated['stock_adjustment'] != 0) {
-            $product->adjustStock(
-                (int) $validated['stock_adjustment'],
-                'manual_adjustment',
-                $validated['adjustment_reason'] ?? 'Ajustement manuel dans la fiche produit',
-                $request->user()->id
-            );
+        // Ajustement ou modification directe du stock (sans justificatif obligatoire)
+        if ($trackStock) {
+            if (! empty($validated['stock_adjustment']) && $validated['stock_adjustment'] != 0) {
+                $product->adjustStock(
+                    (int) $validated['stock_adjustment'],
+                    'manual_adjustment',
+                    $validated['adjustment_reason'] ?? 'Ajustement manuel dans la fiche produit',
+                    $request->user()->id
+                );
+            } elseif ($request->has('stock') && $request->input('stock') !== null) {
+                $targetStock = max(0, (int) $request->input('stock'));
+                $difference = $targetStock - (int) $product->stock;
+                if ($difference !== 0) {
+                    $product->adjustStock(
+                        $difference,
+                        'manual_adjustment',
+                        $validated['adjustment_reason'] ?? 'Mise à jour directe du stock',
+                        $request->user()->id
+                    );
+                }
+            }
         }
 
         // Catégories

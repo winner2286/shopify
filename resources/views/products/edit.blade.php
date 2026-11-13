@@ -174,68 +174,75 @@
                     @endif
                 </section>
 
-                <!-- Stock et Ajustements (C-04) -->
+                <!-- Stock et Inventaire (C-04) -->
                 <section class="card panel">
-                    <h3>Gestion du stock</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+                        <h3 style="margin:0">Gestion du stock</h3>
+                        @if ($product->track_stock)
+                            @if ($product->stock <= 0)
+                                <span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;font-weight:700">Rupture de stock</span>
+                            @elseif ($product->isLowStock())
+                                <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-weight:700">Stock faible (≤ {{ $product->low_stock_threshold }})</span>
+                            @else
+                                <span class="badge" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;font-weight:700">En stock</span>
+                            @endif
+                        @endif
+                    </div>
                     
-                    <div class="field">
+                    <div class="field" style="margin-bottom:1.25rem">
                         <label class="check">
-                            <input type="checkbox" name="track_stock" value="1" @checked(old('track_stock', $product->track_stock))>
-                            <span>Suivre la quantité en stock pour ce produit</span>
+                            <input type="checkbox" name="track_stock" id="track_stock" value="1" @checked(old('track_stock', $product->track_stock)) onchange="document.getElementById('stock-edit-wrapper').style.display = this.checked ? 'block' : 'none'">
+                            <span style="font-weight:600">Suivre la quantité en stock pour ce produit</span>
                         </label>
                     </div>
 
-                    <div style="background:var(--bg-soft);padding:1rem;border-radius:12px;margin:1rem 0">
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <span>Stock actuel :</span>
-                            <strong style="font-size:1.3rem;">{{ $product->stock }} unité(s)</strong>
+                    <div id="stock-edit-wrapper" style="display: {{ old('track_stock', $product->track_stock) ? 'block' : 'none' }}">
+                        <div class="field" style="margin-bottom:1.25rem">
+                            <label for="stock" style="font-weight:600;display:block;margin-bottom:.4rem">Quantité disponible en stock</label>
+                            <div style="display:flex;align-items:center;gap:.5rem;max-width:280px">
+                                <button type="button" class="btn btn-secondary" onclick="let s=document.getElementById('stock');s.value=Math.max(0, parseInt(s.value||0)-1);" aria-label="Diminuer le stock" style="width:44px;height:44px;min-width:44px;font-size:1.4rem;line-height:1;display:flex;align-items:center;justify-content:center;border-radius:10px;padding:0;touch-action:manipulation;font-weight:700">−</button>
+                                <input id="stock" name="stock" type="number" class="input" value="{{ old('stock', $product->stock) }}" min="0" style="text-align:center;font-size:1.3rem;font-weight:700;height:44px;letter-spacing:0.5px">
+                                <button type="button" class="btn btn-secondary" onclick="let s=document.getElementById('stock');s.value=Math.max(0, parseInt(s.value||0)+1);" aria-label="Augmenter le stock" style="width:44px;height:44px;min-width:44px;font-size:1.4rem;line-height:1;display:flex;align-items:center;justify-content:center;border-radius:10px;padding:0;touch-action:manipulation;font-weight:700">+</button>
+                            </div>
+                            <div class="hint" style="margin-top:.4rem">Saisissez directement votre stock réel ou utilisez les boutons − et +. Aucun justificatif n'est demandé.</div>
                         </div>
-                    </div>
 
-                    <h4>Ajustement manuel du stock</h4>
-                    <div class="dash-grid" style="grid-template-columns: 1fr 2fr; margin-bottom:1rem">
-                        <div class="field">
-                            <label for="stock_adjustment">Variation (+ ou -)</label>
-                            <input id="stock_adjustment" name="stock_adjustment" type="number" class="input" placeholder="Ex: +5 ou -2">
+                        <div class="field" style="margin-bottom:1rem">
+                            <label for="low_stock_threshold" style="font-weight:600">Seuil d'alerte stock bas</label>
+                            <input id="low_stock_threshold" name="low_stock_threshold" type="number" class="input" value="{{ old('low_stock_threshold', $product->low_stock_threshold) }}" min="1" style="max-width:180px">
+                            <div class="hint">Alerte envoyée dès que le stock atteint ce seuil ou moins (défaut : 3).</div>
                         </div>
-                        <div class="field">
-                            <label for="adjustment_reason">Motif de l'ajustement</label>
-                            <input id="adjustment_reason" name="adjustment_reason" type="text" class="input" placeholder="Ex: Réassort, Perte, Erreur comptage">
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label for="low_stock_threshold">Seuil d'alerte stock bas</label>
-                        <input id="low_stock_threshold" name="low_stock_threshold" type="number" class="input" value="{{ old('low_stock_threshold', $product->low_stock_threshold) }}" min="1">
                     </div>
 
                     @if ($product->stockMovements->isNotEmpty())
-                        <h4 style="margin-top:1.5rem">Historique des mouvements récents</h4>
-                        <div class="table-wrap">
-                            <table class="table" style="font-size:.85rem">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Variation</th>
-                                        <th>Nouveau stock</th>
-                                        <th>Motif</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($product->stockMovements->take(5) as $mvt)
+                        <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)">
+                            <h4 style="margin:0 0 .75rem 0;font-size:.95rem">Historique des mouvements récents</h4>
+                            <div class="table-wrap">
+                                <table class="table" style="font-size:.85rem">
+                                    <thead>
                                         <tr>
-                                            <td>{{ $mvt->created_at->format('d/m/Y H:i') }}</td>
-                                            <td>
-                                                <strong style="color: {{ $mvt->quantity_change > 0 ? 'var(--ok)' : 'var(--danger)' }}">
-                                                    {{ $mvt->quantity_change > 0 ? '+'.$mvt->quantity_change : $mvt->quantity_change }}
-                                                </strong>
-                                            </td>
-                                            <td>{{ $mvt->new_stock }}</td>
-                                            <td>{{ $mvt->comment ?? $mvt->reason }}</td>
+                                            <th>Date</th>
+                                            <th>Variation</th>
+                                            <th>Nouveau stock</th>
+                                            <th>Note</th>
                                         </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($product->stockMovements->take(5) as $mvt)
+                                            <tr>
+                                                <td>{{ $mvt->created_at->format('d/m/Y H:i') }}</td>
+                                                <td>
+                                                    <strong style="color: {{ $mvt->quantity_change > 0 ? 'var(--ok)' : 'var(--danger)' }}">
+                                                        {{ $mvt->quantity_change > 0 ? '+'.$mvt->quantity_change : $mvt->quantity_change }}
+                                                    </strong>
+                                                </td>
+                                                <td>{{ $mvt->new_stock }}</td>
+                                                <td>{{ $mvt->comment ?? $mvt->reason }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     @endif
                 </section>
