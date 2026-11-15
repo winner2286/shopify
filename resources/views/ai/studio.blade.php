@@ -13,14 +13,18 @@
                 </div>
                 <div>
                     <h1 style="margin:0;font-size:1.5rem;font-weight:800;letter-spacing:-0.02em">Studio Visuel IA</h1>
-                    <p style="margin:0;font-size:.85rem;color:var(--text-soft)">Générez des photos de produits en showroom, affiches publicitaires et bannières réseaux sociaux via le moteur Flux HD.</p>
+                    <p style="margin:0;font-size:.85rem;color:var(--text-soft)">Sublimez vos vrais produits avec Photoroom AI Studio ou générez des visuels showroom, affiches promo et bannières sur Zanika.</p>
                 </div>
             </div>
         </div>
-        <div style="display:flex;align-items:center;gap:.75rem">
+        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
             <span class="ai-studio-credit-badge">
                 <x-icon name="sparkles" :size="14" />
-                <span>5 crédits / visuel</span>
+                <span>{{ ($photoroomConfigured ?? false) ? 'Photoroom AI Studio Actif' : 'Zanika Studio + Flux HD' }}</span>
+            </span>
+            <span class="ai-studio-credit-badge">
+                <x-icon name="zap" :size="14" />
+                <span>1 crédit / visuel</span>
             </span>
         </div>
     </div>
@@ -44,7 +48,14 @@
                             </option>
                         @endforeach
                     </select>
-                    <div class="hint">Sélectionnez un produit pour pré-remplir la description et y associer l'image générée.</div>
+                    <div class="hint">Sélectionnez un produit existant ou importez une photo ci-dessous pour la mettre en scène sans modifier l'article réel.</div>
+                </div>
+
+                <!-- Option 1 bis : Importer directement une photo produit -->
+                <div class="field">
+                    <label for="visual_photo_input">Importer une photo produit (optionnel — Photoroom Studio)</label>
+                    <input type="file" id="visual_photo_input" name="image" accept="image/png,image/jpeg,image/webp" class="input" style="padding:.5rem">
+                    <div class="hint">Votre produit réel est automatiquement détouré, ré-éclairé et posé dans le décor sélectionné.</div>
                 </div>
 
                 <!-- Description / Sujet de l'image -->
@@ -147,6 +158,7 @@
                 <!-- Image finale générée -->
                 <div class="ai-canvas-result" id="canvas-result" style="display:none">
                     <img id="generated-img" src="" alt="Visuel IA généré">
+                    <div id="generated-engine-badge" style="font-size:.75rem;color:var(--text-soft);font-weight:600"></div>
                     <div class="ai-result-actions">
                         <a id="download-link" href="#" download="visuel-ia.jpg" class="btn btn-sm" style="background:#fff;color:#000;font-weight:700">
                             <x-icon name="download" :size="15" />
@@ -464,6 +476,7 @@ async function handleGenerateVisual(e) {
     const style = form.querySelector('input[name="style"]:checked').value;
     const format = form.querySelector('input[name="format"]:checked').value;
     const productId = document.getElementById('product_select').value;
+    const photoInput = document.getElementById('visual_photo_input');
 
     const btn = document.getElementById('ai-generate-btn');
     const btnText = document.getElementById('btn-text');
@@ -479,19 +492,24 @@ async function handleGenerateVisual(e) {
     canvasLoading.style.display = 'block';
 
     try {
+        const formData = new FormData();
+        formData.append('subject', subject);
+        formData.append('style', style);
+        formData.append('format', format);
+        if (productId) {
+            formData.append('product_id', productId);
+        }
+        if (photoInput && photoInput.files && photoInput.files.length > 0) {
+            formData.append('image', photoInput.files[0]);
+        }
+
         const res = await fetch('{{ route('ai.studio.generate') }}', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                subject: subject,
-                style: style,
-                format: format,
-                product_id: productId ? parseInt(productId) : null
-            })
+            body: formData
         });
 
         const data = await res.json();
@@ -500,6 +518,12 @@ async function handleGenerateVisual(e) {
         if (data.status === 'success') {
             document.getElementById('generated-img').src = data.image_url;
             document.getElementById('download-link').href = data.image_url;
+            const badgeEl = document.getElementById('generated-engine-badge');
+            if (badgeEl) {
+                badgeEl.innerText = data.engine === 'photoroom-ai'
+                    ? 'Propulsé par Photoroom AI Studio'
+                    : (data.engine === 'zanika-product-studio' ? 'Propulsé par Zanika Studio' : 'Propulsé par Flux HD');
+            }
             canvasResult.style.display = 'flex';
         } else {
             alert(data.message || 'Erreur lors de la génération du visuel.');

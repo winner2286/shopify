@@ -14,21 +14,22 @@ class ImageService
     public const THUMB_SIZE = 300;
 
     /**
-     * Traite, redimensionne et convertit une image uploadée en WebP optimisé
-     * Retourne ['path' => ..., 'thumbnail_path' => ..., 'size_bytes' => ...]
+     * Traite, redimensionne et convertit une image uploadée en WebP optimisé.
+     * Supporte le mode 'studio' (Photoroom AI Studio + fallback local) et 'original' (conservation brute).
+     * Retourne ['path' => ..., 'thumbnail_path' => ..., 'size_bytes' => ..., 'image_data' => ...]
      */
-    public function processAndStore(UploadedFile $file, string $directory): array
+    public function processAndStore(UploadedFile $file, string $directory, string $enhancementMode = 'studio'): array
     {
         $realPath = $file->getRealPath();
         $mime = $file->getClientMimeType() ?: $file->getMimeType();
 
-        return $this->processFromPath($realPath, $directory, $mime, $file->getSize());
+        return $this->processFromPath($realPath, $directory, $mime, $file->getSize(), $enhancementMode);
     }
 
     /**
-     * Traite une image depuis un chemin de fichier local
+     * Traite une image depuis un chemin de fichier local.
      */
-    public function processFromPath(string $filePath, string $directory, ?string $mime = null, int $originalSize = 0): array
+    public function processFromPath(string $filePath, string $directory, ?string $mime = null, int $originalSize = 0, string $enhancementMode = 'studio'): array
     {
         if (! file_exists($filePath)) {
             return [
@@ -62,13 +63,54 @@ class ImageService
 
         // 1. Correction orientation EXIF (photos smartphone)
         $sourceImage = $this->autoRotate($sourceImage, $filePath);
+        $usedEngine = $enhancementMode === 'original' ? 'original' : 'zanika-local-studio';
 
-        // 2. Retouche automatique IA & Studio : luminosité intelligente, contraste et netteté
-        $sourceImage = $this->enhancePhotoQuality($sourceImage);
-
-        // 3. Cadrage e-commerce studio carré (1:1) propre : centre le produit et évite les coupures
+        // 2. Traitement selon le choix du commerçant ('studio' vs 'original')
         $targetSize = min(self::MAX_WIDTH, self::MAX_HEIGHT);
-        $mainImage = $this->formatStudioSquare($sourceImage, $targetSize);
+        if ($enhancementMode === 'original') {
+            // Mode "Garder telles quelles" : aucune retouche colorimétrique ni cadrage blanc forcé
+            $origW = imagesx($sourceImage);
+            $origH = imagesy($sourceImage);
+            [$newW, $newH] = $this->calculateDimensions($origW, $origH, self::MAX_WIDTH, self::MAX_HEIGHT);
+
+            $mainImage = imagecreatetruecolor($newW, $newH);
+            if ($this->hasTransparency($sourceImage)) {
+                $this->preserveTransparency($mainImage);
+            }
+            imagecopyresampled($mainImage, $sourceImage, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
+        } else {
+            // Mode "Sublimer avec l'IA" (Photoroom Studio en priorité pour les photos produits, sinon studio local)
+            $photoroomApplied = false;
+            if (! str_contains($directory, 'logo')) {
+                $photoroom = app(\App\Services\Ai\PhotoroomService::class);
+                if ($photoroom->isConfigured()) {
+                    $rawBinary = @file_get_contents($filePath);
+                    if (is_string($rawBinary) && $rawBinary !== '') {
+                        $prBinary = $photoroom->studioPackshot($rawBinary, 'studio_white', '1000x1000');
+                        if ($prBinary !== null) {
+                            $prGd = @imagecreatefromstring($prBinary);
+                            if ($prGd) {
+                                if ($this->hasTransparency($prGd)) {
+                                    // Si v1/segment uniquement (PNG détouré transparent), composer le packshot blanc 1:1 avec ombre naturelle
+                                    $studioService = app(\App\Services\Ai\ProductStudioService::class);
+                                    $mainImage = $studioService->renderStudioPackshot($prGd, 'white', $targetSize);
+                                    imagedestroy($prGd);
+                                } else {
+                                    $mainImage = $prGd;
+                                }
+                                $photoroomApplied = true;
+                                $usedEngine = 'photoroom-ai';
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (! $photoroomApplied) {
+                $sourceImage = $this->enhancePhotoQuality($sourceImage);
+                $mainImage = $this->formatStudioSquare($sourceImage, $targetSize);
+            }
+        }
 
         $filename = 'img_' . Str::random(20) . '.webp';
         $fullPath = trim($directory, '/') . '/' . $filename;
@@ -113,13 +155,15 @@ class ImageService
             'thumbnail_path' => $thumbFullPath,
             'size_bytes' => $fileSize,
             'image_data' => $imageData,
+            'enhancement_mode' => $enhancementMode,
+            'engine' => $usedEngine,
         ];
     }
 
     /**
-     * Redimensionne et optimise une image déjà existante sur le disque public
+     * Redimensionne et optimise une image déjà existante sur le disque public.
      */
-    public function optimizeExisting(string $relativePath): ?array
+    public function optimizeExisting(string $relativePath, string $enhancementMode = 'studio'): ?array
     {
         $diskPath = Storage::disk('public')->path($relativePath);
         if (! file_exists($diskPath)) {
@@ -127,7 +171,7 @@ class ImageService
         }
 
         $directory = dirname($relativePath);
-        return $this->processFromPath($diskPath, $directory);
+        return $this->processFromPath($diskPath, $directory, null, 0, $enhancementMode);
     }
 
     private function createImageFromFile(string $path, ?string $mime = null)

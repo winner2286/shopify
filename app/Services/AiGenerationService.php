@@ -261,15 +261,13 @@ class AiGenerationService
                 'ai_confidence' => 92,
             ]);
 
-            // Optimisation et conversion WebP de l'image
-            $opt = $imageService->optimizeExisting($path);
+            // Optimisation et conversion WebP de l'image selon le mode choisi par le commerçant
+            $enhancementMode = $data['photo_enhancement'] ?? $data['photo_enhancement_mode'] ?? 'studio';
+            $opt = $imageService->optimizeExisting($path, $enhancementMode);
             $finalPath = $opt ? $opt['path'] : $path;
             $thumbPath = $opt['thumbnail_path'] ?? null;
             $sizeBytes = $opt['size_bytes'] ?? 0;
-
-            $enhancementMode = $data['photo_enhancement'] ?? 'studio';
-            $imageData = $opt['image_data'] ?? [];
-            $imageData['enhancement_mode'] = $enhancementMode;
+            $imageData = is_string($opt['image_data'] ?? null) ? $opt['image_data'] : null;
 
             // Lier l'image
             $product->images()->create([

@@ -167,7 +167,19 @@
         $productsJson = $products->map(function ($p) {
             $img = '';
             if ($p->primaryImage) {
-                $img = $p->primaryImage->image_data ?: $p->primaryImage->url;
+                $rawData = $p->primaryImage->image_data;
+                if (! empty($rawData)) {
+                    if (str_starts_with($rawData, 'data:image')) {
+                        $img = $rawData;
+                    } else {
+                        $mime = str_starts_with($rawData, 'iVBORw')
+                            ? 'image/png'
+                            : (str_starts_with($rawData, '/9j/') ? 'image/jpeg' : 'image/webp');
+                        $img = "data:{$mime};base64,{$rawData}";
+                    }
+                } else {
+                    $img = $p->primaryImage->url;
+                }
             }
             return [
                 'id' => $p->id,
@@ -274,6 +286,24 @@
                                 </option>
                             @endforeach
                         </select>
+
+                        <!-- Photoroom AI Studio 1-Clic -->
+                        <div style="margin-top:.75rem;padding:.75rem;border-radius:10px;border:1px solid rgba(158, 27, 50, 0.25);background:rgba(158, 27, 50, 0.04)">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap">
+                                <div style="font-size:.8rem;color:var(--text-soft)">
+                                    <strong style="color:var(--text);display:inline-flex;align-items:center;gap:.35rem">
+                                        <x-icon name="sparkles" :size="14" style="color:var(--brand-1)" />
+                                        Photoroom AI Studio
+                                    </strong>
+                                    <div style="font-size:.75rem">Supprime l'arrière-plan de la photo sur l'affiche sans quitter Zanika.</div>
+                                </div>
+                                <button type="button" id="btnPhotoroomCutout" onclick="photoroomCutoutCurrentProduct()" class="btn btn-sm btn-primary" style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;white-space:nowrap">
+                                    <x-icon name="sparkles" :size="14" />
+                                    <span id="btnPhotoroomCutoutText">Détourer & Sublimer la photo (Photoroom IA)</span>
+                                </button>
+                            </div>
+                            <div id="photoroomStatusMsg" style="display:none;margin-top:.5rem;font-size:.78rem;font-weight:600"></div>
+                        </div>
                     </div>
                 @endif
 
@@ -802,6 +832,73 @@
         customShopImg = null;
         document.getElementById('customShopImageInput').value = '';
         updateFlyer();
+    }
+
+    async function photoroomCutoutCurrentProduct() {
+        if (!currentProduct || !currentProduct.id) {
+            alert('Veuillez d\'abord sélectionner un produit.');
+            return;
+        }
+
+        const btn = document.getElementById('btnPhotoroomCutout');
+        const btnText = document.getElementById('btnPhotoroomCutoutText');
+        const statusMsg = document.getElementById('photoroomStatusMsg');
+        const originalLabel = 'Détourer & Sublimer la photo (Photoroom IA)';
+
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.innerText = 'Détourage Photoroom en cours...';
+        if (statusMsg) {
+            statusMsg.style.display = 'block';
+            statusMsg.style.color = 'var(--text-soft)';
+            statusMsg.innerText = 'Traitement haute précision en cours sur Zanika...';
+        }
+
+        try {
+            const res = await fetch('{{ route('ai.products.photoroom_cutout') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    product_id: currentProduct.id,
+                    mode: 'transparent',
+                    save_to_product: true
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success || !data.data_uri) {
+                throw new Error(data.error || data.message || 'Détourage indisponible.');
+            }
+
+            currentProduct.image_url = data.data_uri;
+            const img = new Image();
+            img.onload = () => {
+                loadedProductImg = img;
+                updateFlyer();
+            };
+            img.src = data.data_uri;
+
+            if (statusMsg) {
+                statusMsg.style.display = 'block';
+                statusMsg.style.color = 'var(--ok, #10b981)';
+                statusMsg.innerText = data.message || 'Photo détourée et appliquée sur votre affiche !';
+            }
+            if (window.BoutiqToast) {
+                window.BoutiqToast(data.message || 'Photo détourée avec succès !', 'success');
+            }
+        } catch (err) {
+            if (statusMsg) {
+                statusMsg.style.display = 'block';
+                statusMsg.style.color = 'var(--danger, #ef4444)';
+                statusMsg.innerText = err.message || 'Impossible de détourer cette photo.';
+            }
+        } finally {
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.innerText = originalLabel;
+        }
     }
 
     // Moteur de rendu graphique Canvas

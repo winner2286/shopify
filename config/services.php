@@ -64,4 +64,10 @@ return [
         'subject' => env('VAPID_SUBJECT', env('MAIL_FROM_ADDRESS') ? 'mailto:' . env('MAIL_FROM_ADDRESS') : null),
     ],
 
+    'photoroom' => [
+        'key' => env('PHOTOROOM_API_KEY'),
+        'segment_url' => env('PHOTOROOM_SEGMENT_URL', 'https://sdk.photoroom.com/v1/segment'),
+        'edit_url' => env('PHOTOROOM_EDIT_URL', 'https://image-api.photoroom.com/v2/edit'),
+    ],
+
 ];

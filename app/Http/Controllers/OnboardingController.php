@@ -144,17 +144,18 @@ class OnboardingController extends Controller
             'photos' => ['nullable', 'array', 'max:20'],
             'photos.*' => ['image', 'mimes:jpeg,png,webp,jpg', 'max:5120'], // Max 5 Mo par photo
             'photo_enhancement' => ['nullable', 'string', 'in:studio,original'],
+            'photo_enhancement_mode' => ['nullable', 'string', 'in:studio,original'],
         ], [
             'photos.max' => 'Vous pouvez envoyer au maximum 20 photos.',
         ]);
 
-        $enhancementMode = $request->input('photo_enhancement', 'studio');
+        $enhancementMode = $request->input('photo_enhancement', $request->input('photo_enhancement_mode', 'studio'));
 
         $storedPaths = [];
         if ($request->hasFile('photos')) {
             $imageService = app(\App\Services\ImageService::class);
             foreach ($request->file('photos') as $file) {
-                $processed = $imageService->processAndStore($file, "shops/{$shop->id}/onboarding");
+                $processed = $imageService->processAndStore($file, "shops/{$shop->id}/onboarding", $enhancementMode);
                 $storedPaths[] = $processed['path'];
             }
         }

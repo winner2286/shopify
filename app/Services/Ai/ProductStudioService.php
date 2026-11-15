@@ -25,9 +25,11 @@ class ProductStudioService
     public const CATEGORY_GENERAL = 'general';
 
     public function __construct(
-        protected ?AiVisionService $visionService = null
+        protected ?AiVisionService $visionService = null,
+        protected ?PhotoroomService $photoroom = null
     ) {
         $this->visionService = $visionService ?? new AiVisionService();
+        $this->photoroom = $photoroom ?? app(PhotoroomService::class);
     }
 
     /**
@@ -55,9 +57,11 @@ class ProductStudioService
         $categoryKey = $detectedCategory['category'];
         $productTitle = $detectedCategory['title'];
 
-        // 3. Détourage professionnel haute fidélité (Multi-tier : API RMBG + Algorithme local haute précision)
+        // 3. Détourage professionnel haute fidélité (Photoroom v1/segment -> API RMBG -> Algorithme local)
         $cutoutResult = $this->extractCutout($imageBinary);
         $cutoutPng = $cutoutResult['binary'];
+        $cutoutMethod = $cutoutResult['method'];
+        $usedPhotoroomEdit = false;
         $cutoutPath = null;
         $cutoutUrl = null;
 
@@ -85,7 +89,9 @@ class ProductStudioService
                         'id' => 'studio_white',
                         'type' => 'studio_white',
                         'title' => 'Studio Blanc Épuré',
-                        'subtitle' => 'Standard Marketplace (Amazon / Shopify)',
+                        'subtitle' => $cutoutMethod === 'photoroom_v1_segment'
+                            ? 'Détourage HD Photoroom & Standard Marketplace'
+                            : 'Standard Marketplace (Amazon / Shopify)',
                         'url' => Storage::disk('public')->url($whitePath),
                         'path' => $whitePath,
                         'cutout_path' => $cutoutPath,
@@ -118,26 +124,50 @@ class ProductStudioService
                     ];
                 }
 
-                // C. Décor Thématique selon la catégorie réelle du produit (Parquet, Travertin, Dressing, Podium)
-                $lifestylePackshot = $this->renderCategoryLifestyle($cutoutGd, $categoryKey, self::TARGET_SIZE);
-                if ($lifestylePackshot && ! empty($lifestylePackshot['canvas'])) {
-                    $lifePath = "shops/{$shop->id}/products_ai/lifestyle_{$uniq}.jpg";
-                    $this->saveGdImage($lifestylePackshot['canvas'], $lifePath);
-                    imagedestroy($lifestylePackshot['canvas']);
+                // C. Décor Thématique selon la catégorie réelle du produit (Photoroom v2 AI Scene en priorité, sinon décor local)
+                $photoroomLifestyle = $this->photoroom->isConfigured()
+                    ? $this->photoroom->editProductImage($imageBinary, $this->photoroom->mapStyleToEditParams('lifestyle', self::TARGET_SIZE . 'x' . self::TARGET_SIZE))
+                    : null;
+
+                if ($photoroomLifestyle !== null) {
+                    $usedPhotoroomEdit = true;
+                    $lifePath = "shops/{$shop->id}/products_ai/lifestyle_{$uniq}.png";
+                    Storage::disk('public')->put($lifePath, $photoroomLifestyle);
 
                     $variations[] = [
                         'id' => 'lifestyle_staged',
                         'type' => 'lifestyle',
-                        'title' => $lifestylePackshot['title'] ?? 'Mise en Scène Décor',
-                        'subtitle' => $lifestylePackshot['subtitle'] ?? 'Décor adapté à votre catégorie d\'article',
+                        'title' => 'Mise en Scène Studio IA',
+                        'subtitle' => 'Décor généré et ré-éclairé par Photoroom IA',
                         'url' => Storage::disk('public')->url($lifePath),
                         'path' => $lifePath,
                         'cutout_path' => $cutoutPath,
                         'selected' => false,
                         'is_source' => false,
-                        'badge' => 'Décor Studio',
-                        'quality_score' => 95,
+                        'badge' => 'Photoroom IA',
+                        'quality_score' => 98,
                     ];
+                } else {
+                    $lifestylePackshot = $this->renderCategoryLifestyle($cutoutGd, $categoryKey, self::TARGET_SIZE);
+                    if ($lifestylePackshot && ! empty($lifestylePackshot['canvas'])) {
+                        $lifePath = "shops/{$shop->id}/products_ai/lifestyle_{$uniq}.jpg";
+                        $this->saveGdImage($lifestylePackshot['canvas'], $lifePath);
+                        imagedestroy($lifestylePackshot['canvas']);
+
+                        $variations[] = [
+                            'id' => 'lifestyle_staged',
+                            'type' => 'lifestyle',
+                            'title' => $lifestylePackshot['title'] ?? 'Mise en Scène Décor',
+                            'subtitle' => $lifestylePackshot['subtitle'] ?? 'Décor adapté à votre catégorie d\'article',
+                            'url' => Storage::disk('public')->url($lifePath),
+                            'path' => $lifePath,
+                            'cutout_path' => $cutoutPath,
+                            'selected' => false,
+                            'is_source' => false,
+                            'badge' => 'Décor Studio',
+                            'quality_score' => 95,
+                        ];
+                    }
                 }
 
                 // D. Studio Podium Minimaliste Premium
@@ -211,9 +241,14 @@ class ProductStudioService
         $qualityAudit = $this->auditQuality($imageBinary, $variations);
 
         $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+        $engine = ($cutoutMethod === 'photoroom_v1_segment' || $usedPhotoroomEdit)
+            ? 'photoroom-ai'
+            : 'zanika-product-studio';
 
         return [
             'status' => 'success',
+            'engine' => $engine,
+            'cutout_method' => $usedPhotoroomEdit ? 'photoroom_v2_edit' : $cutoutMethod,
             'product_title' => $productTitle,
             'category' => $categoryKey,
             'cutout_path' => $cutoutPath,
@@ -223,6 +258,83 @@ class ProductStudioService
             'variations' => $variations,
             'quality_audit' => $qualityAudit,
             'duration_ms' => $durationMs,
+        ];
+    }
+
+    /**
+     * Détoure ou sublime une photo produit en 1 clic pour les Affiches Promo & Vidéos Pub.
+     * Utilise Photoroom AI en priorité avec bascule transparente sur le moteur local.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function cutoutTransparent(Shop $shop, string $imageBinary, string $mode = 'transparent'): ?array
+    {
+        if (trim($imageBinary) === '') {
+            return null;
+        }
+
+        $uniq = uniqid();
+        $engine = 'zanika-product-studio';
+        $method = 'local_saliency_segmentation';
+        $outputBinary = null;
+        $ext = 'png';
+        $mime = 'image/png';
+
+        if ($mode === 'studio_white') {
+            if ($this->photoroom->isConfigured()) {
+                $outputBinary = $this->photoroom->studioPackshot($imageBinary, 'studio_white', '1000x1000');
+                if ($outputBinary !== null) {
+                    $engine = 'photoroom-ai';
+                    $method = 'photoroom_v2_edit';
+                }
+            }
+
+            if ($outputBinary === null) {
+                $cutoutResult = $this->extractCutout($imageBinary);
+                $method = $cutoutResult['method'];
+                if ($method === 'photoroom_v1_segment') {
+                    $engine = 'photoroom-ai';
+                }
+
+                if (! empty($cutoutResult['binary']) && function_exists('imagecreatefromstring')) {
+                    $cutoutGd = @imagecreatefromstring($cutoutResult['binary']);
+                    if ($cutoutGd) {
+                        $whitePackshot = $this->renderStudioPackshot($cutoutGd, 'white', self::TARGET_SIZE);
+                        imagedestroy($cutoutGd);
+                        if ($whitePackshot) {
+                            ob_start();
+                            imagejpeg($whitePackshot, null, self::JPEG_QUALITY);
+                            $outputBinary = ob_get_clean() ?: null;
+                            imagedestroy($whitePackshot);
+                            $ext = 'jpg';
+                            $mime = 'image/jpeg';
+                        }
+                    }
+                }
+            }
+        } else {
+            $cutoutResult = $this->extractCutout($imageBinary);
+            $outputBinary = $cutoutResult['binary'] ?? null;
+            $method = $cutoutResult['method'] ?? 'failed';
+            if ($method === 'photoroom_v1_segment') {
+                $engine = 'photoroom-ai';
+            }
+        }
+
+        if (! $outputBinary) {
+            return null;
+        }
+
+        $relativePath = "shops/{$shop->id}/products_ai/cutout_ad_{$uniq}.{$ext}";
+        Storage::disk('public')->put($relativePath, $outputBinary);
+
+        return [
+            'status' => 'success',
+            'url' => Storage::disk('public')->url($relativePath),
+            'path' => $relativePath,
+            'data_uri' => 'data:' . $mime . ';base64,' . base64_encode($outputBinary),
+            'engine' => $engine,
+            'cutout_method' => $method,
         ];
     }
 
@@ -455,13 +567,26 @@ PROMPT;
 
     /**
      * Extrait le produit de son arrière-plan (Détourage précis et fidèle).
-     * Utilise d'abord l'API RMBG spécialisée, avec bascule instantanée sur l'algorithme local.
+     * Priorité 1 : API Photoroom v1/segment (si configurée).
+     * Priorité 2 : API RMBG distante.
+     * Priorité 3 : Bascule instantanée sur l'algorithme local GD haute précision.
      *
      * @return array{binary: string|null, method: string}
      */
     public function extractCutout(string $imageBinary): array
     {
-        // 1. Tenter l'appel vers un endpoint RMBG rapide
+        // 1. Priorité Photoroom v1/segment (si clé API configurée)
+        if ($this->photoroom->isConfigured()) {
+            $photoroomCutout = $this->photoroom->removeBackground($imageBinary, ['format' => 'png']);
+            if ($photoroomCutout !== null) {
+                return [
+                    'binary' => $photoroomCutout,
+                    'method' => 'photoroom_v1_segment',
+                ];
+            }
+        }
+
+        // 2. Tenter l'appel vers un endpoint RMBG rapide
         $apiCutout = $this->tryRemoteRmbg($imageBinary);
         if ($apiCutout && strlen($apiCutout) > 500) {
             return [
@@ -470,7 +595,7 @@ PROMPT;
             ];
         }
 
-        // 2. Bascule autonome sur l'algorithme de segmentation local haute précision en GD
+        // 3. Bascule autonome sur l'algorithme de segmentation local haute précision en GD
         $localCutout = $this->segmentBackgroundLocally($imageBinary);
         if ($localCutout) {
             return [

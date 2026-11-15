@@ -311,16 +311,19 @@ PROMPT;
     }
 
     /**
-     * Génère un visuel promotionnel ou publicitaire de niveau studio via le moteur Flux.
+     * Génère un visuel promotionnel ou publicitaire de niveau studio :
+     * - Si un produit réel ($sourceImageBinary ou $productId avec photo) est fourni : utilise Photoroom AI Studio
+     *   (ou bascule locale sur ProductStudioService) afin de préserver 100 % l'article réel.
+     * - Sinon (visuel libre sans photo) : utilise le moteur Flux HD.
      */
-    public function generateMarketingVisual(Shop $shop, array $params): array
+    public function generateMarketingVisual(Shop $shop, array $params, ?string $sourceImageBinary = null): array
     {
         $startTime = microtime(true);
 
-        $style = $params['style'] ?? 'studio_minimalist';
-        $format = $params['format'] ?? '1:1'; // 1:1, 9:16, 16:9
-        $subject = trim($params['subject'] ?? 'Produit tendance');
-        $badgeText = $params['badge_text'] ?? null;
+        $style = (string) ($params['style'] ?? 'studio_minimalist');
+        $format = (string) ($params['format'] ?? '1:1'); // 1:1, 9:16, 16:9
+        $subject = trim((string) ($params['subject'] ?? 'Produit tendance'));
+        $badgeText = isset($params['badge_text']) ? trim((string) $params['badge_text']) : null;
         $productId = ! empty($params['product_id']) ? (int) $params['product_id'] : null;
 
         // Dimensions selon le format
@@ -329,51 +332,98 @@ PROMPT;
             '16:9' => [1280, 720],
             default => [800, 800],
         };
-
-        // Enrichissement de prompt selon le style professionnel
-        $styleEnhancer = match ($style) {
-            'luxury_showroom' => 'in an ultra-luxurious modern boutique showroom, polished marble floor, ambient architectural spotlights, elegant golden accents, high fashion editorial lighting, 8k masterpiece',
-            'lifestyle_urban' => 'in an authentic trendy urban lifestyle setting in West Africa, warm natural golden hour sunlight, vibrant aesthetic, depth of field blur, photorealistic',
-            'flash_sale' => 'bold commercial advertising banner aesthetic, vibrant energetic gradient background, floating geometric pedestal, dramatic studio flash lighting, eye-catching sales visual',
-            'tropical_african' => 'modern Afro-chic minimalist aesthetic, warm terracotta and lush monstera leaves, soft morning sun, high-end African design lookbook',
-            default => 'clean minimalist studio product photography, pristine white and neutral backdrop, soft diffused commercial lightbox illumination, crisp sharp details, commercial catalogue photography',
+        $photoroomSize = match ($format) {
+            '9:16' => '1080x1920',
+            '16:9' => '1280x720',
+            default => '1000x1000',
         };
 
-        $fullPrompt = "Professional commercial advertising visual of {$subject}, {$styleEnhancer}, photorealistic, stunning quality, no text distortion, 4k UHD";
+        $product = null;
+        if ($productId) {
+            $product = Product::where('shop_id', $shop->id)
+                ->with(['primaryImage', 'images'])
+                ->find($productId);
+        }
+
+        if ($sourceImageBinary === null && ! empty($params['source_image_binary']) && is_string($params['source_image_binary'])) {
+            $sourceImageBinary = $params['source_image_binary'];
+        }
+        if ($sourceImageBinary === null && $product) {
+            $sourceImageBinary = $this->extractProductImageBinary($product);
+        }
 
         try {
-            $encodedPrompt = urlencode($fullPrompt);
-            $imageUrl = "https://image.pollinations.ai/prompt/{$encodedPrompt}?width={$width}&height={$height}&nologo=true&model=flux";
+            $imageBinary = null;
+            $modelUsed = 'flux-schnell';
+            $engine = 'flux-schnell';
+            $step = 'image_studio_flux';
+            $ext = 'jpg';
 
-            $client = Http::timeout(35);
-            if (! app()->environment('production')) {
-                $client = $client->withoutVerifying();
+            // Voie 1 : Photo produit réelle -> Photoroom Studio IA (+ bascule automatique ProductStudioService)
+            if (! empty($sourceImageBinary)) {
+                $studioVisual = $this->generateVisualFromProductImage(
+                    $sourceImageBinary,
+                    $style,
+                    $photoroomSize,
+                    $width,
+                    $height
+                );
+
+                if ($studioVisual !== null) {
+                    $imageBinary = $studioVisual['binary'];
+                    $modelUsed = $studioVisual['model_used'];
+                    $engine = $studioVisual['engine'];
+                    $step = $studioVisual['step'];
+                    $ext = $studioVisual['ext'];
+                }
             }
 
-            $imageResponse = $client->get($imageUrl);
+            // Voie 2 : Visuel libre sans photo source (ou si l'étape produit n'a rien produit) -> Flux HD
+            if ($imageBinary === null) {
+                $styleEnhancer = match ($style) {
+                    'luxury_showroom' => 'in an ultra-luxurious modern boutique showroom, polished marble floor, ambient architectural spotlights, elegant golden accents, high fashion editorial lighting, 8k masterpiece',
+                    'lifestyle_urban' => 'in an authentic trendy urban lifestyle setting in West Africa, warm natural golden hour sunlight, vibrant aesthetic, depth of field blur, photorealistic',
+                    'flash_sale' => 'bold commercial advertising banner aesthetic, vibrant energetic gradient background, floating geometric pedestal, dramatic studio flash lighting, eye-catching sales visual',
+                    'tropical_african' => 'modern Afro-chic minimalist aesthetic, warm terracotta and lush monstera leaves, soft morning sun, high-end African design lookbook',
+                    default => 'clean minimalist studio product photography, pristine white and neutral backdrop, soft diffused commercial lightbox illumination, crisp sharp details, commercial catalogue photography',
+                };
 
-            if (! $imageResponse->successful() || empty($imageResponse->body())) {
-                return ['status' => 'error', 'message' => 'Impossible de générer le visuel pour le moment.'];
+                $fullPrompt = "Professional commercial advertising visual of {$subject}, {$styleEnhancer}, photorealistic, stunning quality, no text distortion, 4k UHD";
+                $encodedPrompt = urlencode($fullPrompt);
+                $imageUrl = "https://image.pollinations.ai/prompt/{$encodedPrompt}?width={$width}&height={$height}&nologo=true&model=flux";
+
+                $client = Http::timeout(35);
+                if (! app()->environment('production')) {
+                    $client = $client->withoutVerifying();
+                }
+
+                $imageResponse = $client->get($imageUrl);
+
+                if (! $imageResponse->successful() || empty($imageResponse->body())) {
+                    return ['status' => 'error', 'message' => 'Impossible de générer le visuel pour le moment.'];
+                }
+
+                $imageBinary = $imageResponse->body();
             }
 
-            $imageBinary = $imageResponse->body();
-            $filename = 'ai_visual_' . uniqid() . '.jpg';
+            if (! empty($badgeText)) {
+                $imageBinary = $this->applyBadgeOverlay($imageBinary, $badgeText);
+            }
+
+            $filename = 'ai_visual_' . uniqid() . '.' . $ext;
             $storageRelativePath = "shops/{$shop->id}/visuals/{$filename}";
 
             Storage::disk('public')->put($storageRelativePath, $imageBinary);
 
             // Si rattaché à un produit, enregistrer dans ProductImage
             $productImage = null;
-            if ($productId) {
-                $product = Product::where('shop_id', $shop->id)->find($productId);
-                if ($product) {
-                    $maxOrder = $product->images()->max('sort_order') ?? 0;
-                    $productImage = $product->images()->create([
-                        'path' => $storageRelativePath,
-                        'sort_order' => $maxOrder + 1,
-                        'size_bytes' => strlen($imageBinary),
-                    ]);
-                }
+            if ($product) {
+                $maxOrder = $product->images()->max('sort_order') ?? 0;
+                $productImage = $product->images()->create([
+                    'path' => $storageRelativePath,
+                    'sort_order' => $maxOrder + 1,
+                    'size_bytes' => strlen($imageBinary),
+                ]);
             }
 
             $durationMs = (int) round((microtime(true) - $startTime) * 1000);
@@ -381,8 +431,8 @@ PROMPT;
             AiGeneration::create([
                 'shop_id' => $shop->id,
                 'type' => 'ai_visual_generation',
-                'step' => 'image_studio_flux',
-                'model_used' => 'flux-schnell',
+                'step' => $step,
+                'model_used' => $modelUsed,
                 'prompt_tokens' => 0,
                 'completion_tokens' => 0,
                 'cost_estimated_fcfa' => 50,
@@ -393,11 +443,14 @@ PROMPT;
                     'path' => $storageRelativePath,
                     'format' => $format,
                     'style' => $style,
+                    'engine' => $engine,
                 ],
             ]);
 
             return [
                 'status' => 'success',
+                'engine' => $engine,
+                'model_used' => $modelUsed,
                 'image_url' => Storage::disk('public')->url($storageRelativePath),
                 'storage_path' => $storageRelativePath,
                 'product_image_id' => $productImage?->id,
@@ -409,6 +462,184 @@ PROMPT;
             Log::error('generateMarketingVisual Exception: ' . $e->getMessage());
             return ['status' => 'error', 'message' => 'Erreur lors de la génération : ' . $e->getMessage()];
         }
+    }
+
+    /**
+     * Génère un visuel marketing à partir de la vraie photo d'un produit en utilisant
+     * Photoroom Image Editing v2 puis bascule automatique sur Photoroom v1/segment / Zanika Studio.
+     *
+     * @return array{binary: string, model_used: string, engine: string, step: string, ext: string}|null
+     */
+    protected function generateVisualFromProductImage(
+        string $sourceImageBinary,
+        string $style,
+        string $photoroomSize,
+        int $targetWidth,
+        int $targetHeight
+    ): ?array {
+        $photoroom = app(PhotoroomService::class);
+
+        if ($photoroom->isConfigured()) {
+            $editParams = $photoroom->mapStyleToEditParams($style, $photoroomSize);
+            $edited = $photoroom->editProductImage($sourceImageBinary, $editParams);
+            if ($edited !== null) {
+                return [
+                    'binary' => $edited,
+                    'model_used' => 'photoroom-v2-edit',
+                    'engine' => 'photoroom-ai',
+                    'step' => 'image_studio_photoroom',
+                    'ext' => 'png',
+                ];
+            }
+        }
+
+        // Bascule : détourage (Photoroom v1/segment si configuré, sinon local) + scène studio aux dimensions exactes
+        $studioService = app(ProductStudioService::class);
+        $cutout = $studioService->extractCutout($sourceImageBinary);
+        $cutoutPng = $cutout['binary'] ?? null;
+
+        if (! $cutoutPng || ! function_exists('imagecreatefromstring')) {
+            return null;
+        }
+
+        $cutoutGd = @imagecreatefromstring($cutoutPng);
+        if (! $cutoutGd) {
+            return null;
+        }
+
+        $cropped = $studioService->cropTransparentBoundingBox($cutoutGd);
+        $cW = max(1, imagesx($cropped));
+        $cH = max(1, imagesy($cropped));
+
+        $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+
+        [$topRgb, $bottomRgb] = match ($style) {
+            'luxury_showroom' => [[28, 24, 30], [14, 12, 18]],
+            'flash_sale' => [[158, 27, 50], [64, 12, 24]],
+            'tropical_african' => [[238, 224, 210], [212, 185, 160]],
+            'lifestyle_urban' => [[244, 240, 234], [225, 218, 208]],
+            default => [[255, 255, 255], [244, 244, 248]],
+        };
+
+        for ($y = 0; $y < $targetHeight; $y++) {
+            $t = $y / max(1, $targetHeight - 1);
+            $r = (int) round($topRgb[0] + (($bottomRgb[0] - $topRgb[0]) * $t));
+            $g = (int) round($topRgb[1] + (($bottomRgb[1] - $topRgb[1]) * $t));
+            $b = (int) round($topRgb[2] + (($bottomRgb[2] - $topRgb[2]) * $t));
+            $lineColor = imagecolorallocate($canvas, $r, $g, $b);
+            imageline($canvas, 0, $y, $targetWidth, $y, $lineColor);
+        }
+
+        $usableW = (int) round($targetWidth * 0.78);
+        $usableH = (int) round($targetHeight * 0.72);
+        $ratio = min($usableW / $cW, $usableH / $cH);
+        $newW = max(1, (int) round($cW * $ratio));
+        $newH = max(1, (int) round($cH * $ratio));
+
+        $dstX = (int) round(($targetWidth - $newW) / 2);
+        $dstY = (int) round(($targetHeight - $newH) / 2);
+
+        $shadowCol = imagecolorallocatealpha($canvas, 15, 15, 20, 102);
+        imagefilledellipse(
+            $canvas,
+            $dstX + (int) round($newW / 2),
+            $dstY + $newH + 4,
+            (int) round($newW * 0.76),
+            max(10, (int) round($newH * 0.08)),
+            $shadowCol
+        );
+
+        imagecopyresampled($canvas, $cropped, $dstX, $dstY, 0, 0, $newW, $newH, $cW, $cH);
+
+        if ($cropped !== $cutoutGd) {
+            imagedestroy($cropped);
+        }
+        imagedestroy($cutoutGd);
+
+        ob_start();
+        imagejpeg($canvas, null, 92);
+        $binary = ob_get_clean() ?: null;
+        imagedestroy($canvas);
+
+        if (! $binary) {
+            return null;
+        }
+
+        $isPhotoroomCutout = ($cutout['method'] ?? '') === 'photoroom_v1_segment';
+
+        return [
+            'binary' => $binary,
+            'model_used' => $isPhotoroomCutout ? 'photoroom-v1-studio' : 'zanika-product-studio',
+            'engine' => $isPhotoroomCutout ? 'photoroom-ai' : 'zanika-product-studio',
+            'step' => $isPhotoroomCutout ? 'image_studio_photoroom' : 'image_studio_local',
+            'ext' => 'jpg',
+        ];
+    }
+
+    /**
+     * Extrait les octets binaires de l'image principale d'un produit.
+     */
+    protected function extractProductImageBinary(Product $product): ?string
+    {
+        $image = $product->primaryImage ?? $product->images->first();
+        if (! $image) {
+            return null;
+        }
+
+        if (! empty($image->path) && Storage::disk('public')->exists($image->path)) {
+            $raw = Storage::disk('public')->get($image->path);
+            if (is_string($raw) && $raw !== '') {
+                return $raw;
+            }
+        }
+
+        if (! empty($image->image_data) && is_string($image->image_data)) {
+            $clean = preg_replace('#^data:image/\w+;base64,#i', '', $image->image_data);
+            $decoded = base64_decode((string) $clean, true);
+            if (is_string($decoded) && $decoded !== '') {
+                return $decoded;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Applique un badge promotionnel discret sur le visuel généré si demandé.
+     */
+    protected function applyBadgeOverlay(string $imageBinary, string $badgeText): string
+    {
+        $badgeText = trim($badgeText);
+        if ($badgeText === '' || ! function_exists('imagecreatefromstring')) {
+            return $imageBinary;
+        }
+
+        $img = @imagecreatefromstring($imageBinary);
+        if (! $img) {
+            return $imageBinary;
+        }
+
+        $font = 5;
+        $text = mb_strtoupper(Str::limit($badgeText, 24, ''), 'UTF-8');
+        $asciiText = Str::ascii($text);
+        $charW = imagefontwidth($font);
+        $charH = imagefontheight($font);
+        $padX = 18;
+        $padY = 10;
+        $boxW = (strlen($asciiText) * $charW) + ($padX * 2);
+        $boxH = $charH + ($padY * 2);
+
+        $bgCol = imagecolorallocate($img, 158, 27, 50); // Rouge bordeaux Zanika
+        $txtCol = imagecolorallocate($img, 255, 255, 255);
+        imagefilledrectangle($img, 24, 24, 24 + $boxW, 24 + $boxH, $bgCol);
+        imagestring($img, $font, 24 + $padX, 24 + $padY, $asciiText, $txtCol);
+
+        ob_start();
+        imagepng($img);
+        $out = ob_get_clean();
+        imagedestroy($img);
+
+        return is_string($out) && $out !== '' ? $out : $imageBinary;
     }
 
     /**
@@ -425,6 +656,14 @@ PROMPT;
      */
     public function removeBackground(string $imageBinary): ?string
     {
+        $photoroom = app(PhotoroomService::class);
+        if ($photoroom->isConfigured()) {
+            $cutout = $photoroom->removeBackground($imageBinary, ['format' => 'png']);
+            if ($cutout !== null) {
+                return $cutout;
+            }
+        }
+
         try {
             $b64 = 'data:image/jpeg;base64,' . base64_encode($imageBinary);
             $spaceUrl = 'https://gokaygokay-inspyrenet-rembg.hf.space/gradio_api';

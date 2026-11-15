@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Services\Ai\AiVisionService;
+use App\Services\Ai\PhotoroomService;
+use App\Services\Ai\ProductStudioService;
 use App\Services\ImageService;
 use App\Support\SearchHelper;
 use Illuminate\Http\JsonResponse;
@@ -148,7 +150,7 @@ class AiProductController extends Controller
             'shop_id' => $shop->id,
             'type' => 'ai_quality_check',
             'step' => 'studio_packshot',
-            'model_used' => 'zanika-product-studio',
+            'model_used' => $studioResult['engine'] ?? 'zanika-product-studio',
             'prompt_tokens' => 0,
             'completion_tokens' => 0,
             'cost_estimated_fcfa' => 12,
@@ -159,6 +161,8 @@ class AiProductController extends Controller
 
         return response()->json([
             'status' => 'success',
+            'engine' => $studioResult['engine'] ?? 'zanika-product-studio',
+            'cutout_method' => $studioResult['cutout_method'] ?? null,
             'category' => $studioResult['category'] ?? 'general',
             'product_title' => $studioResult['product_title'] ?? null,
             'cutout_path' => $studioResult['cutout_path'] ?? null,
@@ -310,7 +314,7 @@ class AiProductController extends Controller
     /**
      * Espace Studio Visuel IA pour les affiches, bannières et mises en situation.
      */
-    public function studio(Request $request): View|\Illuminate\Http\RedirectResponse
+    public function studio(Request $request, PhotoroomService $photoroom): View|\Illuminate\Http\RedirectResponse
     {
         $user = $request->user();
         $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
@@ -318,7 +322,10 @@ class AiProductController extends Controller
             return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
         }
 
-        $products = $shop->products()->where('status', Product::STATUS_ACTIVE)->get(['id', 'title', 'price']);
+        $products = $shop->products()
+            ->where('status', Product::STATUS_ACTIVE)
+            ->with(['primaryImage', 'images'])
+            ->get(['id', 'title', 'price']);
         
         // Historique des visuels générés par l'IA pour cette boutique
         $recentVisuals = AiGeneration::where('shop_id', $shop->id)
@@ -331,11 +338,12 @@ class AiProductController extends Controller
             'shop' => $shop,
             'products' => $products,
             'recentVisuals' => $recentVisuals,
+            'photoroomConfigured' => $photoroom->isConfigured(),
         ]);
     }
 
     /**
-     * Génère un visuel publicitaire IA avec le moteur Flux.
+     * Génère un visuel publicitaire IA (Photoroom Studio si photo/produit sélectionné, sinon moteur Flux).
      */
     public function generateVisual(Request $request, AiVisionService $visionService): JsonResponse
     {
@@ -344,6 +352,8 @@ class AiProductController extends Controller
             'style' => 'required|string|in:studio_minimalist,luxury_showroom,lifestyle_urban,flash_sale,tropical_african',
             'format' => 'required|string|in:1:1,9:16,16:9',
             'product_id' => 'nullable|integer',
+            'badge_text' => 'nullable|string|max:40',
+            'image' => 'nullable|file|image|max:10240',
         ]);
 
         $user = $request->user();
@@ -359,11 +369,145 @@ class AiProductController extends Controller
             ], 402);
         }
 
-        $result = $visionService->generateMarketingVisual($shop, $request->all());
+        $sourceImageBinary = null;
+        if ($request->hasFile('image')) {
+            $sourceImageBinary = file_get_contents($request->file('image')->getRealPath()) ?: null;
+        }
+
+        $result = $visionService->generateMarketingVisual(
+            $shop,
+            $request->except('image'),
+            $sourceImageBinary
+        );
+
         if (($result['status'] ?? '') === 'success') {
             $shop->consumeAiCredits(1);
         }
 
         return response()->json($result);
+    }
+
+    /**
+     * Détourage / Sublimation 1-Clic (Photoroom AI + fallback local) pour Affiches Promo & Vidéos Pub.
+     */
+    public function cutoutForAd(Request $request, ProductStudioService $studioService): JsonResponse
+    {
+        $request->validate([
+            'product_id' => 'nullable|integer',
+            'image' => 'nullable|file|image|max:10240',
+            'image_base64' => 'nullable|string',
+            'mode' => 'nullable|string|in:transparent,studio_white',
+            'save_to_product' => 'nullable|boolean',
+        ]);
+
+        $user = $request->user();
+        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        if (! $shop) {
+            return response()->json(['error' => 'Boutique introuvable.'], 403);
+        }
+
+        if (! $shop->hasEnoughAiCredits(1)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Crédits IA mensuels épuisés.',
+            ], 402);
+        }
+
+        $imageBinary = null;
+        $product = null;
+
+        if ($request->filled('product_id')) {
+            $product = Product::withoutGlobalScopes()
+                ->where('shop_id', $shop->id)
+                ->with(['primaryImage', 'images'])
+                ->find((int) $request->input('product_id'));
+
+            if (! $product) {
+                return response()->json(['error' => 'Produit introuvable ou non autorisé.'], 403);
+            }
+        }
+
+        if ($request->hasFile('image')) {
+            $imageBinary = file_get_contents($request->file('image')->getRealPath()) ?: null;
+        } elseif ($request->filled('image_base64')) {
+            $base64 = (string) $request->input('image_base64');
+            $decoded = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64), true);
+            $imageBinary = is_string($decoded) && $decoded !== '' ? $decoded : null;
+        } elseif ($product) {
+            $primary = $product->primaryImage ?? $product->images->first();
+            if ($primary) {
+                if (! empty($primary->path) && Storage::disk('public')->exists($primary->path)) {
+                    $imageBinary = Storage::disk('public')->get($primary->path);
+                } elseif (! empty($primary->image_data) && is_string($primary->image_data)) {
+                    $clean = preg_replace('#^data:image/\w+;base64,#i', '', $primary->image_data);
+                    $decoded = base64_decode((string) $clean, true);
+                    $imageBinary = is_string($decoded) && $decoded !== '' ? $decoded : null;
+                }
+            }
+        }
+
+        if (! $imageBinary) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Veuillez sélectionner un produit possédant une photo ou importer une image valide.',
+            ], 422);
+        }
+
+        $mode = (string) $request->input('mode', 'transparent');
+        $cutout = $studioService->cutoutTransparent($shop, $imageBinary, $mode);
+
+        if (! $cutout || ($cutout['status'] ?? '') !== 'success') {
+            return response()->json([
+                'success' => false,
+                'error' => 'Impossible de détourer cette image pour le moment.',
+            ], 500);
+        }
+
+        $shop->consumeAiCredits(1);
+        AiGeneration::create([
+            'shop_id' => $shop->id,
+            'type' => 'ai_photoroom_cutout',
+            'step' => $cutout['cutout_method'] ?? 'photoroom_cutout',
+            'model_used' => $cutout['engine'] ?? 'zanika-product-studio',
+            'prompt_tokens' => 0,
+            'completion_tokens' => 0,
+            'cost_estimated_fcfa' => 1,
+            'duration_ms' => 450,
+            'status' => 'success',
+            'input_summary' => $product
+                ? "Détourage 1-clic [{$mode}] pour le produit #{$product->id} ({$product->title})"
+                : "Détourage 1-clic [{$mode}] depuis image importée",
+            'output_data' => [
+                'path' => $cutout['path'],
+                'mode' => $mode,
+                'engine' => $cutout['engine'],
+            ],
+        ]);
+
+        if ($request->boolean('save_to_product') && $product) {
+            $rawB64 = preg_replace('#^data:image/\w+;base64,#i', '', (string) $cutout['data_uri']);
+            $product->images()->increment('sort_order');
+            $product->images()->create([
+                'path' => $cutout['path'],
+                'sort_order' => 0,
+                'size_bytes' => Storage::disk('public')->exists($cutout['path'])
+                    ? Storage::disk('public')->size($cutout['path'])
+                    : 0,
+                'image_data' => $rawB64,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'status' => 'success',
+            'url' => $cutout['url'],
+            'path' => $cutout['path'],
+            'data_uri' => $cutout['data_uri'],
+            'engine' => $cutout['engine'],
+            'cutout_method' => $cutout['cutout_method'],
+            'message' => $cutout['engine'] === 'photoroom-ai'
+                ? 'Photo détourée et sublimée avec Photoroom IA !'
+                : 'Photo détourée avec Zanika Studio !',
+        ]);
     }
 }
