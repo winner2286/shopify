@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Shop;
 use App\Models\Subscription;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ShopController extends Controller
@@ -47,7 +47,7 @@ class ShopController extends Controller
     /**
      * Enregistrement ultra-rapide (Nom + Devise/Pays uniquement).
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $user = $request->user();
 
@@ -57,7 +57,7 @@ class ShopController extends Controller
                 return response()->json([
                     'error' => 'limit_reached',
                     'message' => 'Limite de boutiques atteinte pour votre forfait.',
-                    'upgrade_url' => route('subscription.index'),
+                    'upgrade_url' => route('shops.create'),
                 ], 403);
             }
 
@@ -82,19 +82,8 @@ class ShopController extends Controller
         $countryCode = strtoupper($validated['country']);
         $profile = config("platform.country_profiles.{$countryCode}") ?? config('platform.country_profiles.TG');
 
-        // Génération automatique d'un sous-domaine propre et unique
-        $baseSubdomain = Str::slug($validated['name']);
-        if (empty($baseSubdomain)) {
-            $baseSubdomain = 'boutique-' . Str::lower(Str::random(5));
-        }
-
-        $subdomain = $baseSubdomain;
-        $counter = 1;
-
-        while (Shop::where('subdomain', $subdomain)->exists()) {
-            $subdomain = $baseSubdomain . '-' . $counter;
-            $counter++;
-        }
+        // Génération automatique d'un sous-domaine propre, unique et protégé contre les noms réservés
+        $subdomain = Shop::generateUniqueSubdomain($validated['name']);
 
         $shop = Shop::create([
             'user_id' => $user->id,

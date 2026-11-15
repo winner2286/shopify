@@ -30,6 +30,36 @@ class MediaController extends Controller
     }
 
     /**
+     * Tente de servir un fichier disque via BinaryFileResponse ou repli mémoire si is_readable() est restreint.
+     */
+    private function tryServeFile(string $path, int $maxAge = 2592000, ?string $fallbackBinary = null): BinaryFileResponse|Response|null
+    {
+        if (is_file($path) && is_readable($path) && (filesize($path) ?: 0) > 0) {
+            return response()->file($path, $this->imageHeaders($maxAge));
+        }
+
+        $binary = $fallbackBinary;
+        if (($binary === null || $binary === '') && is_file($path)) {
+            $read = @file_get_contents($path);
+            if ($read !== false && $read !== '') {
+                $binary = $read;
+            }
+        }
+
+        if (is_string($binary) && $binary !== '') {
+            $mimeType = 'image/webp';
+            if (class_exists(\finfo::class)) {
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $mimeType = $finfo->buffer($binary) ?: 'image/webp';
+            }
+
+            return response($binary, 200, $this->imageHeaders($maxAge, $mimeType));
+        }
+
+        return null;
+    }
+
+    /**
      * Sert un fichier média du stockage public ou le régénère dynamiquement
      */
     public function serve(Request $request, string $path): BinaryFileResponse|Response
@@ -49,11 +79,11 @@ class MediaController extends Controller
             if (! str_starts_with($realDiskPath, $publicRoot . DIRECTORY_SEPARATOR)) {
                 abort(403, 'Accès refusé.');
             }
-            if (is_file($realDiskPath) && filesize($realDiskPath) > 0) {
-                return response()->file($realDiskPath, $this->imageHeaders());
+            if ($served = $this->tryServeFile($realDiskPath)) {
+                return $served;
             }
-        } elseif (is_file($diskPath) && filesize($diskPath) > 0) {
-            return response()->file($diskPath, $this->imageHeaders());
+        } elseif ($served = $this->tryServeFile($diskPath)) {
+            return $served;
         }
 
         // 2. Recherche en base de données limitée au chemin exact demandé (sans fuite inter-boutiques par basename)
@@ -68,13 +98,9 @@ class MediaController extends Controller
             if ($binary) {
                 @mkdir(dirname($diskPath), 0755, true);
                 @file_put_contents($diskPath, $binary);
-                if (file_exists($diskPath) && filesize($diskPath) > 0) {
-                    return response()->file($diskPath, $this->imageHeaders());
+                if ($served = $this->tryServeFile($diskPath, 2592000, $binary)) {
+                    return $served;
                 }
-                // Si l'écriture sur disque est restreinte, servir directement depuis la mémoire
-                $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                $mimeType = $finfo->buffer($binary) ?: 'image/webp';
-                return response($binary, 200, $this->imageHeaders(2592000, $mimeType));
             }
         }
 
@@ -88,24 +114,31 @@ class MediaController extends Controller
 
         $catalogPhoto = $this->resolveCatalogPhoto($product, $cleanPath);
         if ($catalogPhoto && file_exists($catalogPhoto)) {
-            $content = file_get_contents($catalogPhoto);
-            @mkdir(dirname($diskPath), 0755, true);
-            @file_put_contents($diskPath, $content);
+            $content = @file_get_contents($catalogPhoto);
+            if ($content !== false && $content !== '') {
+                @mkdir(dirname($diskPath), 0755, true);
+                @file_put_contents($diskPath, $content);
 
-            // Persistance définitive dans PostgreSQL
-            if ($productImage && empty($productImage->image_data)) {
-                $productImage->update(['image_data' => base64_encode($content)]);
+                // Persistance définitive dans PostgreSQL
+                if ($productImage && empty($productImage->image_data)) {
+                    $productImage->update(['image_data' => base64_encode($content)]);
+                }
+
+                if ($served = $this->tryServeFile($diskPath, 2592000, $content)) {
+                    return $served;
+                }
             }
-
-            return response()->file($diskPath, $this->imageHeaders());
         }
 
         // 4. Génération dynamique WebP avec GD
         if ($this->generateWebPPlaceholder($product, $diskPath)) {
-            if ($productImage && empty($productImage->image_data) && file_exists($diskPath)) {
-                $productImage->update(['image_data' => base64_encode(file_get_contents($diskPath))]);
+            $generatedBinary = file_exists($diskPath) ? @file_get_contents($diskPath) : null;
+            if ($productImage && empty($productImage->image_data) && is_string($generatedBinary) && $generatedBinary !== '') {
+                $productImage->update(['image_data' => base64_encode($generatedBinary)]);
             }
-            return response()->file($diskPath, $this->imageHeaders(86400));
+            if ($served = $this->tryServeFile($diskPath, 86400, is_string($generatedBinary) ? $generatedBinary : null)) {
+                return $served;
+            }
         }
 
         // 5. Fallback vectoriel SVG pur
@@ -151,7 +184,9 @@ class MediaController extends Controller
                 }
             }
 
-            return response()->file($catalogPhoto, $this->imageHeaders(86400));
+            if ($served = $this->tryServeFile($catalogPhoto, 86400)) {
+                return $served;
+            }
         }
 
         $svg = $this->buildSvgContent($title, $cat, $color);

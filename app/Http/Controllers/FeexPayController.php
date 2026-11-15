@@ -241,8 +241,9 @@ class FeexPayController extends Controller
             abort(403, 'La simulation de paiement est désactivée en production.');
         }
 
-        $shop = $request->user()?->shop;
-        if (! $shop || (int) $subscription->shop_id !== (int) $shop->id) {
+        $user = $request->user();
+        $ownsSubscription = $user && $user->shops()->whereKey($subscription->shop_id)->exists();
+        if (! $ownsSubscription) {
             abort(403, 'Accès non autorisé à cet abonnement.');
         }
 

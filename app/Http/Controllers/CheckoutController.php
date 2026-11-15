@@ -190,7 +190,7 @@ class CheckoutController extends Controller
         $token = (string) $request->query('token', '');
         $isPlacedInSession = in_array($order->order_number, (array) session('placed_orders', []), true);
         $hasValidToken = $token !== '' && hash_equals($order->receiptToken(), $token);
-        $isOwnerOrAdmin = $user && ($user->isAdmin() || $user->shop?->id === $order->shop_id);
+        $isOwnerOrAdmin = $user && ($user->isAdmin() || (int) $shop->user_id === (int) $user->id);
 
         if (! $isPlacedInSession && ! $hasValidToken && ! $isOwnerOrAdmin) {
             return redirect()->route('storefront.tracking', ['subdomain' => $shop->subdomain, 'numero' => $order->order_number])

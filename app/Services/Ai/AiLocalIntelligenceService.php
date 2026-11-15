@@ -536,10 +536,10 @@ DIAG;
             return "\n\n📌 **En direct sur ta boutique** : Tu as **{$pending} commande(s) en attente** dans `/commandes`.";
         }
 
-        if ($slug === 'guide-multi-boutiques-forfaits' && $shop->user) {
-            $maxShops = $shop->user->maxAllowedShops();
-            $currentShops = $shop->user->shops()->withoutGlobalScopes()->count();
-            $planName = $shop->user->currentPlan()?->name ?? 'Essentiel';
+        if ($slug === 'guide-multi-boutiques-forfaits' && $shop->owner) {
+            $maxShops = $shop->owner->maxShops();
+            $currentShops = $shop->owner->shops()->withoutGlobalScopes()->count();
+            $planName = $shop->owner->currentPlan()?->name ?? 'Essentiel';
             $limitLabel = $maxShops >= 999 ? 'Illimité' : $maxShops;
             return "\n\n📌 **En direct sur ton compte** : Tu es sur le forfait **{$planName}** avec **{$currentShops} / {$limitLabel} boutique(s)** active(s).";
         }

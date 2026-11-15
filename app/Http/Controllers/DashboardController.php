@@ -36,7 +36,7 @@ class DashboardController extends Controller
             ['label' => 'Ajouter un premier produit', 'done' => $productsCount > 0],
             ['label' => 'Activer un moyen de paiement', 'done' => $shop !== null],
             ['label' => 'Publier et partager le lien', 'done' => $shop && $shop->status === 'published'],
-            ['label' => 'Générer une publicité', 'done' => false],
+            ['label' => 'Générer une publicité', 'done' => $shop ? $shop->advertisements()->exists() : false],
         ];
 
         return view('dashboard', compact(

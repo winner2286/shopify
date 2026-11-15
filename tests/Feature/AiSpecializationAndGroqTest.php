@@ -126,6 +126,13 @@ class AiSpecializationAndGroqTest extends TestCase
         $this->assertStringContainsString('English', $resEnglish['content']);
         $this->assertStringNotContainsString('Comment ajouter un nouveau produit', $resEnglish['content']);
 
+        // Question sur le multi-boutiques & forfaits : doit utiliser $shop->owner->maxShops() sans erreur
+        $resMultiShop = $localEngine->respond([
+            ['role' => 'user', 'content' => 'Comment créer plusieurs boutiques selon mon forfait ?'],
+        ], $this->shop);
+        $this->assertStringContainsString('En direct sur ton compte', $resMultiShop['content']);
+        $this->assertStringContainsString('/boutiques/creer', $resMultiShop['content']);
+
         // 2. Question diagnostic causal : Beaucoup de commandes mais bénéfices faibles
         Order::withoutGlobalScopes()->create([
             'shop_id' => $this->shop->id,

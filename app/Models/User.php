@@ -42,19 +42,42 @@ class User extends Authenticatable
     }
 
     /**
-     * Récupère la boutique active dans la session ou la boutique par défaut.
+     * Accesseur dynamique : retourne la boutique active en session ou la boutique par défaut.
+     * Garantit que $user->shop respecte le basculement multi-boutiques dans toute l'application.
      */
-    public function activeShop(): ?Shop
+    public function getShopAttribute(): ?Shop
     {
         $shopId = session('active_shop_id');
         if ($shopId) {
+            if ($this->relationLoaded('active_shop') && $this->getRelation('active_shop')?->id === (int) $shopId) {
+                return $this->getRelation('active_shop');
+            }
+
             $selected = $this->shops()->find($shopId);
             if ($selected) {
+                $this->setRelation('active_shop', $selected);
                 return $selected;
             }
         }
 
-        return $this->shop;
+        if ($this->relationLoaded('shop')) {
+            return $this->getRelation('shop');
+        }
+
+        $latest = $this->shop()->first();
+        if ($latest) {
+            $this->setRelation('shop', $latest);
+        }
+
+        return $latest;
+    }
+
+    /**
+     * Récupère la boutique active dans la session ou la boutique par défaut.
+     */
+    public function activeShop(): ?Shop
+    {
+        return $this->getShopAttribute();
     }
 
     /**
@@ -121,7 +144,7 @@ class User extends Authenticatable
         $normalizedEmail = strtolower(trim((string) $this->email));
 
         if (in_array($normalizedEmail, $superAdminEmails, true) && ($this->isVerified() || app()->environment('testing', 'local'))) {
-            if ($this->role !== self::ROLE_ADMIN) {
+            if ($this->exists && $this->role !== self::ROLE_ADMIN) {
                 $this->forceFill(['role' => self::ROLE_ADMIN])->saveQuietly();
             }
             return true;

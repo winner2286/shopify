@@ -15,9 +15,9 @@ class BelongsToShopScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
-        // Isolation multi-tenant fail-closed : tout utilisateur non-admin est strictement borné à sa boutique.
+        // Isolation multi-tenant fail-closed : tout utilisateur non-admin est strictement borné à sa boutique active.
         if (Auth::check() && ! Auth::user()->isAdmin()) {
-            $shopId = Auth::user()->shop?->id ?? -1;
+            $shopId = Auth::user()->activeShop()?->id ?? -1;
             $builder->where($model->qualifyColumn('shop_id'), $shopId);
         }
     }
