@@ -23,8 +23,12 @@
                 <span>{{ ($photoroomConfigured ?? false) ? 'Photoroom AI Studio Actif' : 'Zanika Studio + Flux HD' }}</span>
             </span>
             <span class="ai-studio-credit-badge">
+                <x-icon name="image" :size="14" />
+                <span>Photoroom : <strong id="studio-photoroom-remaining">{{ $photoroomCreditsRemaining ?? $shop->photoroomCreditsRemaining() }}</strong> / {{ $photoroomCreditsMonthly ?? $shop->photoroomCreditsMonthly() }}</span>
+            </span>
+            <span class="ai-studio-credit-badge">
                 <x-icon name="zap" :size="14" />
-                <span>1 crédit / visuel</span>
+                <span>Crédits IA : <strong id="studio-ai-remaining">{{ $aiCreditsRemaining ?? $shop->aiCreditsRemaining() }}</strong> / {{ $aiCreditsMonthly ?? $shop->aiCreditsMonthly() }}</span>
             </span>
         </div>
     </div>
@@ -523,6 +527,14 @@ async function handleGenerateVisual(e) {
                 badgeEl.innerText = data.engine === 'photoroom-ai'
                     ? 'Propulsé par Photoroom AI Studio'
                     : (data.engine === 'zanika-product-studio' ? 'Propulsé par Zanika Studio' : 'Propulsé par Flux HD');
+            }
+            const prRem = document.getElementById('studio-photoroom-remaining');
+            if (prRem && data.photoroom_credits_remaining !== undefined) {
+                prRem.innerText = data.photoroom_credits_remaining;
+            }
+            const aiRem = document.getElementById('studio-ai-remaining');
+            if (aiRem && data.ai_credits_remaining !== undefined) {
+                aiRem.innerText = data.ai_credits_remaining;
             }
             canvasResult.style.display = 'flex';
         } else {

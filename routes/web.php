@@ -142,13 +142,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/assistant-ia/memoire/{memory}', [\App\Http\Controllers\AiShopMemoryController::class, 'destroy'])->name('ai.memory.destroy');
 
     // AI Products & Studio Visuel IA (Module 4 & 5)
-    Route::post('/assistant-ia/produits/analyser-photo', [\App\Http\Controllers\AiProductController::class, 'analyzePhoto'])->name('ai.products.analyze_photo');
-    Route::post('/assistant-ia/produits/verifier-qualite', [\App\Http\Controllers\AiProductController::class, 'verifyQuality'])->name('ai.products.verify_quality');
-    Route::post('/assistant-ia/produits/generer-variante', [\App\Http\Controllers\AiProductController::class, 'generateVariant'])->name('ai.products.generate_variant');
-    Route::post('/assistant-ia/produits/{product}/optimiser', [\App\Http\Controllers\AiProductController::class, 'optimizeProduct'])->name('ai.products.optimize');
-    Route::post('/assistant-ia/produits/detourer-photoroom', [\App\Http\Controllers\AiProductController::class, 'cutoutForAd'])->name('ai.products.photoroom_cutout');
+    Route::middleware('throttle:20,1')->group(function () {
+        Route::post('/assistant-ia/produits/analyser-photo', [\App\Http\Controllers\AiProductController::class, 'analyzePhoto'])->name('ai.products.analyze_photo');
+        Route::post('/assistant-ia/produits/verifier-qualite', [\App\Http\Controllers\AiProductController::class, 'verifyQuality'])->name('ai.products.verify_quality');
+        Route::post('/assistant-ia/produits/generer-variante', [\App\Http\Controllers\AiProductController::class, 'generateVariant'])->name('ai.products.generate_variant');
+        Route::post('/assistant-ia/produits/{product}/optimiser', [\App\Http\Controllers\AiProductController::class, 'optimizeProduct'])->name('ai.products.optimize');
+        Route::post('/assistant-ia/produits/detourer-photoroom', [\App\Http\Controllers\AiProductController::class, 'cutoutForAd'])->name('ai.products.photoroom_cutout');
+        Route::post('/assistant-ia/studio/generer', [\App\Http\Controllers\AiProductController::class, 'generateVisual'])->name('ai.studio.generate');
+    });
     Route::get('/assistant-ia/studio', [\App\Http\Controllers\AiProductController::class, 'studio'])->name('ai.studio');
-    Route::post('/assistant-ia/studio/generer', [\App\Http\Controllers\AiProductController::class, 'generateVisual'])->name('ai.studio.generate');
 
     // AI Orders & AI Customer (Module 6 & 7)
     Route::get('/assistant-ia/commandes/{order}/analyse-risque', [\App\Http\Controllers\AiOrderController::class, 'analyzeRisk'])->name('ai.orders.analyze_risk');

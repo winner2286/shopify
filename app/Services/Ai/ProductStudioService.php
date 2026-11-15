@@ -58,7 +58,7 @@ class ProductStudioService
         $productTitle = $detectedCategory['title'];
 
         // 3. Détourage professionnel haute fidélité (Photoroom v1/segment -> API RMBG -> Algorithme local)
-        $cutoutResult = $this->extractCutout($imageBinary);
+        $cutoutResult = $this->extractCutout($imageBinary, $shop);
         $cutoutPng = $cutoutResult['binary'];
         $cutoutMethod = $cutoutResult['method'];
         $usedPhotoroomEdit = false;
@@ -124,8 +124,8 @@ class ProductStudioService
                     ];
                 }
 
-                // C. Décor Thématique selon la catégorie réelle du produit (Photoroom v2 AI Scene en priorité, sinon décor local)
-                $photoroomLifestyle = $this->photoroom->isConfigured()
+                // C. Décor Thématique selon la catégorie réelle du produit (Photoroom v2 AI Scene en priorité si quota Photoroom actif, sinon décor local)
+                $photoroomLifestyle = ($this->photoroom->isConfigured() && $shop->hasEnoughPhotoroomCredits(1))
                     ? $this->photoroom->editProductImage($imageBinary, $this->photoroom->mapStyleToEditParams('lifestyle', self::TARGET_SIZE . 'x' . self::TARGET_SIZE))
                     : null;
 
@@ -241,7 +241,12 @@ class ProductStudioService
         $qualityAudit = $this->auditQuality($imageBinary, $variations);
 
         $durationMs = (int) round((microtime(true) - $startTime) * 1000);
-        $engine = ($cutoutMethod === 'photoroom_v1_segment' || $usedPhotoroomEdit)
+        $usedPhotoroom = ($cutoutMethod === 'photoroom_v1_segment' || $usedPhotoroomEdit);
+        if ($usedPhotoroom) {
+            $shop->consumePhotoroomCredits(1);
+        }
+
+        $engine = $usedPhotoroom
             ? 'photoroom-ai'
             : 'zanika-product-studio';
 
@@ -281,7 +286,7 @@ class ProductStudioService
         $mime = 'image/png';
 
         if ($mode === 'studio_white') {
-            if ($this->photoroom->isConfigured()) {
+            if ($this->photoroom->isConfigured() && $shop->hasEnoughPhotoroomCredits(1)) {
                 $outputBinary = $this->photoroom->studioPackshot($imageBinary, 'studio_white', '1000x1000');
                 if ($outputBinary !== null) {
                     $engine = 'photoroom-ai';
@@ -290,7 +295,7 @@ class ProductStudioService
             }
 
             if ($outputBinary === null) {
-                $cutoutResult = $this->extractCutout($imageBinary);
+                $cutoutResult = $this->extractCutout($imageBinary, $shop);
                 $method = $cutoutResult['method'];
                 if ($method === 'photoroom_v1_segment') {
                     $engine = 'photoroom-ai';
@@ -313,7 +318,7 @@ class ProductStudioService
                 }
             }
         } else {
-            $cutoutResult = $this->extractCutout($imageBinary);
+            $cutoutResult = $this->extractCutout($imageBinary, $shop);
             $outputBinary = $cutoutResult['binary'] ?? null;
             $method = $cutoutResult['method'] ?? 'failed';
             if ($method === 'photoroom_v1_segment') {
@@ -323,6 +328,10 @@ class ProductStudioService
 
         if (! $outputBinary) {
             return null;
+        }
+
+        if ($engine === 'photoroom-ai') {
+            $shop->consumePhotoroomCredits(1);
         }
 
         $relativePath = "shops/{$shop->id}/products_ai/cutout_ad_{$uniq}.{$ext}";
@@ -573,10 +582,13 @@ PROMPT;
      *
      * @return array{binary: string|null, method: string}
      */
-    public function extractCutout(string $imageBinary): array
+    public function extractCutout(string $imageBinary, ?Shop $shop = null): array
     {
-        // 1. Priorité Photoroom v1/segment (si clé API configurée)
-        if ($this->photoroom->isConfigured()) {
+        // 1. Priorité Photoroom v1/segment (si clé API configurée et quota Photoroom actif)
+        $canUsePhotoroom = $this->photoroom->isConfigured()
+            && ($shop === null || $shop->hasEnoughPhotoroomCredits(1));
+
+        if ($canUsePhotoroom) {
             $photoroomCutout = $this->photoroom->removeBackground($imageBinary, ['format' => 'png']);
             if ($photoroomCutout !== null) {
                 return [

@@ -97,8 +97,12 @@
                             <strong>{{ $p->storage_mb >= 1024 ? ($p->storage_mb / 1024).' Go' : $p->storage_mb.' Mo' }}</strong>
                         </div>
                         <div style="display:flex;align-items:center;justify-content:space-between">
-                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="sparkles" size="15" /> Crédits IA / mois :</span>
+                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="sparkles" size="15" /> Crédits IA Système / mois :</span>
                             <strong style="color:var(--brand-primary)">{{ $p->ai_credits }} crédits</strong>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="image" size="15" /> Quota Photoroom / mois :</span>
+                            <strong style="color:#7c3aed">{{ $p->photoroomCreditsMonthly() }} photos</strong>
                         </div>
                         <div style="display:flex;align-items:center;justify-content:space-between">
                             <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="refresh" size="15" /> Générations complètes :</span>
@@ -177,18 +181,24 @@
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
                             <div>
+                                <label class="label">Crédits d'IA Système / mois *</label>
+                                <input type="number" name="ai_credits" class="input" value="{{ old('ai_credits', $p->ai_credits) }}" required min="0">
+                            </div>
+                            <div>
+                                <label class="label">Quota Photoroom Studio / mois *</label>
+                                <input type="number" name="photoroom_credits" class="input" value="{{ old('photoroom_credits', $p->photoroomCreditsMonthly()) }}" required min="0">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+                            <div>
                                 <label class="label">Stockage photos (en Mo) *</label>
                                 <input type="number" name="storage_mb" class="input" value="{{ old('storage_mb', $p->storage_mb) }}" required min="100">
                             </div>
                             <div>
-                                <label class="label">Crédits d'IA par mois *</label>
-                                <input type="number" name="ai_credits" class="input" value="{{ old('ai_credits', $p->ai_credits) }}" required min="0">
+                                <label class="label">Générations complètes boutique *</label>
+                                <input type="number" name="full_generations" class="input" value="{{ old('full_generations', $p->full_generations) }}" required min="1">
                             </div>
-                        </div>
-
-                        <div style="margin-bottom:1rem">
-                            <label class="label">Générations complètes boutique *</label>
-                            <input type="number" name="full_generations" class="input" value="{{ old('full_generations', $p->full_generations) }}" required min="1">
                         </div>
 
                         <div style="margin-bottom:1rem">

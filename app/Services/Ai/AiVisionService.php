@@ -366,7 +366,8 @@ PROMPT;
                     $style,
                     $photoroomSize,
                     $width,
-                    $height
+                    $height,
+                    $shop
                 );
 
                 if ($studioVisual !== null) {
@@ -475,14 +476,19 @@ PROMPT;
         string $style,
         string $photoroomSize,
         int $targetWidth,
-        int $targetHeight
+        int $targetHeight,
+        ?Shop $shop = null
     ): ?array {
         $photoroom = app(PhotoroomService::class);
+        $canUsePhotoroom = $photoroom->isConfigured()
+            && ($shop === null || $shop->hasEnoughPhotoroomCredits(1));
 
-        if ($photoroom->isConfigured()) {
+        if ($canUsePhotoroom) {
             $editParams = $photoroom->mapStyleToEditParams($style, $photoroomSize);
             $edited = $photoroom->editProductImage($sourceImageBinary, $editParams);
             if ($edited !== null) {
+                $shop?->consumePhotoroomCredits(1);
+
                 return [
                     'binary' => $edited,
                     'model_used' => 'photoroom-v2-edit',
@@ -493,9 +499,9 @@ PROMPT;
             }
         }
 
-        // Bascule : détourage (Photoroom v1/segment si configuré, sinon local) + scène studio aux dimensions exactes
+        // Bascule : détourage (Photoroom v1/segment si configuré et quota actif, sinon local) + scène studio aux dimensions exactes
         $studioService = app(ProductStudioService::class);
-        $cutout = $studioService->extractCutout($sourceImageBinary);
+        $cutout = $studioService->extractCutout($sourceImageBinary, $shop);
         $cutoutPng = $cutout['binary'] ?? null;
 
         if (! $cutoutPng || ! function_exists('imagecreatefromstring')) {
@@ -566,12 +572,15 @@ PROMPT;
         }
 
         $isPhotoroomCutout = ($cutout['method'] ?? '') === 'photoroom_v1_segment';
+        if ($isPhotoroomCutout) {
+            $shop?->consumePhotoroomCredits(1);
+        }
 
         return [
             'binary' => $binary,
-            'model_used' => $isPhotoroomCutout ? 'photoroom-v1-studio' : 'zanika-product-studio',
+            'model_used' => $isPhotoroomCutout ? 'photoroom-v1-segment' : 'zanika-product-studio',
             'engine' => $isPhotoroomCutout ? 'photoroom-ai' : 'zanika-product-studio',
-            'step' => $isPhotoroomCutout ? 'image_studio_photoroom' : 'image_studio_local',
+            'step' => $isPhotoroomCutout ? 'image_studio_photoroom_segment' : 'image_studio_local',
             'ext' => 'jpg',
         ];
     }

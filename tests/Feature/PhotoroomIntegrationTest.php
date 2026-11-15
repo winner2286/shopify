@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\PhotoroomService;
 use App\Services\Ai\ProductStudioService;
+use App\Services\ImageService;
 use App\Services\VideoAdGeneratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpClientRequest;
@@ -413,5 +415,181 @@ class PhotoroomIntegrationTest extends TestCase
         $this->assertSame($fakeCutoutPng, $cutout);
 
         Http::assertSent(fn (HttpClientRequest $req) => $req->hasHeader('x-api-key', 'sk_live_test_777'));
+    }
+
+    public function test_photoroom_credits_and_system_ai_credits_are_tracked_separately(): void
+    {
+        Storage::fake('public');
+        config(['services.photoroom.key' => 'pr_quota_test_key']);
+
+        $fakeCutoutPng = $this->makePngBinary(300, 300, true);
+        $fakeStudioPng = $this->makePngBinary(1000, 1000, false);
+
+        Http::fake([
+            'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
+            'https://image-api.photoroom.com/v2/edit' => Http::response($fakeStudioPng, 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        [$merchant, $shop] = $this->createMerchant('quota.split@example.test');
+        $this->assertSame(80, $shop->aiCreditsRemaining());
+        $this->assertSame(15, $shop->photoroomCreditsRemaining());
+
+        // 1. Détourage flyer via Photoroom -> consomme uniquement 1 crédit Photoroom
+        $cutoutResponse = $this->actingAs($merchant)->postJson(route('ai.products.photoroom_cutout'), [
+            'image' => UploadedFile::fake()->image('sac.png', 280, 280),
+            'mode' => 'transparent',
+        ]);
+
+        $cutoutResponse->assertOk()
+            ->assertJson([
+                'success' => true,
+                'engine' => 'photoroom-ai',
+                'photoroom_credits_remaining' => 14,
+                'ai_credits_remaining' => 80,
+            ]);
+
+        // 2. Génération Studio avec photo produit -> consomme 1 crédit Photoroom, pas l'IA Système
+        $studioResponse = $this->actingAs($merchant)->postJson(route('ai.studio.generate'), [
+            'subject' => 'Sac cuir camel sur marbre',
+            'style' => 'luxury_showroom',
+            'format' => '1:1',
+            'image' => UploadedFile::fake()->image('sac-studio.png', 300, 300),
+        ]);
+
+        $studioResponse->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'engine' => 'photoroom-ai',
+                'photoroom_credits_remaining' => 13,
+                'ai_credits_remaining' => 80,
+            ]);
+
+        // 3. Import produit automatique via ImageService -> consomme 1 crédit Photoroom + log dédié
+        $uploaded = UploadedFile::fake()->image('robe.png', 320, 320);
+        app(ImageService::class)->processAndStore($uploaded, "shops/{$shop->id}/products", 'studio');
+
+        $shop->refresh();
+        $this->assertSame(3, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(12, $shop->photoroomCreditsRemaining());
+        $this->assertSame(0, $shop->aiCreditsUsedThisMonth());
+        $this->assertDatabaseHas('ai_generations', [
+            'shop_id' => $shop->id,
+            'type' => 'ai_photoroom_packshot',
+            'model_used' => 'photoroom-ai',
+        ]);
+    }
+
+    public function test_exhausted_photoroom_quota_falls_back_to_local_studio_without_calling_photoroom_api(): void
+    {
+        Storage::fake('public');
+        config(['services.photoroom.key' => 'pr_blocked_when_quota_zero']);
+        Http::fake();
+
+        [$merchant, $shop] = $this->createMerchant('quota.exhausted@example.test');
+        $shop->update([
+            'photoroom_credits_used' => $shop->photoroomCreditsMonthly(),
+            'ai_credits_used' => 0,
+        ]);
+
+        $this->assertFalse($shop->hasEnoughPhotoroomCredits(1));
+        $this->assertTrue($shop->hasEnoughAiCredits(1));
+
+        // L'upload produit et le détourage doivent fonctionner via le moteur local sans aucun appel Photoroom
+        $uploaded = UploadedFile::fake()->image('bijou.png', 300, 300);
+        $uploadResult = app(ImageService::class)->processAndStore($uploaded, "shops/{$shop->id}/products", 'studio');
+        $this->assertSame('zanika-local-studio', $uploadResult['engine']);
+
+        $cutoutResponse = $this->actingAs($merchant)->postJson(route('ai.products.photoroom_cutout'), [
+            'image' => UploadedFile::fake()->image('bijou-cutout.png', 280, 280),
+            'mode' => 'studio_white',
+        ]);
+
+        $cutoutResponse->assertOk()
+            ->assertJson([
+                'success' => true,
+                'engine' => 'zanika-product-studio',
+                'photoroom_credits_remaining' => 0,
+                'ai_credits_remaining' => 79,
+            ]);
+
+        Http::assertNothingSent();
+
+        $shop->refresh();
+        $this->assertSame(15, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(1, $shop->aiCreditsUsedThisMonth());
+    }
+
+    public function test_super_admin_can_recharge_and_reset_photoroom_credits_independently(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_ADMIN,
+            'email_verified_at' => now(),
+        ]);
+
+        [, $shop] = $this->createMerchant('admin.quota@example.test');
+        $shop->update([
+            'ai_credits_used' => 20,
+            'photoroom_credits_used' => 10,
+        ]);
+
+        $plan = Plan::firstOrCreate(['slug' => 'essentiel'], [
+            'name' => 'Essentiel',
+            'monthly_price' => 10000,
+            'max_products' => 50,
+            'max_shops' => 1,
+            'storage_mb' => 2048,
+            'ai_credits' => 80,
+            'photoroom_credits' => 15,
+            'full_generations' => 1,
+            'active' => true,
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.ai_usage'))
+            ->assertOk()
+            ->assertSee('Appels IA Système')
+            ->assertSee('Appels Photoroom Studio');
+
+        // Recharge ciblée Photoroom (+5) : ne doit pas toucher aux crédits IA Système
+        $this->actingAs($admin)->post(route('admin.ai.recharge', $shop), [
+            'quota_target' => 'photoroom',
+            'action_type' => 'add',
+            'bonus_credits' => 5,
+        ])->assertRedirect();
+
+        $shop->refresh();
+        $this->assertSame(5, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(20, $shop->aiCreditsUsedThisMonth());
+
+        // Reset ciblé Photoroom : remet uniquement photoroom_credits_used à 0
+        $this->actingAs($admin)->post(route('admin.ai.recharge', $shop), [
+            'quota_target' => 'photoroom',
+            'action_type' => 'reset_used',
+            'bonus_credits' => 0,
+        ])->assertRedirect();
+
+        $shop->refresh();
+        $this->assertSame(0, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(20, $shop->aiCreditsUsedThisMonth());
+
+        // Mise à jour du quota Photoroom sur la formule par le Super-Admin
+        $this->actingAs($admin)->post(route('admin.plans.update', $plan), [
+            'name' => $plan->name,
+            'monthly_price' => $plan->monthly_price,
+            'max_products' => $plan->max_products,
+            'max_shops' => $plan->max_shops,
+            'storage_mb' => $plan->storage_mb,
+            'ai_credits' => 90,
+            'photoroom_credits' => 25,
+            'full_generations' => $plan->full_generations,
+            'active' => '1',
+        ])->assertRedirect();
+
+        $plan->refresh();
+        $this->assertSame(90, $plan->ai_credits);
+        $this->assertSame(25, $plan->photoroomCreditsMonthly());
+
+        $this->actingAs($admin)->get(route('admin.plans'))
+            ->assertOk()
+            ->assertSee('Quota Photoroom / mois');
     }
 }

@@ -18,6 +18,7 @@ class PlanSeeder extends Seeder
                 'max_shops' => 1,
                 'storage_mb' => 2048,
                 'ai_credits' => 80,
+                'photoroom_credits' => 15,
                 'full_generations' => 1,
                 'features' => [
                     '1 boutique e-commerce incluse',
@@ -35,6 +36,7 @@ class PlanSeeder extends Seeder
                 'max_shops' => 3,
                 'storage_mb' => 8192,
                 'ai_credits' => 350,
+                'photoroom_credits' => 50,
                 'full_generations' => 2,
                 'features' => [
                     'Jusqu\'à 3 boutiques distinctes gérées',
@@ -54,6 +56,7 @@ class PlanSeeder extends Seeder
                 'max_shops' => 999,
                 'storage_mb' => 25600,
                 'ai_credits' => 1200,
+                'photoroom_credits' => 150,
                 'full_generations' => 5,
                 'features' => [
                     'Boutiques illimitées sans restriction',

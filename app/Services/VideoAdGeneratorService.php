@@ -404,7 +404,7 @@ class VideoAdGeneratorService
             'products_count' => count($formattedProducts),
             'platform' => $platform,
             'shop_url' => $shop->public_url,
-            'visual_engine' => app(\App\Services\Ai\PhotoroomService::class)->isConfigured()
+            'visual_engine' => app(\App\Services\Ai\PhotoroomService::class)->isConfigured() && $shop->hasEnoughPhotoroomCredits(1)
                 ? 'photoroom-ai'
                 : 'zanika-studio',
         ];

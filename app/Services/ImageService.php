@@ -79,11 +79,21 @@ class ImageService
             }
             imagecopyresampled($mainImage, $sourceImage, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
         } else {
-            // Mode "Sublimer avec l'IA" (Photoroom Studio en priorité pour les photos produits, sinon studio local)
+            // Mode "Sublimer avec l'IA" (Photoroom Studio si quota Photoroom actif pour la boutique, sinon studio local)
             $photoroomApplied = false;
             if (! str_contains($directory, 'logo')) {
+                $shop = null;
+                if (preg_match('#^shops/(\d+)(?:/|$)#', trim(str_replace('\\', '/', $directory), '/'), $match)) {
+                    $shop = \App\Models\Shop::withoutGlobalScopes()->find((int) $match[1]);
+                } elseif (auth()->check()) {
+                    $shop = auth()->user()->shop ?? null;
+                }
+
                 $photoroom = app(\App\Services\Ai\PhotoroomService::class);
-                if ($photoroom->isConfigured()) {
+                $canUsePhotoroom = $photoroom->isConfigured()
+                    && ($shop === null || $shop->hasEnoughPhotoroomCredits(1));
+
+                if ($canUsePhotoroom) {
                     $rawBinary = @file_get_contents($filePath);
                     if (is_string($rawBinary) && $rawBinary !== '') {
                         $prBinary = $photoroom->studioPackshot($rawBinary, 'studio_white', '1000x1000');
@@ -100,6 +110,22 @@ class ImageService
                                 }
                                 $photoroomApplied = true;
                                 $usedEngine = 'photoroom-ai';
+
+                                if ($shop !== null) {
+                                    $shop->consumePhotoroomCredits(1);
+                                    \App\Models\AiGeneration::create([
+                                        'shop_id' => $shop->id,
+                                        'type' => 'ai_photoroom_packshot',
+                                        'step' => 'auto_upload_packshot',
+                                        'model_used' => 'photoroom-ai',
+                                        'prompt_tokens' => 0,
+                                        'completion_tokens' => 0,
+                                        'cost_estimated_fcfa' => 15,
+                                        'duration_ms' => 500,
+                                        'status' => 'success',
+                                        'input_summary' => 'Retouche & cadrage automatique Photoroom à l\'import produit',
+                                    ]);
+                                }
                             }
                         }
                     }

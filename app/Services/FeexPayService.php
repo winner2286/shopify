@@ -191,8 +191,11 @@ class FeexPayService
             'renews_at' => $currentEnd->copy()->addMonth(),
         ]);
 
-        // Réapprovisionnement des crédits IA pour le nouveau cycle de facturation
-        $subscription->shop?->update(['ai_credits_used' => 0]);
+        // Réapprovisionnement des crédits IA Système et Photoroom pour le nouveau cycle de facturation
+        $subscription->shop?->update([
+            'ai_credits_used' => 0,
+            'photoroom_credits_used' => 0,
+        ]);
 
         Log::info("Abonnement #{$subscription->id} activé/renouvelé avec succès via GeniusPay (Réf: {$transactionRef}).");
     }

@@ -32,35 +32,35 @@
     <!-- 4 Métriques IA -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;margin-bottom:2rem">
         <div class="card" style="padding:1.4rem">
-            <div style="font-size:.85rem;color:var(--text-soft)">Appels IA Réalisés</div>
+            <div style="font-size:.85rem;color:var(--text-soft)">Appels IA Système</div>
             <div style="font-size:1.8rem;font-weight:700;font-family:var(--font-display);color:var(--brand-2)">
-                {{ number_format($totalCalls, 0, ',', ' ') }}
+                {{ number_format($systemAiCalls ?? $totalCalls, 0, ',', ' ') }}
             </div>
-            <div style="font-size:.8rem;color:var(--text-soft)">Générations totales</div>
+            <div style="font-size:.8rem;color:var(--text-soft)">Groq / OpenRouter ({{ number_format($systemAiCostFcfa ?? $totalCostFcfa, 0, ',', ' ') }} FCFA)</div>
         </div>
 
         <div class="card" style="padding:1.4rem">
-            <div style="font-size:.85rem;color:var(--text-soft)">Coût API Fournisseur Estimé</div>
+            <div style="font-size:.85rem;color:var(--text-soft)">Appels Photoroom Studio</div>
+            <div style="font-size:1.8rem;font-weight:700;font-family:var(--font-display);color:var(--brand-1)">
+                {{ number_format($photoroomCalls ?? 0, 0, ',', ' ') }}
+            </div>
+            <div style="font-size:.8rem;color:var(--text-soft)">Détourage & Packshots ({{ number_format($photoroomCostFcfa ?? 0, 0, ',', ' ') }} FCFA)</div>
+        </div>
+
+        <div class="card" style="padding:1.4rem">
+            <div style="font-size:.85rem;color:var(--text-soft)">Coût API Total Estimé</div>
             <div style="font-size:1.8rem;font-weight:700;font-family:var(--font-display)" class="gradient-text">
                 {{ number_format($totalCostFcfa, 0, ',', ' ') }} FCFA
             </div>
-            <div style="font-size:.8rem;color:var(--ok)">Estimation technique • Purement indicatif</div>
+            <div style="font-size:.8rem;color:var(--ok)">Total {{ number_format($totalCalls, 0, ',', ' ') }} générations</div>
         </div>
 
         <div class="card" style="padding:1.4rem">
-            <div style="font-size:.85rem;color:var(--text-soft)">Tokens Prompt (Entrée)</div>
-            <div style="font-size:1.8rem;font-weight:700;font-family:var(--font-display)">
-                {{ number_format($totalPromptTokens, 0, ',', ' ') }}
+            <div style="font-size:.85rem;color:var(--text-soft)">Tokens LLM (Entrée / Sortie)</div>
+            <div style="font-size:1.5rem;font-weight:700;font-family:var(--font-display)">
+                {{ number_format($totalPromptTokens + $totalCompletionTokens, 0, ',', ' ') }}
             </div>
-            <div style="font-size:.8rem;color:var(--text-soft)">Consommation prompts</div>
-        </div>
-
-        <div class="card" style="padding:1.4rem">
-            <div style="font-size:.85rem;color:var(--text-soft)">Tokens Complétion (Sortie)</div>
-            <div style="font-size:1.8rem;font-weight:700;font-family:var(--font-display)">
-                {{ number_format($totalCompletionTokens, 0, ',', ' ') }}
-            </div>
-            <div style="font-size:.8rem;color:var(--text-soft)">Contenus générés</div>
+            <div style="font-size:.8rem;color:var(--text-soft)">{{ number_format($totalPromptTokens, 0, ',', ' ') }} in • {{ number_format($totalCompletionTokens, 0, ',', ' ') }} out</div>
         </div>
     </div>
 
@@ -93,18 +93,17 @@
 
     <!-- Gestion des Quotas & Recharges par Boutique (Module 15) -->
     <div class="card" style="margin-bottom:2rem;padding:1.5rem">
-        <h3 style="margin:0 0 1rem 0;font-size:1.2rem">Consommation des Crédits & Ajustement des Quotas Marchands</h3>
+        <h3 style="margin:0 0 1rem 0;font-size:1.2rem">Quotas Séparés : Crédits IA Système vs Photoroom Studio</h3>
 
         <div style="overflow-x:auto">
-            <table class="table" style="width:100%;min-width:760px;border-collapse:collapse;font-size:.88rem">
+            <table class="table" style="width:100%;min-width:920px;border-collapse:collapse;font-size:.88rem">
                 <thead>
                     <tr style="background:var(--bg-soft);border-bottom:1px solid var(--border);text-align:left">
                         <th style="padding:.75rem">Boutique</th>
                         <th style="padding:.75rem">Plan Actuel</th>
-                        <th style="padding:.75rem;text-align:center">Crédits Alloués</th>
-                        <th style="padding:.75rem;text-align:center">Consommés</th>
-                        <th style="padding:.75rem;text-align:center">Solde Restant</th>
-                        <th style="padding:.75rem;text-align:right;white-space:nowrap">Action Super-Admin</th>
+                        <th style="padding:.75rem;text-align:center">IA Système (Restant / Plan)</th>
+                        <th style="padding:.75rem;text-align:center">Photoroom Studio (Restant / Plan)</th>
+                        <th style="padding:.75rem;text-align:right;white-space:nowrap">Recharge IA / Photoroom</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -114,38 +113,56 @@
                             $remaining = $s->aiCreditsRemaining();
                             $used = $s->aiCreditsUsedThisMonth();
                             $pctUsed = $allocated > 0 ? min(100, round(($used / $allocated) * 100)) : 0;
+
+                            $prAllocated = $s->photoroomCreditsMonthly();
+                            $prRemaining = $s->photoroomCreditsRemaining();
+                            $prUsed = $s->photoroomCreditsUsedThisMonth();
+                            $prPctUsed = $prAllocated > 0 ? min(100, round(($prUsed / $prAllocated) * 100)) : 0;
                         @endphp
                         <tr style="border-bottom:1px solid var(--border)">
                             <td style="padding:.75rem;font-weight:600">
-                                {{ $s->name }} <span style="font-size:.75rem;color:var(--text-soft)">({{ $s->slug }})</span>
+                                {{ $s->name }} <span style="font-size:.75rem;color:var(--text-soft)">({{ $s->subdomain }})</span>
                             </td>
                             <td style="padding:.75rem">
                                 <span class="badge" style="background:var(--bg-soft)">{{ strtoupper($s->currentPlan()->name ?? 'FREE') }}</span>
                             </td>
-                            <td style="padding:.75rem;text-align:center;font-weight:600">{{ $allocated }}</td>
-                            <td style="padding:.75rem;text-align:center;color:{{ $pctUsed >= 90 ? 'var(--danger)' : 'var(--text)' }}">
-                                {{ $used }} ({{ $pctUsed }}%)
+                            <td style="padding:.75rem;text-align:center">
+                                <strong style="color:{{ $remaining <= 5 ? 'var(--danger)' : 'var(--ok)' }}">{{ $remaining }}</strong> / {{ $allocated }}
+                                <div style="font-size:.74rem;color:{{ $pctUsed >= 90 ? 'var(--danger)' : 'var(--text-soft)' }}">{{ $used }} utilisés ({{ $pctUsed }}%)</div>
                             </td>
-                            <td style="padding:.75rem;text-align:center;font-weight:700;color:{{ $remaining <= 5 ? 'var(--danger)' : 'var(--ok)' }}">
-                                {{ $remaining }}
+                            <td style="padding:.75rem;text-align:center">
+                                <strong style="color:{{ $prRemaining <= 2 ? 'var(--danger)' : 'var(--brand-1)' }}">{{ $prRemaining }}</strong> / {{ $prAllocated }}
+                                <div style="font-size:.74rem;color:{{ $prPctUsed >= 90 ? 'var(--danger)' : 'var(--text-soft)' }}">{{ $prUsed }} utilisés ({{ $prPctUsed }}%)</div>
                             </td>
                             <td style="padding:.6rem .75rem;text-align:right;white-space:nowrap">
-                                <div style="display:inline-flex;align-items:center;justify-content:flex-end;gap:.4rem;white-space:nowrap">
+                                <div style="display:inline-flex;align-items:center;justify-content:flex-end;gap:.35rem;flex-wrap:wrap">
                                     <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="margin:0;display:inline-block">
                                         @csrf
+                                        <input type="hidden" name="quota_target" value="ai">
                                         <input type="hidden" name="action_type" value="add">
                                         <input type="hidden" name="bonus_credits" value="100">
-                                        <button type="submit" class="btn btn-primary" style="height:32px;min-height:32px;padding:0 .75rem;font-size:.78rem;font-weight:600;border-radius:8px;box-shadow:none;display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap" title="Accorder 100 crédits bonus">
-                                            <span>+100 Crédits</span>
-                                        </button>
+                                        <button type="submit" class="btn btn-primary" style="height:30px;min-height:30px;padding:0 .65rem;font-size:.76rem;font-weight:600;border-radius:8px;box-shadow:none" title="Accorder 100 crédits IA bonus">+100 IA</button>
                                     </form>
                                     <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="margin:0;display:inline-block">
                                         @csrf
+                                        <input type="hidden" name="quota_target" value="ai">
                                         <input type="hidden" name="action_type" value="reset_used">
                                         <input type="hidden" name="bonus_credits" value="0">
-                                        <button type="submit" class="btn btn-ghost" style="height:32px;min-height:32px;padding:0 .65rem;font-size:.78rem;font-weight:500;border-radius:8px;border:1px solid var(--border);color:var(--text-soft);background:var(--bg-soft);display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap" onclick="return confirm('Réinitialiser la consommation de la boutique « {{ addslashes($s->name) }} » ?')" title="Remettre à zéro les crédits utilisés">
-                                            <span>Reset</span>
-                                        </button>
+                                        <button type="submit" class="btn btn-ghost" style="height:30px;min-height:30px;padding:0 .55rem;font-size:.76rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-soft)" title="Remettre à zéro les crédits IA">Reset IA</button>
+                                    </form>
+                                    <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="margin:0;display:inline-block">
+                                        @csrf
+                                        <input type="hidden" name="quota_target" value="photoroom">
+                                        <input type="hidden" name="action_type" value="add">
+                                        <input type="hidden" name="bonus_credits" value="25">
+                                        <button type="submit" class="btn btn-primary" style="height:30px;min-height:30px;padding:0 .65rem;font-size:.76rem;font-weight:600;border-radius:8px;background:#7c3aed;border-color:#7c3aed;box-shadow:none" title="Accorder 25 photos Photoroom bonus">+25 Photoroom</button>
+                                    </form>
+                                    <form action="{{ route('admin.ai.recharge', $s) }}" method="POST" style="margin:0;display:inline-block">
+                                        @csrf
+                                        <input type="hidden" name="quota_target" value="photoroom">
+                                        <input type="hidden" name="action_type" value="reset_used">
+                                        <input type="hidden" name="bonus_credits" value="0">
+                                        <button type="submit" class="btn btn-ghost" style="height:30px;min-height:30px;padding:0 .55rem;font-size:.76rem;border-radius:8px;border:1px solid var(--border);background:var(--bg-soft)" title="Remettre à zéro le quota Photoroom">Reset PR</button>
                                     </form>
                                 </div>
                             </td>

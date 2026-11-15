@@ -122,6 +122,15 @@ class PlatformAdminController extends Controller
         $totalPromptTokens = (int) AiGeneration::withoutGlobalScopes()->sum('prompt_tokens');
         $totalCompletionTokens = (int) AiGeneration::withoutGlobalScopes()->sum('completion_tokens');
 
+        $photoroomQuery = AiGeneration::withoutGlobalScopes()->where(function ($q) {
+            $q->whereIn('model_used', ['photoroom-ai', 'photoroom-v2-edit', 'photoroom-v1-segment', 'photoroom-v1-studio'])
+              ->orWhere('type', 'like', 'ai_photoroom%');
+        });
+        $photoroomCalls = (clone $photoroomQuery)->count();
+        $photoroomCostFcfa = (int) (clone $photoroomQuery)->sum('cost_estimated_fcfa');
+        $systemAiCalls = max(0, $totalCalls - $photoroomCalls);
+        $systemAiCostFcfa = max(0, $totalCostFcfa - $photoroomCostFcfa);
+
         // Métriques de l'Agent IA ECOM
         $totalConversations = \App\Models\AiConversation::withoutGlobalScopes()->count();
         $totalMessages = \App\Models\AiMessage::withoutGlobalScopes()->count();
@@ -140,6 +149,7 @@ class PlatformAdminController extends Controller
         return view('admin.ai_usage', compact(
             'totalCalls', 'totalCostFcfa', 'totalPromptTokens',
             'totalCompletionTokens', 'generations',
+            'photoroomCalls', 'photoroomCostFcfa', 'systemAiCalls', 'systemAiCostFcfa',
             'totalConversations', 'totalMessages', 'totalAutomations', 'topConsumerShops'
         ));
     }
@@ -241,17 +251,22 @@ class PlatformAdminController extends Controller
         $this->checkAdmin($request);
 
         $validated = $request->validate([
-            'bonus_credits' => 'required|integer|min:1|max:100000',
+            'bonus_credits' => 'nullable|integer|min:0|max:100000',
             'action_type' => 'required|string|in:add,reset_used',
+            'quota_target' => 'nullable|string|in:ai,photoroom',
         ]);
 
+        $target = $validated['quota_target'] ?? 'ai';
+        $column = $target === 'photoroom' ? 'photoroom_credits_used' : 'ai_credits_used';
+        $label = $target === 'photoroom' ? 'Photoroom Studio' : 'IA Système';
+
         if ($validated['action_type'] === 'reset_used') {
-            $shop->update(['ai_credits_used' => 0]);
-            $msg = "Les crédits utilisés de la boutique « {$shop->name} » ont été remis à zéro.";
+            $shop->update([$column => 0]);
+            $msg = "Les crédits {$label} utilisés de la boutique « {$shop->name} » ont été remis à zéro.";
         } else {
-            // Décrémente l'usage pour redonner des crédits disponibles
-            $shop->decrement('ai_credits_used', max(0, $validated['bonus_credits']));
-            $msg = "{$validated['bonus_credits']} crédits IA bonus ont été accordés à la boutique « {$shop->name} ».";
+            $bonus = max(1, (int) ($validated['bonus_credits'] ?? 10));
+            $shop->decrement($column, $bonus);
+            $msg = "{$bonus} crédits {$label} bonus ont été accordés à la boutique « {$shop->name} ».";
         }
 
         return back()->with('status', $msg);
@@ -283,6 +298,7 @@ class PlatformAdminController extends Controller
             'max_shops' => 'nullable|integer|min:1',
             'storage_mb' => 'required|integer|min:100',
             'ai_credits' => 'required|integer|min:0',
+            'photoroom_credits' => 'nullable|integer|min:0',
             'full_generations' => 'required|integer|min:1',
             'features' => 'nullable|string',
         ]);
@@ -305,6 +321,7 @@ class PlatformAdminController extends Controller
             'max_shops' => $validated['max_shops'] ?? $plan->max_shops ?? 1,
             'storage_mb' => $validated['storage_mb'],
             'ai_credits' => $validated['ai_credits'],
+            'photoroom_credits' => $validated['photoroom_credits'] ?? $plan->photoroom_credits ?? 15,
             'full_generations' => $validated['full_generations'],
             'active' => $request->has('active'),
             'features' => $featuresArray,

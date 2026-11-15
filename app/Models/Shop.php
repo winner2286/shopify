@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
     'user_id', 'name', 'subdomain', 'status', 'onboarding_step', 'onboarding_data',
     'locale', 'currency', 'description', 'business_category', 'theme', 'contact',
     'logo_path', 'brand_color', 'visual_style', 'target_audience', 'ai_credits_used',
+    'photoroom_credits_used',
 ])]
 class Shop extends Model
 {
@@ -29,6 +30,7 @@ class Shop extends Model
             'onboarding_data' => 'array',
             'onboarding_step' => 'integer',
             'ai_credits_used' => 'integer',
+            'photoroom_credits_used' => 'integer',
         ];
     }
 
@@ -64,6 +66,7 @@ class Shop extends Model
             'max_products' => 50,
             'storage_mb' => 2048,
             'ai_credits' => 80,
+            'photoroom_credits' => 15,
             'full_generations' => 1,
             'active' => true,
         ]);
@@ -116,6 +119,36 @@ class Shop extends Model
     public function consumeAiCredits(int $cost = 1): void
     {
         $this->increment('ai_credits_used', max(1, $cost));
+        $this->refresh();
+    }
+
+    public function photoroomCreditsMonthly(): int
+    {
+        return $this->currentPlan()->photoroomCreditsMonthly();
+    }
+
+    public function photoroomCreditsUsedThisMonth(): int
+    {
+        return max(0, (int) $this->photoroom_credits_used);
+    }
+
+    public function photoroomCreditsRemaining(): int
+    {
+        if ($this->owner?->isAdmin()) {
+            return 9999;
+        }
+
+        return max(0, $this->photoroomCreditsMonthly() - (int) $this->photoroom_credits_used);
+    }
+
+    public function hasEnoughPhotoroomCredits(int $cost = 1): bool
+    {
+        return $this->photoroomCreditsRemaining() >= max(1, $cost);
+    }
+
+    public function consumePhotoroomCredits(int $cost = 1): void
+    {
+        $this->increment('photoroom_credits_used', max(1, $cost));
         $this->refresh();
     }
 

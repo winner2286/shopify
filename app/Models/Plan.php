@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['slug', 'name', 'monthly_price', 'max_products', 'max_shops', 'storage_mb', 'ai_credits', 'full_generations', 'features', 'active'])]
+#[Fillable(['slug', 'name', 'monthly_price', 'max_products', 'max_shops', 'storage_mb', 'ai_credits', 'photoroom_credits', 'full_generations', 'features', 'active'])]
 class Plan extends Model
 {
     protected function casts(): array
     {
-        return ['features' => 'array', 'active' => 'boolean', 'max_shops' => 'integer'];
+        return ['features' => 'array', 'active' => 'boolean', 'max_shops' => 'integer', 'photoroom_credits' => 'integer'];
     }
 
     public function subscriptions(): HasMany
@@ -39,6 +39,23 @@ class Plan extends Model
     public function isUnlimitedShops(): bool
     {
         return $this->maxShops() >= 999;
+    }
+
+    /**
+     * Quota mensuel dédié Photoroom Studio (détourage & packshots v2/edit).
+     */
+    public function photoroomCreditsMonthly(): int
+    {
+        if ($this->photoroom_credits !== null) {
+            return max(0, (int) $this->photoroom_credits);
+        }
+
+        return match ($this->slug) {
+            'essentiel', 'free' => 15,
+            'pro' => 50,
+            'premium' => 150,
+            default => 15,
+        };
     }
 
     public function isEssentiel(): bool

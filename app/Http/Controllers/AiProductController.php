@@ -234,8 +234,11 @@ class AiProductController extends Controller
             }
 
             if ($binary) {
-                $extracted = $studioService->extractCutout($binary);
+                $extracted = $studioService->extractCutout($binary, $shop);
                 $cutoutPngBinary = $extracted['binary'] ?? null;
+                if (($extracted['method'] ?? '') === 'photoroom_v1_segment') {
+                    $shop->consumePhotoroomCredits(1);
+                }
             }
         }
 
@@ -339,6 +342,10 @@ class AiProductController extends Controller
             'products' => $products,
             'recentVisuals' => $recentVisuals,
             'photoroomConfigured' => $photoroom->isConfigured(),
+            'photoroomCreditsRemaining' => $shop->photoroomCreditsRemaining(),
+            'photoroomCreditsMonthly' => $shop->photoroomCreditsMonthly(),
+            'aiCreditsRemaining' => $shop->aiCreditsRemaining(),
+            'aiCreditsMonthly' => $shop->aiCreditsMonthly(),
         ]);
     }
 
@@ -362,10 +369,10 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
-        if (! $shop->hasEnoughAiCredits(1)) {
+        if (! $shop->hasEnoughAiCredits(1) && ! $shop->hasEnoughPhotoroomCredits(1)) {
             return response()->json([
                 'status' => 'error',
-                'error' => 'Crédits IA mensuels épuisés.',
+                'error' => 'Crédits IA et quota Photoroom mensuels épuisés.',
             ], 402);
         }
 
@@ -381,7 +388,12 @@ class AiProductController extends Controller
         );
 
         if (($result['status'] ?? '') === 'success') {
-            $shop->consumeAiCredits(1);
+            if (($result['engine'] ?? '') !== 'photoroom-ai') {
+                $shop->consumeAiCredits(1);
+            }
+            $shop->refresh();
+            $result['photoroom_credits_remaining'] = $shop->photoroomCreditsRemaining();
+            $result['ai_credits_remaining'] = $shop->aiCreditsRemaining();
         }
 
         return response()->json($result);
@@ -406,10 +418,10 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
-        if (! $shop->hasEnoughAiCredits(1)) {
+        if (! $shop->hasEnoughPhotoroomCredits(1) && ! $shop->hasEnoughAiCredits(1)) {
             return response()->json([
                 'status' => 'error',
-                'error' => 'Crédits IA mensuels épuisés.',
+                'error' => 'Quotas Photoroom et crédits IA mensuels épuisés.',
             ], 402);
         }
 
@@ -463,7 +475,10 @@ class AiProductController extends Controller
             ], 500);
         }
 
-        $shop->consumeAiCredits(1);
+        if (($cutout['engine'] ?? '') !== 'photoroom-ai') {
+            $shop->consumeAiCredits(1);
+        }
+        $shop->refresh();
         AiGeneration::create([
             'shop_id' => $shop->id,
             'type' => 'ai_photoroom_cutout',
@@ -505,6 +520,8 @@ class AiProductController extends Controller
             'data_uri' => $cutout['data_uri'],
             'engine' => $cutout['engine'],
             'cutout_method' => $cutout['cutout_method'],
+            'photoroom_credits_remaining' => $shop->photoroomCreditsRemaining(),
+            'ai_credits_remaining' => $shop->aiCreditsRemaining(),
             'message' => $cutout['engine'] === 'photoroom-ai'
                 ? 'Photo détourée et sublimée avec Photoroom IA !'
                 : 'Photo détourée avec Zanika Studio !',
