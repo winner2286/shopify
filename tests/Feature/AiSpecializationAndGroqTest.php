@@ -205,11 +205,25 @@ class AiSpecializationAndGroqTest extends TestCase
 
         $report = $service->runBenchmark($this->shop, $this->merchant);
         $this->assertEquals(100.0, $report['global_score_percent']);
+        $this->assertEquals(16, $report['total_cases']);
 
         $dataset = $service->exportFineTuningDataset('ai/test_sft_dataset.jsonl');
         $this->assertEquals('success', $dataset['status']);
-        $this->assertEquals(9, $dataset['examples_count']);
+        $this->assertGreaterThanOrEqual(50, $dataset['examples_count']);
+        $this->assertCount(10, $dataset['categories_covered']);
         $this->assertTrue($dataset['privacy_compliant']);
+
+        $dpo = $service->exportDpoDataset('ai/test_dpo_dataset.jsonl');
+        $this->assertEquals('success', $dpo['status']);
+        $this->assertGreaterThanOrEqual(10, $dpo['pairs_count']);
+
+        $tools = $service->exportToolCallingDataset('ai/test_tools_dataset.jsonl');
+        $this->assertEquals('success', $tools['status']);
+        $this->assertGreaterThanOrEqual(10, $tools['examples_count']);
+
+        $training = $service->trainAllModels($this->shop, $this->merchant);
+        $this->assertEquals(100.0, $training['benchmark']['global_score_percent']);
+        $this->assertGreaterThanOrEqual(24, $training['manifest']['rag_knowledge_base']['active_chunks_count']);
     }
 }
 

@@ -1,0 +1,74 @@
+{
+    "trained_at": "2026-11-15T16:58:19+00:00",
+    "pipeline_duration_ms": 121.54,
+    "engines": {
+        "primary_cloud_llm": "openai\/gpt-oss-120b",
+        "fallback_cloud_llm": "llama-3.3-70b-versatile",
+        "fast_cloud_llm": "llama-3.1-8b-instant",
+        "local_sovereign_engine": "zanika-local-intelligence (BM25 + Trigram RAG + Live DB + Shop Memory)"
+    },
+    "rag_knowledge_base": {
+        "active_chunks_count": 24,
+        "categories": {
+            "africa_playbook": 6,
+            "catalog_rules": 5,
+            "ecommerce_strategy": 1,
+            "marketing_ads": 1,
+            "navigation_ui": 6,
+            "orders_cod": 4,
+            "payments_geniuspay": 1
+        }
+    },
+    "datasets": {
+        "sft": {
+            "status": "success",
+            "path": "C:\\Users\\kougn\\Desktop\\shopify\\plateforme\\storage\\app\/private\\ai\/zanika_ecommerce_sft_dataset.jsonl",
+            "relative_path": "ai\/zanika_ecommerce_sft_dataset.jsonl",
+            "examples_count": 54,
+            "categories_covered": [
+                "platform_qa",
+                "natural_conversation",
+                "order_management",
+                "customer_service",
+                "business_advisory",
+                "product_inventory",
+                "claims_and_returns",
+                "delivery_and_cod",
+                "problem_solving_and_security",
+                "multi_turn_coaching"
+            ],
+            "privacy_compliant": true
+        },
+        "dpo": {
+            "status": "success",
+            "path": "C:\\Users\\kougn\\Desktop\\shopify\\plateforme\\storage\\app\/private\\ai\/zanika_ecommerce_dpo_dataset.jsonl",
+            "relative_path": "ai\/zanika_ecommerce_dpo_dataset.jsonl",
+            "pairs_count": 12,
+            "categories_covered": [
+                "natural_tone_vs_robotic_menu",
+                "natural_greeting_vs_unsolicited_status",
+                "margin_protection_vs_price_slashing",
+                "credit_refusal_playbook",
+                "exact_zanika_routes_vs_hallucination",
+                "onboarding_photo_choice_accuracy",
+                "multi_shop_plan_limits_accuracy",
+                "cod_verification_vs_blind_shipping",
+                "two_phase_security_vs_silent_mutation",
+                "profitability_causal_reasoning",
+                "security_prompt_injection_defense",
+                "africa_payment_localization"
+            ]
+        },
+        "tool_calling": {
+            "status": "success",
+            "path": "C:\\Users\\kougn\\Desktop\\shopify\\plateforme\\storage\\app\/private\\ai\/zanika_tool_calling_dataset.jsonl",
+            "relative_path": "ai\/zanika_tool_calling_dataset.jsonl",
+            "examples_count": 12
+        }
+    },
+    "benchmark": {
+        "global_score_percent": 100,
+        "passed_cases": 16,
+        "total_cases": 16
+    }
+}

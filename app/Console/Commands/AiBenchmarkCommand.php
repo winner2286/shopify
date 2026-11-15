@@ -42,7 +42,11 @@ class AiBenchmarkCommand extends Command
 
         if ($this->option('export-dataset')) {
             $export = $service->exportFineTuningDataset();
+            $dpo = $service->exportDpoDataset();
+            $tools = $service->exportToolCallingDataset();
             $this->info("Dataset SFT JSONL généré ({$export['examples_count']} scénarios certifiés) : {$export['path']}");
+            $this->info("Dataset DPO JSONL généré ({$dpo['pairs_count']} paires de préférence) : {$dpo['path']}");
+            $this->info("Dataset Tool-Calling JSONL généré ({$tools['examples_count']} appels d'outils) : {$tools['path']}");
         }
 
         return self::SUCCESS;

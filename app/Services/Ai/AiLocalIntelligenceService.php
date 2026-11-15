@@ -502,6 +502,10 @@ DIAG;
             'comment', 'ou ', 'où ', 'ajouter', 'modifier', 'changer', 'creer', 'créer',
             'consulter', 'voir', 'savoir', 'configurer', 'forfait', 'abonnement',
             'studio', 'code promo', 'réduction', 'reduction', 'rupture', 'livreur',
+            'boutique', 'plusieurs', 'limite', 'affiche', 'flyer', 'tiktok', 'vidéo', 'video',
+            'crédit', 'credit', 'tabaski', 'ramadan', 'noël', 'noel', 'black friday',
+            'publier', 'pause', 'mémoire', 'memoire', 'automatisation', 'photo', 'retouche',
+            'originale', 'tmoney', 'moov', 'wave', 'geniuspay', 'ajuster', 'stock',
         ];
 
         foreach ($patterns as $p) {
@@ -530,6 +534,14 @@ DIAG;
                 ->where('status', Order::STATUS_PENDING)
                 ->count();
             return "\n\n📌 **En direct sur ta boutique** : Tu as **{$pending} commande(s) en attente** dans `/commandes`.";
+        }
+
+        if ($slug === 'guide-multi-boutiques-forfaits' && $shop->user) {
+            $maxShops = $shop->user->maxAllowedShops();
+            $currentShops = $shop->user->shops()->withoutGlobalScopes()->count();
+            $planName = $shop->user->currentPlan()?->name ?? 'Essentiel';
+            $limitLabel = $maxShops >= 999 ? 'Illimité' : $maxShops;
+            return "\n\n📌 **En direct sur ton compte** : Tu es sur le forfait **{$planName}** avec **{$currentShops} / {$limitLabel} boutique(s)** active(s).";
         }
 
         return '';

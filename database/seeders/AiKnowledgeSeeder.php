@@ -350,6 +350,160 @@ Méthode pour transformer une fiche produit ordinaire en page à haute conversio
    - Au moins 2 photos nettes (packshot fond blanc + mise en scène lifestyle via le Studio Visuel IA /assistant-ia/studio).
 TEXT
             ],
+
+            // =========================================================================
+            // 5. MULTI-BOUTIQUES, FORFAITS, ONBOARDING & GESTION AVANCÉE (NOUVEAU)
+            // =========================================================================
+            [
+                'category' => 'navigation_ui',
+                'title' => 'Comment créer plusieurs boutiques et comprendre les limites par forfait',
+                'slug' => 'guide-multi-boutiques-forfaits',
+                'keywords' => ['multi-boutiques', 'plusieurs boutiques', 'creer boutique', 'nouvelle boutique', 'forfait', 'essentiel', 'pro', 'premium', 'limite', 'quota', 'basculer'],
+                'target_routes' => 'shops.create, dashboard, subscription.checkout',
+                'sort_order' => 17,
+                'content' => <<<TEXT
+Sur Zanika, un même compte commerçant peut créer et piloter plusieurs boutiques distinctes selon son forfait actif :
+1. Quotas de boutiques par formule d'abonnement :
+   - Formule Essentiel (10 000 FCFA / mois) : 1 boutique incluse, jusqu'à 50 produits, 80 crédits IA/mois.
+   - Formule Pro (15 000 FCFA / mois) : Jusqu'à 3 boutiques incluses, 300 produits par boutique, 350 crédits IA/mois, codes promo, alertes de rupture et scripts TikTok.
+   - Formule Premium (30 000 FCFA / mois) : Boutiques illimitées (jusqu'à 999), 2 500 produits, 1 200 crédits IA/mois, export comptable et support VIP.
+2. Comment créer une nouvelle boutique (/boutiques/creer) :
+   - Depuis le Tableau de bord (/tableau-de-bord), cliquez sur le bouton « + Nouvelle boutique ».
+   - Le formulaire minimaliste ne demande que l'essentiel : Nom de la boutique (avec aperçu instantané du sous-domaine .zanika.shop), Pays et Devise (FCFA, MAD, EUR, USD).
+   - Si votre limite de boutiques est atteinte, Zanika vous invite automatiquement à passer au forfait supérieur (/abonnement/paiement/pro ou premium).
+3. Comment basculer d'une boutique à l'autre :
+   - Utilisez le sélecteur de boutique en haut du Tableau de bord pour changer de boutique active en 1 clic sans vous déconnecter.
+TEXT
+            ],
+
+            [
+                'category' => 'catalog_rules',
+                'title' => 'Comment ajuster rapidement le stock d\'un produit sans justificatif obligatoire',
+                'slug' => 'guide-ajustement-rapide-stock',
+                'keywords' => ['ajustement', 'rapide', 'stock', 'variation', 'motif', 'optionnel', 'justificatif', 'inventaire', 'quantite', 'seuil'],
+                'target_routes' => 'products.edit, products.index',
+                'sort_order' => 18,
+                'content' => <<<TEXT
+Zanika simplifie la mise à jour quotidienne de vos stocks sur mobile comme sur ordinateur :
+1. Ajustement direct sur la fiche produit (/produits/{id}/modifier) :
+   - Dans la section "Gestion du stock", saisissez directement la nouvelle quantité en stock ou la variation (+5, -2) : le motif ou justificatif écrit est 100% optionnel (non obligatoire).
+   - Si vous laissez le champ motif vide, Zanika enregistre automatiquement "Ajustement manuel" dans le journal d'audit stock_movements.
+   - Vous pouvez également définir le "Seuil d'alerte stock bas" (par défaut 3 ou 5 unités) pour être prévenu avant la rupture.
+2. Ajustement par commande vocale ou texte via Zanika AI :
+   - Dites simplement : « Mets le stock de [Produit] à 20 » ou « Ajoute 10 unités au stock de [Produit] ». L'IA prépare la mise à jour via update_product_stock_or_price et vous demande une confirmation en 1 clic.
+TEXT
+            ],
+
+            [
+                'category' => 'navigation_ui',
+                'title' => 'Comment choisir entre Sublimer mes photos avec l\'IA ou garder mes photos originales',
+                'slug' => 'guide-choix-traitement-photo-onboarding',
+                'keywords' => ['photo', 'onboarding', 'sublimer', 'original', 'originale', 'brut', 'studio ia', 'retouche', 'garder', 'qualite'],
+                'target_routes' => 'onboarding.step3, ai.studio, products.create',
+                'sort_order' => 19,
+                'content' => <<<TEXT
+Lors de la création de votre boutique (/onboarding/photos) ou de l'ajout d'articles, Zanika vous laisse le contrôle total sur le rendu de vos photos produits :
+1. Option « Sublimer avec l'IA » (Recommandé — mode 'studio') :
+   - L'IA équilibre la lumière, renforce la netteté, nettoie l'arrière-plan et présente votre article sur un fond studio propre et professionnel, tout en respectant à 100% la forme et la couleur réelle de votre produit.
+   - Un badge vert « Studio IA » identifie les visuels sublimés.
+2. Option « Garder telles quelles » (Photo originale brute — mode 'original') :
+   - Vos photos originales sont conservées exactement telles que vous les avez prises ou importées depuis votre téléphone, sans détourage ni modification de l'arrière-plan.
+   - Idéal si vous avez déjà photographié vos articles dans un décor réel de votre boutique ou sur un mannequin.
+TEXT
+            ],
+
+            [
+                'category' => 'marketing_ads',
+                'title' => 'Comment générer des affiches promotionnelles (Flyers) et des vidéos publicitaires TikTok',
+                'slug' => 'guide-affiches-flyers-videos-tiktok',
+                'keywords' => ['affiche', 'flyer', 'poster', 'visuel', 'tiktok', 'reels', 'statut whatsapp', 'video', 'publicite', 'campagne', 'audio'],
+                'target_routes' => 'ads.flyers, ads.create, ads.index',
+                'sort_order' => 20,
+                'content' => <<<TEXT
+Pour attirer des clients depuis WhatsApp, TikTok, Instagram et Facebook sans graphiste :
+1. Générateur d'Affiches & Flyers Promotionnels (/publicite/affiches) :
+   - Sélectionnez un produit de votre catalogue, choisissez un modèle d'affiche (Promo Flash, Nouvel Arrivage, Spécial Fêtes, Luxe Minimaliste), personnalisez l'accroche et téléchargez l'image HD prête à être postée en Statut WhatsApp ou sur Facebook/Instagram.
+2. Créateur de Campagnes & Vidéos Publicitaires IA (/publicite/creer) :
+   - Sélectionnez un ou plusieurs produits et la plateforme cible (TikTok, Instagram Reels, Facebook Ads, WhatsApp).
+   - L'IA rédige 3 variantes de textes publicitaires (accroche, corps persuasif, appel à l'action) et un script vidéo complet scène par scène.
+   - Vous pouvez exporter la vidéo promotionnelle avec voix-off IA ou importer votre propre piste audio personnalisée (/publicite/{ad}/upload-audio).
+TEXT
+            ],
+
+            [
+                'category' => 'navigation_ui',
+                'title' => 'Comment fonctionnent la Mémoire IA de la boutique et les Automatisations Proactives',
+                'slug' => 'guide-memoire-ia-automatisations',
+                'keywords' => ['memoire', 'souvenir', 'objectif', 'automatisation', 'proactif', 'briefing', 'matinal', 'conseiller'],
+                'target_routes' => 'ai.memory.index, ai.automations, analytics.advisor',
+                'sort_order' => 21,
+                'content' => <<<TEXT
+Zanika AI n'est pas un simple chatbot : il mémorise le contexte de votre entreprise et travaille en arrière-plan.
+1. Mémoire Intelligente de la Boutique (/assistant-ia/memoire) :
+   - Enregistre automatiquement ou manuellement vos objectifs financiers (ex: "Atteindre 2 000 000 FCFA ce mois"), vos habitudes logistiques, votre ton de marque et vos règles de remise.
+   - Vous pouvez consulter, modifier ou supprimer chaque souvenir à tout moment dans /assistant-ia/memoire.
+2. Automatisations IA (/assistant-ia/automatisations) :
+   - Activez ou mettez en pause des tâches autonomes : surveillance quotidienne des ruptures de stock, détection des commandes COD à risque, relance des produits dormants et génération du Briefing Matinal.
+   - Le bouton « Exécuter maintenant » lance immédiatement une analyse complète de la boutique.
+3. Conseiller Analytique IA (/statistiques/conseiller-ia) :
+   - Fournit un diagnostic stratégique sur l'évolution de votre chiffre d'affaires, votre taux de conversion et vos meilleures ventes avec export CSV (/statistiques/exporter).
+TEXT
+            ],
+
+            [
+                'category' => 'africa_playbook',
+                'title' => 'Playbook : Calendrier Commercial & Campagnes Saisonnières en Afrique (Tabaski, Ramadan, Fêtes)',
+                'slug' => 'playbook-campagnes-saisonnieres-afrique',
+                'keywords' => ['tabaski', 'ramadan', 'korite', 'aid', 'noel', 'fin annee', 'rentree', 'saint valentin', 'black friday', 'saison', 'fete', 'stock', 'pack'],
+                'target_routes' => 'ads.create, discounts.index, ai.marketing',
+                'sort_order' => 22,
+                'content' => <<<TEXT
+Réussir ses pics de ventes saisonniers sur les marchés africains (Togo, Bénin, Côte d'Ivoire, Sénégal, Cameroun, Maroc) :
+1. Ramadan & Korité (Aïd el-Fitr) / Tabaski (Aïd el-Kébir) :
+   - Anticipez votre stock 15 à 20 jours avant la fête et lancez les précommandes (forte demande sur le prêt-à-porter traditionnel, bazin, wax, chaussures, parfums, paniers garnis et décoration).
+   - Créez un code promo dédié (ex: TABASKI15 ou RAMADAN10 dans /codes-promo) et proposez des "Packs Famille" ou "Coffrets Cadeaux".
+   - Attention logistique : bloquez les expéditions interurbaines 72h avant le jour J et concentrez les coursiers moto sur la livraison express urbaine jusqu'à la veille au soir.
+2. Fêtes de Fin d'Année (Décembre — Noël & Nouvel An) :
+   - Période de plus forte liquidité de l'année. Mettez en avant les idées cadeaux, les tenues de soirée et les offres "2 achetés = le 3ème à -50%".
+3. Rentrée Scolaire & Universitaire (Septembre - Octobre) et Saint-Valentin (14 Février) :
+   - À la Saint-Valentin, créez des coffrets "Pour Lui / Pour Elle" prêts à offrir avec livraison discrète au bureau ou à domicile.
+TEXT
+            ],
+
+            [
+                'category' => 'africa_playbook',
+                'title' => 'Playbook : Comment refuser poliment la vente à crédit ("Je paie à la fin du mois") sur WhatsApp',
+                'slug' => 'playbook-refuser-credit-whatsapp',
+                'keywords' => ['credit', 'fin du mois', 'avance', 'acompte', 'reservation', 'garder', 'payer apres', 'dette'],
+                'target_routes' => 'ai.assistant, orders.index',
+                'sort_order' => 23,
+                'content' => <<<TEXT
+La vente à crédit non encadrée est la première cause de faillite des petits commerces en Afrique. Voici comment refuser le crédit sur WhatsApp sans jamais braquer ni perdre le client :
+1. Règle absolue : Ne jamais livrer un produit sans encaissement intégral (au départ via Mobile Money ou à la remise en main propre COD).
+2. La technique de la "Réservation Privilège avec Acompte" :
+   - Au lieu de dire sèchement « Nous ne faisons pas crédit », répondez avec chaleur :
+   - « Je comprends tout à fait ! Pour la comptabilité de la boutique, le système ne permet pas de sortir un article sans règlement complet. En revanche, comme il ne reste que quelques pièces en stock, vous pouvez verser une petite avance de réservation de 2 000 ou 3 000 FCFA par T-Money / Wave / MoMo : je vous mets l'article de côté à votre nom et on vous le livre dès que vous recevez votre virement en fin de mois ! »
+TEXT
+            ],
+
+            [
+                'category' => 'navigation_ui',
+                'title' => 'Sécurité des comptes, verrouillage anti-force brute et publication de la boutique',
+                'slug' => 'guide-securite-publication-boutique',
+                'keywords' => ['securite', 'mot de passe', 'verrouillage', 'tentatives', 'publier', 'pause', 'maintenance', 'sous-domaine', 'recu'],
+                'target_routes' => 'shop.settings, login',
+                'sort_order' => 24,
+                'content' => <<<TEXT
+Sécurité et cycle de vie d'une boutique sur Zanika :
+1. Protection contre les mots de passe erronés (Anti-Brute Force) :
+   - Après 5 tentatives de connexion infructueuses sur /connexion, l'accès est temporairement bloqué pendant 60 secondes (Rate Limiting Laravel) afin de protéger le compte marchand contre le piratage.
+2. Publication et Mise en Pause de la boutique (/boutique/parametres) :
+   - Une nouvelle boutique démarre en mode "Brouillon" (draft). Dès qu'au moins un produit actif avec un prix supérieur à 0 FCFA est prêt, cliquez sur « Publier ma boutique » (/boutique/publier) pour la rendre publique sur votre sous-domaine.
+   - Si vous partez en congé ou faites un inventaire, cliquez sur « Mettre en pause » (/boutique/pause) : vos visiteurs verront un écran de maintenance élégant avec votre contact WhatsApp.
+3. Reçus publics vérifiables :
+   - Chaque commande possède un lien de reçu numérique (/recu/{orderNumber}) partageable sur WhatsApp pour rassurer immédiatement l'acheteur.
+TEXT
+            ],
         ];
 
         foreach ($chunks as $chunk) {

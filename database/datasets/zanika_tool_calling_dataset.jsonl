@@ -1,0 +1,12 @@
+{"user_query":"Montre-moi un résumé complet de ma boutique aujourd'hui.","expected_tool":"get_shop_overview","arguments":{"period":"30d"},"requires_confirmation":false}
+{"user_query":"Quels sont mes produits actuellement en rupture ou en stock faible ?","expected_tool":"get_low_stock_alerts","arguments":{"include_out_of_stock":true},"requires_confirmation":false}
+{"user_query":"Crée le produit Robe Soie Bordeaux à 22 000 FCFA avec 15 unités en stock.","expected_tool":"create_product_draft","arguments":{"title":"Robe Soie Bordeaux","price":22000,"stock":15},"requires_confirmation":true}
+{"user_query":"Change le prix de la Montre Prestige Or (ID 12) à 18 500 FCFA.","expected_tool":"update_product_price","arguments":{"product_id":12,"new_price":18500},"requires_confirmation":true}
+{"user_query":"Mets le stock des Sandales Cuir (ID 7) à 30 pièces.","expected_tool":"update_product_stock","arguments":{"product_id":7,"new_stock":30,"reason":"Ajustement rapide"},"requires_confirmation":true}
+{"user_query":"Liste mes commandes en attente de confirmation.","expected_tool":"list_orders","arguments":{"status":"pending","limit":10},"requires_confirmation":false}
+{"user_query":"Prépare la feuille de route livreur pour la commande #45.","expected_tool":"generate_courier_dispatch","arguments":{"order_id":45},"requires_confirmation":false}
+{"user_query":"Passe la commande #45 en statut confirmée.","expected_tool":"update_order_status","arguments":{"order_id":45,"new_status":"confirmed"},"requires_confirmation":true}
+{"user_query":"Crée un code promo TABASKI20 de 20% valable 7 jours.","expected_tool":"create_promo_code","arguments":{"code":"TABASKI20","type":"percentage","value":20,"days_valid":7},"requires_confirmation":true}
+{"user_query":"Analyse pourquoi ma rentabilité baisse malgré mes commandes.","expected_tool":"get_profitability_diagnosis","arguments":{"days":30},"requires_confirmation":false}
+{"user_query":"Quels sont mes articles qui dorment en stock depuis plus de 45 jours ?","expected_tool":"analyze_dead_stock","arguments":{"days_without_sale":45},"requires_confirmation":false}
+{"user_query":"Mémorise que mon objectif de ventes mensuel est de 2 000 000 FCFA.","expected_tool":"save_merchant_memory","arguments":{"key":"objectif_financier","value":"2 000 000 FCFA par mois"},"requires_confirmation":false}
