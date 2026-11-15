@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Plan;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Ai\PhotoroomService;
 use App\Services\Ai\ProductStudioService;
@@ -39,6 +40,59 @@ class PhotoroomIntegrationTest extends TestCase
         ]);
 
         return [$user, $shop];
+    }
+
+    private function subscribeShopToPlan(Shop $shop, string $slug): Plan
+    {
+        $defaults = match ($slug) {
+            'pro' => [
+                'name' => 'Pro',
+                'monthly_price' => 15000,
+                'max_products' => 300,
+                'max_shops' => 3,
+                'storage_mb' => 8192,
+                'ai_credits' => 350,
+                'photoroom_credits' => 60,
+                'full_generations' => 2,
+                'active' => true,
+            ],
+            'premium' => [
+                'name' => 'Premium',
+                'monthly_price' => 30000,
+                'max_products' => 2500,
+                'max_shops' => 999,
+                'storage_mb' => 25600,
+                'ai_credits' => 1200,
+                'photoroom_credits' => 180,
+                'full_generations' => 5,
+                'active' => true,
+            ],
+            default => [
+                'name' => 'Essentiel',
+                'monthly_price' => 10000,
+                'max_products' => 50,
+                'max_shops' => 1,
+                'storage_mb' => 2048,
+                'ai_credits' => 80,
+                'photoroom_credits' => 25,
+                'full_generations' => 1,
+                'active' => true,
+            ],
+        };
+
+        $plan = Plan::firstOrCreate(['slug' => $slug], $defaults);
+
+        Subscription::create([
+            'shop_id' => $shop->id,
+            'plan_id' => $plan->id,
+            'status' => 'active',
+            'starts_at' => now(),
+            'renews_at' => now()->addMonth(),
+        ]);
+
+        $shop->refresh();
+
+        return $plan;
     }
 
     private function makePngBinary(int $width = 240, int $height = 240, bool $transparent = false): string
@@ -115,6 +169,7 @@ class PhotoroomIntegrationTest extends TestCase
     {
         Storage::fake('public');
         [, $shop] = $this->createMerchant();
+        $this->subscribeShopToPlan($shop, 'pro');
         $source = $this->makePngBinary(260, 260, false);
 
         // 1. Photoroom actif
@@ -258,6 +313,7 @@ class PhotoroomIntegrationTest extends TestCase
         ]);
 
         [$merchant, $shop] = $this->createMerchant('visual.studio@example.test');
+        $this->subscribeShopToPlan($shop, 'pro');
         $product = Product::withoutGlobalScopes()->create([
             'shop_id' => $shop->id,
             'title' => 'Parfum Oud Prestige',
@@ -325,9 +381,10 @@ class PhotoroomIntegrationTest extends TestCase
         Storage::fake('public');
         config(['services.photoroom.key' => 'pr_onboarding_key']);
 
-        $fakeStudioSquare = $this->makePngBinary(1000, 1000, false);
+        // Smart Cost : l'import produit studio utilise v1/segment (13 FCFA) + ombre studio locale 1:1
+        $fakeCutoutPng = $this->makePngBinary(400, 200, true);
         Http::fake([
-            'https://image-api.photoroom.com/v2/edit' => Http::response($fakeStudioSquare, 200, ['Content-Type' => 'image/png']),
+            'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
         ]);
 
         [$merchant, $shop] = $this->createMerchant('studio.onboarding@example.test');
@@ -348,7 +405,8 @@ class PhotoroomIntegrationTest extends TestCase
         $this->assertSame(imagesx($savedGd), imagesy($savedGd), 'Le mode studio Photoroom doit produire un packshot carré 1:1.');
         imagedestroy($savedGd);
 
-        Http::assertSent(fn (HttpClientRequest $req) => str_contains($req->url(), 'image-api.photoroom.com/v2/edit'));
+        Http::assertSent(fn (HttpClientRequest $req) => str_contains($req->url(), 'sdk.photoroom.com/v1/segment'));
+        Http::assertNotSent(fn (HttpClientRequest $req) => str_contains($req->url(), 'v2/edit'));
     }
 
     public function test_studio_generate_visual_handles_uploaded_image_file_and_local_fallback(): void
@@ -432,7 +490,7 @@ class PhotoroomIntegrationTest extends TestCase
 
         [$merchant, $shop] = $this->createMerchant('quota.split@example.test');
         $this->assertSame(80, $shop->aiCreditsRemaining());
-        $this->assertSame(15, $shop->photoroomCreditsRemaining());
+        $this->assertSame(25, $shop->photoroomCreditsRemaining());
 
         // 1. Détourage flyer via Photoroom -> consomme uniquement 1 crédit Photoroom
         $cutoutResponse = $this->actingAs($merchant)->postJson(route('ai.products.photoroom_cutout'), [
@@ -444,11 +502,11 @@ class PhotoroomIntegrationTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'engine' => 'photoroom-ai',
-                'photoroom_credits_remaining' => 14,
+                'photoroom_credits_remaining' => 24,
                 'ai_credits_remaining' => 80,
             ]);
 
-        // 2. Génération Studio avec photo produit -> consomme 1 crédit Photoroom, pas l'IA Système
+        // 2. Génération Studio avec photo produit (Essentiel -> v1/segment + scène locale) -> consomme 1 crédit Photoroom, pas l'IA Système
         $studioResponse = $this->actingAs($merchant)->postJson(route('ai.studio.generate'), [
             'subject' => 'Sac cuir camel sur marbre',
             'style' => 'luxury_showroom',
@@ -460,7 +518,7 @@ class PhotoroomIntegrationTest extends TestCase
             ->assertJson([
                 'status' => 'success',
                 'engine' => 'photoroom-ai',
-                'photoroom_credits_remaining' => 13,
+                'photoroom_credits_remaining' => 23,
                 'ai_credits_remaining' => 80,
             ]);
 
@@ -470,12 +528,13 @@ class PhotoroomIntegrationTest extends TestCase
 
         $shop->refresh();
         $this->assertSame(3, $shop->photoroomCreditsUsedThisMonth());
-        $this->assertSame(12, $shop->photoroomCreditsRemaining());
+        $this->assertSame(22, $shop->photoroomCreditsRemaining());
         $this->assertSame(0, $shop->aiCreditsUsedThisMonth());
         $this->assertDatabaseHas('ai_generations', [
             'shop_id' => $shop->id,
             'type' => 'ai_photoroom_packshot',
-            'model_used' => 'photoroom-ai',
+            'model_used' => 'photoroom-v1-segment',
+            'cost_estimated_fcfa' => 13,
         ]);
     }
 
@@ -515,8 +574,89 @@ class PhotoroomIntegrationTest extends TestCase
         Http::assertNothingSent();
 
         $shop->refresh();
-        $this->assertSame(15, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(25, $shop->photoroomCreditsUsedThisMonth());
         $this->assertSame(1, $shop->aiCreditsUsedThisMonth());
+    }
+
+    public function test_smart_cost_uses_v1_segment_on_essentiel_and_v2_edit_on_pro_for_generative_scenes(): void
+    {
+        Storage::fake('public');
+        config(['services.photoroom.key' => 'pr_smart_cost_key']);
+
+        $fakeCutoutPng = $this->makePngBinary(300, 300, true);
+        $fakeScenePng = $this->makePngBinary(1000, 1000, false);
+
+        Http::fake([
+            'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
+            'https://image-api.photoroom.com/v2/edit' => Http::response($fakeScenePng, 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        // 1. Boutique Essentiel -> même avec un style génératif, Smart Cost utilise v1/segment (13 FCFA) et jamais v2/edit
+        [$essentielUser, $essentielShop] = $this->createMerchant('smart.essentiel@example.test');
+        $this->subscribeShopToPlan($essentielShop, 'essentiel');
+
+        $essentielRes = $this->actingAs($essentielUser)->postJson(route('ai.studio.generate'), [
+            'subject' => 'Montre dorée luxe',
+            'style' => 'luxury_showroom',
+            'format' => '1:1',
+            'image' => UploadedFile::fake()->image('montre.png', 300, 300),
+        ]);
+
+        $essentielRes->assertOk()->assertJson([
+            'status' => 'success',
+            'engine' => 'photoroom-ai',
+            'model_used' => 'photoroom-v1-segment',
+            'photoroom_credits_remaining' => 24,
+        ]);
+
+        $this->assertDatabaseHas('ai_generations', [
+            'shop_id' => $essentielShop->id,
+            'type' => 'ai_visual_generation',
+            'model_used' => 'photoroom-v1-segment',
+            'cost_estimated_fcfa' => 13,
+        ]);
+        Http::assertNotSent(fn (HttpClientRequest $req) => str_contains($req->url(), 'v2/edit'));
+
+        // 2. Boutique Pro -> packshot studio blanc reste en v1/segment (13 FCFA), scène générative active v2/edit (62 FCFA)
+        [$proUser, $proShop] = $this->createMerchant('smart.pro@example.test');
+        $this->subscribeShopToPlan($proShop, 'pro');
+
+        $proWhiteRes = $this->actingAs($proUser)->postJson(route('ai.studio.generate'), [
+            'subject' => 'Baskets blanches',
+            'style' => 'studio_minimalist',
+            'format' => '1:1',
+            'image' => UploadedFile::fake()->image('baskets-pro.png', 300, 300),
+        ]);
+
+        $proWhiteRes->assertOk()->assertJson([
+            'status' => 'success',
+            'engine' => 'photoroom-ai',
+            'model_used' => 'photoroom-v1-segment',
+            'photoroom_credits_remaining' => 59,
+        ]);
+        Http::assertNotSent(fn (HttpClientRequest $req) => str_contains($req->url(), 'v2/edit'));
+
+        $proSceneRes = $this->actingAs($proUser)->postJson(route('ai.studio.generate'), [
+            'subject' => 'Parfum ambré',
+            'style' => 'luxury_showroom',
+            'format' => '1:1',
+            'image' => UploadedFile::fake()->image('parfum-pro.png', 300, 300),
+        ]);
+
+        $proSceneRes->assertOk()->assertJson([
+            'status' => 'success',
+            'engine' => 'photoroom-ai',
+            'model_used' => 'photoroom-v2-edit',
+            'photoroom_credits_remaining' => 58,
+        ]);
+
+        $this->assertDatabaseHas('ai_generations', [
+            'shop_id' => $proShop->id,
+            'type' => 'ai_visual_generation',
+            'model_used' => 'photoroom-v2-edit',
+            'cost_estimated_fcfa' => 62,
+        ]);
+        Http::assertSent(fn (HttpClientRequest $req) => str_contains($req->url(), 'image-api.photoroom.com/v2/edit'));
     }
 
     public function test_super_admin_can_recharge_and_reset_photoroom_credits_independently(): void
@@ -539,7 +679,7 @@ class PhotoroomIntegrationTest extends TestCase
             'max_shops' => 1,
             'storage_mb' => 2048,
             'ai_credits' => 80,
-            'photoroom_credits' => 15,
+            'photoroom_credits' => 25,
             'full_generations' => 1,
             'active' => true,
         ]);
@@ -579,14 +719,14 @@ class PhotoroomIntegrationTest extends TestCase
             'max_shops' => $plan->max_shops,
             'storage_mb' => $plan->storage_mb,
             'ai_credits' => 90,
-            'photoroom_credits' => 25,
+            'photoroom_credits' => 30,
             'full_generations' => $plan->full_generations,
             'active' => '1',
         ])->assertRedirect();
 
         $plan->refresh();
         $this->assertSame(90, $plan->ai_credits);
-        $this->assertSame(25, $plan->photoroomCreditsMonthly());
+        $this->assertSame(30, $plan->photoroomCreditsMonthly());
 
         $this->actingAs($admin)->get(route('admin.plans'))
             ->assertOk()

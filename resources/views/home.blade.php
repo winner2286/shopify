@@ -876,13 +876,14 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                         $maxP = $plan->max_products ?: ($plan->slug === 'essentiel' ? 50 : ($plan->slug === 'pro' ? 300 : 2500));
                         $storage = $plan->storage_mb ?: ($plan->slug === 'essentiel' ? 2048 : ($plan->slug === 'pro' ? 8192 : 25600));
                         $credits = $plan->ai_credits ?: ($plan->slug === 'essentiel' ? 80 : ($plan->slug === 'pro' ? 350 : 1200));
+                        $prCredits = $plan->photoroomCreditsMonthly();
                         $extraFeats = (!empty($plan->features) && count($plan->features) > 0 && !in_array('Tableau de bord simple', $plan->features))
                             ? $plan->features
                             : ($plan->slug === 'essentiel'
-                                ? ['Publicité IA : textes & accroches simples', 'Tableau de bord de vente simple', 'Support standard par email']
+                                ? ['Détourage automatique & Packshot studio blanc (Photoroom HD)', 'Publicité IA : textes & accroches simples', 'Tableau de bord de vente simple', 'Support standard par email']
                                 : ($plan->slug === 'pro'
-                                    ? ['Publicité IA : textes, visuels & scripts TikTok', 'Codes promo & soldes programmées', 'Alertes rupture de stock (WhatsApp/SMS)', 'Statistiques complètes & top ventes', 'Support prioritaire par WhatsApp']
-                                    : ['Campagnes IA sponsorisées complètes', 'Codes promo illimités & ventes privées', 'Gestion multi-collaborateurs (jusqu\'à 3 accès)', 'Export comptable des commandes (Excel / PDF)', 'Connexion de nom de domaine personnalisé', 'Chargé de compte dédié & Support VIP 7j/7']
+                                    ? ['Studio Photo IA Pro : décors générés, ombres réalistes & PNG HD', 'Publicité IA : textes, visuels & scripts TikTok', 'Codes promo & soldes programmées', 'Alertes rupture de stock (WhatsApp/SMS)', 'Statistiques complètes & top ventes', 'Support prioritaire par WhatsApp']
+                                    : ['Suite Studio Photoroom Max : showrooms luxe, lifestyle & podiums IA', 'Retouche catalogue haute capacité & détourage pub en 1 clic', 'Campagnes IA sponsorisées complètes', 'Codes promo illimités & ventes privées', 'Gestion multi-collaborateurs (jusqu\'à 3 accès)', 'Export comptable des commandes (Excel / PDF)', 'Connexion de nom de domaine personnalisé', 'Chargé de compte dédié & Support VIP 7j/7']
                                 )
                             );
                     @endphp
@@ -916,6 +917,19 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                         <li>
                             <x-icon name="check" :size="16" />
                             <span><strong>{{ $credits }} crédits d'IA</strong> par mois</span>
+                        </li>
+                        <li>
+                            <x-icon name="check" :size="16" />
+                            <span>
+                                <strong>{{ $prCredits }} photos Photoroom HD</strong> / mois
+                                @if($plan->slug === 'essentiel')
+                                    <span style="font-size:.82em;color:var(--text-soft)">(packshot blanc)</span>
+                                @elseif($plan->slug === 'pro')
+                                    <span style="font-size:.82em;color:var(--brand-primary);font-weight:600">(Pro · décors IA)</span>
+                                @else
+                                    <span style="font-size:.82em;color:var(--brand-primary);font-weight:600">(Max · luxe & podiums)</span>
+                                @endif
+                            </span>
                         </li>
                         <li>
                             <x-icon name="check" :size="16" />

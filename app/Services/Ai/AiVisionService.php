@@ -429,6 +429,14 @@ PROMPT;
 
             $durationMs = (int) round((microtime(true) - $startTime) * 1000);
 
+            $stepLower = strtolower((string) $step);
+            $modelLower = strtolower((string) $modelUsed);
+            $estimatedCostFcfa = match (true) {
+                str_contains($stepLower, 'v2') || str_contains($modelLower, 'v2') || str_contains($stepLower, 'scene') => 62,
+                str_contains($modelLower, 'photoroom') || str_contains($stepLower, 'photoroom') || str_contains($stepLower, 'v1') => 13,
+                default => 5,
+            };
+
             AiGeneration::create([
                 'shop_id' => $shop->id,
                 'type' => 'ai_visual_generation',
@@ -436,7 +444,7 @@ PROMPT;
                 'model_used' => $modelUsed,
                 'prompt_tokens' => 0,
                 'completion_tokens' => 0,
-                'cost_estimated_fcfa' => 50,
+                'cost_estimated_fcfa' => $estimatedCostFcfa,
                 'duration_ms' => $durationMs,
                 'status' => 'success',
                 'input_summary' => "Génération visuel [{$style}, {$format}] : {$subject}",
@@ -483,7 +491,13 @@ PROMPT;
         $canUsePhotoroom = $photoroom->isConfigured()
             && ($shop === null || $shop->hasEnoughPhotoroomCredits(1));
 
-        if ($canUsePhotoroom) {
+        $generativeStyles = ['luxury_showroom', 'lifestyle', 'lifestyle_urban', 'flash_sale', 'tropical_african', 'podium'];
+        $isGenerativeScene = in_array($style, $generativeStyles, true);
+        $canUseGenerativeV2 = $canUsePhotoroom
+            && $isGenerativeScene
+            && ($shop === null || $shop->canUsePhotoroomGenerativeScene());
+
+        if ($canUseGenerativeV2) {
             $editParams = $photoroom->mapStyleToEditParams($style, $photoroomSize);
             $edited = $photoroom->editProductImage($sourceImageBinary, $editParams);
             if ($edited !== null) {

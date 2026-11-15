@@ -11,12 +11,12 @@ return new class extends Migration
     {
         if (! Schema::hasColumn('plans', 'photoroom_credits')) {
             Schema::table('plans', function (Blueprint $table) {
-                $table->unsignedInteger('photoroom_credits')->default(15)->after('ai_credits');
+                $table->unsignedInteger('photoroom_credits')->default(25)->after('ai_credits');
             });
 
-            DB::table('plans')->where('slug', 'essentiel')->update(['photoroom_credits' => 15]);
-            DB::table('plans')->where('slug', 'pro')->update(['photoroom_credits' => 50]);
-            DB::table('plans')->where('slug', 'premium')->update(['photoroom_credits' => 150]);
+            DB::table('plans')->where('slug', 'essentiel')->update(['photoroom_credits' => 25]);
+            DB::table('plans')->where('slug', 'pro')->update(['photoroom_credits' => 60]);
+            DB::table('plans')->where('slug', 'premium')->update(['photoroom_credits' => 180]);
         }
 
         if (! Schema::hasColumn('shops', 'photoroom_credits_used')) {

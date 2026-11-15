@@ -124,8 +124,8 @@ class ProductStudioService
                     ];
                 }
 
-                // C. Décor Thématique selon la catégorie réelle du produit (Photoroom v2 AI Scene en priorité si quota Photoroom actif, sinon décor local)
-                $photoroomLifestyle = ($this->photoroom->isConfigured() && $shop->hasEnoughPhotoroomCredits(1))
+                // C. Décor Thématique selon la catégorie réelle du produit (Smart Cost : Photoroom v2 AI Scene uniquement sur Pro/Premium/Admin, sinon décor local GD + cutout v1/segment)
+                $photoroomLifestyle = ($this->photoroom->isConfigured() && $shop->canUsePhotoroomGenerativeScene() && $shop->hasEnoughPhotoroomCredits(1))
                     ? $this->photoroom->editProductImage($imageBinary, $this->photoroom->mapStyleToEditParams('lifestyle', self::TARGET_SIZE . 'x' . self::TARGET_SIZE))
                     : null;
 
@@ -286,14 +286,7 @@ class ProductStudioService
         $mime = 'image/png';
 
         if ($mode === 'studio_white') {
-            if ($this->photoroom->isConfigured() && $shop->hasEnoughPhotoroomCredits(1)) {
-                $outputBinary = $this->photoroom->studioPackshot($imageBinary, 'studio_white', '1000x1000');
-                if ($outputBinary !== null) {
-                    $engine = 'photoroom-ai';
-                    $method = 'photoroom_v2_edit';
-                }
-            }
-
+            // Smart Cost : studio blanc 1:1 en v1/segment (~13 FCFA) + ombre studio locale au lieu de v2/edit (~62 FCFA)
             if ($outputBinary === null) {
                 $cutoutResult = $this->extractCutout($imageBinary, $shop);
                 $method = $cutoutResult['method'];

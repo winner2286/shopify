@@ -51,11 +51,16 @@ class Plan extends Model
         }
 
         return match ($this->slug) {
-            'essentiel', 'free' => 15,
-            'pro' => 50,
-            'premium' => 150,
-            default => 15,
+            'essentiel', 'free' => 25,
+            'pro' => 60,
+            'premium' => 180,
+            default => 25,
         };
+    }
+
+    public function supportsGenerativeScenes(): bool
+    {
+        return in_array(strtolower((string) $this->slug), ['pro', 'premium'], true);
     }
 
     public function isEssentiel(): bool

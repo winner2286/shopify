@@ -66,7 +66,7 @@ class Shop extends Model
             'max_products' => 50,
             'storage_mb' => 2048,
             'ai_credits' => 80,
-            'photoroom_credits' => 15,
+            'photoroom_credits' => 25,
             'full_generations' => 1,
             'active' => true,
         ]);
@@ -150,6 +150,29 @@ class Shop extends Model
     {
         $this->increment('photoroom_credits_used', max(1, $cost));
         $this->refresh();
+    }
+
+    /**
+     * Détermine si la boutique a accès aux décors génératifs Photoroom v2/edit
+     * (réservés aux formules Pro / Premium ou au compte Super-Admin).
+     */
+    public function canUsePhotoroomGenerativeScene(): bool
+    {
+        if ($this->currentPlan()->supportsGenerativeScenes()) {
+            return true;
+        }
+
+        if ($this->user_id) {
+            $owner = $this->relationLoaded('user')
+                ? $this->getRelation('user')
+                : \App\Models\User::find($this->user_id);
+
+            if ($owner && $owner->isAdmin()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function ownsPublicPath(string $path): bool

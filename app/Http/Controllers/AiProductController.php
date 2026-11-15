@@ -146,14 +146,19 @@ class AiProductController extends Controller
 
         // Journalisation de la vérification qualité (+12 crédits)
         $shop->consumeAiCredits(12);
+        $studioEngine = $studioResult['engine'] ?? 'zanika-product-studio';
+        $studioCostFcfa = $studioEngine === 'photoroom-ai'
+            ? ($shop->canUsePhotoroomGenerativeScene() ? 62 : 13)
+            : 6;
+
         AiGeneration::create([
             'shop_id' => $shop->id,
             'type' => 'ai_quality_check',
             'step' => 'studio_packshot',
-            'model_used' => $studioResult['engine'] ?? 'zanika-product-studio',
+            'model_used' => $studioEngine,
             'prompt_tokens' => 0,
             'completion_tokens' => 0,
-            'cost_estimated_fcfa' => 12,
+            'cost_estimated_fcfa' => $studioCostFcfa,
             'duration_ms' => $studioResult['duration_ms'] ?? 1200,
             'status' => 'success',
             'input_summary' => "Studio Packshot [{$studioResult['category']}] : " . ($studioResult['product_title'] ?? 'Article'),
@@ -486,7 +491,7 @@ class AiProductController extends Controller
             'model_used' => $cutout['engine'] ?? 'zanika-product-studio',
             'prompt_tokens' => 0,
             'completion_tokens' => 0,
-            'cost_estimated_fcfa' => 1,
+            'cost_estimated_fcfa' => ($cutout['engine'] ?? '') === 'photoroom-ai' ? 13 : 1,
             'duration_ms' => 450,
             'status' => 'success',
             'input_summary' => $product

@@ -96,12 +96,12 @@ class ImageService
                 if ($canUsePhotoroom) {
                     $rawBinary = @file_get_contents($filePath);
                     if (is_string($rawBinary) && $rawBinary !== '') {
-                        $prBinary = $photoroom->studioPackshot($rawBinary, 'studio_white', '1000x1000');
+                        // Smart Cost : import produit en packshot blanc via v1/segment (~13 FCFA) + ombre studio locale
+                        $prBinary = $photoroom->removeBackground($rawBinary, ['format' => 'png']);
                         if ($prBinary !== null) {
                             $prGd = @imagecreatefromstring($prBinary);
                             if ($prGd) {
                                 if ($this->hasTransparency($prGd)) {
-                                    // Si v1/segment uniquement (PNG détouré transparent), composer le packshot blanc 1:1 avec ombre naturelle
                                     $studioService = app(\App\Services\Ai\ProductStudioService::class);
                                     $mainImage = $studioService->renderStudioPackshot($prGd, 'white', $targetSize);
                                     imagedestroy($prGd);
@@ -117,13 +117,13 @@ class ImageService
                                         'shop_id' => $shop->id,
                                         'type' => 'ai_photoroom_packshot',
                                         'step' => 'auto_upload_packshot',
-                                        'model_used' => 'photoroom-ai',
+                                        'model_used' => 'photoroom-v1-segment',
                                         'prompt_tokens' => 0,
                                         'completion_tokens' => 0,
-                                        'cost_estimated_fcfa' => 15,
+                                        'cost_estimated_fcfa' => 13,
                                         'duration_ms' => 500,
                                         'status' => 'success',
-                                        'input_summary' => 'Retouche & cadrage automatique Photoroom à l\'import produit',
+                                        'input_summary' => 'Retouche & packshot studio blanc Photoroom v1/segment à l\'import produit',
                                     ]);
                                 }
                             }

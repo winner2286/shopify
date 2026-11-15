@@ -51,6 +51,21 @@
                 <div style="font-size:.82rem;color:var(--text-soft)">Intelligence Artificielle</div>
                 <div style="font-weight:700;font-size:1.05rem">{{ $plan->ai_credits }} crédits / mois</div>
             </div>
+            <div style="grid-column:1 / -1;background:linear-gradient(135deg,#f8f5ff 0%,#eef6ff 100%);border:1px solid #d9d6fe;padding:.9rem 1.1rem;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap">
+                <div>
+                    <div style="font-size:.82rem;color:#5925dc;font-weight:600">Studio Photo IA Photoroom</div>
+                    <div style="font-weight:700;font-size:1.05rem;color:#101828">{{ $plan->photoroomCreditsMonthly() }} photos Photoroom HD / mois</div>
+                </div>
+                <div style="font-size:.82rem;font-weight:600;color:#5925dc;background:#fff;padding:.35rem .75rem;border-radius:999px;border:1px solid #d9d6fe">
+                    @if($plan->slug === 'essentiel')
+                        Détourage & Packshot blanc HD
+                    @elseif($plan->slug === 'pro')
+                        Studio Pro : Décors IA & ombres HD
+                    @else
+                        Photoroom Max : Showrooms luxe, lifestyle & podiums IA
+                    @endif
+                </div>
+            </div>
         </div>
 
         <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.6rem;font-size:.95rem">
