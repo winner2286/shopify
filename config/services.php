@@ -66,6 +66,7 @@ return [
 
     'photoroom' => [
         'key' => env('PHOTOROOM_API_KEY'),
+        'sandbox_key' => env('PHOTOROOM_SANDBOX_API_KEY'),
         'segment_url' => env('PHOTOROOM_SEGMENT_URL', 'https://sdk.photoroom.com/v1/segment'),
         'edit_url' => env('PHOTOROOM_EDIT_URL', 'https://image-api.photoroom.com/v2/edit'),
     ],

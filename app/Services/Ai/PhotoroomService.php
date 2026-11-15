@@ -20,7 +20,12 @@ class PhotoroomService
 
     protected function apiKey(): string
     {
-        return trim((string) config('services.photoroom.key', $this->apiKey));
+        $liveKey = trim((string) config('services.photoroom.key', $this->apiKey));
+        if ($liveKey !== '') {
+            return $liveKey;
+        }
+
+        return trim((string) config('services.photoroom.sandbox_key', ''));
     }
 
     protected function segmentUrl(): string

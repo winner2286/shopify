@@ -372,4 +372,46 @@ class PhotoroomIntegrationTest extends TestCase
                 'format' => '1:1',
             ]);
     }
+
+    public function test_photoroom_service_uses_sandbox_key_when_live_key_is_empty(): void
+    {
+        config([
+            'services.photoroom.key' => '',
+            'services.photoroom.sandbox_key' => 'sandbox_sk_test_999',
+        ]);
+
+        $fakeCutoutPng = $this->makePngBinary(200, 200, true);
+
+        Http::fake([
+            'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        $service = new PhotoroomService();
+        $this->assertTrue($service->isConfigured());
+
+        $cutout = $service->removeBackground($this->makePngBinary(180, 180, false));
+        $this->assertSame($fakeCutoutPng, $cutout);
+
+        Http::assertSent(fn (HttpClientRequest $req) => $req->hasHeader('x-api-key', 'sandbox_sk_test_999'));
+    }
+
+    public function test_photoroom_service_prefers_live_key_over_sandbox_key(): void
+    {
+        config([
+            'services.photoroom.key' => 'sk_live_test_777',
+            'services.photoroom.sandbox_key' => 'sandbox_sk_test_999',
+        ]);
+
+        $fakeCutoutPng = $this->makePngBinary(200, 200, true);
+
+        Http::fake([
+            'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        $service = new PhotoroomService();
+        $cutout = $service->removeBackground($this->makePngBinary(180, 180, false));
+        $this->assertSame($fakeCutoutPng, $cutout);
+
+        Http::assertSent(fn (HttpClientRequest $req) => $req->hasHeader('x-api-key', 'sk_live_test_777'));
+    }
 }

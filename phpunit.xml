@@ -33,5 +33,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="PHOTOROOM_API_KEY" value=""/>
+        <env name="PHOTOROOM_SANDBOX_API_KEY" value=""/>
     </php>
 </phpunit>
