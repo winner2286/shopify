@@ -287,17 +287,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function prepareImageFile(file) {
-        const isHeicLike = /image\/(hei[cf])|\.(hei[cf])$/i.test((file.type || '') + ' ' + (file.name || ''));
-        if (file.size <= compressThresholdBytes && !isHeicLike) {
-            return Promise.resolve(file);
-        }
-
         return new Promise((resolve) => {
             const img = new Image();
             const url = URL.createObjectURL(file);
 
             img.onload = function() {
-                const maxDim = 1600;
+                const maxDim = 1200;
                 const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
                 const w = Math.max(1, Math.round((img.width || 800) * scale));
                 const h = Math.max(1, Math.round((img.height || 800) * scale));
@@ -305,6 +300,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 canvas.width = w;
                 canvas.height = h;
                 const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
                 ctx.drawImage(img, 0, 0, w, h);
 
                 const baseName = (file.name || 'photo').replace(/\.[^/.]+$/, '');
@@ -334,10 +331,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             img.onerror = function() {
                 URL.revokeObjectURL(url);
-                if (file.size <= 5 * 1024 * 1024) {
+                const isHeicLike = /image\/(hei[cf])|\.(hei[cf])$/i.test((file.type || '') + ' ' + (file.name || ''));
+                if (!isHeicLike && file.size <= 5 * 1024 * 1024) {
                     resolve(file);
                 } else {
-                    alert('La photo "' + file.name + '" dépasse 5 Mo.');
+                    alert('Ce format photo mobile (' + (file.name || 'HEIC') + ') n\'a pas pu être converti par le navigateur. Utilisez JPG, PNG ou WebP.');
                     resolve(null);
                 }
             };

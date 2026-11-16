@@ -45,6 +45,7 @@ class ProductStudioService
     {
         $startTime = microtime(true);
         $uniq = uniqid();
+        $imageBinary = $this->normalizeImageBinary($imageBinary, 1200);
 
         // 1. Sauvegarder la photo originale pour que le commerçant conserve toujours le choix de la garder
         $sourceFilename = "source_{$uniq}.jpg";
@@ -278,6 +279,7 @@ class ProductStudioService
             return null;
         }
 
+        $imageBinary = $this->normalizeImageBinary($imageBinary, 1200);
         $uniq = uniqid();
         $engine = 'zanika-product-studio';
         $method = 'local_saliency_segmentation';
@@ -591,13 +593,15 @@ PROMPT;
             }
         }
 
-        // 2. Tenter l'appel vers un endpoint RMBG rapide
-        $apiCutout = $this->tryRemoteRmbg($imageBinary);
-        if ($apiCutout && strlen($apiCutout) > 500) {
-            return [
-                'binary' => $apiCutout,
-                'method' => 'ai_rmbg_model',
-            ];
+        // 2. Tenter l'appel vers un endpoint RMBG rapide uniquement si explicitement activé
+        if (config('services.rmbg.enabled', false)) {
+            $apiCutout = $this->tryRemoteRmbg($imageBinary);
+            if ($apiCutout && strlen($apiCutout) > 500) {
+                return [
+                    'binary' => $apiCutout,
+                    'method' => 'ai_rmbg_model',
+                ];
+            }
         }
 
         // 3. Bascule autonome sur l'algorithme de segmentation local haute précision en GD
@@ -682,6 +686,52 @@ PROMPT;
     }
 
     /**
+     * Redimensionne en mémoire une image haute résolution (ex: smartphone 12-24 MP)
+     * afin d'éviter les dépassements mémoire et timeouts PHP sur le serveur.
+     */
+    public function normalizeImageBinary(string $imageBinary, int $maxDim = 1200): string
+    {
+        if (! function_exists('imagecreatefromstring') || trim($imageBinary) === '') {
+            return $imageBinary;
+        }
+
+        $src = @imagecreatefromstring($imageBinary);
+        if (! $src) {
+            return $imageBinary;
+        }
+
+        $w = imagesx($src);
+        $h = imagesy($src);
+        if ($w <= $maxDim && $h <= $maxDim) {
+            imagedestroy($src);
+            return $imageBinary;
+        }
+
+        $ratio = min($maxDim / max(1, $w), $maxDim / max(1, $h));
+        $newW = max(1, (int) round($w * $ratio));
+        $newH = max(1, (int) round($h * $ratio));
+
+        $dst = imagecreatetruecolor($newW, $newH);
+        imagealphablending($dst, false);
+        imagesavealpha($dst, true);
+        $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+        imagefilledrectangle($dst, 0, 0, $newW, $newH, $transparent);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, $w, $h);
+        imagedestroy($src);
+
+        ob_start();
+        if (str_starts_with($imageBinary, "\x89PNG")) {
+            imagepng($dst);
+        } else {
+            imagejpeg($dst, null, 90);
+        }
+        $resized = ob_get_clean();
+        imagedestroy($dst);
+
+        return is_string($resized) && $resized !== '' ? $resized : $imageBinary;
+    }
+
+    /**
      * Algorithme de segmentation de fond local haute précision (pur PHP + GD).
      * Échantillonne les bordures pour extraire le sujet principal sans altérer ses pixels intérieurs.
      */
@@ -691,6 +741,7 @@ PROMPT;
             return null;
         }
 
+        $imageBinary = $this->normalizeImageBinary($imageBinary, 720);
         $src = @imagecreatefromstring($imageBinary);
         if (! $src) {
             return null;
@@ -783,9 +834,10 @@ PROMPT;
         $h = imagesy($img);
         $minX = $w; $maxX = 0;
         $minY = $h; $maxY = 0;
+        $step = ($w > 600 || $h > 600) ? 2 : 1;
 
-        for ($x = 0; $x < $w; $x++) {
-            for ($y = 0; $y < $h; $y++) {
+        for ($x = 0; $x < $w; $x += $step) {
+            for ($y = 0; $y < $h; $y += $step) {
                 $alpha = (imagecolorat($img, $x, $y) >> 24) & 0x7F;
                 if ($alpha < 115) { // Pixel visible
                     if ($x < $minX) $minX = $x;
@@ -800,11 +852,12 @@ PROMPT;
             return $img;
         }
 
-        // Légère marge de sécurité de 4 pixels
-        $minX = max(0, $minX - 4);
-        $minY = max(0, $minY - 4);
-        $cropW = min($w - $minX, ($maxX - $minX + 1) + 8);
-        $cropH = min($h - $minY, ($maxY - $minY + 1) + 8);
+        // Légère marge de sécurité
+        $margin = $step + 4;
+        $minX = max(0, $minX - $margin);
+        $minY = max(0, $minY - $margin);
+        $cropW = min($w - $minX, ($maxX - $minX + 1) + ($margin * 2));
+        $cropH = min($h - $minY, ($maxY - $minY + 1) + ($margin * 2));
 
         $cropped = imagecrop($img, ['x' => $minX, 'y' => $minY, 'width' => $cropW, 'height' => $cropH]);
         return $cropped ?: $img;

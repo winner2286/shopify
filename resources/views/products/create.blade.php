@@ -446,17 +446,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function prepareImageFile(file) {
-        const isHeicLike = /image\/(hei[cf])|\.(hei[cf])$/i.test((file.type || '') + ' ' + (file.name || ''));
-        if (file.size <= compressThresholdBytes && !isHeicLike) {
-            return Promise.resolve(file);
-        }
-
         return new Promise((resolve) => {
             const img = new Image();
             const url = URL.createObjectURL(file);
 
             img.onload = function() {
-                const maxDim = 1600;
+                const maxDim = 1200;
                 const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
                 const w = Math.max(1, Math.round((img.width || 800) * scale));
                 const h = Math.max(1, Math.round((img.height || 800) * scale));
@@ -464,6 +459,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 canvas.width = w;
                 canvas.height = h;
                 const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
                 ctx.drawImage(img, 0, 0, w, h);
 
                 const baseName = (file.name || 'photo').replace(/\.[^/.]+$/, '');
@@ -493,10 +490,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             img.onerror = function() {
                 URL.revokeObjectURL(url);
-                if (file.size <= 5 * 1024 * 1024) {
+                const isHeicLike = /image\/(hei[cf])|\.(hei[cf])$/i.test((file.type || '') + ' ' + (file.name || ''));
+                if (!isHeicLike && file.size <= 5 * 1024 * 1024) {
                     resolve(file);
                 } else {
-                    alert('La photo "' + file.name + '" dépasse la taille maximale autorisée (5 Mo).');
+                    alert('Ce format photo mobile (' + (file.name || 'HEIC') + ') n\'a pas pu être converti par le navigateur. Utilisez JPG, PNG ou WebP.');
                     resolve(null);
                 }
             };
@@ -504,6 +502,8 @@ document.addEventListener('DOMContentLoaded', function() {
             img.src = url;
         });
     }
+
+    window.prepareProductPhotoForAi = prepareImageFile;
 
     // Traitement des nouveaux fichiers ajoutés
     async function handleNewFiles(files) {
@@ -960,6 +960,12 @@ window.runAiQualityCheck = async function(file) {
         }
     }
 
+    if (typeof window.prepareProductPhotoForAi === 'function') {
+        const prepared = await window.prepareProductPhotoForAi(file);
+        if (!prepared) return;
+        file = prepared;
+    }
+
     currentSourceFile = file;
 
     const loadingBox = document.getElementById('ai-quality-loading');
@@ -1000,9 +1006,9 @@ window.runAiQualityCheck = async function(file) {
             body: formData
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
-        if (data.status === 'success' && data.variations && data.variations.length > 0) {
+        if (res.ok && data.status === 'success' && data.variations && data.variations.length > 0) {
             currentAiVariations = data.variations;
             window.currentCutoutPath = data.cutout_path || null;
             window.currentSourceUrl = data.source_url || (file ? URL.createObjectURL(file) : '');
@@ -1028,7 +1034,8 @@ window.runAiQualityCheck = async function(file) {
 
             window.renderAiStudioModal();
         } else {
-            alert(data.error || 'Impossible de traiter la photo avec le Studio IA pour le moment.');
+            const detailedErr = data.error || data.message || (data.errors ? Object.values(data.errors).flat()[0] : null);
+            alert(detailedErr || 'Impossible de traiter la photo avec le Studio IA pour le moment.');
         }
     } catch (err) {
         console.error('Erreur Studio IA:', err);

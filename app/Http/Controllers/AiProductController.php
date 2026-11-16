@@ -13,18 +13,39 @@ use App\Services\ImageService;
 use App\Support\SearchHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class AiProductController extends Controller
 {
+    protected function isDecodableImageBinary(?string $binary): bool
+    {
+        if (! is_string($binary) || trim($binary) === '') {
+            return false;
+        }
+
+        if (function_exists('imagecreatefromstring')) {
+            $img = @imagecreatefromstring($binary);
+            if (! $img) {
+                return false;
+            }
+            imagedestroy($img);
+            return true;
+        }
+
+        return str_starts_with($binary, "\x89PNG")
+            || str_starts_with($binary, "\xFF\xD8\xFF")
+            || str_starts_with($binary, 'RIFF');
+    }
+
     /**
      * Analyse une photo de produit déposée par le commerçant et pré-remplit la fiche produit.
      */
     public function analyzePhoto(Request $request, AiVisionService $visionService): JsonResponse
     {
         $request->validate([
-            'photo' => 'nullable|file|image|max:10240', // 10 Mo max
+            'photo' => 'nullable|file|max:15360', // 15 Mo max (MIME mobiles tolérés puis vérifiés en binaire)
             'photo_base64' => 'nullable|string',
             'user_hint' => 'nullable|string|max:200',
         ]);
@@ -68,8 +89,11 @@ class AiProductController extends Controller
             $tempPhotoUrl = Storage::disk('public')->url($tempPhotoPath);
         }
 
-        if (! $imageBinary) {
-            return response()->json(['error' => 'Veuillez fournir une photo valide.'], 422);
+        if (! $this->isDecodableImageBinary($imageBinary)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Format d\'image non supporté ou fichier invalide. Utilisez une photo JPG, PNG ou WebP.',
+            ], 422);
         }
 
         $userHint = $request->input('user_hint');
@@ -102,7 +126,7 @@ class AiProductController extends Controller
     public function verifyQuality(Request $request, \App\Services\Ai\ProductStudioService $studioService): JsonResponse
     {
         $request->validate([
-            'photo' => 'nullable|file|image|max:10240',
+            'photo' => 'nullable|file|max:15360',
             'photo_base64' => 'nullable|string',
             'photo_path' => 'nullable|string',
             'category_hint' => 'nullable|string|max:200',
@@ -137,48 +161,61 @@ class AiProductController extends Controller
             }
         }
 
-        if (! $imageBinary) {
-            return response()->json(['error' => 'Veuillez fournir une photo valide.'], 422);
+        if (! $this->isDecodableImageBinary($imageBinary)) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Format d\'image non supporté ou fichier invalide. Utilisez une photo JPG, PNG ou WebP.',
+            ], 422);
         }
 
-        $categoryHint = $request->input('category_hint');
-        $studioResult = $studioService->processProductPhoto($shop, $imageBinary, $categoryHint);
+        try {
+            $categoryHint = $request->input('category_hint');
+            $studioResult = $studioService->processProductPhoto($shop, $imageBinary, $categoryHint);
 
-        // Journalisation de la vérification qualité (+12 crédits)
-        $shop->consumeAiCredits(12);
-        $studioEngine = $studioResult['engine'] ?? 'zanika-product-studio';
-        $studioCostFcfa = $studioEngine === 'photoroom-ai'
-            ? ($shop->canUsePhotoroomGenerativeScene() ? 62 : 13)
-            : 6;
+            // Journalisation de la vérification qualité (+12 crédits)
+            $shop->consumeAiCredits(12);
+            $studioEngine = $studioResult['engine'] ?? 'zanika-product-studio';
+            $studioCostFcfa = $studioEngine === 'photoroom-ai'
+                ? ($shop->canUsePhotoroomGenerativeScene() ? 62 : 13)
+                : 6;
 
-        AiGeneration::create([
-            'shop_id' => $shop->id,
-            'type' => 'ai_quality_check',
-            'step' => 'studio_packshot',
-            'model_used' => $studioEngine,
-            'prompt_tokens' => 0,
-            'completion_tokens' => 0,
-            'cost_estimated_fcfa' => $studioCostFcfa,
-            'duration_ms' => $studioResult['duration_ms'] ?? 1200,
-            'status' => 'success',
-            'input_summary' => "Studio Packshot [{$studioResult['category']}] : " . ($studioResult['product_title'] ?? 'Article'),
-        ]);
+            AiGeneration::create([
+                'shop_id' => $shop->id,
+                'type' => 'ai_quality_check',
+                'step' => 'studio_packshot',
+                'model_used' => $studioEngine,
+                'prompt_tokens' => 0,
+                'completion_tokens' => 0,
+                'cost_estimated_fcfa' => $studioCostFcfa,
+                'duration_ms' => $studioResult['duration_ms'] ?? 1200,
+                'status' => 'success',
+                'input_summary' => "Studio Packshot [{$studioResult['category']}] : " . ($studioResult['product_title'] ?? 'Article'),
+            ]);
 
-        return response()->json([
-            'status' => 'success',
-            'engine' => $studioResult['engine'] ?? 'zanika-product-studio',
-            'cutout_method' => $studioResult['cutout_method'] ?? null,
-            'category' => $studioResult['category'] ?? 'general',
-            'product_title' => $studioResult['product_title'] ?? null,
-            'cutout_path' => $studioResult['cutout_path'] ?? null,
-            'cutout_url' => $studioResult['cutout_url'] ?? null,
-            'source_path' => $studioResult['source_path'] ?? null,
-            'source_url' => $studioResult['source_url'] ?? null,
-            'variations' => $studioResult['variations'] ?? [],
-            'quality_audit' => $studioResult['quality_audit'] ?? null,
-            'duration_ms' => $studioResult['duration_ms'] ?? null,
-            'message' => 'Packshots studio créés avec succès sans altération du produit',
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'engine' => $studioResult['engine'] ?? 'zanika-product-studio',
+                'cutout_method' => $studioResult['cutout_method'] ?? null,
+                'category' => $studioResult['category'] ?? 'general',
+                'product_title' => $studioResult['product_title'] ?? null,
+                'cutout_path' => $studioResult['cutout_path'] ?? null,
+                'cutout_url' => $studioResult['cutout_url'] ?? null,
+                'source_path' => $studioResult['source_path'] ?? null,
+                'source_url' => $studioResult['source_url'] ?? null,
+                'variations' => $studioResult['variations'] ?? [],
+                'quality_audit' => $studioResult['quality_audit'] ?? null,
+                'duration_ms' => $studioResult['duration_ms'] ?? null,
+                'message' => 'Packshots studio créés avec succès sans altération du produit',
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            Log::warning('Studio Photo IA verifyQuality failure: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Impossible de traiter cette photo avec le Studio IA pour le moment. Réessayez avec une image JPG ou PNG.',
+            ], 500);
+        }
     }
 
     /**
@@ -187,6 +224,7 @@ class AiProductController extends Controller
     public function generateVariant(Request $request, \App\Services\Ai\ProductStudioService $studioService): JsonResponse
     {
         $request->validate([
+            'photo' => 'nullable|file|max:15360',
             'photo_path' => 'nullable|string',
             'photo_base64' => 'nullable|string',
             'cutout_path' => 'nullable|string',
@@ -411,7 +449,7 @@ class AiProductController extends Controller
     {
         $request->validate([
             'product_id' => 'nullable|integer',
-            'image' => 'nullable|file|image|max:10240',
+            'image' => 'nullable|file|max:15360',
             'image_base64' => 'nullable|string',
             'mode' => 'nullable|string|in:transparent,studio_white',
             'save_to_product' => 'nullable|boolean',
@@ -463,10 +501,10 @@ class AiProductController extends Controller
             }
         }
 
-        if (! $imageBinary) {
+        if (! $this->isDecodableImageBinary($imageBinary)) {
             return response()->json([
                 'success' => false,
-                'error' => 'Veuillez sélectionner un produit possédant une photo ou importer une image valide.',
+                'error' => 'Veuillez sélectionner un produit possédant une photo ou importer une image valide (JPG, PNG, WebP).',
             ], 422);
         }
 

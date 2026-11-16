@@ -813,4 +813,36 @@ class PhotoroomIntegrationTest extends TestCase
 
         Http::assertSentCount(1);
     }
+
+    public function test_verify_quality_handles_high_resolution_mobile_photo_and_rejects_corrupt_binary_cleanly(): void
+    {
+        Storage::fake('public');
+        config(['services.photoroom.key' => '']);
+
+        [$merchant] = $this->createMerchant('highres.studio@example.test');
+
+        $highResPhoto = UploadedFile::fake()->image('iphone-photo.jpg', 2400, 1800);
+
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => $highResPhoto,
+            'category_hint' => 'Sac à main',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('engine', 'zanika-product-studio');
+
+        $variations = $response->json('variations');
+        $this->assertIsArray($variations);
+        $this->assertGreaterThanOrEqual(4, count($variations));
+
+        // Vérifier le rejet JSON clair (avec clé error en français) si binaire corrompu
+        $corruptFile = UploadedFile::fake()->createWithContent('broken.heic', 'NOT_AN_IMAGE_BINARY');
+        $badResponse = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => $corruptFile,
+        ]);
+
+        $badResponse->assertStatus(422)
+            ->assertJsonStructure(['status', 'error']);
+    }
 }
