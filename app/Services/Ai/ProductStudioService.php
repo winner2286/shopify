@@ -733,7 +733,8 @@ PROMPT;
 
     /**
      * Algorithme de segmentation de fond local haute précision (pur PHP + GD).
-     * Échantillonne les bordures pour extraire le sujet principal sans altérer ses pixels intérieurs.
+     * Utilise un Flood-Fill (BFS) connecté aux bordures extérieures pour détourer le fond
+     * sans jamais perforer les pixels intérieurs du produit (vêtements gris, blancs, reflets, etc.).
      */
     public function segmentBackgroundLocally(string $imageBinary): ?string
     {
@@ -741,10 +742,14 @@ PROMPT;
             return null;
         }
 
-        $imageBinary = $this->normalizeImageBinary($imageBinary, 720);
+        $imageBinary = $this->normalizeImageBinary($imageBinary, 540);
         $src = @imagecreatefromstring($imageBinary);
         if (! $src) {
             return null;
+        }
+
+        if (function_exists('imageistruecolor') && ! imageistruecolor($src) && function_exists('imagepalettetotruecolor')) {
+            @imagepalettetotruecolor($src);
         }
 
         $w = imagesx($src);
@@ -754,31 +759,134 @@ PROMPT;
             return null;
         }
 
-        // 1. Échantillonnage de la couleur du fond sur les 4 coins et le périmètre
-        $cornerSamples = [
-            imagecolorat($src, 2, 2),
-            imagecolorat($src, $w - 3, 2),
-            imagecolorat($src, 2, $h - 3),
-            imagecolorat($src, $w - 3, $h - 3),
-            imagecolorat($src, (int) ($w / 2), 2),
-            imagecolorat($src, (int) ($w / 2), $h - 3),
-            imagecolorat($src, 2, (int) ($h / 2)),
-            imagecolorat($src, $w - 3, (int) ($h / 2)),
-        ];
+        // 1. Échantillonnage du périmètre extérieur et sélection du cluster dominant (évite de moyenner le produit avec le fond)
+        $perimeterSamples = $this->samplePerimeterRgb($src, $w, $h);
+        [$bgR, $bgG, $bgB] = $this->findDominantBackgroundColor($perimeterSamples);
 
-        $bgR = 0; $bgG = 0; $bgB = 0;
-        foreach ($cornerSamples as $col) {
-            $bgR += ($col >> 16) & 0xFF;
-            $bgG += ($col >> 8) & 0xFF;
-            $bgB += $col & 0xFF;
+        // 2. Flood-Fill (BFS) démarrant uniquement depuis les 4 bordures extérieures
+        $total = $w * $h;
+        $isBg = str_repeat("\0", $total);
+        $queued = str_repeat("\0", $total);
+        $blocked = str_repeat("\0", $total);
+
+        $strictBgDistSq = 28.0 * 28.0;
+        $maxDriftDistSq = 40.0 * 40.0;
+        $stepDistSq = 11.0 * 11.0;
+
+        $queue = [];
+        $head = 0;
+
+        // Amorçage sur le pourtour extérieur (y=0, y=h-1, x=0, x=w-1)
+        for ($x = 0; $x < $w; $x++) {
+            foreach ([0, $h - 1] as $y) {
+                $idx = $y * $w + $x;
+                if ($queued[$idx] === "\1") {
+                    continue;
+                }
+                $col = imagecolorat($src, $x, $y);
+                $r = ($col >> 16) & 0xFF;
+                $g = ($col >> 8) & 0xFF;
+                $b = $col & 0xFF;
+                if ($this->colorDistanceSq($r, $g, $b, $bgR, $bgG, $bgB) <= $strictBgDistSq) {
+                    $queued[$idx] = "\1";
+                    $isBg[$idx] = "\1";
+                    $queue[] = $idx;
+                } else {
+                    $blocked[$idx] = "\1";
+                }
+            }
         }
-        $count = count($cornerSamples);
-        $bgR = (int) round($bgR / $count);
-        $bgG = (int) round($bgG / $count);
-        $bgB = (int) round($bgB / $count);
+        for ($y = 1; $y < $h - 1; $y++) {
+            foreach ([0, $w - 1] as $x) {
+                $idx = $y * $w + $x;
+                if ($queued[$idx] === "\1" || $blocked[$idx] === "\1") {
+                    continue;
+                }
+                $col = imagecolorat($src, $x, $y);
+                $r = ($col >> 16) & 0xFF;
+                $g = ($col >> 8) & 0xFF;
+                $b = $col & 0xFF;
+                if ($this->colorDistanceSq($r, $g, $b, $bgR, $bgG, $bgB) <= $strictBgDistSq) {
+                    $queued[$idx] = "\1";
+                    $isBg[$idx] = "\1";
+                    $queue[] = $idx;
+                } else {
+                    $blocked[$idx] = "\1";
+                }
+            }
+        }
 
-        // Seuil adaptatif de distance de couleur
-        $threshold = 32;
+        // Propagation 4-voisins uniquement à travers les pixels connectés aux bordures
+        $neighbors = [-1, 1, -$w, $w];
+        $tail = count($queue);
+        $bgRbDiff = $bgR - $bgB;
+        $bgGmDiff = $bgG - (($bgR + $bgB) * 0.5);
+
+        while ($head < $tail) {
+            $idx = $queue[$head++];
+            $cx = $idx % $w;
+
+            $cCol = imagecolorat($src, $cx, intdiv($idx, $w));
+            $cr = ($cCol >> 16) & 0xFF;
+            $cg = ($cCol >> 8) & 0xFF;
+            $cb = $cCol & 0xFF;
+
+            foreach ($neighbors as $offset) {
+                if ($offset === -1 && $cx === 0) {
+                    continue;
+                }
+                if ($offset === 1 && $cx === $w - 1) {
+                    continue;
+                }
+                $nIdx = $idx + $offset;
+                if ($nIdx < 0 || $nIdx >= $total) {
+                    continue;
+                }
+                if ($queued[$nIdx] === "\1" || $blocked[$nIdx] === "\1") {
+                    continue;
+                }
+
+                $nCol = imagecolorat($src, $nIdx % $w, intdiv($nIdx, $w));
+                $nr = ($nCol >> 16) & 0xFF;
+                $ng = ($nCol >> 8) & 0xFF;
+                $nb = $nCol & 0xFF;
+
+                $dr = $nr - $bgR;
+                $dg = $ng - $bgG;
+                $db = $nb - $bgB;
+                $dc1 = ($nr - $nb) - $bgRbDiff;
+                $dc2 = ($ng - (($nr + $nb) * 0.5)) - $bgGmDiff;
+                $distToBgSq = (($dr * $dr + $dg * $dg + $db * $db) / 3.0)
+                    + (0.30 * $dc1 * $dc1)
+                    + (0.20 * $dc2 * $dc2);
+
+                if ($distToBgSq <= $strictBgDistSq) {
+                    $queued[$nIdx] = "\1";
+                    $isBg[$nIdx] = "\1";
+                    $queue[] = $nIdx;
+                    $tail++;
+                    continue;
+                }
+
+                if ($distToBgSq <= $maxDriftDistSq) {
+                    $sdr = $nr - $cr;
+                    $sdg = $ng - $cg;
+                    $sdb = $nb - $cb;
+                    $stepSq = ($sdr * $sdr + $sdg * $sdg + $sdb * $sdb) / 3.0;
+                    if ($stepSq <= $stepDistSq) {
+                        $queued[$nIdx] = "\1";
+                        $isBg[$nIdx] = "\1";
+                        $queue[] = $nIdx;
+                        $tail++;
+                        continue;
+                    }
+                } else {
+                    $blocked[$nIdx] = "\1";
+                }
+            }
+        }
+
+        $removedRatio = $tail / max(1, $total);
 
         $dst = imagecreatetruecolor($w, $h);
         imagealphablending($dst, false);
@@ -786,32 +894,74 @@ PROMPT;
         $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
         imagefilledrectangle($dst, 0, 0, $w, $h, $transparent);
 
-        for ($x = 0; $x < $w; $x++) {
+        // 3. Garde-fou fond complexe/texturé ou faible contraste (< 8% ou > 85% retirés) :
+        // préserve 100% du cliché dans un cadre propre aux coins légèrement adoucis (zéro trou ni artefact).
+        if ($removedRatio < 0.08 || $removedRatio > 0.85) {
+            $cornerRadius = min(18, max(8, (int) round(min($w, $h) * 0.04)));
+            $rSq = $cornerRadius * $cornerRadius;
+
             for ($y = 0; $y < $h; $y++) {
+                for ($x = 0; $x < $w; $x++) {
+                    $alpha = 0;
+                    $dx = ($x < $cornerRadius) ? ($cornerRadius - 1 - $x) : (($x >= $w - $cornerRadius) ? ($x - ($w - $cornerRadius)) : 0);
+                    $dy = ($y < $cornerRadius) ? ($cornerRadius - 1 - $y) : (($y >= $h - $cornerRadius) ? ($y - ($h - $cornerRadius)) : 0);
+                    if ($dx > 0 && $dy > 0 && ($dx * $dx + $dy * $dy) > $rSq) {
+                        $alpha = 127;
+                    }
+
+                    $col = imagecolorat($src, $x, $y);
+                    $r = ($col >> 16) & 0xFF;
+                    $g = ($col >> 8) & 0xFF;
+                    $b = $col & 0xFF;
+                    imagesetpixel($dst, $x, $y, imagecolorallocatealpha($dst, $r, $g, $b, $alpha));
+                }
+            }
+
+            imagedestroy($src);
+            ob_start();
+            imagepng($dst);
+            $pngData = ob_get_clean();
+            imagedestroy($dst);
+
+            return $pngData ?: null;
+        }
+
+        // 4. Composition finale : seuls les pixels connectés au fond extérieur sont transparents,
+        // avec transition douce uniquement sur la frontière de 1px. Tous les pixels intérieurs restent 100% opaques.
+        $featherDistSq = 44.0 * 44.0;
+
+        for ($y = 0; $y < $h; $y++) {
+            $rowOffset = $y * $w;
+            for ($x = 0; $x < $w; $x++) {
+                $idx = $rowOffset + $x;
+                if ($isBg[$idx] === "\1") {
+                    continue;
+                }
+
+                $bgNeighbors = 0;
+                if ($x > 0 && $isBg[$idx - 1] === "\1") $bgNeighbors++;
+                if ($x < $w - 1 && $isBg[$idx + 1] === "\1") $bgNeighbors++;
+                if ($y > 0 && $isBg[$idx - $w] === "\1") $bgNeighbors++;
+                if ($y < $h - 1 && $isBg[$idx + $w] === "\1") $bgNeighbors++;
+
+                if ($bgNeighbors >= 3) {
+                    continue;
+                }
+
                 $col = imagecolorat($src, $x, $y);
                 $r = ($col >> 16) & 0xFF;
                 $g = ($col >> 8) & 0xFF;
                 $b = $col & 0xFF;
 
-                // Distance euclidienne pondérée dans l'espace colorimétrique perceptuel
-                $dr = $r - $bgR;
-                $dg = $g - $bgG;
-                $db = $b - $bgB;
-                $dist = sqrt((0.299 * $dr * $dr) + (0.587 * $dg * $dg) + (0.114 * $db * $db));
-
-                if ($dist < $threshold) {
-                    // Pixel de fond : rendu transparent avec adoucissement aux limites
-                    $alpha = 127;
-                } elseif ($dist < ($threshold + 12)) {
-                    // Transition douce (feathering) pour éliminer les contours durs en escalier
-                    $factor = ($dist - $threshold) / 12.0;
-                    $alpha = (int) round(127 * (1.0 - $factor));
-                } else {
-                    $alpha = 0; // Pixel du produit conservé à 100%
+                $alpha = 0;
+                if ($bgNeighbors > 0) {
+                    $distSq = $this->colorDistanceSq($r, $g, $b, $bgR, $bgG, $bgB);
+                    if ($distSq <= $featherDistSq) {
+                        $alpha = $bgNeighbors === 2 ? 64 : 38;
+                    }
                 }
 
-                $newCol = imagecolorallocatealpha($dst, $r, $g, $b, $alpha);
-                imagesetpixel($dst, $x, $y, $newCol);
+                imagesetpixel($dst, $x, $y, imagecolorallocatealpha($dst, $r, $g, $b, $alpha));
             }
         }
 
@@ -823,6 +973,111 @@ PROMPT;
         imagedestroy($dst);
 
         return $pngData ?: null;
+    }
+
+    /**
+     * Échantillonne les pixels le long des 4 bords de l'image pour identifier la couleur du fond extérieur.
+     *
+     * @return array<int, array{0: int, 1: int, 2: int}>
+     */
+    protected function samplePerimeterRgb($src, int $w, int $h): array
+    {
+        $samples = [];
+        $inset = 2;
+        $coords = [
+            [$inset, $inset],
+            [$w - 1 - $inset, $inset],
+            [$inset, $h - 1 - $inset],
+            [$w - 1 - $inset, $h - 1 - $inset],
+        ];
+
+        $steps = 6;
+        for ($i = 1; $i < $steps; $i++) {
+            $px = (int) round(($w - 1) * ($i / $steps));
+            $py = (int) round(($h - 1) * ($i / $steps));
+            $coords[] = [$px, $inset];
+            $coords[] = [$px, $h - 1 - $inset];
+            $coords[] = [$inset, $py];
+            $coords[] = [$w - 1 - $inset, $py];
+        }
+
+        foreach ($coords as [$cx, $cy]) {
+            $cx = max(0, min($w - 1, $cx));
+            $cy = max(0, min($h - 1, $cy));
+            $col = imagecolorat($src, $cx, $cy);
+            $samples[] = [
+                ($col >> 16) & 0xFF,
+                ($col >> 8) & 0xFF,
+                $col & 0xFF,
+            ];
+        }
+
+        return $samples;
+    }
+
+    /**
+     * Identifie le cluster de couleur dominant parmi les échantillons du périmètre extérieur.
+     *
+     * @param array<int, array{0: int, 1: int, 2: int}> $samples
+     * @return array{0: int, 1: int, 2: int}
+     */
+    protected function findDominantBackgroundColor(array $samples): array
+    {
+        if ($samples === []) {
+            return [255, 255, 255];
+        }
+
+        $clusterThreshSq = 28.0 * 28.0;
+        $bestMembers = [$samples[0]];
+        $bestWeight = -1;
+
+        foreach ($samples as $idx => $pivot) {
+            $members = [];
+            $weight = 0;
+            foreach ($samples as $j => $candidate) {
+                if ($this->colorDistanceSq($pivot[0], $pivot[1], $pivot[2], $candidate[0], $candidate[1], $candidate[2]) <= $clusterThreshSq) {
+                    $members[] = $candidate;
+                    // Les 4 coins (indices 0..3) reçoivent un léger bonus pour départager les bords serrés
+                    $weight += ($j < 4) ? 2 : 1;
+                }
+            }
+            if ($weight > $bestWeight || ($weight === $bestWeight && $idx < 4)) {
+                $bestWeight = $weight;
+                $bestMembers = $members;
+            }
+        }
+
+        $rSum = 0;
+        $gSum = 0;
+        $bSum = 0;
+        foreach ($bestMembers as [$r, $g, $b]) {
+            $rSum += $r;
+            $gSum += $g;
+            $bSum += $b;
+        }
+        $n = max(1, count($bestMembers));
+
+        return [
+            (int) round($rSum / $n),
+            (int) round($gSum / $n),
+            (int) round($bSum / $n),
+        ];
+    }
+
+    /**
+     * Distance colorimétrique au carré sensible à la fois à la luminance et à la chrominance (teinte).
+     */
+    protected function colorDistanceSq(int $r1, int $g1, int $b1, int $r2, int $g2, int $b2): float
+    {
+        $dr = $r1 - $r2;
+        $dg = $g1 - $g2;
+        $db = $b1 - $b2;
+        $dc1 = ($r1 - $b1) - ($r2 - $b2);
+        $dc2 = ($g1 - (($r1 + $b1) * 0.5)) - ($g2 - (($r2 + $b2) * 0.5));
+
+        return (($dr * $dr + $dg * $dg + $db * $db) / 3.0)
+            + (0.30 * $dc1 * $dc1)
+            + (0.20 * $dc2 * $dc2);
     }
 
     /**

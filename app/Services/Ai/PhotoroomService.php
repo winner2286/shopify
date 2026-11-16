@@ -20,12 +20,25 @@ class PhotoroomService
 
     protected function apiKey(): string
     {
-        $liveKey = trim((string) config('services.photoroom.key', $this->apiKey));
-        if ($liveKey !== '') {
-            return $liveKey;
-        }
+        $candidates = $this->candidateApiKeys();
 
-        return trim((string) config('services.photoroom.sandbox_key', ''));
+        return $candidates[0] ?? '';
+    }
+
+    /**
+     * Retourne les clés API Photoroom candidates par ordre de priorité : Live puis Sandbox.
+     * Permet de basculer automatiquement sur la clé Sandbox si le quota gratuit Live (402/403/429) est épuisé.
+     *
+     * @return array<int, string>
+     */
+    protected function candidateApiKeys(): array
+    {
+        $candidates = [
+            trim((string) config('services.photoroom.key', $this->apiKey)),
+            trim((string) config('services.photoroom.sandbox_key', '')),
+        ];
+
+        return array_values(array_unique(array_filter($candidates, fn (string $k) => $k !== '')));
     }
 
     protected function segmentUrl(): string
@@ -43,7 +56,7 @@ class PhotoroomService
      */
     public function isConfigured(): bool
     {
-        return $this->apiKey() !== '';
+        return $this->candidateApiKeys() !== [];
     }
 
     /**
@@ -55,50 +68,22 @@ class PhotoroomService
      */
     public function removeBackground(string $imageBinary, array $options = []): ?string
     {
-        $apiKey = $this->apiKey();
-        if ($apiKey === '' || trim($imageBinary) === '') {
-            return null;
-        }
+        $fields = [
+            'format' => (string) ($options['format'] ?? 'png'),
+            'channels' => (string) ($options['channels'] ?? 'rgba'),
+            'size' => (string) ($options['size'] ?? 'full'),
+            'crop' => isset($options['crop']) && $options['crop'] ? 'true' : 'false',
+        ];
 
-        try {
-            $client = Http::withHeaders([
-                'x-api-key' => $apiKey,
-                'Accept' => 'image/png, application/json',
-            ])->timeout(25);
-
-            if (! app()->environment('production')) {
-                $client = $client->withoutVerifying();
-            }
-
-            $fields = [
-                'format' => (string) ($options['format'] ?? 'png'),
-                'channels' => (string) ($options['channels'] ?? 'rgba'),
-                'size' => (string) ($options['size'] ?? 'full'),
-                'crop' => isset($options['crop']) && $options['crop'] ? 'true' : 'false',
-            ];
-
-            $response = $client
-                ->attach('image_file', $imageBinary, 'product.jpg')
-                ->post($this->segmentUrl(), $fields);
-
-            if ($response->successful()) {
-                $body = $response->body();
-                if ($this->isValidImageBinary($body)) {
-                    return $body;
-                }
-                Log::warning('Photoroom v1/segment returned non-image payload.');
-                return null;
-            }
-
-            Log::warning('Photoroom v1/segment HTTP error', [
-                'status' => $response->status(),
-                'body' => mb_substr($response->body(), 0, 300),
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('Photoroom v1/segment exception: ' . $e->getMessage());
-        }
-
-        return null;
+        return $this->sendMultipartWithFallback(
+            url: $this->segmentUrl(),
+            fileField: 'image_file',
+            imageBinary: $imageBinary,
+            fields: $fields,
+            accept: 'image/png, application/json',
+            timeout: 25,
+            logLabel: 'Photoroom v1/segment'
+        );
     }
 
     /**
@@ -110,58 +95,87 @@ class PhotoroomService
      */
     public function editProductImage(string $imageBinary, array $params = []): ?string
     {
-        $apiKey = $this->apiKey();
-        if ($apiKey === '' || trim($imageBinary) === '') {
+        $fields = [
+            'removeBackground' => (string) ($params['removeBackground'] ?? 'true'),
+            'lighting.mode' => (string) ($params['lighting.mode'] ?? 'ai.auto'),
+            'shadow.mode' => (string) ($params['shadow.mode'] ?? 'ai.soft'),
+            'padding' => (string) ($params['padding'] ?? '0.10'),
+            'outputSize' => (string) ($params['outputSize'] ?? '1000x1000'),
+            'export.format' => (string) ($params['export.format'] ?? 'png'),
+        ];
+
+        if (! empty($params['background.prompt'])) {
+            $fields['background.prompt'] = (string) $params['background.prompt'];
+            if (! empty($params['background.guidance.scale'])) {
+                $fields['background.guidance.scale'] = (string) $params['background.guidance.scale'];
+            }
+        } else {
+            $fields['background.color'] = ltrim((string) ($params['background.color'] ?? 'FFFFFF'), '#');
+        }
+
+        return $this->sendMultipartWithFallback(
+            url: $this->editUrl(),
+            fileField: 'imageFile',
+            imageBinary: $imageBinary,
+            fields: $fields,
+            accept: 'image/png, image/jpeg, image/webp, application/json',
+            timeout: 30,
+            logLabel: 'Photoroom v2/edit'
+        );
+    }
+
+    /**
+     * Exécute un appel multipart vers Photoroom en basculant automatiquement de la clé Live
+     * vers la clé Sandbox si la première échoue (401/402/403/429/timeout).
+     *
+     * @param array<string, string> $fields
+     */
+    protected function sendMultipartWithFallback(
+        string $url,
+        string $fileField,
+        string $imageBinary,
+        array $fields,
+        string $accept,
+        int $timeout,
+        string $logLabel
+    ): ?string {
+        $keys = $this->candidateApiKeys();
+        if ($keys === [] || trim($imageBinary) === '') {
             return null;
         }
 
-        try {
-            $client = Http::withHeaders([
-                'x-api-key' => $apiKey,
-                'Accept' => 'image/png, image/jpeg, image/webp, application/json',
-            ])->timeout(30);
+        foreach ($keys as $index => $apiKey) {
+            try {
+                $client = Http::withHeaders([
+                    'x-api-key' => $apiKey,
+                    'Accept' => $accept,
+                ])->timeout($timeout);
 
-            if (! app()->environment('production')) {
-                $client = $client->withoutVerifying();
-            }
-
-            $fields = [
-                'removeBackground' => (string) ($params['removeBackground'] ?? 'true'),
-                'lighting.mode' => (string) ($params['lighting.mode'] ?? 'ai.auto'),
-                'shadow.mode' => (string) ($params['shadow.mode'] ?? 'ai.soft'),
-                'padding' => (string) ($params['padding'] ?? '0.10'),
-                'outputSize' => (string) ($params['outputSize'] ?? '1000x1000'),
-                'export.format' => (string) ($params['export.format'] ?? 'png'),
-            ];
-
-            if (! empty($params['background.prompt'])) {
-                $fields['background.prompt'] = (string) $params['background.prompt'];
-                if (! empty($params['background.guidance.scale'])) {
-                    $fields['background.guidance.scale'] = (string) $params['background.guidance.scale'];
+                if (! app()->environment('production')) {
+                    $client = $client->withoutVerifying();
                 }
-            } else {
-                $fields['background.color'] = ltrim((string) ($params['background.color'] ?? 'FFFFFF'), '#');
-            }
 
-            $response = $client
-                ->attach('imageFile', $imageBinary, 'product.jpg')
-                ->post($this->editUrl(), $fields);
+                $response = $client
+                    ->attach($fileField, $imageBinary, 'product.jpg')
+                    ->post($url, $fields);
 
-            if ($response->successful()) {
-                $body = $response->body();
-                if ($this->isValidImageBinary($body)) {
-                    return $body;
+                if ($response->successful()) {
+                    $body = $response->body();
+                    if ($this->isValidImageBinary($body)) {
+                        return $body;
+                    }
+                    Log::warning("{$logLabel} returned non-image payload.", ['key_index' => $index]);
+                    continue;
                 }
-                Log::warning('Photoroom v2/edit returned non-image payload.');
-                return null;
-            }
 
-            Log::warning('Photoroom v2/edit HTTP error', [
-                'status' => $response->status(),
-                'body' => mb_substr($response->body(), 0, 300),
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('Photoroom v2/edit exception: ' . $e->getMessage());
+                Log::warning("{$logLabel} HTTP error", [
+                    'key_index' => $index,
+                    'status' => $response->status(),
+                    'body' => mb_substr($response->body(), 0, 300),
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning("{$logLabel} exception: " . $e->getMessage(), ['key_index' => $index]);
+            }
         }
 
         return null;

@@ -15,6 +15,23 @@ export OPENROUTER_MODEL="${OPENROUTER_MODEL:-google/gemini-2.5-flash}"
 export FEEXPAY_MODE="${FEEXPAY_MODE:-SANDBOX}"
 export FEEXPAY_BASE_URL="${FEEXPAY_BASE_URL:-https://api-v2.feexpay.me}"
 export FEEXPAY_CURRENCY="${FEEXPAY_CURRENCY:-XOF}"
+export PHOTOROOM_API_KEY="${PHOTOROOM_API_KEY:-sk_pr_default_3ced77ab358dd4a3e4ff3b88e62cccb7d5aba97d}"
+export PHOTOROOM_SANDBOX_API_KEY="${PHOTOROOM_SANDBOX_API_KEY:-sandbox_sk_pr_default_3ced77ab358dd4a3e4ff3b88e62cccb7d5aba97d}"
+export PHOTOROOM_SEGMENT_URL="${PHOTOROOM_SEGMENT_URL:-https://sdk.photoroom.com/v1/segment}"
+export PHOTOROOM_EDIT_URL="${PHOTOROOM_EDIT_URL:-https://image-api.photoroom.com/v2/edit}"
+
+if [ -f /var/www/html/.env ]; then
+    for PR_VAR in PHOTOROOM_API_KEY PHOTOROOM_SANDBOX_API_KEY PHOTOROOM_SEGMENT_URL PHOTOROOM_EDIT_URL; do
+        PR_VAL=$(printenv "$PR_VAR" 2>/dev/null || true)
+        if [ -n "$PR_VAL" ]; then
+            if grep -q "^${PR_VAR}=" /var/www/html/.env 2>/dev/null; then
+                sed -i "s|^${PR_VAR}=.*|${PR_VAR}=${PR_VAL}|g" /var/www/html/.env 2>/dev/null || true
+            else
+                echo "${PR_VAR}=${PR_VAL}" >> /var/www/html/.env 2>/dev/null || true
+            fi
+        fi
+    done
+fi
 
 # 2. Validation et génération de la clé d'application
 case "$APP_KEY" in

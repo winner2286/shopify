@@ -1,8 +1,8 @@
 <!-- ======================================================================= -->
 <!-- ZANIKA AI PRODUCT PHOTOGRAPHY STUDIO — STUDIO PHOTO PROFESSIONNEL IA     -->
 <!-- ======================================================================= -->
-<div id="ai-variations-modal" style="display:none;position:fixed;inset:0;background:rgba(8,10,15,0.88);backdrop-filter:blur(10px);z-index:99999;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;box-sizing:border-box">
-    <div style="background:var(--surface, #18181b);border:1px solid rgba(255,255,255,0.12);border-radius:24px;max-width:820px;width:100%;padding:1.6rem;box-shadow:0 30px 80px rgba(0,0,0,0.85);position:relative;margin:auto;box-sizing:border-box;color:var(--text, #f4f4f5)">
+<div id="ai-variations-modal" style="display:none;position:fixed;inset:0;background:rgba(8,10,15,0.88);backdrop-filter:blur(10px);z-index:99999;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;overflow-x:hidden;max-width:100vw;box-sizing:border-box">
+    <div class="ai-studio-modal-card" style="background:var(--surface, #18181b);border:1px solid rgba(255,255,255,0.12);border-radius:24px;max-width:min(820px, 100%);width:100%;padding:1.6rem;box-shadow:0 30px 80px rgba(0,0,0,0.85);position:relative;margin:auto;box-sizing:border-box;overflow-x:hidden;color:var(--text, #f4f4f5)">
         
         <!-- Bouton Fermer -->
         <button type="button" onclick="closeAiVariationsModal()" style="position:absolute;top:1.1rem;right:1.1rem;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:var(--text, #fff);font-size:1.4rem;display:grid;place-items:center;cursor:pointer;line-height:1;z-index:10;transition:all .15s" aria-label="Fermer" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">×</button>
@@ -37,7 +37,7 @@
         </div>
 
         <!-- Onglets du Studio (Comparateur vs Galerie de styles) -->
-        <div style="display:flex;gap:.5rem;margin-bottom:1.1rem;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:.6rem">
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.1rem;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:.6rem">
             <button type="button" id="tab-btn-compare" onclick="switchAiStudioTab('compare')" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-weight:700;font-size:.86rem;padding:.45rem 1rem;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;transition:all .15s">
                 <x-icon name="zap" :size="15" /> <span>Comparatif Avant / Après</span>
             </button>
@@ -119,17 +119,17 @@
         </div>
 
         <!-- Barre d'Actions Principales (Section 6 & Règle Commerçant a le dernier mot) -->
-        <div style="display:flex;flex-direction:column;gap:.75rem">
-            <div style="display:grid;grid-template-columns:2fr 1fr;gap:.75rem" class="studio-actions-grid">
+        <div style="display:flex;flex-direction:column;gap:.75rem;width:100%;max-width:100%;box-sizing:border-box">
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:.75rem;width:100%;max-width:100%;box-sizing:border-box" class="studio-actions-grid">
                 <!-- Bouton 1 : Valider et utiliser cette image -->
-                <button type="button" id="btn-confirm-ai-selection" onclick="confirmAiPhotoSelection()" class="btn" style="background:linear-gradient(135deg, #9e1b32, #c5223d);color:#fff;border:none;font-weight:800;padding:.95rem 1.4rem;border-radius:14px;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:.6rem;box-shadow:0 6px 20px rgba(158,27,50,0.45);cursor:pointer;transition:transform .15s, box-shadow .15s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
-                    <x-icon name="check" size="20" />
-                    <span id="btn-confirm-text">Utiliser cette photo studio</span>
+                <button type="button" id="btn-confirm-ai-selection" onclick="confirmAiPhotoSelection()" class="btn" style="background:linear-gradient(135deg, #9e1b32, #c5223d);color:#fff;border:none;font-weight:800;padding:.95rem 1.4rem;border-radius:14px;font-size:1rem;display:flex;align-items:center;justify-content:center;gap:.6rem;box-shadow:0 6px 20px rgba(158,27,50,0.45);cursor:pointer;transition:transform .15s, box-shadow .15s;white-space:normal;word-break:break-word;text-align:center;line-height:1.25;width:100%;max-width:100%;min-width:0;box-sizing:border-box" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                    <span style="flex-shrink:0;display:inline-flex"><x-icon name="check" size="20" /></span>
+                    <span id="btn-confirm-text" style="min-width:0;word-break:break-word">Utiliser cette photo studio</span>
                 </button>
 
                 <!-- Bouton 2 : Réessayer / Générer une autre variante -->
-                <button type="button" onclick="requestAnotherAiVariant()" id="btn-retry-variant" class="btn btn-ghost" style="border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:var(--text, #fff);font-weight:700;padding:.95rem 1.1rem;border-radius:14px;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:.45rem;cursor:pointer;transition:all .15s">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
+                <button type="button" onclick="requestAnotherAiVariant()" id="btn-retry-variant" class="btn btn-ghost" style="border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:var(--text, #fff);font-weight:700;padding:.95rem 1.1rem;border-radius:14px;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:.45rem;cursor:pointer;transition:all .15s;white-space:normal;word-break:break-word;text-align:center;line-height:1.25;width:100%;max-width:100%;min-width:0;box-sizing:border-box">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
                     <span>Réessayer (+6 cr)</span>
                 </button>
             </div>
@@ -152,11 +152,31 @@
 
 <style>
 @media (max-width: 640px) {
+    #ai-variations-modal {
+        padding: .55rem !important;
+    }
+    .ai-studio-modal-card {
+        padding: 1.1rem !important;
+        border-radius: 18px !important;
+    }
     .studio-compare-grid {
+        grid-template-columns: 1fr !important;
+    }
+    #ai-variations-grid {
         grid-template-columns: 1fr !important;
     }
     .studio-actions-grid {
         grid-template-columns: 1fr !important;
+    }
+    .studio-compare-grid > *,
+    .studio-actions-grid > * {
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+    #btn-confirm-ai-selection {
+        font-size: .92rem !important;
+        padding: .85rem 1rem !important;
+        white-space: normal !important;
     }
 }
 </style>

@@ -845,4 +845,78 @@ class PhotoroomIntegrationTest extends TestCase
         $badResponse->assertStatus(422)
             ->assertJsonStructure(['status', 'error']);
     }
+
+    public function test_photoroom_service_falls_back_from_live_to_sandbox_key_when_live_returns_402(): void
+    {
+        config([
+            'services.photoroom.key' => 'sk_live_exhausted',
+            'services.photoroom.sandbox_key' => 'sandbox_sk_backup',
+        ]);
+
+        $fakeCutoutPng = $this->makePngBinary(240, 240, true);
+        $fakeEditedPng = $this->makePngBinary(1000, 1000, false);
+
+        Http::fake(function (HttpClientRequest $req) use ($fakeCutoutPng, $fakeEditedPng) {
+            $apiKey = $req->header('x-api-key')[0] ?? '';
+            if ($apiKey === 'sk_live_exhausted') {
+                return Http::response(['error' => 'Live quota exceeded'], 402);
+            }
+
+            if ($apiKey === 'sandbox_sk_backup') {
+                return str_contains($req->url(), 'v2/edit')
+                    ? Http::response($fakeEditedPng, 200, ['Content-Type' => 'image/png'])
+                    : Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']);
+            }
+
+            return Http::response(['error' => 'Unauthorized'], 401);
+        });
+
+        $service = new PhotoroomService();
+        $source = $this->makePngBinary(200, 200, false);
+
+        $cutout = $service->removeBackground($source);
+        $this->assertSame($fakeCutoutPng, $cutout);
+
+        $edited = $service->editProductImage($source, $service->mapStyleToEditParams('studio_white'));
+        $this->assertSame($fakeEditedPng, $edited);
+
+        Http::assertSent(fn (HttpClientRequest $req) => $req->hasHeader('x-api-key', 'sk_live_exhausted'));
+        Http::assertSent(fn (HttpClientRequest $req) => $req->hasHeader('x-api-key', 'sandbox_sk_backup'));
+    }
+
+    public function test_local_background_segmentation_never_punches_holes_inside_grey_product(): void
+    {
+        $im = imagecreatetruecolor(300, 300);
+        // Fond neutre gris clair
+        $outerBg = imagecolorallocate($im, 230, 230, 232);
+        imagefilledrectangle($im, 0, 0, 300, 300, $outerBg);
+
+        // Contour sombre du vêtement + intérieur gris quasi identique au fond extérieur
+        $seam = imagecolorallocate($im, 45, 45, 50);
+        imagefilledrectangle($im, 60, 50, 240, 250, $seam);
+
+        $innerGrey = imagecolorallocate($im, 228, 228, 230);
+        imagefilledrectangle($im, 76, 66, 224, 234, $innerGrey);
+
+        ob_start();
+        imagepng($im);
+        $binary = (string) ob_get_clean();
+        imagedestroy($im);
+
+        $cutoutPng = app(ProductStudioService::class)->segmentBackgroundLocally($binary);
+        $this->assertNotNull($cutoutPng);
+
+        $cutoutGd = imagecreatefromstring($cutoutPng);
+        $this->assertNotFalse($cutoutGd);
+
+        $cornerAlpha = (imagecolorat($cutoutGd, 5, 5) >> 24) & 0x7F;
+        $centerAlpha = (imagecolorat($cutoutGd, 150, 150) >> 24) & 0x7F;
+        $seamAlpha = (imagecolorat($cutoutGd, 68, 150) >> 24) & 0x7F;
+
+        imagedestroy($cutoutGd);
+
+        $this->assertGreaterThan(100, $cornerAlpha, 'Le fond extérieur doit être détouré.');
+        $this->assertSame(0, $seamAlpha, 'La bordure du produit doit rester 100% opaque.');
+        $this->assertSame(0, $centerAlpha, 'Aucun trou blanc ne doit apparaître à l\'intérieur d\'un vêtement gris.');
+    }
 }
