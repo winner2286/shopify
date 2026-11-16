@@ -827,6 +827,13 @@ window.previewAiPhoto = function(input) {
             }
         };
         reader.readAsDataURL(file);
+
+        // Si aucune photo n'est encore dans la galerie du produit, l'y injecter aussi pour aperçu immédiat
+        if (typeof window.getSelectedFiles === 'function'
+            && typeof window.handleProductPhotoInput === 'function'
+            && window.getSelectedFiles().length === 0) {
+            window.handleProductPhotoInput({ files: [file], value: '' });
+        }
     }
 };
 

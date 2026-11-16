@@ -116,8 +116,8 @@
             </div>
 
             <!-- Inputs cachés -->
-            <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="display:none">
-            <input type="file" id="gallery-file-input" multiple accept="image/png,image/jpeg,image/webp,image/*" style="display:none">
+            <input type="file" id="camera-file-input" accept="image/*" capture="environment" onchange="window.handleOnboardingPhotoInput && window.handleOnboardingPhotoInput(this)" style="display:none">
+            <input type="file" id="gallery-file-input" multiple accept="image/png,image/jpeg,image/webp,image/*" onchange="window.handleOnboardingPhotoInput && window.handleOnboardingPhotoInput(this)" style="display:none">
             <input type="file" id="master-photos-input" name="photos[]" multiple style="display:none">
 
             <!-- Grille de prévisualisation immédiate -->
@@ -206,7 +206,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const maxPhotos = 20;
-    const maxSizeBytes = 5 * 1024 * 1024;
+    const compressThresholdBytes = Math.round(4.5 * 1024 * 1024);
+    const hardMaxSizeBytes = 15 * 1024 * 1024;
     const cameraInput = document.getElementById('camera-file-input');
     const galleryInput = document.getElementById('gallery-file-input');
     const masterInput = document.getElementById('master-photos-input');
@@ -218,6 +219,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let selectedFiles = [];
 
+    window.handleOnboardingPhotoInput = function(input) {
+        if (!input || !input.files || input.files.length === 0) return;
+        const files = Array.from(input.files);
+        input.value = '';
+        handleNewFiles(files);
+    };
+
     if (btnCamera && cameraInput) {
         btnCamera.addEventListener('click', function(e) {
             e.preventDefault();
@@ -228,10 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
             cameraInput.click();
         });
         cameraInput.addEventListener('change', function() {
-            if (this.files && this.files.length > 0) {
-                handleNewFiles(Array.from(this.files));
-                this.value = '';
-            }
+            window.handleOnboardingPhotoInput(this);
         });
     }
 
@@ -245,10 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
             galleryInput.click();
         });
         galleryInput.addEventListener('change', function() {
-            if (this.files && this.files.length > 0) {
-                handleNewFiles(Array.from(this.files));
-                this.value = '';
-            }
+            window.handleOnboardingPhotoInput(this);
         });
     }
 
@@ -278,27 +280,104 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function handleNewFiles(files) {
+    function isAcceptedImageFile(file) {
+        if (!file) return false;
+        if (file.type && file.type.startsWith('image/')) return true;
+        return /\.(jpe?g|png|webp|heic|heif|avif|gif)$/i.test(file.name || '');
+    }
+
+    function prepareImageFile(file) {
+        const isHeicLike = /image\/(hei[cf])|\.(hei[cf])$/i.test((file.type || '') + ' ' + (file.name || ''));
+        if (file.size <= compressThresholdBytes && !isHeicLike) {
+            return Promise.resolve(file);
+        }
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+
+            img.onload = function() {
+                const maxDim = 1600;
+                const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+                const w = Math.max(1, Math.round((img.width || 800) * scale));
+                const h = Math.max(1, Math.round((img.height || 800) * scale));
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+
+                const baseName = (file.name || 'photo').replace(/\.[^/.]+$/, '');
+                const exportAt = (quality) => {
+                    canvas.toBlob(function(blob) {
+                        if (blob && blob.size > compressThresholdBytes && quality > 0.75) {
+                            exportAt(0.72);
+                            return;
+                        }
+                        URL.revokeObjectURL(url);
+                        if (blob && blob.size <= 5 * 1024 * 1024) {
+                            resolve(new File([blob], baseName + '.jpg', {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            }));
+                        } else if (file.size <= 5 * 1024 * 1024) {
+                            resolve(file);
+                        } else {
+                            alert('La photo "' + file.name + '" dépasse 5 Mo.');
+                            resolve(null);
+                        }
+                    }, 'image/jpeg', quality);
+                };
+
+                exportAt(0.88);
+            };
+
+            img.onerror = function() {
+                URL.revokeObjectURL(url);
+                if (file.size <= 5 * 1024 * 1024) {
+                    resolve(file);
+                } else {
+                    alert('La photo "' + file.name + '" dépasse 5 Mo.');
+                    resolve(null);
+                }
+            };
+
+            img.src = url;
+        });
+    }
+
+    async function handleNewFiles(files) {
         let added = 0;
         for (const file of files) {
-            if (!file.type.startsWith('image/')) {
+            if (!isAcceptedImageFile(file)) {
                 alert('Le fichier "' + file.name + '" n\'est pas une image valide.');
                 continue;
             }
-            if (file.size > maxSizeBytes) {
-                alert('La photo "' + file.name + '" dépasse 5 Mo.');
+            if (file.size > hardMaxSizeBytes) {
+                alert('La photo "' + file.name + '" dépasse 15 Mo.');
                 continue;
             }
             if (selectedFiles.length >= maxPhotos) {
                 alert('Limite de ' + maxPhotos + ' photos atteinte.');
                 break;
             }
-            selectedFiles.push(file);
+
+            const prepared = await prepareImageFile(file);
+            if (!prepared) continue;
+            if (selectedFiles.length >= maxPhotos) {
+                alert('Limite de ' + maxPhotos + ' photos atteinte.');
+                break;
+            }
+
+            selectedFiles.push(prepared);
             added++;
         }
         if (added > 0) {
             syncMasterInput();
             renderPreviews();
+            if (previewGrid) {
+                previewGrid.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         }
     }
 
@@ -447,6 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
             rotBtn.style.position = 'absolute';
             rotBtn.style.top = '6px';
             rotBtn.style.left = '6px';
+            rotBtn.style.right = 'auto';
             rotBtn.style.width = '26px';
             rotBtn.style.height = '26px';
             rotBtn.style.background = 'rgba(0, 0, 0, 0.75)';

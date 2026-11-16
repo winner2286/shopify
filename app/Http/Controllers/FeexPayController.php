@@ -224,6 +224,7 @@ class FeexPayController extends Controller
             'starts_at' => now(),
             'ends_at' => now()->addMonth(),
         ]);
+        $shop->unsetRelation('subscription');
 
         return view('subscription.checkout', [
             'plan' => $plan,
@@ -249,6 +250,8 @@ class FeexPayController extends Controller
 
         $ref = 'SIM-SUB-' . strtoupper(bin2hex(random_bytes(4)));
         $this->feexPayService->handleSubscriptionPaymentSuccess($subscription, $ref, $plan);
+        $user->unsetRelation('shop');
+        $user->unsetRelation('active_shop');
 
         return redirect()->route('dashboard')->with('status', "Simulation réussie : votre forfait {$plan->name} ({$plan->monthly_price} FCFA) a été activé avec succès pour 1 mois supplémentaire.");
     }

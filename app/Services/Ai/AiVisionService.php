@@ -424,6 +424,7 @@ PROMPT;
                     'path' => $storageRelativePath,
                     'sort_order' => $maxOrder + 1,
                     'size_bytes' => strlen($imageBinary),
+                    'image_data' => base64_encode($imageBinary),
                 ]);
             }
 

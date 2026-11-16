@@ -251,37 +251,40 @@ class VideoAdGeneratorService
 
         $primary = $product->primaryImage ?? $product->images->first();
 
-        // 1. Image en Base64 stockée en base de données
-        if ($primary && ! empty($primary->image_data)) {
-            $data = $primary->image_data;
-            if (str_starts_with($data, 'data:image')) {
-                return $data;
+        if ($primary) {
+            // 1. Cache Photoroom vidéo réutilisable ou sublimation Photoroom Solution A à la demande
+            $cachedOrEnhanced = $this->resolveCachedOrEnhancedPhotoroomImage($primary, $shop, $enhancePhotoroom);
+            if ($cachedOrEnhanced !== null) {
+                return $cachedOrEnhanced;
             }
-            return 'data:image/webp;base64,' . $data;
-        }
 
-        // 2. Fichier physique sur le disque public -> cache Photoroom réutilisable ou conversion Base64 zéro latence
-        if ($primary && ! empty($primary->path)) {
-            $diskPath = Storage::disk('public')->path($primary->path);
-            if (file_exists($diskPath) && filesize($diskPath) > 0) {
-                $cachedOrEnhanced = $this->resolveCachedOrEnhancedPhotoroomImage($primary, $shop, $diskPath, $enhancePhotoroom);
-                if ($cachedOrEnhanced !== null) {
-                    return $cachedOrEnhanced;
+            // 2. Image en Base64 stockée en base de données
+            if (! empty($primary->image_data)) {
+                $data = $primary->image_data;
+                if (str_starts_with($data, 'data:image')) {
+                    return $data;
+                }
+                return 'data:image/webp;base64,' . $data;
+            }
+
+            // 3. Fichier physique sur le disque public -> conversion Base64 zéro latence
+            if (! empty($primary->path)) {
+                $diskPath = Storage::disk('public')->path($primary->path);
+                if (file_exists($diskPath) && filesize($diskPath) > 0) {
+                    $mime = @mime_content_type($diskPath) ?: 'image/webp';
+                    return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
                 }
 
-                $mime = @mime_content_type($diskPath) ?: 'image/webp';
-                return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
-            }
-
-            if (! empty($primary->thumbnail_path)) {
-                $thumbPath = Storage::disk('public')->path($primary->thumbnail_path);
-                if (file_exists($thumbPath) && filesize($thumbPath) > 0) {
-                    $mime = @mime_content_type($thumbPath) ?: 'image/webp';
-                    return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($thumbPath));
+                if (! empty($primary->thumbnail_path)) {
+                    $thumbPath = Storage::disk('public')->path($primary->thumbnail_path);
+                    if (file_exists($thumbPath) && filesize($thumbPath) > 0) {
+                        $mime = @mime_content_type($thumbPath) ?: 'image/webp';
+                        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($thumbPath));
+                    }
                 }
-            }
 
-            return $primary->url;
+                return $primary->url;
+            }
         }
 
         // 3. Fallback catalogue selon la catégorie
@@ -310,7 +313,6 @@ class VideoAdGeneratorService
     protected function resolveCachedOrEnhancedPhotoroomImage(
         ProductImage $primary,
         Shop $shop,
-        string $diskPath,
         bool $enhancePhotoroom
     ): ?string {
         $cacheRelPath = "shops/{$shop->id}/products_ai/video_pr_{$primary->id}.png";
@@ -331,7 +333,17 @@ class VideoAdGeneratorService
             return null;
         }
 
-        $rawBinary = @file_get_contents($diskPath);
+        $rawBinary = null;
+        if (! empty($primary->path) && Storage::disk('public')->exists($primary->path)) {
+            $rawBinary = Storage::disk('public')->get($primary->path);
+        } elseif (! empty($primary->image_data)) {
+            $rawB64 = preg_replace('#^data:image/\w+;base64,#i', '', (string) $primary->image_data);
+            $decoded = base64_decode((string) $rawB64, true);
+            if (is_string($decoded) && $decoded !== '') {
+                $rawBinary = $decoded;
+            }
+        }
+
         if (! is_string($rawBinary) || $rawBinary === '') {
             return null;
         }

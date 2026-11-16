@@ -179,12 +179,14 @@ class ProductController extends Controller
                 ]);
             }
         } elseif ($request->filled('ai_temp_photo_path')) {
-            $tempPath = (string) $request->input('ai_temp_photo_path');
+            $tempPath = ltrim((string) $request->input('ai_temp_photo_path'), '/');
             if ($shop->ownsPublicPath($tempPath) && Storage::disk('public')->exists($tempPath)) {
+                $rawBytes = (string) Storage::disk('public')->get($tempPath);
                 $product->images()->create([
                     'path' => $tempPath,
                     'sort_order' => 0,
-                    'size_bytes' => Storage::disk('public')->size($tempPath),
+                    'size_bytes' => strlen($rawBytes),
+                    'image_data' => $rawBytes !== '' ? base64_encode($rawBytes) : null,
                 ]);
             }
         }
@@ -302,10 +304,12 @@ class ProductController extends Controller
         } elseif ($request->filled('ai_temp_photo_path')) {
             $tempPath = ltrim((string) $request->input('ai_temp_photo_path'), '/');
             if ($shop->ownsPublicPath($tempPath) && Storage::disk('public')->exists($tempPath)) {
+                $rawBytes = (string) Storage::disk('public')->get($tempPath);
                 $product->images()->create([
                     'path' => $tempPath,
                     'sort_order' => $product->images()->count(),
-                    'size_bytes' => Storage::disk('public')->size($tempPath),
+                    'size_bytes' => strlen($rawBytes),
+                    'image_data' => $rawBytes !== '' ? base64_encode($rawBytes) : null,
                 ]);
             }
         }

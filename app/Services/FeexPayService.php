@@ -192,10 +192,17 @@ class FeexPayService
         ]);
 
         // Réapprovisionnement des crédits IA Système et Photoroom pour le nouveau cycle de facturation
-        $subscription->shop?->update([
-            'ai_credits_used' => 0,
-            'photoroom_credits_used' => 0,
-        ]);
+        $shop = $subscription->shop;
+        if ($shop) {
+            $shop->update([
+                'ai_credits_used' => 0,
+                'photoroom_credits_used' => 0,
+            ]);
+            $shop->unsetRelation('subscription');
+            $shop->unsetRelation('subscriptions');
+            $shop->owner?->unsetRelation('shop');
+            $shop->owner?->unsetRelation('active_shop');
+        }
 
         Log::info("Abonnement #{$subscription->id} activé/renouvelé avec succès via GeniusPay (Réf: {$transactionRef}).");
     }

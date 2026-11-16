@@ -196,6 +196,26 @@ class ImageService
             return null;
         }
 
+        $normalizedPath = ltrim(str_replace('\\', '/', $relativePath), '/');
+        $dir = trim(dirname($normalizedPath), '.');
+        $basename = basename($normalizedPath);
+        $thumbRelPath = ($dir !== '' ? $dir . '/' : '') . 'thumb_' . $basename;
+
+        // Éviter le double traitement Photoroom si déjà optimisée lors de l'étape 3
+        if (str_starts_with($basename, 'img_') && Storage::disk('public')->exists($thumbRelPath)) {
+            $thumbDiskPath = Storage::disk('public')->path($thumbRelPath);
+            $savedFile = file_exists($thumbDiskPath) ? $thumbDiskPath : $diskPath;
+
+            return [
+                'path' => $normalizedPath,
+                'thumbnail_path' => $thumbRelPath,
+                'size_bytes' => filesize($diskPath) ?: 0,
+                'image_data' => base64_encode((string) file_get_contents($savedFile)),
+                'enhancement_mode' => $enhancementMode,
+                'engine' => 'cached-existing',
+            ];
+        }
+
         $directory = dirname($relativePath);
         return $this->processFromPath($diskPath, $directory, null, 0, $enhancementMode);
     }
