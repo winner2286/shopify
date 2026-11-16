@@ -80,117 +80,133 @@ class ProductStudioService
             $cutoutGd = @imagecreatefromstring($cutoutPng);
             if ($cutoutGd) {
                 // A. Studio Blanc Épuré — Standard Marketplace mondial (Amazon, Shopify, Zara)
-                $whitePackshot = $this->renderStudioPackshot($cutoutGd, 'white', self::TARGET_SIZE, $categoryKey);
-                if ($whitePackshot) {
-                    $whitePath = "shops/{$shop->id}/products_ai/studio_white_{$uniq}.jpg";
-                    $this->saveGdImage($whitePackshot, $whitePath);
-                    imagedestroy($whitePackshot);
+                try {
+                    $whitePackshot = $this->renderStudioPackshot($cutoutGd, 'white', self::TARGET_SIZE, $categoryKey);
+                    if ($whitePackshot) {
+                        $whitePath = "shops/{$shop->id}/products_ai/studio_white_{$uniq}.jpg";
+                        $this->saveGdImage($whitePackshot, $whitePath);
+                        imagedestroy($whitePackshot);
 
-                    $variations[] = [
-                        'id' => 'studio_white',
-                        'type' => 'studio_white',
-                        'title' => 'Studio Blanc Épuré',
-                        'subtitle' => $cutoutMethod === 'photoroom_v1_segment'
-                            ? 'Détourage HD Photoroom & Standard Marketplace'
-                            : 'Standard Marketplace (Amazon / Shopify)',
-                        'url' => Storage::disk('public')->url($whitePath),
-                        'path' => $whitePath,
-                        'cutout_path' => $cutoutPath,
-                        'selected' => true,
-                        'is_source' => false,
-                        'badge' => 'Standard Pro',
-                        'quality_score' => 98,
-                    ];
+                        $variations[] = [
+                            'id' => 'studio_white',
+                            'type' => 'studio_white',
+                            'title' => 'Studio Blanc Épuré',
+                            'subtitle' => $cutoutMethod === 'photoroom_v1_segment'
+                                ? 'Détourage HD Photoroom & Standard Marketplace'
+                                : 'Standard Marketplace (Amazon / Shopify)',
+                            'url' => Storage::disk('public')->url($whitePath),
+                            'path' => $whitePath,
+                            'cutout_path' => $cutoutPath,
+                            'selected' => true,
+                            'is_source' => false,
+                            'badge' => 'Standard Pro',
+                            'quality_score' => 98,
+                        ];
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('ProductStudioService studio_white failed: ' . $e->getMessage());
                 }
 
                 // B. Studio Ambiance Douce — Éclairage raffiné ivoire & ombre soyeuse
-                $ambientPackshot = $this->renderStudioPackshot($cutoutGd, 'ambient_warm', self::TARGET_SIZE, $categoryKey);
-                if ($ambientPackshot) {
-                    $ambientPath = "shops/{$shop->id}/products_ai/studio_ambient_{$uniq}.jpg";
-                    $this->saveGdImage($ambientPackshot, $ambientPath);
-                    imagedestroy($ambientPackshot);
+                try {
+                    $ambientPackshot = $this->renderStudioPackshot($cutoutGd, 'ambient_warm', self::TARGET_SIZE, $categoryKey);
+                    if ($ambientPackshot) {
+                        $ambientPath = "shops/{$shop->id}/products_ai/studio_ambient_{$uniq}.jpg";
+                        $this->saveGdImage($ambientPackshot, $ambientPath);
+                        imagedestroy($ambientPackshot);
 
-                    $variations[] = [
-                        'id' => 'studio_ambient',
-                        'type' => 'studio_ambient',
-                        'title' => 'Ambiance Douce Ivoire',
-                        'subtitle' => 'Éclairage chaleureux & ombre portée naturelle',
-                        'url' => Storage::disk('public')->url($ambientPath),
-                        'path' => $ambientPath,
-                        'cutout_path' => $cutoutPath,
-                        'selected' => false,
-                        'is_source' => false,
-                        'badge' => 'Chic & Doux',
-                        'quality_score' => 96,
-                    ];
+                        $variations[] = [
+                            'id' => 'studio_ambient',
+                            'type' => 'studio_ambient',
+                            'title' => 'Ambiance Douce Ivoire',
+                            'subtitle' => 'Éclairage chaleureux & ombre portée naturelle',
+                            'url' => Storage::disk('public')->url($ambientPath),
+                            'path' => $ambientPath,
+                            'cutout_path' => $cutoutPath,
+                            'selected' => empty($variations),
+                            'is_source' => false,
+                            'badge' => 'Chic & Doux',
+                            'quality_score' => 96,
+                        ];
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('ProductStudioService studio_ambient failed: ' . $e->getMessage());
                 }
 
                 // C. Décor Thématique selon la catégorie réelle du produit (Smart Cost : Photoroom v2 AI Scene uniquement sur Pro/Premium/Admin, sinon décor local GD + cutout v1/segment)
-                $photoroomLifestyle = ($this->photoroom->isConfigured() && $shop->canUsePhotoroomGenerativeScene() && $shop->hasEnoughPhotoroomCredits(1))
-                    ? $this->photoroom->editProductImage($imageBinary, $this->photoroom->mapStyleToEditParams('lifestyle', self::TARGET_SIZE . 'x' . self::TARGET_SIZE))
-                    : null;
+                try {
+                    $photoroomLifestyle = ($this->photoroom->isConfigured() && $shop->canUsePhotoroomGenerativeScene() && $shop->hasEnoughPhotoroomCredits(1))
+                        ? $this->photoroom->editProductImage($imageBinary, $this->photoroom->mapStyleToEditParams('lifestyle', self::TARGET_SIZE . 'x' . self::TARGET_SIZE))
+                        : null;
 
-                if ($photoroomLifestyle !== null) {
-                    $usedPhotoroomEdit = true;
-                    $lifePath = "shops/{$shop->id}/products_ai/lifestyle_{$uniq}.png";
-                    Storage::disk('public')->put($lifePath, $photoroomLifestyle);
-
-                    $variations[] = [
-                        'id' => 'lifestyle_staged',
-                        'type' => 'lifestyle',
-                        'title' => 'Mise en Scène Studio IA',
-                        'subtitle' => 'Décor généré et ré-éclairé par Photoroom IA',
-                        'url' => Storage::disk('public')->url($lifePath),
-                        'path' => $lifePath,
-                        'cutout_path' => $cutoutPath,
-                        'selected' => false,
-                        'is_source' => false,
-                        'badge' => 'Photoroom IA',
-                        'quality_score' => 98,
-                    ];
-                } else {
-                    $lifestylePackshot = $this->renderCategoryLifestyle($cutoutGd, $categoryKey, self::TARGET_SIZE);
-                    if ($lifestylePackshot && ! empty($lifestylePackshot['canvas'])) {
-                        $lifePath = "shops/{$shop->id}/products_ai/lifestyle_{$uniq}.jpg";
-                        $this->saveGdImage($lifestylePackshot['canvas'], $lifePath);
-                        imagedestroy($lifestylePackshot['canvas']);
+                    if ($photoroomLifestyle !== null) {
+                        $usedPhotoroomEdit = true;
+                        $lifePath = "shops/{$shop->id}/products_ai/lifestyle_{$uniq}.png";
+                        Storage::disk('public')->put($lifePath, $photoroomLifestyle);
 
                         $variations[] = [
                             'id' => 'lifestyle_staged',
                             'type' => 'lifestyle',
-                            'title' => $lifestylePackshot['title'] ?? 'Mise en Scène Décor',
-                            'subtitle' => $lifestylePackshot['subtitle'] ?? 'Décor adapté à votre catégorie d\'article',
+                            'title' => 'Mise en Scène Studio IA',
+                            'subtitle' => 'Décor généré et ré-éclairé par Photoroom IA',
                             'url' => Storage::disk('public')->url($lifePath),
                             'path' => $lifePath,
                             'cutout_path' => $cutoutPath,
-                            'selected' => false,
+                            'selected' => empty($variations),
                             'is_source' => false,
-                            'badge' => 'Décor Studio',
-                            'quality_score' => 95,
+                            'badge' => 'Photoroom IA',
+                            'quality_score' => 98,
                         ];
+                    } else {
+                        $lifestylePackshot = $this->renderCategoryLifestyle($cutoutGd, $categoryKey, self::TARGET_SIZE);
+                        if ($lifestylePackshot && ! empty($lifestylePackshot['canvas'])) {
+                            $lifePath = "shops/{$shop->id}/products_ai/lifestyle_{$uniq}.jpg";
+                            $this->saveGdImage($lifestylePackshot['canvas'], $lifePath);
+                            imagedestroy($lifestylePackshot['canvas']);
+
+                            $variations[] = [
+                                'id' => 'lifestyle_staged',
+                                'type' => 'lifestyle',
+                                'title' => $lifestylePackshot['title'] ?? 'Mise en Scène Décor',
+                                'subtitle' => $lifestylePackshot['subtitle'] ?? 'Décor adapté à votre catégorie d\'article',
+                                'url' => Storage::disk('public')->url($lifePath),
+                                'path' => $lifePath,
+                                'cutout_path' => $cutoutPath,
+                                'selected' => empty($variations),
+                                'is_source' => false,
+                                'badge' => 'Décor Studio',
+                                'quality_score' => 95,
+                            ];
+                        }
                     }
+                } catch (\Throwable $e) {
+                    Log::warning('ProductStudioService lifestyle failed: ' . $e->getMessage());
                 }
 
                 // D. Studio Podium Minimaliste Premium
-                $podiumPackshot = $this->renderPodiumPackshot($cutoutGd, self::TARGET_SIZE, $categoryKey);
-                if ($podiumPackshot) {
-                    $podiumPath = "shops/{$shop->id}/products_ai/studio_podium_{$uniq}.jpg";
-                    $this->saveGdImage($podiumPackshot, $podiumPath);
-                    imagedestroy($podiumPackshot);
+                try {
+                    $podiumPackshot = $this->renderPodiumPackshot($cutoutGd, self::TARGET_SIZE, $categoryKey);
+                    if ($podiumPackshot) {
+                        $podiumPath = "shops/{$shop->id}/products_ai/studio_podium_{$uniq}.jpg";
+                        $this->saveGdImage($podiumPackshot, $podiumPath);
+                        imagedestroy($podiumPackshot);
 
-                    $variations[] = [
-                        'id' => 'studio_podium',
-                        'type' => 'podium',
-                        'title' => 'Podium Minimaliste Luxe',
-                        'subtitle' => 'Socle architectural épuré & lumière zénithale',
-                        'url' => Storage::disk('public')->url($podiumPath),
-                        'path' => $podiumPath,
-                        'cutout_path' => $cutoutPath,
-                        'selected' => false,
-                        'is_source' => false,
-                        'badge' => 'Luxe Minimaliste',
-                        'quality_score' => 94,
-                    ];
+                        $variations[] = [
+                            'id' => 'studio_podium',
+                            'type' => 'podium',
+                            'title' => 'Podium Minimaliste Luxe',
+                            'subtitle' => 'Socle architectural épuré & lumière zénithale',
+                            'url' => Storage::disk('public')->url($podiumPath),
+                            'path' => $podiumPath,
+                            'cutout_path' => $cutoutPath,
+                            'selected' => empty($variations),
+                            'is_source' => false,
+                            'badge' => 'Luxe Minimaliste',
+                            'quality_score' => 94,
+                        ];
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('ProductStudioService studio_podium failed: ' . $e->getMessage());
                 }
 
                 imagedestroy($cutoutGd);
@@ -199,28 +215,32 @@ class ProductStudioService
 
         // 5. Fallback d'optimisation photographique sans détourage si le détourage a échoué
         if (empty($variations) && function_exists('imagecreatefromstring')) {
-            $srcGd = @imagecreatefromstring($imageBinary);
-            if ($srcGd) {
-                $enhancedGd = $this->enhancePhotographicQuality($srcGd);
-                $framedGd = $this->frameSquareStudio($enhancedGd, self::TARGET_SIZE);
-                $fallbackPath = "shops/{$shop->id}/products_ai/enhanced_{$uniq}.jpg";
-                $this->saveGdImage($framedGd, $fallbackPath);
-                imagedestroy($framedGd);
-                if ($enhancedGd !== $srcGd) imagedestroy($enhancedGd);
-                imagedestroy($srcGd);
+            try {
+                $srcGd = @imagecreatefromstring($imageBinary);
+                if ($srcGd) {
+                    $enhancedGd = $this->enhancePhotographicQuality($srcGd);
+                    $framedGd = $this->frameSquareStudio($enhancedGd, self::TARGET_SIZE);
+                    $fallbackPath = "shops/{$shop->id}/products_ai/enhanced_{$uniq}.jpg";
+                    $this->saveGdImage($framedGd, $fallbackPath);
+                    imagedestroy($framedGd);
+                    if ($enhancedGd !== $srcGd) imagedestroy($enhancedGd);
+                    imagedestroy($srcGd);
 
-                $variations[] = [
-                    'id' => 'enhanced_original',
-                    'type' => 'enhanced',
-                    'title' => 'Photo Retouchée & Cadrée',
-                    'subtitle' => 'Contraste, netteté et cadrage 1:1 optimisés',
-                    'url' => Storage::disk('public')->url($fallbackPath),
-                    'path' => $fallbackPath,
-                    'selected' => true,
-                    'is_source' => false,
-                    'badge' => 'Retouche Studio',
-                    'quality_score' => 90,
-                ];
+                    $variations[] = [
+                        'id' => 'enhanced_original',
+                        'type' => 'enhanced',
+                        'title' => 'Photo Retouchée & Cadrée',
+                        'subtitle' => 'Contraste, netteté et cadrage 1:1 optimisés',
+                        'url' => Storage::disk('public')->url($fallbackPath),
+                        'path' => $fallbackPath,
+                        'selected' => true,
+                        'is_source' => false,
+                        'badge' => 'Retouche Studio',
+                        'quality_score' => 90,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                Log::warning('ProductStudioService fallback optimization failed: ' . $e->getMessage());
             }
         }
 
@@ -244,7 +264,11 @@ class ProductStudioService
         $durationMs = (int) round((microtime(true) - $startTime) * 1000);
         $usedPhotoroom = ($cutoutMethod === 'photoroom_v1_segment' || $usedPhotoroomEdit);
         if ($usedPhotoroom) {
-            $shop->consumePhotoroomCredits(1);
+            try {
+                $shop->consumePhotoroomCredits(1);
+            } catch (\Throwable $e) {
+                Log::warning('ProductStudioService consumePhotoroomCredits failed: ' . $e->getMessage());
+            }
         }
 
         $engine = $usedPhotoroom
@@ -326,7 +350,11 @@ class ProductStudioService
         }
 
         if ($engine === 'photoroom-ai') {
-            $shop->consumePhotoroomCredits(1);
+            try {
+                $shop->consumePhotoroomCredits(1);
+            } catch (\Throwable $e) {
+                Log::warning('ProductStudioService cutoutTransparent consumePhotoroomCredits failed: ' . $e->getMessage());
+            }
         }
 
         $relativePath = "shops/{$shop->id}/products_ai/cutout_ad_{$uniq}.{$ext}";

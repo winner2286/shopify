@@ -172,25 +172,29 @@ class AiProductController extends Controller
             $categoryHint = $request->input('category_hint');
             $studioResult = $studioService->processProductPhoto($shop, $imageBinary, $categoryHint);
 
-            // Journalisation de la vérification qualité (+12 crédits)
-            $shop->consumeAiCredits(12);
-            $studioEngine = $studioResult['engine'] ?? 'zanika-product-studio';
-            $studioCostFcfa = $studioEngine === 'photoroom-ai'
-                ? ($shop->canUsePhotoroomGenerativeScene() ? 62 : 13)
-                : 6;
+            // Journalisation et débit des crédits isolés pour ne jamais bloquer la restitution des packshots
+            try {
+                $shop->consumeAiCredits(12);
+                $studioEngine = $studioResult['engine'] ?? 'zanika-product-studio';
+                $studioCostFcfa = $studioEngine === 'photoroom-ai'
+                    ? ($shop->canUsePhotoroomGenerativeScene() ? 62 : 13)
+                    : 6;
 
-            AiGeneration::create([
-                'shop_id' => $shop->id,
-                'type' => 'ai_quality_check',
-                'step' => 'studio_packshot',
-                'model_used' => $studioEngine,
-                'prompt_tokens' => 0,
-                'completion_tokens' => 0,
-                'cost_estimated_fcfa' => $studioCostFcfa,
-                'duration_ms' => $studioResult['duration_ms'] ?? 1200,
-                'status' => 'success',
-                'input_summary' => "Studio Packshot [{$studioResult['category']}] : " . ($studioResult['product_title'] ?? 'Article'),
-            ]);
+                AiGeneration::create([
+                    'shop_id' => $shop->id,
+                    'type' => 'ai_quality_check',
+                    'step' => 'studio_packshot',
+                    'model_used' => $studioEngine,
+                    'prompt_tokens' => 0,
+                    'completion_tokens' => 0,
+                    'cost_estimated_fcfa' => $studioCostFcfa,
+                    'duration_ms' => $studioResult['duration_ms'] ?? 1200,
+                    'status' => 'success',
+                    'input_summary' => "Studio Packshot [{$studioResult['category']}] : " . ($studioResult['product_title'] ?? 'Article'),
+                ]);
+            } catch (\Throwable $logError) {
+                Log::warning('Studio Photo IA credit/audit log skipped: ' . $logError->getMessage());
+            }
 
             return response()->json([
                 'status' => 'success',

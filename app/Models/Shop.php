@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -118,8 +121,7 @@ class Shop extends Model
 
     public function consumeAiCredits(int $cost = 1): void
     {
-        $this->increment('ai_credits_used', max(1, $cost));
-        $this->refresh();
+        $this->safeIncrementCreditColumn('ai_credits_used', $cost);
     }
 
     public function photoroomCreditsMonthly(): int
@@ -148,8 +150,37 @@ class Shop extends Model
 
     public function consumePhotoroomCredits(int $cost = 1): void
     {
-        $this->increment('photoroom_credits_used', max(1, $cost));
-        $this->refresh();
+        $this->safeIncrementCreditColumn('photoroom_credits_used', $cost);
+    }
+
+    /**
+     * Incrémente un compteur de crédits mensuels avec auto-guérison si une colonne de quota
+     * manque suite à une migration partiellement bloquée en base de production.
+     */
+    protected function safeIncrementCreditColumn(string $column, int $cost): void
+    {
+        $amount = max(1, $cost);
+
+        try {
+            $this->increment($column, $amount);
+            $this->refresh();
+            return;
+        } catch (\Throwable $e) {
+            Log::warning("Credit increment failed for shops.{$column}: " . $e->getMessage());
+        }
+
+        try {
+            if (! Schema::hasColumn('shops', $column)) {
+                Schema::table('shops', function (Blueprint $table) use ($column) {
+                    $table->integer($column)->default(0);
+                });
+            }
+
+            $this->increment($column, $amount);
+            $this->refresh();
+        } catch (\Throwable $e2) {
+            Log::warning("Auto-repair credit increment failed for shops.{$column}: " . $e2->getMessage());
+        }
     }
 
     /**

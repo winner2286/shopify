@@ -11,10 +11,12 @@ use App\Services\Ai\PhotoroomService;
 use App\Services\Ai\ProductStudioService;
 use App\Services\ImageService;
 use App\Services\VideoAdGeneratorService;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpClientRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -918,5 +920,43 @@ class PhotoroomIntegrationTest extends TestCase
         $this->assertGreaterThan(100, $cornerAlpha, 'Le fond extérieur doit être détouré.');
         $this->assertSame(0, $seamAlpha, 'La bordure du produit doit rester 100% opaque.');
         $this->assertSame(0, $centerAlpha, 'Aucun trou blanc ne doit apparaître à l\'intérieur d\'un vêtement gris.');
+    }
+
+    public function test_verify_quality_succeeds_even_if_photoroom_credit_column_requires_auto_repair(): void
+    {
+        Storage::fake('public');
+        config(['services.photoroom.key' => 'pr_autorepair_key']);
+
+        $fakeCutoutPng = $this->makePngBinary(400, 400, true);
+        $fakeScenePng = $this->makePngBinary(1000, 1000, false);
+
+        Http::fake([
+            'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
+            'https://image-api.photoroom.com/v2/edit' => Http::response($fakeScenePng, 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        [$merchant, $shop] = $this->createMerchant('autorepair.studio@example.test');
+        $this->subscribeShopToPlan($shop, 'pro');
+
+        // Simuler une base de production où la migration photoroom_credits_used avait été bloquée
+        Schema::table('shops', function (Blueprint $table) {
+            $table->dropColumn('photoroom_credits_used');
+        });
+        $this->assertFalse(Schema::hasColumn('shops', 'photoroom_credits_used'));
+
+        $photo = UploadedFile::fake()->image('pantalon.jpg', 500, 500);
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => $photo,
+            'category_hint' => 'Pantalon jogging',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('engine', 'photoroom-ai');
+
+        $this->assertTrue(Schema::hasColumn('shops', 'photoroom_credits_used'));
+        $shop->refresh();
+        $this->assertSame(1, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertNotEmpty($response->json('variations'));
     }
 }
