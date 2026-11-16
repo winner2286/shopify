@@ -751,16 +751,20 @@ function openProductLivePreview() {
         photoUrls.push(aiTemp);
     }
 
-    // Fichiers uploadés
-    if (typeof selectedFiles !== 'undefined' && selectedFiles.length > 0) {
-        selectedFiles.forEach(f => {
+    // Fichiers uploadés & photos déjà enregistrées (hors doublons blob)
+    document.querySelectorAll('.gallery-item img').forEach(img => {
+        if (img.src && !img.src.startsWith('blob:')) {
+            photoUrls.push(img.src);
+        }
+    });
+
+    const uploadedFiles = typeof window.getSelectedFiles === 'function'
+        ? window.getSelectedFiles()
+        : (typeof window.getSelectedEditFiles === 'function' ? window.getSelectedEditFiles() : []);
+
+    if (uploadedFiles && uploadedFiles.length > 0) {
+        uploadedFiles.forEach(f => {
             photoUrls.push(URL.createObjectURL(f));
-        });
-    } else {
-        // En mode édition : vérifier les photos déjà existantes dans le DOM
-        const existingImgs = document.querySelectorAll('.gallery-item img');
-        existingImgs.forEach(img => {
-            if (img.src) photoUrls.push(img.src);
         });
     }
 

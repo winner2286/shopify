@@ -147,8 +147,8 @@
                     </label>
 
                     <!-- Inputs fichiers masqués mais actifs dans le DOM (reconnus par iOS Safari et Android) -->
-                    <input type="file" id="camera-file-input" accept="image/*" capture="environment" style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;">
-                    <input type="file" id="gallery-file-input" multiple accept="image/jpeg,image/png,image/webp,image/*" style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;">
+                    <input type="file" id="camera-file-input" accept="image/*" capture="environment" onchange="window.handleProductPhotoInput && window.handleProductPhotoInput(this)" style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;">
+                    <input type="file" id="gallery-file-input" multiple accept="image/jpeg,image/png,image/webp,image/*" onchange="window.handleProductPhotoInput && window.handleProductPhotoInput(this)" style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;">
                     <input type="file" id="master-photos-input" name="photos[]" multiple style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;width:1px;height:1px;">
 
                     <!-- Message d'alerte limite -->
@@ -352,7 +352,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const maxPhotos = 8;
-    const maxSizeBytes = 5 * 1024 * 1024; // 5 Mo
+    const compressThresholdBytes = Math.round(4.5 * 1024 * 1024); // Compression auto au-delà de 4,5 Mo
+    const hardMaxSizeBytes = 15 * 1024 * 1024; // 15 Mo max brut avant compression
     const cameraInput = document.getElementById('camera-file-input');
     const galleryInput = document.getElementById('gallery-file-input');
     const masterInput = document.getElementById('master-photos-input');
@@ -365,6 +366,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let selectedFiles = [];
 
+    window.handleProductPhotoInput = function(input) {
+        if (!input || !input.files || input.files.length === 0) return;
+        const files = Array.from(input.files);
+        input.value = '';
+        handleNewFiles(files);
+    };
+
     // Clic sur "Prendre une photo" (Label natif HTML pour iOS Safari et Android)
     if (btnCamera && cameraInput) {
         btnCamera.addEventListener('click', function(e) {
@@ -376,10 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         cameraInput.addEventListener('change', function() {
-            if (this.files && this.files.length > 0) {
-                handleNewFiles(Array.from(this.files));
-                this.value = '';
-            }
+            window.handleProductPhotoInput(this);
         });
     }
 
@@ -394,10 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         galleryInput.addEventListener('change', function() {
-            if (this.files && this.files.length > 0) {
-                handleNewFiles(Array.from(this.files));
-                this.value = '';
-            }
+            window.handleProductPhotoInput(this);
         });
     }
 
@@ -437,33 +439,114 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function isAcceptedImageFile(file) {
+        if (!file) return false;
+        if (file.type && file.type.startsWith('image/')) return true;
+        return /\.(jpe?g|png|webp|heic|heif|avif|gif)$/i.test(file.name || '');
+    }
+
+    function prepareImageFile(file) {
+        const isHeicLike = /image\/(hei[cf])|\.(hei[cf])$/i.test((file.type || '') + ' ' + (file.name || ''));
+        if (file.size <= compressThresholdBytes && !isHeicLike) {
+            return Promise.resolve(file);
+        }
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+
+            img.onload = function() {
+                const maxDim = 1600;
+                const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+                const w = Math.max(1, Math.round((img.width || 800) * scale));
+                const h = Math.max(1, Math.round((img.height || 800) * scale));
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+
+                const baseName = (file.name || 'photo').replace(/\.[^/.]+$/, '');
+                const exportAt = (quality) => {
+                    canvas.toBlob(function(blob) {
+                        if (blob && blob.size > compressThresholdBytes && quality > 0.75) {
+                            exportAt(0.72);
+                            return;
+                        }
+                        URL.revokeObjectURL(url);
+                        if (blob && blob.size <= 5 * 1024 * 1024) {
+                            resolve(new File([blob], baseName + '.jpg', {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            }));
+                        } else if (file.size <= 5 * 1024 * 1024) {
+                            resolve(file);
+                        } else {
+                            alert('La photo "' + file.name + '" dépasse la taille maximale autorisée (5 Mo).');
+                            resolve(null);
+                        }
+                    }, 'image/jpeg', quality);
+                };
+
+                exportAt(0.88);
+            };
+
+            img.onerror = function() {
+                URL.revokeObjectURL(url);
+                if (file.size <= 5 * 1024 * 1024) {
+                    resolve(file);
+                } else {
+                    alert('La photo "' + file.name + '" dépasse la taille maximale autorisée (5 Mo).');
+                    resolve(null);
+                }
+            };
+
+            img.src = url;
+        });
+    }
+
     // Traitement des nouveaux fichiers ajoutés
-    function handleNewFiles(files) {
+    async function handleNewFiles(files) {
         let added = 0;
+        let firstAddedFile = null;
+
         for (const file of files) {
-            if (!file.type.startsWith('image/')) {
+            if (!isAcceptedImageFile(file)) {
                 alert('Le fichier "' + file.name + '" n\'est pas une image valide.');
                 continue;
             }
-            if (file.size > maxSizeBytes) {
-                alert('La photo "' + file.name + '" dépasse la taille maximale autorisée (5 Mo).');
+            if (file.size > hardMaxSizeBytes) {
+                alert('La photo "' + file.name + '" dépasse 15 Mo et ne peut pas être importée.');
                 continue;
             }
             if (selectedFiles.length >= maxPhotos) {
                 alert('Limite de ' + maxPhotos + ' photos atteinte.');
                 break;
             }
-            selectedFiles.push(file);
+
+            const prepared = await prepareImageFile(file);
+            if (!prepared) continue;
+            if (selectedFiles.length >= maxPhotos) {
+                alert('Limite de ' + maxPhotos + ' photos atteinte.');
+                break;
+            }
+
+            selectedFiles.push(prepared);
+            if (!firstAddedFile) firstAddedFile = prepared;
             added++;
         }
+
         if (added > 0) {
             syncMasterInput();
             renderPreviews();
+            if (previewGrid) {
+                previewGrid.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
 
             // Si le contrôle qualité IA est activé, lancer la vérification comparative
             const toggleQuality = document.getElementById('toggle-ai-quality');
-            if (toggleQuality && toggleQuality.checked) {
-                window.runAiQualityCheck(files[0]);
+            if (toggleQuality && toggleQuality.checked && firstAddedFile) {
+                window.runAiQualityCheck(firstAddedFile);
             }
         }
     }
@@ -595,8 +678,11 @@ document.addEventListener('DOMContentLoaded', function() {
             aiStudioBtn.type = 'button';
             aiStudioBtn.title = 'Améliorer cette photo avec le Studio Photo IA';
             aiStudioBtn.style.position = 'absolute';
+            aiStudioBtn.style.top = 'auto';
             aiStudioBtn.style.bottom = '6px';
             aiStudioBtn.style.right = '6px';
+            aiStudioBtn.style.width = 'auto';
+            aiStudioBtn.style.height = 'auto';
             aiStudioBtn.style.background = 'linear-gradient(135deg, #9e1b32, #c5223d)';
             aiStudioBtn.style.border = 'none';
             aiStudioBtn.style.color = '#fff';
@@ -629,6 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
             rotBtn.style.position = 'absolute';
             rotBtn.style.top = '6px';
             rotBtn.style.left = '6px';
+            rotBtn.style.right = 'auto';
             rotBtn.style.width = '26px';
             rotBtn.style.height = '26px';
             rotBtn.style.background = 'rgba(0, 0, 0, 0.75)';
@@ -817,24 +904,6 @@ function formatNumber(num) {
     return new Intl.NumberFormat('fr-FR').format(num || 0);
 }
 
-// ==========================================================================
-// VÉRIFICATION QUALITÉ IA & SÉLECTEUR DE VARIANTES COMPARATIF (THÈME ZANIKA)
-// ==========================================================================
-let currentAiVariations = [];
-let currentSourceFile = null;
-
-window.handleAiQualityToggle = function(input) {
-    if (input.checked) {
-        const files = window.getSelectedFiles ? window.getSelectedFiles() : [];
-        if (files.length > 0) {
-            window.runAiQualityCheck(files[0]);
-        } else {
-            const loadingBox = document.getElementById('ai-quality-loading');
-            if (loadingBox) {
-                loadingBox.style.display = 'flex';
-                loadingBox.innerHTML = `<span>Sélectionnez ou prenez une photo : le comparateur qualité IA s'ouvrira immédiatement.</span>`;
-                setTimeout(() => {
-                    if (loadingBox.style.display === 'flex' && !loadingBox.dataset.loading) {
 // ==========================================================================
 // ZANIKA AI PRODUCT PHOTOGRAPHY STUDIO — MOTEUR INTERACTIF JAVASCRIPT
 // ==========================================================================
