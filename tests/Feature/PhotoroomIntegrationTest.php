@@ -732,4 +732,85 @@ class PhotoroomIntegrationTest extends TestCase
             ->assertOk()
             ->assertSee('Quota Photoroom / mois');
     }
+
+    public function test_video_ad_campaign_solution_a_enhances_products_with_photoroom_and_caches_for_reuse(): void
+    {
+        Storage::fake('public');
+        config([
+            'services.photoroom.key' => 'pr_video_solution_a_key',
+            'services.groq.key' => '',
+            'services.openrouter.key' => '',
+            'services.gemini.key' => '',
+        ]);
+
+        $fakePhotoroomPackshot = $this->makePngBinary(1000, 1000, false);
+        Http::fake([
+            'https://image-api.photoroom.com/v2/edit' => Http::response($fakePhotoroomPackshot, 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        [$merchant, $shop] = $this->createMerchant('video.solutiona@example.test');
+        $this->subscribeShopToPlan($shop, 'pro');
+
+        $product = Product::withoutGlobalScopes()->create([
+            'shop_id' => $shop->id,
+            'title' => 'Montre Élégance Dakar',
+            'slug' => 'montre-elegance-dakar',
+            'price' => 35000,
+            'status' => Product::STATUS_ACTIVE,
+        ]);
+
+        $rawPath = "shops/{$shop->id}/products/montre-raw.png";
+        Storage::disk('public')->put($rawPath, $this->makePngBinary(300, 300, false));
+        $productImage = $product->images()->create([
+            'path' => $rawPath,
+            'sort_order' => 0,
+            'size_bytes' => 1500,
+        ]);
+
+        // L'écran de création affiche bien l'option Photoroom Solution A
+        $this->actingAs($merchant)->get(route('ads.create'))
+            ->assertOk()
+            ->assertSee('Sublimer les photos produits avec Photoroom HD');
+
+        // 1. Première vidéo avec sublimation Photoroom -> 1 seul appel Photoroom, mise en cache sur disque
+        $firstResponse = $this->actingAs($merchant)->post(route('ads.store'), [
+            'angle' => VideoAdGeneratorService::ANGLE_COUP_DE_COEUR,
+            'product_id' => $product->id,
+            'tone' => VideoAdGeneratorService::TONE_LUXE,
+            'channel' => VideoAdGeneratorService::PLATFORM_TIKTOK,
+            'target_duration' => 15,
+            'enhance_photoroom' => '1',
+        ]);
+
+        $firstResponse->assertRedirect();
+        $cachePath = "shops/{$shop->id}/products_ai/video_pr_{$productImage->id}.png";
+        Storage::disk('public')->assertExists($cachePath);
+
+        $shop->refresh();
+        $this->assertSame(1, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(59, $shop->photoroomCreditsRemaining());
+        $this->assertDatabaseHas('ai_generations', [
+            'shop_id' => $shop->id,
+            'type' => 'ai_photoroom_video_slide',
+            'model_used' => 'photoroom-v2-edit',
+            'cost_estimated_fcfa' => 62,
+        ]);
+
+        // 2. Deuxième vidéo avec le même produit -> réutilise le cache sans rappeler Photoroom ni consommer de crédit
+        $secondResponse = $this->actingAs($merchant)->post(route('ads.store'), [
+            'angle' => VideoAdGeneratorService::ANGLE_COUP_DE_COEUR,
+            'product_id' => $product->id,
+            'tone' => VideoAdGeneratorService::TONE_DYNAMIQUE,
+            'channel' => VideoAdGeneratorService::PLATFORM_WHATSAPP,
+            'target_duration' => 20,
+            'enhance_photoroom' => '1',
+        ]);
+
+        $secondResponse->assertRedirect();
+        $shop->refresh();
+        $this->assertSame(1, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(59, $shop->photoroomCreditsRemaining());
+
+        Http::assertSentCount(1);
+    }
 }

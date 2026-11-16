@@ -102,7 +102,10 @@ class AdvertisingController extends Controller
             'channel' => ['nullable', 'string', 'in:whatsapp,tiktok,sms,instagram,facebook,general'],
             'objective' => ['nullable', 'string'],
             'promo_price' => ['nullable', 'integer', 'min:0'],
+            'enhance_photoroom' => ['nullable', 'boolean'],
         ]);
+
+        $validated['enhance_photoroom'] = $request->boolean('enhance_photoroom');
 
         if (! empty($validated['product_id'])) {
             $productExists = $shop->products()->where('id', $validated['product_id'])->exists();

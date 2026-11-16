@@ -57,6 +57,7 @@ class AiAdvertisingService
             'category_ids' => (array) ($data['category_ids'] ?? []),
             'selected_product_ids' => (array) ($data['selected_product_ids'] ?? []),
             'platform' => $channel,
+            'enhance_photoroom' => ! empty($data['enhance_photoroom']),
         ];
 
         // Génération complète (produits, timeline de scènes, scripts synchronisés, textes)

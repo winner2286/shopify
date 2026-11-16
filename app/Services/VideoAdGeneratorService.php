@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\AiGeneration;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Shop;
+use App\Services\Ai\PhotoroomService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -210,12 +212,12 @@ class VideoAdGeneratorService
     /**
      * Formate la liste des produits pour le studio vidéo avec URL ou Base64 zéro latence.
      */
-    public function formatProductsPayload(Collection $products, Shop $shop, bool $hidePrices = false): array
+    public function formatProductsPayload(Collection $products, Shop $shop, bool $hidePrices = false, bool $enhancePhotoroom = false): array
     {
         $currency = ($shop->currency === 'XOF' || empty($shop->currency)) ? 'FCFA' : $shop->currency;
 
-        return $products->map(function (Product $p) use ($shop, $currency, $hidePrices) {
-            $imageUrl = $this->resolveProductImageUrl($p, $shop);
+        return $products->map(function (Product $p) use ($shop, $currency, $hidePrices, $enhancePhotoroom) {
+            $imageUrl = $this->resolveProductImageUrl($p, $shop, $enhancePhotoroom);
             $hasDiscount = $p->compare_at_price && $p->compare_at_price > $p->price;
             $discountPct = $hasDiscount
                 ? (int) round((($p->compare_at_price - $p->price) / max($p->compare_at_price, 1)) * 100)
@@ -241,7 +243,7 @@ class VideoAdGeneratorService
     /**
      * Résout l'URL ou le Data URI Base64 de la photo d'un produit (zéro latence CORS).
      */
-    public function resolveProductImageUrl(?Product $product, Shop $shop): string
+    public function resolveProductImageUrl(?Product $product, Shop $shop, bool $enhancePhotoroom = false): string
     {
         if (! $product) {
             return $this->resolveShopLogoUrl($shop);
@@ -258,10 +260,15 @@ class VideoAdGeneratorService
             return 'data:image/webp;base64,' . $data;
         }
 
-        // 2. Fichier physique sur le disque public -> conversion Base64 pour zéro latence
+        // 2. Fichier physique sur le disque public -> cache Photoroom réutilisable ou conversion Base64 zéro latence
         if ($primary && ! empty($primary->path)) {
             $diskPath = Storage::disk('public')->path($primary->path);
             if (file_exists($diskPath) && filesize($diskPath) > 0) {
+                $cachedOrEnhanced = $this->resolveCachedOrEnhancedPhotoroomImage($primary, $shop, $diskPath, $enhancePhotoroom);
+                if ($cachedOrEnhanced !== null) {
+                    return $cachedOrEnhanced;
+                }
+
                 $mime = @mime_content_type($diskPath) ?: 'image/webp';
                 return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
             }
@@ -297,6 +304,67 @@ class VideoAdGeneratorService
     }
 
     /**
+     * Retourne l'image Photoroom mise en cache pour cette photo produit (0 crédit) ou
+     * appelle Photoroom une seule fois en mode Smart Cost puis la met en cache sur disque.
+     */
+    protected function resolveCachedOrEnhancedPhotoroomImage(
+        ProductImage $primary,
+        Shop $shop,
+        string $diskPath,
+        bool $enhancePhotoroom
+    ): ?string {
+        $cacheRelPath = "shops/{$shop->id}/products_ai/video_pr_{$primary->id}.png";
+
+        if (Storage::disk('public')->exists($cacheRelPath)) {
+            $cached = Storage::disk('public')->get($cacheRelPath);
+            if (is_string($cached) && $cached !== '') {
+                return 'data:image/png;base64,' . base64_encode($cached);
+            }
+        }
+
+        if (! $enhancePhotoroom || str_contains((string) $primary->path, 'products_ai/')) {
+            return null;
+        }
+
+        $photoroom = app(PhotoroomService::class);
+        if (! $photoroom->isConfigured() || ! $shop->hasEnoughPhotoroomCredits(1)) {
+            return null;
+        }
+
+        $rawBinary = @file_get_contents($diskPath);
+        if (! is_string($rawBinary) || $rawBinary === '') {
+            return null;
+        }
+
+        $useGenerativeTier = $shop->canUsePhotoroomGenerativeScene();
+        $prBinary = $useGenerativeTier
+            ? $photoroom->studioPackshot($rawBinary, 'studio_white', '1000x1000')
+            : $photoroom->removeBackground($rawBinary, ['format' => 'png']);
+
+        if (! is_string($prBinary) || $prBinary === '') {
+            return null;
+        }
+
+        Storage::disk('public')->put($cacheRelPath, $prBinary);
+        $shop->consumePhotoroomCredits(1);
+
+        AiGeneration::create([
+            'shop_id' => $shop->id,
+            'type' => 'ai_photoroom_video_slide',
+            'step' => $useGenerativeTier ? 'video_product_studio_packshot' : 'video_product_v1_cutout',
+            'model_used' => $useGenerativeTier ? 'photoroom-v2-edit' : 'photoroom-v1-segment',
+            'prompt_tokens' => 0,
+            'completion_tokens' => 0,
+            'cost_estimated_fcfa' => $useGenerativeTier ? 62 : 13,
+            'duration_ms' => 500,
+            'status' => 'success',
+            'input_summary' => 'Sublimation & mise en cache Photoroom pour Studio Vidéo IA',
+        ]);
+
+        return 'data:image/png;base64,' . base64_encode($prBinary);
+    }
+
+    /**
      * Résout le logo de la boutique sous forme de Base64 ou URL.
      */
     public function resolveShopLogoUrl(Shop $shop): string
@@ -327,6 +395,7 @@ class VideoAdGeneratorService
         $customMessage = trim((string) ($data['custom_message'] ?? ''));
         $isStorePresentation = ($angle === self::ANGLE_BOUTIQUE);
         $platform = $this->normalizePlatform($data['platform'] ?? self::PLATFORM_TIKTOK);
+        $enhancePhotoroom = ! empty($data['enhance_photoroom']);
 
         // Sélection des produits selon l'angle
         $products = $this->selectProductsForAd(
@@ -337,7 +406,7 @@ class VideoAdGeneratorService
             (array) ($data['selected_product_ids'] ?? [])
         );
 
-        $formattedProducts = $this->formatProductsPayload($products, $shop, $isStorePresentation);
+        $formattedProducts = $this->formatProductsPayload($products, $shop, $isStorePresentation, $enhancePhotoroom);
 
         // Détection de l'atout vérifié de la boutique
         $assetPhrase = $this->resolveShopAssetPhrase($shop, $customMessage);
