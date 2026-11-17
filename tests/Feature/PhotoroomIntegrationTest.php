@@ -24,6 +24,20 @@ class PhotoroomIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_production_never_falls_back_to_a_watermarked_sandbox_image(): void
+    {
+        $this->app['env'] = 'production';
+        config(['services.photoroom.key' => 'live-test', 'services.photoroom.sandbox_key' => 'sandbox_test']);
+        Http::preventStrayRequests();
+        Http::fake(['https://image-api.photoroom.com/v2/edit' => Http::response([], 402)]);
+
+        $result = app(PhotoroomService::class)->editProductImage($this->makePngBinary());
+
+        $this->assertNull($result);
+        Http::assertSentCount(1);
+        Http::assertNotSent(fn ($request) => $request->hasHeader('x-api-key', 'sandbox_test'));
+    }
+
     private function createMerchant(string $email = 'merchant.pr@example.test'): array
     {
         $user = User::factory()->create([
@@ -836,7 +850,7 @@ class PhotoroomIntegrationTest extends TestCase
 
         $variations = $response->json('variations');
         $this->assertIsArray($variations);
-        $this->assertGreaterThanOrEqual(4, count($variations));
+        $this->assertCount(2, $variations);
 
         // Vérifier le rejet JSON clair (avec clé error en français) si binaire corrompu
         $corruptFile = UploadedFile::fake()->createWithContent('broken.heic', 'NOT_AN_IMAGE_BINARY');

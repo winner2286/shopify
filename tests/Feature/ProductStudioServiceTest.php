@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\AiGeneration;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\ProductStudioService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -26,7 +26,7 @@ class ProductStudioServiceTest extends TestCase
 
         $shop = Shop::create([
             'user_id' => $user->id,
-            'name' => 'Boutique Studio ' . $user->name,
+            'name' => 'Boutique Studio '.$user->name,
             'status' => 'draft',
         ]);
 
@@ -62,7 +62,7 @@ class ProductStudioServiceTest extends TestCase
      */
     public function test_detect_product_category_for_all_required_categories(): void
     {
-        $service = new ProductStudioService();
+        $service = new ProductStudioService;
         $sampleBinary = $this->createSampleProductImage(100, 100);
 
         // A. Chaussures à talons
@@ -108,7 +108,7 @@ class ProductStudioServiceTest extends TestCase
      */
     public function test_local_background_segmentation_and_bounding_box_cropping(): void
     {
-        $service = new ProductStudioService();
+        $service = new ProductStudioService;
         $sampleBinary = $this->createSampleProductImage(300, 300);
 
         // 1. Segmentation
@@ -152,7 +152,7 @@ class ProductStudioServiceTest extends TestCase
      */
     public function test_render_studio_packshots_square_ratio_and_physics_shadows(): void
     {
-        $service = new ProductStudioService();
+        $service = new ProductStudioService;
         $sampleBinary = $this->createSampleProductImage(200, 200);
         $cutoutPng = $service->segmentBackgroundLocally($sampleBinary);
         $cutoutGd = imagecreatefromstring($cutoutPng);
@@ -197,7 +197,7 @@ class ProductStudioServiceTest extends TestCase
         Storage::fake('public');
         [$merchant, $shop] = $this->createMerchant();
 
-        $service = new ProductStudioService();
+        $service = new ProductStudioService;
         $sampleBinary = $this->createSampleProductImage(250, 250);
 
         $result = $service->processProductPhoto($shop, $sampleBinary, 'Escarpins talons hauts cuir');
@@ -212,7 +212,7 @@ class ProductStudioServiceTest extends TestCase
         $this->assertGreaterThanOrEqual(4, count($variations));
 
         // Règle 3 & 6.8 : La photo source originale doit TOUJOURS être présente dans les choix
-        $hasSource = collect($variations)->contains(fn($v) => $v['is_source'] === true);
+        $hasSource = collect($variations)->contains(fn ($v) => $v['is_source'] === true);
         $this->assertTrue($hasSource, 'La photo source originale doit toujours être proposée.');
 
         // Quality Gate automatique
@@ -236,6 +236,7 @@ class ProductStudioServiceTest extends TestCase
         $response = $this->actingAs($merchant)->postJson('/assistant-ia/produits/verifier-qualite', [
             'photo' => $file,
             'category_hint' => 'Chaussures sport basket',
+            'style' => null,
         ]);
 
         $response->assertOk();
@@ -273,7 +274,7 @@ class ProductStudioServiceTest extends TestCase
         [$merchant, $shop] = $this->createMerchant();
 
         // 1. Créer d'abord un fichier de détourage factice
-        $service = new ProductStudioService();
+        $service = new ProductStudioService;
         $sampleBinary = $this->createSampleProductImage(200, 200);
         $cutoutPng = $service->segmentBackgroundLocally($sampleBinary);
 
@@ -328,5 +329,212 @@ class ProductStudioServiceTest extends TestCase
         $this->assertNotNull($product);
         $this->assertCount(1, $product->images);
         $this->assertEquals($packshotPath, $product->images->first()->path);
+    }
+
+    public function test_preview_generates_only_requested_background_and_keeps_exact_source(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => '', 'services.photoroom.sandbox_key' => '']);
+        [$merchant, $shop] = $this->createMerchant();
+        $source = $this->createSampleProductImage();
+
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->createWithContent('photo.jpg', $source), 'style' => 'studio_dark',
+        ])->assertOk()->assertJsonPath('variations.0.type', 'studio_dark')->assertJsonPath('quality_audit.status', 'review_required');
+
+        $this->assertCount(2, $response->json('variations'));
+        $this->assertSame($source, Storage::disk('public')->get($response->json('source_path')));
+        $image = imagecreatefromstring(Storage::disk('public')->get($response->json('variations.0.path')));
+        $this->assertSame(1000, imagesx($image));
+        $corner = imagecolorsforindex($image, imagecolorat($image, 5, 5));
+        $this->assertLessThan(50, $corner['red']);
+        imagedestroy($image);
+        $this->assertSame(12, $shop->fresh()->ai_credits_used);
+        Http::assertNothingSent();
+    }
+
+    public function test_uncertain_cutout_is_rejected_without_charging_or_creating_fake_decor(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => '', 'services.photoroom.sandbox_key' => '']);
+        [$merchant, $shop] = $this->createMerchant();
+        $source = file_get_contents(public_path('images/catalog/burger.webp'));
+
+        $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->createWithContent('photo.webp', $source), 'style' => 'studio_white',
+        ])->assertUnprocessable()->assertJsonValidationErrors('photo');
+
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+        Http::assertNothingSent();
+    }
+
+    public function test_unavailable_custom_scene_is_rejected_and_refunds_reserved_credits(): void
+    {
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => '', 'services.photoroom.sandbox_key' => '']);
+        [$merchant, $shop] = $this->createMerchant();
+
+        $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->image('photo.jpg'), 'style' => 'lifestyle', 'scene_prompt' => 'Une table en bois sous une lumière douce',
+        ])->assertUnprocessable()->assertJsonValidationErrors('style');
+
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        Http::assertNothingSent();
+    }
+
+    public function test_saving_an_uploaded_photo_preserves_background_and_does_not_call_photoroom(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => 'test-key']);
+        [$merchant, $shop] = $this->createMerchant();
+        $source = $this->createSampleProductImage(400, 200);
+
+        $this->actingAs($merchant)->post(route('products.store'), [
+            'title' => 'Photo approuvée', 'price' => 5000, 'status' => 'active',
+            'photos' => [UploadedFile::fake()->createWithContent('photo.jpg', $source)],
+        ])->assertRedirect(route('products.index'));
+
+        $product = $shop->products()->firstOrFail();
+        $image = imagecreatefromstring(Storage::disk('public')->get($product->images->first()->path));
+        $this->assertSame(400, imagesx($image));
+        $this->assertSame(200, imagesy($image));
+        imagedestroy($image);
+        $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
+        Http::assertNothingSent();
+    }
+
+    public function test_existing_photo_can_be_replaced_at_gallery_limit_without_losing_other_photos(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        [$merchant, $shop] = $this->createMerchant();
+        $product = $shop->products()->create(['title' => 'Produit', 'slug' => 'produit', 'price' => 5000, 'status' => 'active']);
+        for ($i = 0; $i < 8; $i++) {
+            $product->images()->create(['path' => "shops/{$shop->id}/products/old-{$i}.jpg", 'sort_order' => $i, 'image_data' => base64_encode($this->createSampleProductImage())]);
+        }
+        $original = $product->images()->orderBy('sort_order')->firstOrFail();
+        $remaining = $product->images()->where('id', '!=', $original->id)->pluck('path', 'id')->all();
+
+        $this->actingAs($merchant)->put(route('products.update', $product), [
+            'title' => $product->title, 'price' => 5000, 'status' => 'active',
+            'studio_replace_image_id' => $original->id, 'photos' => [UploadedFile::fake()->image('retouche.jpg', 300, 300)],
+        ])->assertRedirect(route('products.index'));
+
+        $this->assertSame(8, $product->images()->count());
+        $this->assertNotSame($original->path, $original->fresh()->path);
+        $this->assertSame(0, $original->fresh()->sort_order);
+        $this->assertSame($remaining, $product->images()->where('id', '!=', $original->id)->pluck('path', 'id')->all());
+        Http::assertNothingSent();
+    }
+
+    public function test_replacing_a_foreign_product_photo_is_rejected_before_changing_product(): void
+    {
+        [$merchant, $shop] = $this->createMerchant();
+        [, $otherShop] = $this->createMerchant('other.photo@example.test');
+        $product = $shop->products()->create(['title' => 'Produit', 'slug' => 'produit', 'price' => 5000, 'status' => 'active']);
+        $otherProduct = $otherShop->products()->create(['title' => 'Autre', 'slug' => 'autre', 'price' => 9000, 'status' => 'active']);
+        $image = $otherProduct->images()->create(['path' => "shops/{$otherShop->id}/products/photo.jpg"]);
+
+        $this->actingAs($merchant)->putJson(route('products.update', $product), [
+            'title' => 'Titre modifié', 'price' => 5000, 'status' => 'active', 'studio_replace_image_id' => $image->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('studio_replace_image_id');
+
+        $this->assertSame('Produit', $product->fresh()->title);
+    }
+
+    public function test_custom_scene_uses_merchant_prompt_in_one_provider_call_and_one_photoroom_credit(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => 'test-key', 'services.photoroom.sandbox_key' => '']);
+        [$merchant, $shop] = $this->createMerchant();
+        $merchant->update(['role' => User::ROLE_ADMIN]);
+        $source = $this->createSampleProductImage();
+        $scene = imagecreatefromstring($source);
+        ob_start();
+        imagepng($scene);
+        $result = ob_get_clean();
+        imagedestroy($scene);
+        Http::fake(['https://image-api.photoroom.com/v2/edit' => Http::response($result, 200, ['Content-Type' => 'image/png'])]);
+
+        $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->createWithContent('photo.jpg', $source), 'style' => 'lifestyle', 'scene_prompt' => 'Une table en bois sous une lumière douce',
+        ])->assertOk()->assertJsonPath('variations.0.type', 'lifestyle')->assertJsonPath('engine', 'photoroom-ai');
+
+        $this->assertSame(1, $shop->fresh()->photoroom_credits_used);
+        $this->assertSame(12, $shop->fresh()->ai_credits_used);
+        Http::assertSent(function ($request): bool {
+            $fields = collect($request->data())->pluck('contents', 'name');
+
+            return $request->url() === 'https://image-api.photoroom.com/v2/edit'
+                && str_contains($fields['background.prompt'], 'Une table en bois sous une lumière douce')
+                && $fields['lighting.mode'] === 'ai.preserve-hue-and-saturation'
+                && ! $fields->has('shadow.mode');
+        });
+        Http::assertSentCount(1);
+    }
+
+    public function test_failed_scene_refunds_both_quotas_and_does_not_return_a_local_substitute(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => 'test-key', 'services.photoroom.sandbox_key' => '']);
+        [$merchant, $shop] = $this->createMerchant();
+        $merchant->update(['role' => User::ROLE_ADMIN]);
+        Http::fake(['https://image-api.photoroom.com/v2/edit' => Http::response([], 503)]);
+
+        $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->image('photo.jpg'), 'style' => 'lifestyle', 'scene_prompt' => 'Une table en bois sous une lumière douce',
+        ])->assertUnprocessable()->assertJsonValidationErrors('photo');
+
+        $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        $this->assertSame([], Storage::disk('public')->allFiles());
+        Http::assertSentCount(1);
+    }
+
+    public function test_product_forms_render_without_generating_previews_or_claiming_perfect_fidelity(): void
+    {
+        Http::preventStrayRequests();
+        [$merchant, $shop] = $this->createMerchant();
+        $product = $shop->products()->create(['title' => 'Mon produit', 'slug' => 'produit', 'price' => 5000, 'status' => 'active']);
+        $create = $this->actingAs($merchant)->get(route('products.create'))->assertOk()->assertSee('product-photo-studio')->assertDontSee('100% Fidèle');
+        for ($i = 0; $i < 8; $i++) {
+            $product->images()->create(['path' => "shops/{$shop->id}/products/photo-{$i}.jpg", 'sort_order' => $i]);
+        }
+        $edit = $this->get(route('products.edit', $product))->assertOk()->assertSee('studio_replace_image_id')->assertSee('Ouvrir le studio photo')->assertSee('master-photos-input');
+        if (getenv('CREATIVE_STUDIO_REVIEW') === '1') {
+            foreach (['product-create' => $create, 'product-edit' => $edit] as $name => $response) {
+                file_put_contents(storage_path('app/private/studio-review-'.$name.'.html'), str_replace(
+                    ['http://localhost:8080', 'http://localhost'], ['http://127.0.0.1:8127', 'http://127.0.0.1:8127'], $response->getContent()
+                ));
+            }
+        }
+        Http::assertNothingSent();
+    }
+
+    public function test_light_retouch_preserves_the_scene_and_returns_an_explicit_preview(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        [$merchant] = $this->createMerchant();
+        $source = file_get_contents(public_path('images/catalog/burger.webp'));
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->createWithContent('photo.webp', $source), 'style' => 'retouch',
+        ])->assertOk()->assertJsonPath('cutout_method', 'none')->assertJsonPath('variations.0.title', 'Retouche légère');
+
+        $this->assertCount(2, $response->json('variations'));
+        $this->assertSame($source, Storage::disk('public')->get($response->json('source_path')));
+        $rendered = Storage::disk('public')->get($response->json('variations.0.path'));
+        $dimensions = getimagesizefromstring($rendered);
+        $this->assertSame([1000, 1000], [$dimensions[0], $dimensions[1]]);
+        if (getenv('CREATIVE_STUDIO_REVIEW') === '1') {
+            file_put_contents(storage_path('app/private/product-retouch-review.jpg'), $rendered);
+        }
+        Http::assertNothingSent();
     }
 }

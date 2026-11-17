@@ -7,6 +7,7 @@ use App\Services\PublicMediaStorage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ProductStudioService
@@ -55,6 +56,156 @@ class ProductStudioService
     public function processProductPhoto(Shop $shop, string $imageBinary, ?string $categoryHint = null): array
     {
         return $this->withPhotoroomReservation($shop, fn (bool $reserved) => $this->processReservedProductPhoto($shop, $imageBinary, $categoryHint, $reserved));
+    }
+
+    /**
+     * Create only the requested preview. Never replace a failed AI scene with a handmade decor.
+     *
+     * @return array<string, mixed>
+     */
+    public function previewProductPhoto(Shop $shop, string $imageBinary, string $style, ?string $hint = null, string $scene = ''): array
+    {
+        if ($style === 'lifestyle' && (! $this->photoroom->isConfigured() || ! $shop->canUsePhotoroomGenerativeScene())) {
+            throw ValidationException::withMessages(['style' => 'Les décors IA nécessitent Photoroom et une formule compatible. Choisissez une retouche ou un fond uni.']);
+        }
+
+        $operation = function (bool $reserved) use ($shop, $imageBinary, $style, $hint, $scene): array {
+            $started = microtime(true);
+            $engine = 'zanika-product-studio';
+            $method = 'none';
+            $binary = null;
+            $cutout = null;
+            $title = match ($style) {
+                'retouch' => 'Retouche légère',
+                'studio_ambient' => 'Fond ivoire',
+                'studio_dark' => 'Fond graphite',
+                'lifestyle' => 'Décor personnalisé',
+                default => 'Fond blanc',
+            };
+            $category = $this->matchCategoryKeywords(mb_strtolower((string) $hint));
+
+            if ($style === 'lifestyle') {
+                if (! $reserved) {
+                    throw ValidationException::withMessages(['credits' => 'Quota Photoroom insuffisant pour créer ce décor.']);
+                }
+                $binary = $this->photoroom->editProductImage($imageBinary, [
+                    'background.prompt' => 'Product photography background only. Keep the photographed product, its packaging, labels, proportions and colors unchanged. No extra products, no text, no logos. '.$scene,
+                    'lighting.mode' => 'ai.preserve-hue-and-saturation',
+                    'shadow.mode' => null,
+                ]);
+                if (! $binary) {
+                    throw ValidationException::withMessages(['photo' => 'Le décor IA n’a pas pu être créé. Votre photo est conservée ; aucun décor de remplacement n’a été appliqué.']);
+                }
+                $engine = 'photoroom-ai';
+                $method = 'photoroom_v2_edit';
+            } elseif ($style === 'retouch') {
+                $source = imagecreatefromstring($this->normalizeImageBinary($imageBinary));
+                $canvas = $this->frameSquareStudio($source, self::TARGET_SIZE);
+                imagefilter($canvas, IMG_FILTER_CONTRAST, -3);
+                ob_start();
+                imagejpeg($canvas, null, self::JPEG_QUALITY);
+                $binary = (string) ob_get_clean();
+                imagedestroy($canvas);
+                imagedestroy($source);
+            } else {
+                $cutout = $this->hasUsableTransparency($imageBinary) ? $imageBinary : null;
+                $method = $cutout ? 'source_transparency' : 'none';
+                if (! $cutout && $reserved) {
+                    $cutout = $this->photoroom->removeBackground($imageBinary, ['format' => 'png']);
+                    if ($cutout && $this->hasUsableTransparency($cutout)) {
+                        $engine = 'photoroom-ai';
+                        $method = 'photoroom_v1_segment';
+                    } else {
+                        $cutout = null;
+                    }
+                }
+                if (! $cutout && $this->hasUniformBorder($imageBinary)) {
+                    $cutout = $this->segmentBackgroundLocally($imageBinary);
+                    $method = 'local_uniform_background';
+                }
+                if (! $cutout || ! $this->hasUsableTransparency($cutout)) {
+                    throw ValidationException::withMessages(['photo' => 'Le fond ne peut pas être retiré proprement. Essayez une photo nette sur fond uni, ou choisissez « Retouche légère » pour conserver le décor.']);
+                }
+                $subject = imagecreatefromstring($cutout);
+                $canvas = $this->renderStudioPackshot($subject, match ($style) {
+                    'studio_dark' => 'dark', 'studio_ambient' => 'ambient_warm', default => 'white',
+                }, self::TARGET_SIZE, $category);
+                ob_start();
+                imagejpeg($canvas, null, self::JPEG_QUALITY);
+                $binary = (string) ob_get_clean();
+                imagedestroy($canvas);
+                imagedestroy($subject);
+            }
+
+            $id = (string) Str::uuid();
+            $prefix = "shops/{$shop->id}/products_ai/{$id}";
+            $sourceExt = match ((new \finfo(FILEINFO_MIME_TYPE))->buffer($imageBinary)) {
+                'image/png' => 'png', 'image/webp' => 'webp', default => 'jpg',
+            };
+            $extension = str_starts_with($binary, "\x89PNG") ? 'png' : 'jpg';
+            app(PublicMediaStorage::class)->put($prefix.'_source.'.$sourceExt, $imageBinary);
+            app(PublicMediaStorage::class)->put($prefix.'.'.$extension, $binary);
+            $sourcePath = $prefix.'_source.'.$sourceExt;
+            $path = $prefix.'.'.$extension;
+            $cutoutPath = null;
+            if ($cutout) {
+                $cutoutPath = $prefix.'_cutout.png';
+                app(PublicMediaStorage::class)->put($cutoutPath, $cutout);
+            }
+
+            return [
+                'status' => 'success', 'engine' => $engine, 'category' => $category,
+                'product_title' => $hint, 'cutout_method' => $method, 'cutout_path' => $cutoutPath,
+                'source_path' => $sourcePath, 'source_url' => Storage::disk('public')->url($sourcePath),
+                'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+                'quality_audit' => ['status' => 'review_required', 'summary' => 'Comparez les contours, les couleurs et les inscriptions avant de valider.'],
+                'variations' => [
+                    ['id' => $id, 'title' => $title, 'type' => $style, 'path' => $path, 'url' => Storage::disk('public')->url($path), 'is_source' => false, 'selected' => true],
+                    ['id' => 'source_original', 'title' => 'Photo originale', 'type' => 'source', 'path' => $sourcePath, 'url' => Storage::disk('public')->url($sourcePath), 'is_source' => true, 'selected' => false],
+                ],
+            ];
+        };
+
+        return $style === 'retouch' || ($style !== 'lifestyle' && $this->hasUsableTransparency($imageBinary))
+            ? $operation(false)
+            : $this->withPhotoroomReservation($shop, $operation);
+    }
+
+    private function hasUsableTransparency(string $binary): bool
+    {
+        $image = @imagecreatefromstring($binary);
+        if (! $image) {
+            return false;
+        }
+        $transparent = 0;
+        $opaque = 0;
+        $total = 0;
+        $step = max(1, (int) ceil(max(imagesx($image), imagesy($image)) / 100));
+        for ($y = 0; $y < imagesy($image); $y += $step) {
+            for ($x = 0; $x < imagesx($image); $x += $step) {
+                $alpha = (imagecolorsforindex($image, imagecolorat($image, $x, $y)))['alpha'];
+                $transparent += $alpha > 110 ? 1 : 0;
+                $opaque += $alpha < 30 ? 1 : 0;
+                $total++;
+            }
+        }
+        imagedestroy($image);
+
+        return $transparent / max(1, $total) > .04 && $opaque / max(1, $total) > .04;
+    }
+
+    private function hasUniformBorder(string $binary): bool
+    {
+        $image = @imagecreatefromstring($binary);
+        if (! $image) {
+            return false;
+        }
+        $samples = $this->samplePerimeterRgb($image, imagesx($image), imagesy($image));
+        [$r, $g, $b] = $this->findDominantBackgroundColor($samples);
+        $similar = count(array_filter($samples, fn ($rgb) => $this->colorDistanceSq($rgb[0], $rgb[1], $rgb[2], $r, $g, $b) < 24 * 24));
+        imagedestroy($image);
+
+        return $similar / max(1, count($samples)) >= .95;
     }
 
     private function processReservedProductPhoto(Shop $shop, string $imageBinary, ?string $categoryHint, bool $reserved): array

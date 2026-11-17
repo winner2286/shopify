@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Log;
 class PhotoroomService
 {
     protected string $apiKey;
+
     protected string $segmentUrl;
+
     protected string $editUrl;
 
     public function __construct()
@@ -27,7 +29,7 @@ class PhotoroomService
 
     /**
      * Retourne les clés API Photoroom candidates par ordre de priorité : Live puis Sandbox.
-     * Permet de basculer automatiquement sur la clé Sandbox si le quota gratuit Live (402/403/429) est épuisé.
+     * Les clés Sandbox sont réservées aux environnements de développement et de test.
      *
      * @return array<int, string>
      */
@@ -35,10 +37,11 @@ class PhotoroomService
     {
         $candidates = [
             trim((string) config('services.photoroom.key', $this->apiKey)),
-            trim((string) config('services.photoroom.sandbox_key', '')),
+            app()->environment('production') ? '' : trim((string) config('services.photoroom.sandbox_key', '')),
         ];
 
-        return array_values(array_unique(array_filter($candidates, fn (string $k) => $k !== '')));
+        return array_values(array_unique(array_filter($candidates, fn (string $k) => $k !== ''
+            && (! app()->environment('production') || ! str_starts_with($k, 'sandbox_')))));
     }
 
     protected function segmentUrl(): string
@@ -63,8 +66,8 @@ class PhotoroomService
      * Détourage haute précision d'un produit via l'API Photoroom v1/segment.
      * Retourne les octets d'un PNG transparent (RGBA) ou null en cas d'indisponibilité.
      *
-     * @param string $imageBinary Binaire source de la photo
-     * @param array<string, mixed> $options Options supplémentaires (crop, size, format)
+     * @param  string  $imageBinary  Binaire source de la photo
+     * @param  array<string, mixed>  $options  Options supplémentaires (crop, size, format)
      */
     public function removeBackground(string $imageBinary, array $options = []): ?string
     {
@@ -90,8 +93,8 @@ class PhotoroomService
      * Édition Studio & Scène IA complète via Photoroom Image Editing v2/edit
      * (détourage, ré-éclairage IA ai.auto, ombre douce ai.soft, fond couleur ou décor IA).
      *
-     * @param string $imageBinary Binaire source de la photo
-     * @param array<string, mixed> $params Paramètres Image Editing v2
+     * @param  string  $imageBinary  Binaire source de la photo
+     * @param  array<string, mixed>  $params  Paramètres Image Editing v2
      */
     public function editProductImage(string $imageBinary, array $params = []): ?string
     {
@@ -103,6 +106,9 @@ class PhotoroomService
             'outputSize' => (string) ($params['outputSize'] ?? '1000x1000'),
             'export.format' => (string) ($params['export.format'] ?? 'png'),
         ];
+        if (array_key_exists('shadow.mode', $params) && $params['shadow.mode'] === null) {
+            unset($fields['shadow.mode']);
+        }
 
         if (! empty($params['background.prompt'])) {
             $fields['background.prompt'] = (string) $params['background.prompt'];
@@ -128,7 +134,7 @@ class PhotoroomService
      * Exécute un appel multipart vers Photoroom en basculant automatiquement de la clé Live
      * vers la clé Sandbox si la première échoue (401/402/403/429/timeout).
      *
-     * @param array<string, string> $fields
+     * @param  array<string, string>  $fields
      */
     protected function sendMultipartWithFallback(
         string $url,
@@ -165,6 +171,7 @@ class PhotoroomService
                         return $body;
                     }
                     Log::warning("{$logLabel} returned non-image payload.", ['key_index' => $index]);
+
                     continue;
                 }
 
@@ -174,7 +181,7 @@ class PhotoroomService
                     'body' => mb_substr($response->body(), 0, 300),
                 ]);
             } catch (\Throwable $e) {
-                Log::warning("{$logLabel} exception: " . $e->getMessage(), ['key_index' => $index]);
+                Log::warning("{$logLabel} exception: ".$e->getMessage(), ['key_index' => $index]);
             }
         }
 
@@ -278,6 +285,7 @@ class PhotoroomService
         }
 
         imagedestroy($img);
+
         return true;
     }
 }

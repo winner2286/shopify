@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Mail\VerificationCodeMail;
 use App\Models\Advertisement;
-use App\Models\Category;
-use App\Models\DiscountCode;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\Product;
@@ -103,6 +101,7 @@ class FullPlatformEndToEndTest extends TestCase
         $otpCode = null;
         Mail::assertSent(VerificationCodeMail::class, function (VerificationCodeMail $mail) use (&$otpCode) {
             $otpCode = $mail->code;
+
             return true;
         });
         $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $otpCode);
@@ -205,6 +204,7 @@ class FullPlatformEndToEndTest extends TestCase
         $qualityRes = $this->postJson(route('ai.products.verify_quality'), [
             'photo' => UploadedFile::fake()->image('escarpin-studio.jpg', 320, 320),
             'category_hint' => 'Chaussures femme',
+            'style' => 'studio_white',
         ]);
         $qualityRes->assertOk()->assertJsonPath('engine', 'photoroom-ai');
 
@@ -258,7 +258,7 @@ class FullPlatformEndToEndTest extends TestCase
         $this->assertCount(2, $createdProduct->images, 'La modification avec nouvelle photo doit conserver la photo IA précédente.');
 
         $shop->refresh();
-        $this->assertSame(4, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(3, $shop->photoroomCreditsUsedThisMonth(), 'L’enregistrement conserve la photo sans nouvelle retouche Photoroom.');
 
         // =========================================================================
         // 5. ZONES DE LIVRAISON & PUBLICATION BOUTIQUE
@@ -403,7 +403,7 @@ class FullPlatformEndToEndTest extends TestCase
             ->assertOk()
             ->assertSee($order->order_number);
 
-        $this->get("/recu/{$order->order_number}?token=" . urlencode($order->receiptToken()))
+        $this->get("/recu/{$order->order_number}?token=".urlencode($order->receiptToken()))
             ->assertOk()
             ->assertSee('Afi Kodjo');
 
@@ -511,14 +511,13 @@ if (errors.length > 0) {
     process.exit(1);
 }
 JS;
-            $tmpScript = tempnam(sys_get_temp_dir(), 'blade_js_') . '.cjs';
+            $tmpScript = tempnam(sys_get_temp_dir(), 'blade_js_').'.cjs';
             file_put_contents($tmpScript, $script);
-            $cmd = 'node ' . escapeshellarg($tmpScript) . ' ' . escapeshellarg($viewsRoot) . ' 2>&1';
+            $cmd = 'node '.escapeshellarg($tmpScript).' '.escapeshellarg($viewsRoot).' 2>&1';
             exec($cmd, $outputLines, $exitCode);
             @unlink($tmpScript);
 
-            $this->assertSame(0, $exitCode, "Erreurs de syntaxe JavaScript dans les vues Blade :\n" . implode("\n", $outputLines));
+            $this->assertSame(0, $exitCode, "Erreurs de syntaxe JavaScript dans les vues Blade :\n".implode("\n", $outputLines));
         }
     }
 }
-

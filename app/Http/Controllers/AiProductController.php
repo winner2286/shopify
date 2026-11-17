@@ -168,6 +168,8 @@ class AiProductController extends Controller
             'photo_base64' => 'nullable|string',
             'photo_path' => 'nullable|string',
             'category_hint' => 'nullable|string|max:200',
+            'style' => 'nullable|string|in:retouch,studio_white,studio_ambient,studio_dark,lifestyle',
+            'scene_prompt' => 'nullable|string|max:500|required_if:style,lifestyle',
         ]);
 
         $user = $request->user();
@@ -208,7 +210,9 @@ class AiProductController extends Controller
 
         try {
             $categoryHint = $request->input('category_hint');
-            $studioResult = $shop->withAiCredits(12, fn () => $studioService->processProductPhoto($shop, $imageBinary, $categoryHint));
+            $studioResult = $shop->withAiCredits(12, fn () => $studioService->previewProductPhoto(
+                $shop, $imageBinary, $request->input('style') ?: 'retouch', $categoryHint, (string) $request->input('scene_prompt', '')
+            ));
 
             // Journalisation et débit des crédits isolés pour ne jamais bloquer la restitution des packshots
             try {
@@ -246,8 +250,10 @@ class AiProductController extends Controller
                 'variations' => $studioResult['variations'] ?? [],
                 'quality_audit' => $studioResult['quality_audit'] ?? null,
                 'duration_ms' => $studioResult['duration_ms'] ?? null,
-                'message' => 'Packshots studio créés avec succès sans altération du produit',
+                'message' => 'Aperçu prêt. Comparez-le à votre photo avant de valider.',
             ]);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             report($e);
             Log::warning('Studio Photo IA verifyQuality failure: '.$e->getMessage());

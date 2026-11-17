@@ -170,7 +170,7 @@ class ProductController extends Controller
             $imageService = app(ImageService::class);
             $sortOrder = 0;
             foreach ($request->file('photos') as $file) {
-                $processed = $imageService->processAndStore($file, "shops/{$shop->id}/products");
+                $processed = $imageService->processAndStore($file, "shops/{$shop->id}/products", 'original');
                 $product->images()->create([
                     'path' => $processed['path'],
                     'thumbnail_path' => $processed['thumbnail_path'],
@@ -229,6 +229,7 @@ class ProductController extends Controller
             'stock' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'status' => ['required', 'in:active,hidden,archived'],
+            'studio_replace_image_id' => ['nullable', 'integer', Rule::exists('product_images', 'id')->where('product_id', $product->id)],
             'sku' => ['nullable', 'string', 'max:50'],
             'category_ids' => ['nullable', 'array', 'max:3'],
             'category_ids.*' => [Rule::exists('categories', 'id')->where('shop_id', $shop->id)],
@@ -279,9 +280,11 @@ class ProductController extends Controller
 
         // Nouvelles photos
         if ($request->hasFile('photos')) {
+            $replacement = $request->filled('studio_replace_image_id')
+                ? $product->images()->findOrFail($validated['studio_replace_image_id']) : null;
             // Nettoyage des anciennes images fantômes sans données binaires si l'utilisateur en téléverse de nouvelles
             $hasValidImages = $product->images()->whereNotNull('image_data')->where('image_data', '!=', '')->exists();
-            if (! $hasValidImages) {
+            if (! $hasValidImages && ! $replacement) {
                 $product->images()->delete();
             }
 
@@ -290,19 +293,24 @@ class ProductController extends Controller
 
             $imageService = app(ImageService::class);
             foreach ($request->file('photos') as $file) {
-                if ($currentCount >= 8) {
+                if ($currentCount >= 8 && ! $replacement) {
                     break;
                 } // Limite de 8 photos
 
-                $processed = $imageService->processAndStore($file, "shops/{$shop->id}/products");
-                $product->images()->create([
+                $processed = $imageService->processAndStore($file, "shops/{$shop->id}/products", 'original');
+                $attributes = [
                     'path' => $processed['path'],
                     'thumbnail_path' => $processed['thumbnail_path'],
-                    'sort_order' => $sortOrder++,
                     'size_bytes' => $processed['size_bytes'],
                     'image_data' => $processed['image_data'] ?? null,
-                ]);
-                $currentCount++;
+                ];
+                if ($replacement) {
+                    $replacement->update($attributes);
+                    $replacement = null;
+                } else {
+                    $product->images()->create($attributes + ['sort_order' => $sortOrder++]);
+                    $currentCount++;
+                }
             }
         } elseif ($request->filled('ai_temp_photo_path')) {
             $tempPath = ltrim((string) $request->input('ai_temp_photo_path'), '/');
