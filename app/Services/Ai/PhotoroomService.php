@@ -4,6 +4,7 @@ namespace App\Services\Ai;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class PhotoroomService
 {
@@ -12,6 +13,33 @@ class PhotoroomService
     protected string $segmentUrl;
 
     protected string $editUrl;
+
+    protected ?array $lastFailure = null;
+
+    public function failureMessage(): string
+    {
+        $message = match ($this->lastFailure['status'] ?? null) {
+            401 => 'Photoroom refuse l’accès au service (401). La clé et le compte API doivent être vérifiés.',
+            402 => 'Photoroom bloque la demande côté facturation (402). Le solde et l’offre API du compte doivent être vérifiés.',
+            403 => 'Photoroom n’autorise pas cette opération pour le compte API utilisé (403).',
+            400, 422 => 'Photoroom refuse les paramètres de cette demande. Transmettez la référence au support pour vérification.',
+            429 => 'La limite de demandes Photoroom est atteinte. Patientez avant de réessayer.',
+            default => match ($this->lastFailure['kind'] ?? null) {
+                'timeout' => 'Photoroom n’a pas répondu dans le délai prévu.',
+                'connection' => 'La connexion à Photoroom a été interrompue.',
+                'invalid_response' => 'Photoroom a renvoyé une réponse qui ne contient pas d’image exploitable.',
+                default => 'Le service Photoroom est momentanément indisponible.',
+            },
+        };
+
+        return $message.($this->lastFailure ? ' Référence : '.$this->lastFailure['reference'].'.' : '');
+    }
+
+    private function recordFailure(string $kind, ?int $status = null): void
+    {
+        $this->lastFailure = ['kind' => $kind, 'status' => $status, 'reference' => (string) Str::uuid()];
+        Log::warning('Photoroom request failed', $this->lastFailure);
+    }
 
     public function __construct()
     {
@@ -145,6 +173,7 @@ class PhotoroomService
         int $timeout,
         string $logLabel
     ): ?string {
+        $this->lastFailure = null;
         $keys = $this->candidateApiKeys();
         if ($keys === [] || trim($imageBinary) === '') {
             return null;
@@ -168,19 +197,24 @@ class PhotoroomService
                 if ($response->successful()) {
                     $body = $response->body();
                     if ($this->isValidImageBinary($body)) {
+                        $this->lastFailure = null;
+
                         return $body;
                     }
+                    $this->recordFailure('invalid_response', $response->status());
                     Log::warning("{$logLabel} returned non-image payload.", ['key_index' => $index]);
 
                     continue;
                 }
 
+                $this->recordFailure('http', $response->status());
                 Log::warning("{$logLabel} HTTP error", [
                     'key_index' => $index,
                     'status' => $response->status(),
                     'body' => mb_substr($response->body(), 0, 300),
                 ]);
             } catch (\Throwable $e) {
+                $this->recordFailure(str_contains($e->getMessage(), 'cURL error 28') ? 'timeout' : 'connection');
                 Log::warning("{$logLabel} exception: ".$e->getMessage(), ['key_index' => $index]);
             }
         }

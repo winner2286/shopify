@@ -94,7 +94,7 @@ class ProductStudioService
                     'shadow.mode' => null,
                 ]);
                 if (! $binary) {
-                    throw ValidationException::withMessages(['photo' => 'Le décor IA n’a pas pu être créé. Votre photo est conservée ; aucun décor de remplacement n’a été appliqué.']);
+                    throw ValidationException::withMessages(['photo' => $this->photoroom->failureMessage().' Votre photo est conservée et les crédits réservés sur la plateforme ont été restitués.']);
                 }
                 $engine = 'photoroom-ai';
                 $method = 'photoroom_v2_edit';

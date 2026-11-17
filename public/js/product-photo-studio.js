@@ -18,6 +18,7 @@
     const objectUrl = file => {const url = URL.createObjectURL(file); objectUrls.push(url); return url;};
     function resetPreview() {
         preview = null; version++; $('apply').disabled = true;
+        $('apply').textContent = 'Préparez un aperçu pour continuer';
         $('generate').disabled = busy;
         $('generate').textContent = 'Préparer l’aperçu · 12 crédits IA';
         $('result').src = $('source').src; $('result-label').textContent = 'Aperçu à préparer';
@@ -70,6 +71,7 @@
         $('close').disabled = value;
         $('original').disabled = value;
         $('apply').disabled = value || !preview;
+        $('apply').textContent = preview ? 'Utiliser ce rendu' : value ? 'Préparation de l’aperçu…' : 'Aucun rendu à utiliser';
         $('generate').textContent = value ? 'Préparation en cours…' : preview && style() === 'lifestyle' ? 'Proposer un autre décor · 12 crédits IA' : 'Préparer l’aperçu · 12 crédits IA';
         root.setAttribute('aria-busy', String(value));
     }
@@ -105,6 +107,7 @@
             $('result').src = preview.url; $('result-label').textContent = preview.title;
             message('Aperçu prêt. Comparez les détails et les couleurs avant de valider.');
         } catch (error) {
+            preview = null;
             if (requestVersion === version && !root.hidden) message(error.message, true);
         } finally {lock(false);}
     };

@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class ProductStudioServiceTest extends TestCase
@@ -494,6 +495,35 @@ class ProductStudioServiceTest extends TestCase
         $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
         $this->assertSame(0, $shop->fresh()->ai_credits_used);
         $this->assertSame([], Storage::disk('public')->allFiles());
+        Http::assertSentCount(1);
+    }
+
+    #[TestWith([401, 'accès'])]
+    #[TestWith([402, 'facturation'])]
+    #[TestWith([403, 'n’autorise pas'])]
+    #[TestWith([400, 'paramètres'])]
+    #[TestWith([422, 'paramètres'])]
+    #[TestWith([429, 'limite'])]
+    #[TestWith([503, 'indisponible'])]
+    public function test_provider_rejection_is_explained_without_exposing_private_response(int $status, string $explanation): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => 'test-key', 'services.photoroom.sandbox_key' => '']);
+        [$merchant, $shop] = $this->createMerchant();
+        $merchant->update(['role' => User::ROLE_ADMIN]);
+        Http::fake(['https://image-api.photoroom.com/v2/edit' => Http::response(['error' => ['message' => 'PRIVATE_PROVIDER_MESSAGE']], $status)]);
+
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->image('photo.jpg'), 'style' => 'lifestyle', 'scene_prompt' => 'Décor chambre',
+        ])->assertUnprocessable()->assertJsonValidationErrors('photo');
+
+        $error = $response->json('errors.photo.0');
+        $this->assertStringContainsString($explanation, $error);
+        $this->assertStringContainsString('Référence :', $error);
+        $this->assertStringNotContainsString('PRIVATE_PROVIDER_MESSAGE', $response->getContent());
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
         Http::assertSentCount(1);
     }
 

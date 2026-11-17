@@ -13,6 +13,7 @@ use App\Services\ImageService;
 use App\Services\VideoAdGeneratorService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request as HttpClientRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -23,6 +24,34 @@ use Tests\TestCase;
 class PhotoroomIntegrationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_timeout_has_a_safe_diagnostic_message(): void
+    {
+        config(['services.photoroom.key' => 'test-key', 'services.photoroom.sandbox_key' => '']);
+        Http::preventStrayRequests();
+        $attempts = 0;
+        Http::fake(function () use (&$attempts): never {
+            $attempts++;
+            throw new ConnectionException('cURL error 28: PRIVATE_CONNECTION_DETAIL');
+        });
+        $service = app(PhotoroomService::class);
+
+        $this->assertNull($service->editProductImage($this->makePngBinary()));
+        $this->assertStringContainsString('délai prévu', $service->failureMessage());
+        $this->assertStringNotContainsString('PRIVATE_CONNECTION_DETAIL', $service->failureMessage());
+        $this->assertSame(1, $attempts);
+    }
+
+    public function test_invalid_image_response_has_a_safe_diagnostic_message(): void
+    {
+        config(['services.photoroom.key' => 'test-key', 'services.photoroom.sandbox_key' => '']);
+        Http::preventStrayRequests();
+        Http::fake(['https://image-api.photoroom.com/v2/edit' => Http::response('not-an-image')]);
+        $service = app(PhotoroomService::class);
+        $this->assertNull($service->editProductImage($this->makePngBinary()));
+        $this->assertStringContainsString('image exploitable', $service->failureMessage());
+        Http::assertSentCount(1);
+    }
 
     public function test_production_never_falls_back_to_a_watermarked_sandbox_image(): void
     {
