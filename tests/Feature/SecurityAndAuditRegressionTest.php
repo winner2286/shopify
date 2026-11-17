@@ -16,10 +16,12 @@ use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Ai\ActionTokenService;
+use App\Services\FeexPayService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
 
 class SecurityAndAuditRegressionTest extends TestCase
@@ -35,7 +37,7 @@ class SecurityAndAuditRegressionTest extends TestCase
     private function createMerchantWithShop(string $email, string $subdomain, string $planSlug = 'essentiel'): array
     {
         $user = User::create([
-            'name' => 'Marchand ' . $subdomain,
+            'name' => 'Marchand '.$subdomain,
             'email' => $email,
             'password' => bcrypt('password123'),
             'role' => User::ROLE_MERCHANT,
@@ -47,7 +49,7 @@ class SecurityAndAuditRegressionTest extends TestCase
 
         $shop = Shop::create([
             'user_id' => $user->id,
-            'name' => 'Boutique ' . $subdomain,
+            'name' => 'Boutique '.$subdomain,
             'subdomain' => $subdomain,
             'status' => Shop::PUBLISHED,
             'business_category' => 'mode',
@@ -174,8 +176,10 @@ class SecurityAndAuditRegressionTest extends TestCase
             ], 200),
             '*REF-VALID-001*' => Http::response([
                 'status' => 'SUCCESSFUL',
+                'shop_id' => 'fake-shop-id',
                 'custom_id' => "ORDER:{$order1->id}",
                 'amount' => 15000,
+                'currency' => 'XOF',
                 'phoneNumber' => '+228 90 11 22 33',
             ], 200),
         ]);
@@ -286,7 +290,7 @@ class SecurityAndAuditRegressionTest extends TestCase
     {
         Storage::fake('public');
 
-        $placeholderResponse = $this->get('/api/placeholder-image?title=' . urlencode('<script>alert(1)</script>') . '&color=' . urlencode('red"onload="alert(2)') . '&cat=' . urlencode('<svg onload=x>'));
+        $placeholderResponse = $this->get('/api/placeholder-image?title='.urlencode('<script>alert(1)</script>').'&color='.urlencode('red"onload="alert(2)').'&cat='.urlencode('<svg onload=x>'));
         $placeholderResponse->assertStatus(200);
         $placeholderResponse->assertHeader('Content-Type', 'image/svg+xml');
         $csp = (string) $placeholderResponse->headers->get('Content-Security-Policy');
@@ -454,8 +458,8 @@ class SecurityAndAuditRegressionTest extends TestCase
         Storage::fake('public');
 
         // Path traversal et fuite inter-boutiques sur MediaController::serve (/storage/{path})
-        $this->get('/storage/' . rawurlencode('..\\secret.txt'))->assertStatus(403);
-        $this->get('/storage/' . rawurlencode('shops/1/..\\../.env'))->assertStatus(403);
+        $this->get('/storage/'.rawurlencode('..\\secret.txt'))->assertStatus(403);
+        $this->get('/storage/'.rawurlencode('shops/1/..\\../.env'))->assertStatus(403);
 
         ProductImage::create([
             'product_id' => $productA->id,
@@ -466,13 +470,13 @@ class SecurityAndAuditRegressionTest extends TestCase
         ]);
 
         $servedShop1 = $this->get('/storage/shops/1/unique-secret-photo.png')->assertStatus(200);
-        $shop1Bytes = $servedShop1->baseResponse instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse
+        $shop1Bytes = $servedShop1->baseResponse instanceof BinaryFileResponse
             ? file_get_contents($servedShop1->baseResponse->getFile()->getPathname())
             : $servedShop1->getContent();
         $this->assertSame('fake-png-bytes', $shop1Bytes);
 
-        $servedShop999 = $this->get('/storage/shops/999/unique-secret-photo.png')->assertStatus(200);
-        $shop999Bytes = $servedShop999->baseResponse instanceof \Symfony\Component\HttpFoundation\BinaryFileResponse
+        $servedShop999 = $this->get('/storage/shops/999/unique-secret-photo.png')->assertNotFound();
+        $shop999Bytes = $servedShop999->baseResponse instanceof BinaryFileResponse
             ? file_get_contents($servedShop999->baseResponse->getFile()->getPathname())
             : $servedShop999->getContent();
         $this->assertNotSame('fake-png-bytes', $shop999Bytes);
@@ -678,7 +682,7 @@ class SecurityAndAuditRegressionTest extends TestCase
         $shop->update(['ai_credits_used' => 250]);
         $this->assertSame(250, (int) $shop->fresh()->ai_credits_used);
 
-        $feexPayService = app(\App\Services\FeexPayService::class);
+        $feexPayService = app(FeexPayService::class);
         $feexPayService->handleSubscriptionPaymentSuccess($sub, 'TX-RENEW-CREDIT-01', $proPlan);
 
         $this->assertSame(0, (int) $shop->fresh()->ai_credits_used);

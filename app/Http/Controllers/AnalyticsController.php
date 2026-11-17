@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -25,8 +24,10 @@ class AnalyticsController extends Controller
         // Métriques globales (RG-10 : montants en FCFA)
         $totalOrdersCount = $shop->orders()->count();
         $deliveredOrdersCount = $shop->orders()->where('status', Order::STATUS_DELIVERED)->count();
-        $totalRevenue = (int) $shop->orders()->where('status', '!=', Order::STATUS_CANCELLED)->sum('total');
-        $averageCart = $totalOrdersCount > 0 ? (int) round($totalRevenue / $totalOrdersCount) : 0;
+        $paidOrders = $shop->orders()->where('status', '!=', Order::STATUS_CANCELLED)->where('payment_status', Order::PAYMENT_STATUS_PAID);
+        $totalRevenue = (int) (clone $paidOrders)->sum('total');
+        $paidOrdersCount = (clone $paidOrders)->count();
+        $averageCart = $paidOrdersCount > 0 ? (int) round($totalRevenue / $paidOrdersCount) : 0;
         $totalCustomersCount = $shop->customers()->count();
 
         // Évolution des ventes sur les 7 derniers jours (requête agrégée unique, compatible SQLite/PostgreSQL)
@@ -37,6 +38,7 @@ class AnalyticsController extends Controller
             ->selectRaw('DATE(created_at) as sale_date, COALESCE(SUM(total), 0) as total_amount')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->where('status', '!=', Order::STATUS_CANCELLED)
+            ->where('payment_status', Order::PAYMENT_STATUS_PAID)
             ->groupByRaw('DATE(created_at)')
             ->pluck('total_amount', 'sale_date');
 
@@ -87,14 +89,14 @@ class AnalyticsController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="statistiques-ventes-' . date('Y-m-d') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="statistiques-ventes-'.date('Y-m-d').'.csv"',
         ];
 
         $currencyLabel = $shop->currencyLabel();
 
         return response()->stream(function () use ($orders, $currencyLabel) {
             $handle = fopen('php://output', 'w');
-            fputs($handle, "\xEF\xBB\xBF"); // UTF-8 BOM
+            fwrite($handle, "\xEF\xBB\xBF"); // UTF-8 BOM
 
             fputcsv($handle, ['Date', 'N° Commande', 'Client', 'Articles', "Total ({$currencyLabel})", 'Paiement', 'Statut'], ';');
 

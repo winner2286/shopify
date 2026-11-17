@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Payment;
 use App\Services\OrderService;
 use App\Services\WhatsAppNotificationService;
+use App\Support\SearchHelper;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -56,7 +58,7 @@ class OrderController extends Controller
         $search = trim((string) $request->input('q'));
         if ($search) {
             $query->where(function ($q) use ($search) {
-                \App\Support\SearchHelper::whereLike($q, ['order_number', 'customer_name', 'customer_phone'], $search);
+                SearchHelper::whereLike($q, ['order_number', 'customer_name', 'customer_phone'], $search);
             });
         }
 
@@ -116,7 +118,7 @@ class OrderController extends Controller
                 'customer_name' => $latest->customer_name,
                 'customer_phone' => $latest->customer_phone,
                 'total' => $latest->total,
-                'total_formatted' => number_format($latest->total, 0, ',', ' ') . ' ' . $shop->currencyLabel(),
+                'total_formatted' => number_format($latest->total, 0, ',', ' ').' '.$shop->currencyLabel(),
                 'delivery_zone' => $latest->delivery_zone_name,
                 'items_count' => $latest->items->sum('quantity'),
                 'url' => route('orders.show', $latest),
@@ -145,7 +147,7 @@ class OrderController extends Controller
             $phoneDigits = substr($phoneDigits, 2);
         }
         if (strlen($phoneDigits) === 8) {
-            $phoneDigits = '228' . $phoneDigits;
+            $phoneDigits = '228'.$phoneDigits;
         }
 
         $waMessage = urlencode("Bonjour {$order->customer_name}, c'est votre boutique {$shop->name} concernant votre commande {$order->order_number}.");
@@ -194,6 +196,9 @@ class OrderController extends Controller
         ]);
 
         $markShipped = $request->boolean('mark_shipped', true);
+        if ($markShipped && $order->status === Order::STATUS_PENDING) {
+            $order->recordStatusChange(Order::STATUS_CONFIRMED, 'merchant', $request->user()->id, 'Commande confirmée avant transmission au livreur.');
+        }
         if ($markShipped && in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_CONFIRMED], true)) {
             $driverMention = ! empty($validated['driver_phone']) ? " (Livreur : {$validated['driver_phone']})" : '';
             $order->recordStatusChange(
@@ -321,11 +326,11 @@ class OrderController extends Controller
             'paid_at' => now(),
         ]);
 
-        /** @var \App\Models\Payment|null $payment */
+        /** @var Payment|null $payment */
         $payment = $order->payments()->latest()->first();
         if ($payment) {
             $payment->update([
-                'status' => \App\Models\Payment::STATUS_PAID,
+                'status' => Payment::STATUS_PAID,
                 'paid_at' => now(),
             ]);
         }
@@ -377,7 +382,7 @@ class OrderController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="commandes-' . date('Y-m-d') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="commandes-'.date('Y-m-d').'.csv"',
         ];
 
         $currencyLabel = $shop->currencyLabel();
@@ -385,7 +390,7 @@ class OrderController extends Controller
         return response()->stream(function () use ($orders, $currencyLabel) {
             $handle = fopen('php://output', 'w');
             // BOM UTF-8 pour Excel
-            fputs($handle, "\xEF\xBB\xBF");
+            fwrite($handle, "\xEF\xBB\xBF");
 
             fputcsv($handle, [
                 'Numéro Commande', 'Date', 'Nom Client', 'Téléphone', 'Zone Livraison',

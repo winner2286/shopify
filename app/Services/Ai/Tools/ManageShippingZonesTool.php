@@ -13,7 +13,7 @@ class ManageShippingZonesTool implements AiToolInterface
     public function __construct(
         protected ?ActionTokenService $tokenService = null
     ) {
-        $this->tokenService = $tokenService ?? new ActionTokenService();
+        $this->tokenService = $tokenService ?? new ActionTokenService;
     }
 
     public function name(): string
@@ -103,11 +103,11 @@ class ManageShippingZonesTool implements AiToolInterface
                 'action' => 'list',
                 'zones_count' => $zones->count(),
                 'currency' => $shop->currency,
-                'zones' => $zones->map(fn($z) => [
+                'zones' => $zones->map(fn ($z) => [
                     'id' => $z->id,
                     'name' => $z->name,
                     'price' => $z->price,
-                    'formatted_price' => number_format($z->price, 0, ',', ' ') . " {$shop->currency}",
+                    'formatted_price' => number_format($z->price, 0, ',', ' ')." {$shop->currency}",
                     'free_shipping_threshold' => $z->free_shipping_threshold,
                     'delivery_estimate' => $z->delivery_estimate,
                     'is_pickup' => $z->is_pickup,
@@ -151,7 +151,7 @@ class ManageShippingZonesTool implements AiToolInterface
             $token = $this->tokenService->generateToken($shop, $initiator, $this->name(), $actionParams);
 
             $actionLabel = $action === 'create' ? "créer la zone \"{$actionParams['name']}\"" : "mettre à jour la zone \"{$actionParams['name']}\"";
-            $priceText = number_format($actionParams['price'], 0, ',', ' ') . " {$shop->currency}";
+            $priceText = number_format($actionParams['price'], 0, ',', ' ')." {$shop->currency}";
 
             return [
                 'status' => 'action_required',
@@ -165,12 +165,15 @@ class ManageShippingZonesTool implements AiToolInterface
         // Validation HMAC
         $token = $arguments['action_token'] ?? '';
         $executor = $user ?? $shop->owner ?? User::first();
+        if (empty($token)) {
+            return ['status' => 'security_rejection', 'error' => 'Un jeton signé est obligatoire pour confirmer cette action.'];
+        }
         if (! empty($token)) {
             $validation = $this->tokenService->validateToken($token, $shop, $executor, $this->name(), $actionParams);
             if (! $validation['valid']) {
                 return [
                     'status' => 'security_rejection',
-                    'error' => "Refus de sécurité : " . ($validation['error'] ?? 'Jeton invalide.'),
+                    'error' => 'Refus de sécurité : '.($validation['error'] ?? 'Jeton invalide.'),
                 ];
             }
         }
@@ -194,7 +197,7 @@ class ManageShippingZonesTool implements AiToolInterface
                 'zone_id' => $createdZone->id,
                 'name' => $createdZone->name,
                 'price' => $createdZone->price,
-                'summary' => "La zone de livraison « {$createdZone->name} » a été créée avec succès au tarif de " . number_format($createdZone->price, 0, ',', ' ') . " {$shop->currency}.",
+                'summary' => "La zone de livraison « {$createdZone->name} » a été créée avec succès au tarif de ".number_format($createdZone->price, 0, ',', ' ')." {$shop->currency}.",
             ];
         }
 
@@ -212,7 +215,7 @@ class ManageShippingZonesTool implements AiToolInterface
             'zone_id' => $zone->id,
             'name' => $zone->name,
             'price' => $zone->price,
-            'summary' => "La zone de livraison « {$zone->name} » a été modifiée avec succès (Tarif : " . number_format($zone->price, 0, ',', ' ') . " {$shop->currency}).",
+            'summary' => "La zone de livraison « {$zone->name} » a été modifiée avec succès (Tarif : ".number_format($zone->price, 0, ',', ' ')." {$shop->currency}).",
         ];
     }
 }

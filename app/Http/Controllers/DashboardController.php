@@ -27,7 +27,7 @@ class DashboardController extends Controller
 
         $ordersCount = $shop ? $shop->orders()->count() : 0;
         $pendingOrdersCount = $shop ? $shop->orders()->where('status', 'pending')->count() : 0;
-        $totalRevenue = $shop ? (int) $shop->orders()->where('status', '!=', 'cancelled')->sum('total') : 0;
+        $totalRevenue = $shop ? (int) $shop->orders()->where('status', '!=', 'cancelled')->where('payment_status', 'paid')->sum('total') : 0;
         $recentOrders = $shop ? $shop->orders()->take(5)->get() : collect();
 
         // Checklist de démarrage (I-01) : dynamique

@@ -7,7 +7,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
         <div>
             <h1 style="font-size:1.8rem;margin:0">Journal & Coûts IA (CDC J-04)</h1>
-            <p style="margin:0;color:var(--text-soft)">Suivi technique et financier des requêtes d'intelligence artificielle (Gemini Flash).</p>
+            <p style="margin:0;color:var(--text-soft)">Suivi des fournisseurs et moteurs locaux. Les coûts sont estimatifs ; une absence de coût fournisseur ne constitue pas une gratuité. Les journaux publicitaires indiquent si l'usage et le coût sont disponibles.</p>
         </div>
 
         <div class="admin-nav-pills">

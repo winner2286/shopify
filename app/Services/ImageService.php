@@ -2,6 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\AiGeneration;
+use App\Models\Shop;
+use App\Services\Ai\PhotoroomService;
+use App\Services\Ai\ProductStudioService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -9,8 +13,11 @@ use Illuminate\Support\Str;
 class ImageService
 {
     public const MAX_WIDTH = 1200;
+
     public const MAX_HEIGHT = 1200;
+
     public const WEBP_QUALITY = 82;
+
     public const THUMB_SIZE = 300;
 
     /**
@@ -84,12 +91,12 @@ class ImageService
             if (! str_contains($directory, 'logo')) {
                 $shop = null;
                 if (preg_match('#^shops/(\d+)(?:/|$)#', trim(str_replace('\\', '/', $directory), '/'), $match)) {
-                    $shop = \App\Models\Shop::withoutGlobalScopes()->find((int) $match[1]);
+                    $shop = Shop::withoutGlobalScopes()->find((int) $match[1]);
                 } elseif (auth()->check()) {
                     $shop = auth()->user()->shop ?? null;
                 }
 
-                $photoroom = app(\App\Services\Ai\PhotoroomService::class);
+                $photoroom = app(PhotoroomService::class);
                 $canUsePhotoroom = $photoroom->isConfigured()
                     && ($shop === null || $shop->hasEnoughPhotoroomCredits(1));
 
@@ -97,12 +104,13 @@ class ImageService
                     $rawBinary = @file_get_contents($filePath);
                     if (is_string($rawBinary) && $rawBinary !== '') {
                         // Smart Cost : import produit en packshot blanc via v1/segment (~13 FCFA) + ombre studio locale
+                        $shop?->consumePhotoroomCredits(1);
                         $prBinary = $photoroom->removeBackground($rawBinary, ['format' => 'png']);
                         if ($prBinary !== null) {
                             $prGd = @imagecreatefromstring($prBinary);
                             if ($prGd) {
                                 if ($this->hasTransparency($prGd)) {
-                                    $studioService = app(\App\Services\Ai\ProductStudioService::class);
+                                    $studioService = app(ProductStudioService::class);
                                     $mainImage = $studioService->renderStudioPackshot($prGd, 'white', $targetSize);
                                     imagedestroy($prGd);
                                 } else {
@@ -112,8 +120,7 @@ class ImageService
                                 $usedEngine = 'photoroom-ai';
 
                                 if ($shop !== null) {
-                                    $shop->consumePhotoroomCredits(1);
-                                    \App\Models\AiGeneration::create([
+                                    AiGeneration::create([
                                         'shop_id' => $shop->id,
                                         'type' => 'ai_photoroom_packshot',
                                         'step' => 'auto_upload_packshot',
@@ -128,6 +135,10 @@ class ImageService
                                 }
                             }
                         }
+                        if (! $photoroomApplied && $shop !== null) {
+                            $shop->decrement('photoroom_credits_used');
+                            $shop->refresh();
+                        }
                     }
                 }
             }
@@ -138,8 +149,8 @@ class ImageService
             }
         }
 
-        $filename = 'img_' . Str::random(20) . '.webp';
-        $fullPath = trim($directory, '/') . '/' . $filename;
+        $filename = 'img_'.Str::random(20).'.webp';
+        $fullPath = trim($directory, '/').'/'.$filename;
         $diskPath = Storage::disk('public')->path($fullPath);
 
         $dir = dirname($diskPath);
@@ -148,32 +159,40 @@ class ImageService
         }
 
         if (function_exists('imagewebp')) {
-            imagewebp($mainImage, $diskPath, self::WEBP_QUALITY);
+            ob_start();
+            imagewebp($mainImage, null, self::WEBP_QUALITY);
+            $mainBinary = (string) ob_get_clean();
         } else {
-            $filename = 'img_' . Str::random(20) . '.jpg';
-            $fullPath = trim($directory, '/') . '/' . $filename;
+            $filename = 'img_'.Str::random(20).'.jpg';
+            $fullPath = trim($directory, '/').'/'.$filename;
             $diskPath = Storage::disk('public')->path($fullPath);
-            imagejpeg($mainImage, $diskPath, 85);
+            ob_start();
+            imagejpeg($mainImage, null, 85);
+            $mainBinary = (string) ob_get_clean();
         }
+        app(PublicMediaStorage::class)->put($fullPath, $mainBinary);
 
         // 4. Miniature carrée optimisée (300x300 pour affichage fluide)
-        $thumbFilename = 'thumb_' . $filename;
-        $thumbFullPath = trim($directory, '/') . '/' . $thumbFilename;
+        $thumbFilename = 'thumb_'.$filename;
+        $thumbFullPath = trim($directory, '/').'/'.$thumbFilename;
         $thumbDiskPath = Storage::disk('public')->path($thumbFullPath);
 
         $thumbImage = $this->createSquareThumbnail($mainImage, self::THUMB_SIZE);
+        ob_start();
         if (function_exists('imagewebp')) {
-            imagewebp($thumbImage, $thumbDiskPath, 80);
+            imagewebp($thumbImage, null, 80);
         } else {
-            imagejpeg($thumbImage, $thumbDiskPath, 80);
+            imagejpeg($thumbImage, null, 80);
         }
+        $thumbBinary = (string) ob_get_clean();
+        app(PublicMediaStorage::class)->put($thumbFullPath, $thumbBinary);
         imagedestroy($thumbImage);
 
         imagedestroy($mainImage);
         imagedestroy($sourceImage);
 
         $fileSize = file_exists($diskPath) ? filesize($diskPath) : $originalSize;
-        $savedFile = file_exists($thumbDiskPath) ? $thumbDiskPath : (file_exists($diskPath) ? $diskPath : null);
+        $savedFile = file_exists($diskPath) ? $diskPath : null;
         $imageData = $savedFile ? base64_encode(file_get_contents($savedFile)) : null;
 
         return [
@@ -199,12 +218,12 @@ class ImageService
         $normalizedPath = ltrim(str_replace('\\', '/', $relativePath), '/');
         $dir = trim(dirname($normalizedPath), '.');
         $basename = basename($normalizedPath);
-        $thumbRelPath = ($dir !== '' ? $dir . '/' : '') . 'thumb_' . $basename;
+        $thumbRelPath = ($dir !== '' ? $dir.'/' : '').'thumb_'.$basename;
 
         // Éviter le double traitement Photoroom si déjà optimisée lors de l'étape 3
         if (str_starts_with($basename, 'img_') && Storage::disk('public')->exists($thumbRelPath)) {
             $thumbDiskPath = Storage::disk('public')->path($thumbRelPath);
-            $savedFile = file_exists($thumbDiskPath) ? $thumbDiskPath : $diskPath;
+            $savedFile = $diskPath;
 
             return [
                 'path' => $normalizedPath,
@@ -217,6 +236,7 @@ class ImageService
         }
 
         $directory = dirname($relativePath);
+
         return $this->processFromPath($diskPath, $directory, null, 0, $enhancementMode);
     }
 
@@ -239,13 +259,20 @@ class ImageService
             default:
                 // Tentative détection via signature
                 $img = @imagecreatefromjpeg($path);
-                if ($img) return $img;
+                if ($img) {
+                    return $img;
+                }
                 $img = @imagecreatefrompng($path);
-                if ($img) return $img;
+                if ($img) {
+                    return $img;
+                }
                 if (function_exists('imagecreatefromwebp')) {
                     $img = @imagecreatefromwebp($path);
-                    if ($img) return $img;
+                    if ($img) {
+                        return $img;
+                    }
                 }
+
                 return null;
         }
     }
@@ -263,14 +290,17 @@ class ImageService
                     case 3:
                         $rotated = imagerotate($image, 180, 0);
                         imagedestroy($image);
+
                         return $rotated;
                     case 6:
                         $rotated = imagerotate($image, -90, 0);
                         imagedestroy($image);
+
                         return $rotated;
                     case 8:
                         $rotated = imagerotate($image, 90, 0);
                         imagedestroy($image);
+
                         return $rotated;
                 }
             }
@@ -381,7 +411,9 @@ class ImageService
     {
         $w = imagesx($image);
         $h = imagesy($image);
-        if ($w <= 0 || $h <= 0) return 128.0;
+        if ($w <= 0 || $h <= 0) {
+            return 128.0;
+        }
 
         // Échantillonnage rapide sur une miniature 30x30
         $sampleW = min(30, $w);
@@ -455,17 +487,27 @@ class ImageService
     {
         $w = imagesx($img);
         $h = imagesy($img);
-        $minX = $w; $maxX = 0;
-        $minY = $h; $maxY = 0;
+        $minX = $w;
+        $maxX = 0;
+        $minY = $h;
+        $maxY = 0;
 
         for ($x = 0; $x < $w; $x++) {
             for ($y = 0; $y < $h; $y++) {
                 $alpha = (imagecolorat($img, $x, $y) >> 24) & 0x7F;
                 if ($alpha < 120) {
-                    if ($x < $minX) $minX = $x;
-                    if ($x > $maxX) $maxX = $x;
-                    if ($y < $minY) $minY = $y;
-                    if ($y > $maxY) $maxY = $y;
+                    if ($x < $minX) {
+                        $minX = $x;
+                    }
+                    if ($x > $maxX) {
+                        $maxX = $x;
+                    }
+                    if ($y < $minY) {
+                        $minY = $y;
+                    }
+                    if ($y > $maxY) {
+                        $maxY = $y;
+                    }
                 }
             }
         }
@@ -481,6 +523,7 @@ class ImageService
         $cropH = min($h - $minY, ($maxY - $minY + 1) + ($pad * 2));
 
         $cropped = imagecrop($img, ['x' => $minX, 'y' => $minY, 'width' => $cropW, 'height' => $cropH]);
+
         return $cropped ?: $img;
     }
 
@@ -612,7 +655,7 @@ class ImageService
             $title = 'Ambiance Podium Showroom';
         }
 
-        $scenePath = public_path('images/ai_scenes/' . $sceneFile);
+        $scenePath = public_path('images/ai_scenes/'.$sceneFile);
         if (! file_exists($scenePath)) {
             return [
                 'canvas' => $this->buildStudioPackshot($cutoutGd, 'ambient_light', $targetSize),
@@ -647,9 +690,9 @@ class ImageService
             $dstY = (int) round($targetSize * 0.315);
 
             $shadowCore = imagecolorallocatealpha($canvas, 60, 45, 30, 95);
-            imagefilledellipse($canvas, $dstX + (int)($targetW / 2) + 20, (int) round($targetSize * 0.83), (int)($targetW * 0.85), 32, $shadowCore);
+            imagefilledellipse($canvas, $dstX + (int) ($targetW / 2) + 20, (int) round($targetSize * 0.83), (int) ($targetW * 0.85), 32, $shadowCore);
             $shadowSoft = imagecolorallocatealpha($canvas, 80, 60, 40, 115);
-            imagefilledellipse($canvas, $dstX + (int)($targetW / 2) + 25, (int) round($targetSize * 0.835), (int)($targetW * 1.05), 52, $shadowSoft);
+            imagefilledellipse($canvas, $dstX + (int) ($targetW / 2) + 25, (int) round($targetSize * 0.835), (int) ($targetW * 1.05), 52, $shadowSoft);
 
             imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         } elseif ($style === 'cosmetics') {
@@ -671,9 +714,9 @@ class ImageService
             $bottomY = $dstY + $targetH;
 
             $shadowCore = imagecolorallocatealpha($canvas, 60, 50, 40, 95);
-            imagefilledellipse($canvas, $dstX + (int)($targetW / 2) + 12, $bottomY - 4, (int)($targetW * 0.88), 18, $shadowCore);
+            imagefilledellipse($canvas, $dstX + (int) ($targetW / 2) + 12, $bottomY - 4, (int) ($targetW * 0.88), 18, $shadowCore);
             $shadowSoft = imagecolorallocatealpha($canvas, 90, 75, 60, 115);
-            imagefilledellipse($canvas, $dstX + (int)($targetW / 2) + 24, $bottomY + 2, (int)($targetW * 1.1), 32, $shadowSoft);
+            imagefilledellipse($canvas, $dstX + (int) ($targetW / 2) + 24, $bottomY + 2, (int) ($targetW * 1.1), 32, $shadowSoft);
 
             imagecopyresampled($canvas, $prod, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         } elseif ($style === 'shoes') {
@@ -690,11 +733,11 @@ class ImageService
 
             // Ombre de contact au sol nette et réaliste
             $shadowCore = imagecolorallocatealpha($canvas, 40, 28, 18, 95);
-            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.50), $bottomY - 3, (int)($targetW * 0.82), 20, $shadowCore);
+            imagefilledellipse($canvas, $dstX + (int) ($targetW * 0.50), $bottomY - 3, (int) ($targetW * 0.82), 20, $shadowCore);
 
             // Ombre diffuse d'ambiance projetée vers la droite selon la lumière de la fenêtre
             $shadowSoft = imagecolorallocatealpha($canvas, 70, 52, 32, 115);
-            imagefilledellipse($canvas, $dstX + (int)($targetW * 0.54) + 12, $bottomY + 2, (int)($targetW * 0.96), 36, $shadowSoft);
+            imagefilledellipse($canvas, $dstX + (int) ($targetW * 0.54) + 12, $bottomY + 2, (int) ($targetW * 0.96), 36, $shadowSoft);
 
             imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         } elseif ($style === 'jewelry') {
@@ -705,10 +748,10 @@ class ImageService
                 $targetW = (int) round($cW * ($targetH / $cH));
             }
             $dstX = (int) round(($targetSize - $targetW) / 2);
-            $dstY = (int) round($targetSize * 0.48) - (int)($targetH / 2);
+            $dstY = (int) round($targetSize * 0.48) - (int) ($targetH / 2);
 
             $shadowCore = imagecolorallocatealpha($canvas, 30, 30, 35, 100);
-            imagefilledellipse($canvas, (int)($targetSize / 2), $dstY + $targetH - 2, (int)($targetW * 0.8), 20, $shadowCore);
+            imagefilledellipse($canvas, (int) ($targetSize / 2), $dstY + $targetH - 2, (int) ($targetW * 0.8), 20, $shadowCore);
 
             imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         } else {
@@ -723,9 +766,9 @@ class ImageService
             $dstY = 534 - $targetH + 4;
 
             $shadowCore = imagecolorallocatealpha($canvas, 45, 40, 35, 95);
-            imagefilledellipse($canvas, (int)($targetSize / 2), 534, (int)($targetW * 0.85), 20, $shadowCore);
+            imagefilledellipse($canvas, (int) ($targetSize / 2), 534, (int) ($targetW * 0.85), 20, $shadowCore);
             $shadowSoft = imagecolorallocatealpha($canvas, 70, 60, 50, 115);
-            imagefilledellipse($canvas, (int)($targetSize / 2), 537, (int)($targetW * 1.05), 34, $shadowSoft);
+            imagefilledellipse($canvas, (int) ($targetSize / 2), 537, (int) ($targetW * 1.05), 34, $shadowSoft);
 
             imagecopyresampled($canvas, $cutoutGd, $dstX, $dstY, 0, 0, $targetW, $targetH, $cW, $cH);
         }
@@ -738,7 +781,9 @@ class ImageService
 
     private function hasTransparency($image): bool
     {
-        if (! function_exists('imagecolorat')) return false;
+        if (! function_exists('imagecolorat')) {
+            return false;
+        }
         $w = imagesx($image);
         $h = imagesy($image);
         $points = [[0, 0], [$w - 1, 0], [0, $h - 1], [$w - 1, $h - 1]];
@@ -746,9 +791,12 @@ class ImageService
             if ($x >= 0 && $y >= 0 && $x < $w && $y < $h) {
                 $color = imagecolorat($image, $x, $y);
                 $alpha = ($color >> 24) & 0x7F;
-                if ($alpha > 10) return true;
+                if ($alpha > 10) {
+                    return true;
+                }
             }
         }
+
         return false;
     }
 }

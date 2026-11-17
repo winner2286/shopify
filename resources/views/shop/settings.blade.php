@@ -244,7 +244,7 @@
                 </div>
 
                 <div>
-                    <label for="subdomain" class="label">Sous-domaine / Adresse web *</label>
+                    <label for="subdomain" class="label">Identifiant de l’adresse web *</label>
                     <div style="display:flex;align-items:center;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden">
                         <span style="padding:0 .8rem;color:var(--text-soft);font-size:.9rem;white-space:nowrap">/b/</span>
                         <input id="subdomain" type="text" name="subdomain" value="{{ old('subdomain', $shop->subdomain) }}" required maxlength="30" pattern="^[a-z0-9][a-z0-9\-]{1,28}[a-z0-9]$" style="border:none;background:transparent;padding:.75rem .5rem;flex:1;color:var(--text);font-family:monospace;font-size:1rem" placeholder="ma-boutique">

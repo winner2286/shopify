@@ -17,7 +17,9 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     public const ROLE_MERCHANT = 'merchant';
+
     public const ROLE_SUPPORT = 'support';
+
     public const ROLE_ADMIN = 'admin';
 
     protected function casts(): array
@@ -56,6 +58,7 @@ class User extends Authenticatable
             $selected = $this->shops()->find($shopId);
             if ($selected) {
                 $this->setRelation('active_shop', $selected);
+
                 return $selected;
             }
         }
@@ -89,13 +92,14 @@ class User extends Authenticatable
             ->whereIn('status', ['active', 'trial', 'grace'])
             ->with('plan')
             ->latest('id')
-            ->first();
+            ->get()
+            ->first(fn (Subscription $subscription) => $subscription->grantsAccess());
 
-        if ($activeSub && $activeSub->plan) {
+        if ($activeSub && $activeSub->plan && $activeSub->plan->active) {
             return $activeSub->plan;
         }
 
-        return Plan::where('slug', 'essentiel')->first() 
+        return Plan::where('slug', 'essentiel')->first()
             ?? new Plan(['slug' => 'essentiel', 'name' => 'Essentiel', 'max_shops' => 1]);
     }
 
@@ -147,6 +151,7 @@ class User extends Authenticatable
             if ($this->exists && $this->role !== self::ROLE_ADMIN) {
                 $this->forceFill(['role' => self::ROLE_ADMIN])->saveQuietly();
             }
+
             return true;
         }
 

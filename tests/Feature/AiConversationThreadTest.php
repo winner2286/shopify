@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Ai\AiLocalIntelligenceService;
 use App\Services\Ai\AiOrchestrator;
 use App\Services\Ai\Contracts\LlmProviderInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +20,7 @@ class AiConversationThreadTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected Shop $shop;
 
     protected function setUp(): void
@@ -37,10 +39,10 @@ class AiConversationThreadTest extends TestCase
 
     public function test_clean_unwanted_greetings_strips_hallucinated_pleasantry(): void
     {
-        $orchestrator = new AiOrchestrator();
+        $orchestrator = new AiOrchestrator;
 
         // Exact situation from the user screenshot:
-        $userMsg = "Tu peux mettre une promotion en place ??";
+        $userMsg = 'Tu peux mettre une promotion en place ??';
         $llmOutput = "Bonjour ! Je vais très bien, merci, et ravi de te retrouver aussi !\n\nOui, absolument. Je peux t'aider à mettre en place une promotion.";
 
         $cleaned = $orchestrator->cleanUnwantedGreetings($llmOutput, $userMsg, 1);
@@ -53,40 +55,40 @@ class AiConversationThreadTest extends TestCase
 
     public function test_clean_unwanted_greetings_preserves_legitimate_greeting(): void
     {
-        $orchestrator = new AiOrchestrator();
+        $orchestrator = new AiOrchestrator;
 
-        $userMsg = "bonjour";
+        $userMsg = 'bonjour';
         $llmOutput = "Bonjour ! Comment puis-je vous aider aujourd'hui sur votre boutique ?";
 
         $cleaned = $orchestrator->cleanUnwantedGreetings($llmOutput, $userMsg, 0);
 
-        $this->assertStringStartsWith("Bonjour !", $cleaned);
+        $this->assertStringStartsWith('Bonjour !', $cleaned);
     }
 
     public function test_clean_unwanted_greetings_preserves_how_are_you_reply_when_asked(): void
     {
-        $orchestrator = new AiOrchestrator();
+        $orchestrator = new AiOrchestrator;
 
-        $userMsg = "Salut, comment vas-tu ?";
+        $userMsg = 'Salut, comment vas-tu ?';
         $llmOutput = "Bonjour ! Je vais très bien, merci. Comment puis-je t'aider ?";
 
         $cleaned = $orchestrator->cleanUnwantedGreetings($llmOutput, $userMsg, 0);
 
-        $this->assertStringContainsString("Je vais très bien", $cleaned);
+        $this->assertStringContainsString('Je vais très bien', $cleaned);
     }
 
     public function test_clean_unwanted_greetings_removes_greetings_on_turn_2_even_if_llm_greets(): void
     {
-        $orchestrator = new AiOrchestrator();
+        $orchestrator = new AiOrchestrator;
 
         // Conversation already in progress (turn 2)
-        $userMsg = "Et pour la livraison express ?";
-        $llmOutput = "Bonjour ! Concernant la livraison express, nous pouvons configurer une zone.";
+        $userMsg = 'Et pour la livraison express ?';
+        $llmOutput = 'Bonjour ! Concernant la livraison express, nous pouvons configurer une zone.';
 
         $cleaned = $orchestrator->cleanUnwantedGreetings($llmOutput, $userMsg, 2);
 
         $this->assertStringNotContainsString('Bonjour', $cleaned);
-        $this->assertStringStartsWith("Concernant la livraison express", $cleaned);
+        $this->assertStringStartsWith('Concernant la livraison express', $cleaned);
     }
 
     public function test_active_conversation_endpoint_returns_active_conversation(): void
@@ -132,8 +134,10 @@ class AiConversationThreadTest extends TestCase
         ]);
 
         // Mock LLM
-        $mockLlm = new class implements LlmProviderInterface {
-            public function chat(array $messages, array $tools = [], array $options = []): array {
+        $mockLlm = new class implements LlmProviderInterface
+        {
+            public function chat(array $messages, array $tools = [], array $options = []): array
+            {
                 return [
                     'content' => "Bien sûr, je m'en occupe.",
                     'tool_calls' => null,
@@ -148,7 +152,7 @@ class AiConversationThreadTest extends TestCase
         $orchestrator = new AiOrchestrator($mockLlm);
 
         // Appel sans conversation_id
-        $result = $orchestrator->sendMessage($this->shop, $this->user, "Tu peux mettre une promotion en place ??", null);
+        $result = $orchestrator->sendMessage($this->shop, $this->user, 'Tu peux mettre une promotion en place ??', null);
 
         $this->assertEquals('success', $result['status']);
         // Doit avoir réutilisé la conversation existante active
@@ -164,10 +168,12 @@ class AiConversationThreadTest extends TestCase
             'last_message_at' => now()->subMinutes(10),
         ]);
 
-        $mockLlm = new class implements LlmProviderInterface {
-            public function chat(array $messages, array $tools = [], array $options = []): array {
+        $mockLlm = new class implements LlmProviderInterface
+        {
+            public function chat(array $messages, array $tools = [], array $options = []): array
+            {
                 return [
-                    'content' => "Nouvelle discussion démarrée.",
+                    'content' => 'Nouvelle discussion démarrée.',
                     'tool_calls' => null,
                     'tokens_input' => 10,
                     'tokens_output' => 10,
@@ -182,7 +188,7 @@ class AiConversationThreadTest extends TestCase
         $result = $orchestrator->sendMessage(
             $this->shop,
             $this->user,
-            "Recommençons à zéro.",
+            'Recommençons à zéro.',
             null,
             ['force_new_conversation' => true]
         );
@@ -217,7 +223,8 @@ class AiConversationThreadTest extends TestCase
         $this->shop->update(['ai_credits_used' => 12]);
         $this->shop->unsetRelation('subscription');
 
-        $spyLlm = new class implements LlmProviderInterface {
+        $spyLlm = new class implements LlmProviderInterface
+        {
             public string $capturedSystemPrompt = '';
 
             public function chat(array $messages, array $tools = [], array $options = []): array
@@ -246,7 +253,7 @@ class AiConversationThreadTest extends TestCase
         $prompt = $spyLlm->capturedSystemPrompt;
         $this->assertStringContainsString('Boutique Test Thread', $prompt);
         $this->assertStringContainsString('Forfait actuel : Essentiel (essentiel)', $prompt);
-        $this->assertStringContainsString('Crédits IA restants : 68 / 80', $prompt);
+        $this->assertStringContainsString('Crédits IA restants : 67 / 80', $prompt);
         $this->assertStringContainsString('Fonctionnalités réellement actives :', $prompt);
         $this->assertStringContainsString('Gestion du catalogue & produits (0/50 produits utilisés)', $prompt);
         $this->assertStringContainsString('Fonctionnalités NON disponibles', $prompt);
@@ -283,7 +290,8 @@ class AiConversationThreadTest extends TestCase
 
         $this->shop->unsetRelation('subscription');
 
-        $spyLlm = new class implements LlmProviderInterface {
+        $spyLlm = new class implements LlmProviderInterface
+        {
             public string $capturedSystemPrompt = '';
 
             public function chat(array $messages, array $tools = [], array $options = []): array
@@ -308,7 +316,7 @@ class AiConversationThreadTest extends TestCase
 
         $prompt = $spyLlm->capturedSystemPrompt;
         $this->assertStringContainsString('Forfait actuel : Pro (pro)', $prompt);
-        $this->assertStringContainsString('Crédits IA restants : 350 / 350', $prompt);
+        $this->assertStringContainsString('Crédits IA restants : 349 / 350', $prompt);
         $this->assertMatchesRegularExpression('/^- Fonctionnalités réellement actives :[^\n]*Codes promotionnels et réductions \(\/codes-promo\)/m', $prompt);
         $this->assertMatchesRegularExpression('/^- Fonctionnalités réellement actives :[^\n]*Scripts vidéo TikTok \/ Instagram Reels/m', $prompt);
         $this->assertDoesNotMatchRegularExpression('/^- Fonctionnalités NON disponibles[^\n]*Codes promotionnels/m', $prompt);
@@ -328,7 +336,8 @@ class AiConversationThreadTest extends TestCase
             'status' => Product::STATUS_ACTIVE,
         ]);
 
-        $spyLlm = new class implements LlmProviderInterface {
+        $spyLlm = new class implements LlmProviderInterface
+        {
             public string $capturedSystemPrompt = '';
 
             public function chat(array $messages, array $tools = [], array $options = []): array
@@ -364,18 +373,20 @@ class AiConversationThreadTest extends TestCase
 
     public function test_multi_turn_history_is_passed_in_chronological_order_and_greetings_do_not_repeat(): void
     {
-        $localService = new \App\Services\Ai\AiLocalIntelligenceService();
-        $localLlm = new class($localService, $this->shop) implements LlmProviderInterface {
+        $localService = new AiLocalIntelligenceService;
+        $localLlm = new class($localService, $this->shop) implements LlmProviderInterface
+        {
             public array $capturedMessages = [];
 
             public function __construct(
-                protected \App\Services\Ai\AiLocalIntelligenceService $local,
+                protected AiLocalIntelligenceService $local,
                 protected Shop $shop
             ) {}
 
             public function chat(array $messages, array $tools = [], array $options = []): array
             {
                 $this->capturedMessages = $messages;
+
                 return $this->local->respond($messages, $this->shop);
             }
         };
@@ -407,7 +418,7 @@ class AiConversationThreadTest extends TestCase
         // Vérifier que l'historique transmis au LLM est bien dans l'ordre chronologique (cc -> reply1 -> bonjour -> reply2 -> 1)
         $nonSystemRoles = array_values(array_filter(
             $localLlm->capturedMessages,
-            fn($m) => ($m['role'] ?? '') !== 'system'
+            fn ($m) => ($m['role'] ?? '') !== 'system'
         ));
         $this->assertCount(5, $nonSystemRoles);
         $this->assertSame('cc', $nonSystemRoles[0]['content']);

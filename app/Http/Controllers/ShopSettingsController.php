@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shop;
-use Illuminate\Http\RedirectResponse;
+use App\Services\AdminNotificationService;
+use App\Services\ImageService;
+use App\Services\PublicMediaStorage;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -58,7 +62,7 @@ class ShopSettingsController extends Controller
             'email' => ['nullable', 'email', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:100'],
-            'maps_url' => ['nullable', 'string', 'max:500'],
+            'maps_url' => ['nullable', 'url:http,https', 'max:500'],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,webp,jpg', 'max:5120'],
         ], [
             'subdomain.regex' => 'Le sous-domaine doit contenir uniquement des lettres minuscules, chiffres ou tirets (sans tiret au début ou à la fin).',
@@ -106,13 +110,14 @@ class ShopSettingsController extends Controller
 
         // Gestion de l'upload du logo personnalisé
         if ($request->hasFile('logo')) {
-            $imageService = app(\App\Services\ImageService::class);
+            $imageService = app(ImageService::class);
             $processed = $imageService->processAndStore($request->file('logo'), "shops/{$shop->id}/logo");
-            if (!empty($processed['path'])) {
-                if ($shop->logo_path && Storage::disk('public')->exists($shop->logo_path)) {
-                    Storage::disk('public')->delete($shop->logo_path);
+            if (! empty($processed['path'])) {
+                if ($shop->logo_path) {
+                    app(PublicMediaStorage::class)->delete($shop->logo_path);
                 }
                 $updateData['logo_path'] = $processed['path'];
+                $updateData['logo_data'] = $processed['image_data'] ?? null;
 
                 // Désactive l'éventuel logo SVG IA généré lors de l'onboarding pour privilégier l'image importée
                 $onboardingData = $shop->onboarding_data ?? [];
@@ -120,10 +125,11 @@ class ShopSettingsController extends Controller
                 $updateData['onboarding_data'] = $onboardingData;
             }
         } elseif ($request->boolean('remove_logo')) {
-            if ($shop->logo_path && Storage::disk('public')->exists($shop->logo_path)) {
-                Storage::disk('public')->delete($shop->logo_path);
+            if ($shop->logo_path) {
+                app(PublicMediaStorage::class)->delete($shop->logo_path);
             }
             $updateData['logo_path'] = null;
+            $updateData['logo_data'] = null;
         }
 
         $shop->update($updateData);
@@ -137,6 +143,7 @@ class ShopSettingsController extends Controller
     public function publish(Request $request): RedirectResponse
     {
         $shop = $request->user()->shop;
+        abort_if($shop->status === Shop::SUSPENDED, 403, 'Seul un administrateur peut lever la suspension de cette boutique.');
         $checklist = $shop->publicationChecklist();
 
         if (! $checklist['can_publish']) {
@@ -147,9 +154,9 @@ class ShopSettingsController extends Controller
 
         // Notification immédiate du Super-Admin (Mobile Push + Email + Audit Alert)
         try {
-            app(\App\Services\AdminNotificationService::class)->notifyShopLaunched($shop);
+            app(AdminNotificationService::class)->notifyShopLaunched($shop);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("[ShopSettingsController] Notification admin boutique échouée : " . $e->getMessage());
+            Log::warning('[ShopSettingsController] Notification admin boutique échouée : '.$e->getMessage());
         }
 
         return redirect()->route('shop.settings')->with('published_success', true)->with('status', 'Félicitations ! Votre boutique est désormais en ligne et accessible à vos clients.');
@@ -228,7 +235,7 @@ class ShopSettingsController extends Controller
 
         // Vérification 1 : Nom de la boutique conforme
         if (trim(strtolower($request->input('confirm_shop_name'))) !== trim(strtolower($shop->name))) {
-            return back()->withErrors(['confirm_shop_name' => 'Le nom saisi ne correspond pas exactement au nom de votre boutique ("' . $shop->name . '").']);
+            return back()->withErrors(['confirm_shop_name' => 'Le nom saisi ne correspond pas exactement au nom de votre boutique ("'.$shop->name.'").']);
         }
 
         // Vérification 2 : Mot de passe du marchand
@@ -248,6 +255,6 @@ class ShopSettingsController extends Controller
         // Suppression de la boutique (cascade sur categories, products, orders, etc.)
         $shop->delete();
 
-        return redirect()->route('onboarding.step1')->with('status', 'La boutique "' . $shopName . '" a été définitivement supprimée. Vous pouvez désormais créer une nouvelle boutique.');
+        return redirect()->route('onboarding.step1')->with('status', 'La boutique "'.$shopName.'" a été définitivement supprimée. Vous pouvez désormais créer une nouvelle boutique.');
     }
 }

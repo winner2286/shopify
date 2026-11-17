@@ -8,19 +8,21 @@ use App\Models\AiMessage;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\Contracts\LlmProviderInterface;
-use App\Services\Ai\Providers\GroqLlmProvider;
-use App\Services\Ai\Providers\OpenRouterLlmProvider;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AiOrchestrator
 {
     protected LlmProviderInterface $llm;
+
     protected ToolRegistry $tools;
+
     protected AiRagService $rag;
+
     protected AiShopMemoryService $memory;
+
     protected AiProactiveAdvisorService $proactiveAdvisor;
+
     protected ActionTokenService $tokenService;
 
     public function __construct(
@@ -32,11 +34,11 @@ class AiOrchestrator
         ?ActionTokenService $tokenService = null
     ) {
         $this->llm = $llm ?? app(LlmProviderInterface::class);
-        $this->tools = $tools ?? new ToolRegistry();
-        $this->rag = $rag ?? new AiRagService();
-        $this->memory = $memory ?? new AiShopMemoryService();
-        $this->proactiveAdvisor = $proactiveAdvisor ?? new AiProactiveAdvisorService();
-        $this->tokenService = $tokenService ?? new ActionTokenService();
+        $this->tools = $tools ?? new ToolRegistry;
+        $this->rag = $rag ?? new AiRagService;
+        $this->memory = $memory ?? new AiShopMemoryService;
+        $this->proactiveAdvisor = $proactiveAdvisor ?? new AiProactiveAdvisorService;
+        $this->tokenService = $tokenService ?? new ActionTokenService;
     }
 
     /**
@@ -44,7 +46,6 @@ class AiOrchestrator
      */
     public function sendMessage(Shop $shop, User $user, string $userMessage, ?int $conversationId = null, array $options = []): array
     {
-        $startTime = microtime(true);
 
         // 1. Vérification des crédits IA de la boutique (Illimité pour le Super-Admin)
         $isAdmin = $user->isAdmin() || (bool) $shop->owner?->isAdmin();
@@ -52,11 +53,17 @@ class AiOrchestrator
         if (! $isAdmin && $remainingCredits <= 0) {
             return [
                 'status' => 'quota_exceeded',
-                'message' => "Votre forfait actuel ne dispose plus de crédits IA disponibles pour ce mois. Veuillez recharger votre compte ou passer à un forfait supérieur pour continuer à utiliser votre copilote Zanika AI.",
+                'message' => 'Votre forfait actuel ne dispose plus de crédits IA disponibles pour ce mois. Veuillez recharger votre compte ou passer à un forfait supérieur pour continuer à utiliser votre copilote Zanika AI.',
                 'remaining_credits' => 0,
             ];
         }
 
+        return $shop->withAiCredits(1, fn () => $this->sendReservedMessage($shop, $user, $userMessage, $conversationId, $options));
+    }
+
+    private function sendReservedMessage(Shop $shop, User $user, string $userMessage, ?int $conversationId, array $options): array
+    {
+        $startTime = microtime(true);
         // 2. Récupération ou création de la conversation
         $forceNew = (bool) ($options['force_new_conversation'] ?? false);
         $conversation = null;
@@ -155,7 +162,7 @@ class AiOrchestrator
 
         $totalTokensInput = $response['tokens_input'] ?? 0;
         $totalTokensOutput = $response['tokens_output'] ?? 0;
-        $modelUsed = $response['model_used'] ?? ('groq:' . config('services.groq.model', 'openai/gpt-oss-120b'));
+        $modelUsed = $response['model_used'] ?? ('groq:'.config('services.groq.model', 'openai/gpt-oss-120b'));
 
         // 8. Boucle Multi-Step ReAct (Raisonnement Itératif & Tool Calling)
         $maxIterations = (int) ($options['max_iterations'] ?? 4);
@@ -202,9 +209,9 @@ class AiOrchestrator
                 $toolName = $function['name'] ?? '';
                 $rawArgs = $function['arguments'] ?? '{}';
                 $args = is_string($rawArgs) ? json_decode($rawArgs, true) : (array) $rawArgs;
-                $callId = $toolCall['id'] ?? ('call_' . uniqid());
+                $callId = $toolCall['id'] ?? ('call_'.uniqid());
 
-                $toolResult = $this->tools->execute($toolName, $shop, $args ?: [], $user);
+                $toolResult = $this->tools->executeFromModel($toolName, $shop, $args ?: [], $user);
 
                 // Si l'outil signale une action sensible nécessitant confirmation
                 if (($toolResult['status'] ?? '') === 'action_required') {
@@ -266,12 +273,12 @@ class AiOrchestrator
         try {
             $this->memory->extractAndSaveFacts($shop, $userMessage, $finalContent);
         } catch (\Throwable $e) {
-            Log::warning("AiOrchestrator: échec extraction mémoire boutique : " . $e->getMessage());
+            Log::warning('AiOrchestrator: échec extraction mémoire boutique : '.$e->getMessage());
         }
 
         // 10. Journalisation de la consommation dans ai_generations (pour décompte des crédits)
         $durationMs = (int) round((microtime(true) - $startTime) * 1000);
-        // Coût réel Gemini Flash / OpenRouter : ~0.15$ / 1M tokens entrée et ~0.60$ / 1M tokens sortie (1 USD ≈ 650 FCFA)
+        // Indicative estimate only: provider invoices remain the billing source.
         $costInputUsd = ($totalTokensInput / 1000000) * 0.15;
         $costOutputUsd = ($totalTokensOutput / 1000000) * 0.60;
         $costEstimatedFcfa = max(1, (int) round(($costInputUsd + $costOutputUsd) * 650));
@@ -291,10 +298,10 @@ class AiOrchestrator
                 'conversation_id' => $conversation->id,
                 'has_tools' => ! empty($response['tool_calls']),
                 'has_rag' => $ragChunks->isNotEmpty(),
+                'cost_is_estimate' => true,
             ],
         ]);
 
-        $shop->consumeAiCredits(1);
         $conversation->update(['last_message_at' => now()]);
 
         return [
@@ -380,6 +387,7 @@ class AiOrchestrator
 
         if (($result['status'] ?? '') === 'security_rejection' || ! empty($result['error'])) {
             $errorMessage = $result['error'] ?? 'Échec lors de l\'exécution de l\'action.';
+
             return ['status' => 'error', 'message' => $errorMessage];
         }
 
@@ -387,7 +395,7 @@ class AiOrchestrator
         $action['execution_result'] = $result;
         $message->update(['action_required' => $action]);
 
-        $summaryText = $result['summary'] ?? "Modification appliquée avec succès.";
+        $summaryText = $result['summary'] ?? 'Modification appliquée avec succès.';
 
         AiMessage::create([
             'ai_conversation_id' => $message->ai_conversation_id,
@@ -503,7 +511,7 @@ class AiOrchestrator
         }
 
         if ($hasGreeting && $priorMessagesCount > 0) {
-            $threadingDirective = <<<THREAD
+            $threadingDirective = <<<'THREAD'
 --- LE COMMERÇANT TE SALUE ---
 Le commerçant vient de te saluer (même si la discussion est déjà engagée).
 RÈGLE OBLIGATOIRE : Rends-lui sa salutation avec chaleur et naturel (1 à 2 phrases courtes, un emoji léger possible), cite le nom de sa boutique, puis propose 1 piste concrète et utile (ex : point sur les commandes du jour, stock à surveiller, idée de promo).
@@ -519,14 +527,14 @@ Enchaîne DIRECTEMENT et naturellement sur la demande du commerçant comme dans 
 --- FIN DU STATUT DU FIL ---
 THREAD;
         } elseif (! $hasGreeting) {
-            $threadingDirective = <<<THREAD
+            $threadingDirective = <<<'THREAD'
 --- DIRECTIVE DE RÉPONSE DIRECTE SANS PRÉAMBULE ---
 Le commerçant entre directement dans le vif du sujet sans formuler de salutation.
 RÈGLE OBLIGATOIRE : Réponds DIRECTEMENT à sa question sans aucun « Bonjour », sans « Salut », et sans civilités superflues (« Je vais très bien merci »).
 --- FIN DIRECTIVE ---
 THREAD;
         } else {
-            $threadingDirective = "";
+            $threadingDirective = '';
         }
 
         return <<<PROMPT
@@ -548,7 +556,7 @@ CONTEXTE VÉRIFIÉ DE LA BOUTIQUE :
 - Marché & Paiements locaux : {$countryName} ({$shopCity}) — {$localPaymentInfo} + Paiement à la livraison (Cash on Delivery - COD).
 
 RÈGLES STRICTES DE GARDE-FOU (PRIORITÉ ABSOLUE) :
-1. **Contrôle des crédits** : Si les « Crédits IA restants » sont à 0, refuse poliment d'exécuter des actions de génération (textes, images, pubs, créations assistées) et invite le marchand à recharger son compte ou passer à un forfait supérieur.
+1. **Contrôle des crédits** : Le crédit nécessaire à ce tour est déjà réservé côté serveur. Le solde indiqué concerne les prochains tours : même s'il vaut 0, traite la demande en cours. Ne promets jamais de nouvelles générations gratuites après épuisement du solde.
 2. **Anti-Hallucination & Respect du forfait** : Ne propose, ne promets et n'exécute JAMAIS une fonctionnalité qui ne figure pas dans « Fonctionnalités réellement actives » (ex : n'invente jamais d'exports comptables PDF ni de codes promo ou scripts vidéo TikTok si la boutique n'y a pas accès selon son forfait ; oriente avec tact vers le forfait adapté si le marchand le demande).
 3. **Confidentialité & Sécurité** : Tu ne dois JAMAIS exposer de mots de passe, clés API, secrets, variables d'environnement, jetons de validation (`action_token`) ni d'identifiants techniques internes de Zanika.
 4. **Raisonnement ReAct via Outils Natifs (Sans balises internes)** : Raisonne étape par étape avant d'agir, appelle uniquement les outils JSON déclarés (`tool_calls`) pour lire ou modifier les données réelles de la boutique, appuie-toi strictement sur leurs résultats observés sans jamais inventer de chiffres, et formule ta réponse finale au marchand en français naturel (ou dans sa langue) **sans jamais afficher de balises techniques (`Thought:`, `Action:`, `Action Input:`, `Observation:`, `Answer:`) ni de JSON brut**.
@@ -622,7 +630,7 @@ PROMPT;
         // 1. Découpage du message précédent en paragraphes significatifs (> 25 caractères)
         $prevParagraphs = array_values(array_filter(
             array_map('trim', preg_split('/\n\s*\n/', $prevContent)),
-            fn($p) => mb_strlen($p) >= 25
+            fn ($p) => mb_strlen($p) >= 25
         ));
 
         // Si le nouveau message commence exactement par l'un des paragraphes du message précédent (ex: intro darija répétée)
@@ -694,10 +702,10 @@ PROMPT;
         // 4. Mettre en majuscule le premier caractère (et après une salutation conservée)
         if (! empty($content)) {
             $firstChar = mb_substr($content, 0, 1);
-            $content = mb_strtoupper($firstChar) . mb_substr($content, 1);
+            $content = mb_strtoupper($firstChar).mb_substr($content, 1);
             $content = (string) preg_replace_callback(
                 '/^((?:Bonjour|Salut|Bonsoir|Coucou|Hello|Hey)\s*!\s+)(\p{Ll})/u',
-                fn($m) => $m[1] . mb_strtoupper($m[2]),
+                fn ($m) => $m[1].mb_strtoupper($m[2]),
                 $content
             );
         }

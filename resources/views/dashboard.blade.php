@@ -199,7 +199,7 @@
                     <strong style="font-size:1.5rem;display:block" class="gradient-text">
                         {{ number_format($totalRevenue, 0, ',', ' ') }}
                     </strong>
-                    <span style="font-size:.85rem;color:var(--text-soft);display:block">FCFA encaissés</span>
+                    <span style="font-size:.85rem;color:var(--text-soft);display:block">{{ $shop->currencyLabel() }} encaissés</span>
                     <span style="font-size:.72rem;color:var(--brand-1);font-weight:600;display:inline-flex;align-items:center;gap:2px;margin-top:.25rem">
                         Voir stats <x-icon name="arrow-right" :size="11" />
                     </span>

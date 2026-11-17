@@ -2,12 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Plan;
 use App\Models\Product;
-use App\Models\ShippingZone;
 use App\Models\Shop;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -25,7 +23,9 @@ class AiAgentPhase1Test extends TestCase
     use RefreshDatabase;
 
     protected Shop $shop;
+
     protected User $user;
+
     protected Plan $plan;
 
     protected function setUp(): void
@@ -62,7 +62,7 @@ class AiAgentPhase1Test extends TestCase
 
     public function test_action_token_service_generates_and_validates_hmac_token(): void
     {
-        $service = new ActionTokenService();
+        $service = new ActionTokenService;
         $params = [
             'product_id' => 10,
             'new_price' => 15000,
@@ -105,7 +105,7 @@ class AiAgentPhase1Test extends TestCase
 
     public function test_create_product_tool_requires_confirmation_and_generates_action_token(): void
     {
-        $tool = new CreateProductTool();
+        $tool = new CreateProductTool;
         $args = [
             'title' => 'Robe Wax Royale',
             'price' => 25000,
@@ -130,7 +130,7 @@ class AiAgentPhase1Test extends TestCase
 
     public function test_create_product_tool_executes_after_confirmation_and_audits_stock(): void
     {
-        $tool = new CreateProductTool();
+        $tool = new CreateProductTool;
         $args = [
             'title' => 'Chemise Batik Élégance',
             'price' => 18000,
@@ -172,7 +172,7 @@ class AiAgentPhase1Test extends TestCase
 
     public function test_create_product_tool_rejects_tampered_token(): void
     {
-        $tool = new CreateProductTool();
+        $tool = new CreateProductTool;
         $args = [
             'title' => 'Montre Or 24K',
             'price' => 150000,
@@ -211,12 +211,18 @@ class AiAgentPhase1Test extends TestCase
             'status' => Order::STATUS_PENDING,
         ]);
 
-        $tool = new UpdateOrderStatusTool();
+        $tool = new UpdateOrderStatusTool;
 
-        // 1. Passage de pending à confirmed (sans blocage car progression normale)
+        // 1. Passage de pending à confirmed après approbation signée
         $result = $tool->execute($this->shop, [
             'order_id' => $order->id,
             'new_status' => 'confirmed',
+        ], $this->user);
+
+        $this->assertSame('action_required', $result['status']);
+        $result = $tool->execute($this->shop, [
+            'order_id' => $order->id, 'new_status' => 'confirmed', 'reason' => $result['reason'],
+            'confirmed_by_user' => true, 'action_token' => $result['action_token'],
         ], $this->user);
 
         $this->assertEquals('success', $result['status']);
@@ -230,6 +236,12 @@ class AiAgentPhase1Test extends TestCase
         $resultShipped = $tool->execute($this->shop, [
             'order_id' => $order->id,
             'new_status' => 'shipped',
+        ], $this->user);
+
+        $this->assertSame('action_required', $resultShipped['status']);
+        $resultShipped = $tool->execute($this->shop, [
+            'order_id' => $order->id, 'new_status' => 'shipped', 'reason' => $resultShipped['reason'],
+            'confirmed_by_user' => true, 'action_token' => $resultShipped['action_token'],
         ], $this->user);
 
         $this->assertEquals('success', $resultShipped['status']);
@@ -272,7 +284,7 @@ class AiAgentPhase1Test extends TestCase
             'total_price' => 70000,
         ]);
 
-        $tool = new UpdateOrderStatusTool();
+        $tool = new UpdateOrderStatusTool;
 
         // 1. Demande d'annulation -> action_required obligatoire
         $step1 = $tool->execute($this->shop, [
@@ -316,7 +328,8 @@ class AiAgentPhase1Test extends TestCase
         // Tour 1 : le LLM appelle search_products
         // Tour 2 : le LLM reçoit les résultats et appelle get_catalog_overview
         // Tour 3 : le LLM fournit la synthèse finale
-        $mockLlm = new class implements LlmProviderInterface {
+        $mockLlm = new class implements LlmProviderInterface
+        {
             private int $callCount = 0;
 
             public function chat(array $messages, array $tools = [], array $options = []): array
@@ -362,7 +375,7 @@ class AiAgentPhase1Test extends TestCase
                 }
 
                 return [
-                    'content' => "Synthèse complète : Votre catalogue comporte 0 article et vous avez 0 commande cette semaine.",
+                    'content' => 'Synthèse complète : Votre catalogue comporte 0 article et vous avez 0 commande cette semaine.',
                     'tool_calls' => null,
                     'tokens_input' => 350,
                     'tokens_output' => 80,
@@ -373,10 +386,10 @@ class AiAgentPhase1Test extends TestCase
 
         $orchestrator = new AiOrchestrator(
             llm: $mockLlm,
-            tools: new ToolRegistry()
+            tools: new ToolRegistry
         );
 
-        $result = $orchestrator->sendMessage($this->shop, $this->user, "Fais une analyse croisée de mon catalogue et de mes commandes de la semaine.");
+        $result = $orchestrator->sendMessage($this->shop, $this->user, 'Fais une analyse croisée de mon catalogue et de mes commandes de la semaine.');
 
         $this->assertEquals('success', $result['status']);
         $this->assertStringContainsString('Synthèse complète', $result['message']['content']);
@@ -393,18 +406,20 @@ class AiAgentPhase1Test extends TestCase
     public function test_loop_detection_breaks_infinite_tool_repetition(): void
     {
         // Mock simulant un LLM bloqué dans une boucle en appelant exactement le même outil avec les mêmes arguments
-        $mockLoopLlm = new class implements LlmProviderInterface {
+        $mockLoopLlm = new class implements LlmProviderInterface
+        {
             private int $callCount = 0;
 
             public function chat(array $messages, array $tools = [], array $options = []): array
             {
                 $this->callCount++;
+
                 // Renvoie indéfiniment le même tool_call
                 return [
-                    'content' => "Boucle infinie",
+                    'content' => 'Boucle infinie',
                     'tool_calls' => [
                         [
-                            'id' => 'call_loop_' . $this->callCount,
+                            'id' => 'call_loop_'.$this->callCount,
                             'type' => 'function',
                             'function' => [
                                 'name' => 'get_orders_summary',
@@ -421,10 +436,10 @@ class AiAgentPhase1Test extends TestCase
 
         $orchestrator = new AiOrchestrator(
             llm: $mockLoopLlm,
-            tools: new ToolRegistry()
+            tools: new ToolRegistry
         );
 
-        $result = $orchestrator->sendMessage($this->shop, $this->user, "Test de détection de boucle répétitive.");
+        $result = $orchestrator->sendMessage($this->shop, $this->user, 'Test de détection de boucle répétitive.');
 
         // Doit s'interrompre proprement sans dépasser max_iterations et sans boucle infinie
         $this->assertEquals('success', $result['status']);

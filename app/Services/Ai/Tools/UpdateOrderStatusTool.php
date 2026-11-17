@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Ai\ActionTokenService;
 use App\Services\Ai\Contracts\AiToolInterface;
 use App\Services\OrderService;
+use App\Support\SearchHelper;
 
 class UpdateOrderStatusTool implements AiToolInterface
 {
@@ -16,7 +17,7 @@ class UpdateOrderStatusTool implements AiToolInterface
         protected ?ActionTokenService $tokenService = null
     ) {
         $this->orderService = $orderService ?? app(OrderService::class);
-        $this->tokenService = $tokenService ?? new ActionTokenService();
+        $this->tokenService = $tokenService ?? new ActionTokenService;
     }
 
     public function name(): string
@@ -81,7 +82,7 @@ class UpdateOrderStatusTool implements AiToolInterface
         if ($orderId > 0) {
             $query->where('id', $orderId);
         } elseif (! empty($orderNumber)) {
-            $query->where('order_number', \App\Support\SearchHelper::likeOperator(), "%{$orderNumber}%");
+            $query->where('order_number', SearchHelper::likeOperator(), "%{$orderNumber}%");
         } else {
             return ['error' => 'Veuillez spécifier l\'ID ou le numéro officiel de la commande.'];
         }
@@ -100,7 +101,7 @@ class UpdateOrderStatusTool implements AiToolInterface
         ];
 
         if (! in_array($newStatus, $validStatuses, true)) {
-            return ['error' => "Statut '{$newStatus}' invalide. Statuts autorisés : " . implode(', ', $validStatuses)];
+            return ['error' => "Statut '{$newStatus}' invalide. Statuts autorisés : ".implode(', ', $validStatuses)];
         }
 
         if ($order->status === $newStatus) {
@@ -126,13 +127,14 @@ class UpdateOrderStatusTool implements AiToolInterface
 
         if (! in_array($newStatus, $possibleNext, true)) {
             $currentLabel = $order->status_label;
+
             return [
-                'error' => "Transition impossible : une commande au statut « {$currentLabel} » ne peut pas passer directement à « " . ucfirst($newStatus) . " ».",
+                'error' => "Transition impossible : une commande au statut « {$currentLabel} » ne peut pas passer directement à « ".ucfirst($newStatus).' ».',
             ];
         }
 
         $isConfirmed = ! empty($arguments['confirmed_by_user']);
-        $requiresValidation = ($newStatus === Order::STATUS_CANCELLED);
+        $requiresValidation = true;
 
         // 3. Procédure Human-In-The-Loop obligatoire pour l'annulation
         if ($requiresValidation && ! $isConfirmed) {
@@ -153,7 +155,7 @@ class UpdateOrderStatusTool implements AiToolInterface
                 'order_number' => $order->order_number,
                 'new_status' => $newStatus,
                 'reason' => $actionParams['reason'],
-                'message' => "Confirmation requise : Souhaitez-vous réellement annuler la commande {$order->order_number} de {$order->customer_name} ? Les articles seront automatiquement remis en stock.",
+                'message' => "Confirmation requise : passer la commande {$order->order_number} au statut {$newStatus} ?",
             ];
         }
 
@@ -166,12 +168,15 @@ class UpdateOrderStatusTool implements AiToolInterface
                 'reason' => $reason ?: 'Annulation demandée par le commerçant',
             ];
             $executor = $user ?? $shop->owner ?? User::first();
+            if (empty($token)) {
+                return ['status' => 'security_rejection', 'error' => 'Un jeton signé est obligatoire pour confirmer cette action.'];
+            }
             if (! empty($token)) {
                 $validation = $this->tokenService->validateToken($token, $shop, $executor, $this->name(), $actionParams);
                 if (! $validation['valid']) {
                     return [
                         'status' => 'security_rejection',
-                        'error' => "Refus de sécurité : " . ($validation['error'] ?? 'Jeton invalide.'),
+                        'error' => 'Refus de sécurité : '.($validation['error'] ?? 'Jeton invalide.'),
                     ];
                 }
             }
@@ -194,23 +199,7 @@ class UpdateOrderStatusTool implements AiToolInterface
 
         // Transitions de progression (confirmed, shipped, delivered)
         $previousStatus = $order->status;
-        $order->status = $newStatus;
-
-        if ($newStatus === Order::STATUS_DELIVERED && $order->payment_method === Order::PAYMENT_CASH) {
-            $order->payment_status = Order::PAYMENT_STATUS_PAID;
-            $order->paid_at = now();
-        }
-
-        $order->save();
-
-        // Enregistrement de l'historique d'audit
-        $order->statusHistories()->create([
-            'from_status' => $previousStatus,
-            'to_status' => $newStatus,
-            'author_type' => $user ? 'merchant' : 'system',
-            'author_id' => $user?->id,
-            'comment' => "Mise à jour de statut opérée par le Copilote IA Zanika",
-        ]);
+        $order->recordStatusChange($newStatus, $user ? 'merchant' : 'system', $user?->id, 'Statut mis à jour par le Copilote IA Zanika.');
 
         return [
             'status' => 'success',

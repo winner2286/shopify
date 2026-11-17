@@ -9,6 +9,7 @@ use App\Models\Shop;
 use Exception;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class AiAdvertisingService
 {
@@ -19,6 +20,14 @@ class AiAdvertisingService
      */
     public function generate(Shop $shop, array $data): Advertisement
     {
+        $this->checkChannelAccess($shop, $data['channel'] ?? 'tiktok');
+
+        return $shop->withAiCredits(1, fn () => $this->generateReserved($shop, $data));
+    }
+
+    private function generateReserved(Shop $shop, array $data): Advertisement
+    {
+        $startedAt = microtime(true);
         $channel = $data['channel'] ?? 'tiktok';
         $angle = $data['angle'] ?? match ($data['objective'] ?? '') {
             'promotion', 'destockage' => VideoAdGeneratorService::ANGLE_PROMOTIONS,
@@ -99,15 +108,17 @@ class AiAdvertisingService
             'shop_id' => $shop->id,
             'type' => 'ad_text',
             'step' => 'ad_generation',
-            'model_used' => 'groq:' . (config('services.groq.model') ?: 'openai/gpt-oss-120b'),
-            'prompt_tokens' => 450,
-            'completion_tokens' => 620,
-            'cost_estimated_fcfa' => 12,
-            'duration_ms' => 420,
+            'model_used' => $campaign['generation_source'] ?? 'unknown',
+            'prompt_tokens' => (int) ($campaign['usage']['prompt_tokens'] ?? 0),
+            'completion_tokens' => (int) ($campaign['usage']['completion_tokens'] ?? 0),
+            'cost_estimated_fcfa' => isset($campaign['usage']['cost']) ? (int) ceil((float) $campaign['usage']['cost'] * 650) : 0,
+            'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
             'status' => 'success',
-            'input_summary' => "Ad {$channel} ({$angle}, {$tone}) pour {$shop->name} - " . count($campaign['products']) . " produits",
+            'input_summary' => "Ad {$channel} ({$angle}, {$tone}) pour {$shop->name} - ".count($campaign['products']).' produits',
             'output_data' => [
                 'ad_id' => $advertisement->id,
+                'usage_available' => ! empty($campaign['usage']),
+                'cost_available' => isset($campaign['usage']['cost']) || ($campaign['generation_source'] ?? '') === 'zanika-local-template',
                 'angle' => $angle,
                 'products_count' => count($campaign['products']),
                 'texts_count' => count($campaign['texts']),
@@ -123,6 +134,21 @@ class AiAdvertisingService
      */
     public function regenerateAd(Advertisement $ad, Shop $shop, array $overrides = []): Advertisement
     {
+        $this->checkChannelAccess($shop, $overrides['platform'] ?? $ad->channel);
+
+        return $shop->withAiCredits(1, fn () => $this->regenerateReserved($ad, $shop, $overrides));
+    }
+
+    private function checkChannelAccess(Shop $shop, string $channel): void
+    {
+        if (in_array($channel, ['tiktok', 'instagram'], true) && ! $shop->canUseFeature('tiktok_ads')) {
+            throw ValidationException::withMessages(['channel' => 'Ce canal publicitaire nécessite une formule Pro ou Premium.']);
+        }
+    }
+
+    private function regenerateReserved(Advertisement $ad, Shop $shop, array $overrides = []): Advertisement
+    {
+        $startedAt = microtime(true);
         $vc = $ad->visual_config ?? [];
         $angle = $overrides['angle'] ?? $vc['angle'] ?? ($ad->objective === 'promotion' ? VideoAdGeneratorService::ANGLE_PROMOTIONS : VideoAdGeneratorService::ANGLE_NOUVEAUTES);
         $tone = $overrides['tone'] ?? $vc['tone'] ?? $ad->tone ?? VideoAdGeneratorService::TONE_DYNAMIQUE;
@@ -163,6 +189,18 @@ class AiAdvertisingService
             'visual_config' => $visualConfig,
         ]);
 
+        AiGeneration::create([
+            'shop_id' => $shop->id, 'type' => 'ad_text', 'step' => 'ad_regeneration',
+            'model_used' => $campaign['generation_source'] ?? 'unknown',
+            'prompt_tokens' => (int) ($campaign['usage']['prompt_tokens'] ?? 0),
+            'completion_tokens' => (int) ($campaign['usage']['completion_tokens'] ?? 0),
+            'cost_estimated_fcfa' => isset($campaign['usage']['cost']) ? (int) ceil((float) $campaign['usage']['cost'] * 650) : 0,
+            'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+            'status' => 'success', 'input_summary' => 'Régénération publicitaire',
+            'output_data' => ['ad_id' => $ad->id, 'usage_available' => ! empty($campaign['usage']),
+                'cost_available' => isset($campaign['usage']['cost']) || ($campaign['generation_source'] ?? '') === 'zanika-local-template'],
+        ]);
+
         return $ad;
     }
 
@@ -172,7 +210,7 @@ class AiAdvertisingService
     public function detectDomain(Shop $shop, ?Product $product, string $title, string $desc): string
     {
         $categoryName = $product?->category?->name ?? '';
-        $haystack = mb_strtolower($title . ' ' . $desc . ' ' . $categoryName . ' ' . $shop->business_category . ' ' . $shop->name);
+        $haystack = mb_strtolower($title.' '.$desc.' '.$categoryName.' '.$shop->business_category.' '.$shop->name);
 
         // 1. Food / Restauration / Fast-food / Boissons / Snack
         $foodKeywords = [
@@ -180,7 +218,7 @@ class AiAdvertisingService
             'attiéké', 'attieke', 'spaghetti', 'sandwich', 'tacos', 'resto', 'restaurant', 'fast food', 'fastfood', 'snack',
             'dîner', 'déjeuner', 'plat', 'repas', 'cuisine', 'traiteur', 'gâteau', 'gateau', 'beignet', 'pâtisserie', 'patisserie',
             'jus', 'cocktail', 'boisson', 'glace', 'crevette', 'sauce', 'riz', 'salade', 'nourriture', 'manger', 'gourmand',
-            'délice', 'saveur', 'saveurs', 'croquant', 'chaud', 'chaude', 'faim', 'alimentation'
+            'délice', 'saveur', 'saveurs', 'croquant', 'chaud', 'chaude', 'faim', 'alimentation',
         ];
         foreach ($foodKeywords as $kw) {
             if (str_contains($haystack, $kw)) {
@@ -192,7 +230,7 @@ class AiAdvertisingService
         $beautyKeywords = [
             'crème', 'creme', 'savon', 'lotion', 'sérum', 'serum', 'gommage', 'masque', 'peau', 'teint', 'visage', 'corps',
             'karité', 'coco', 'huile', 'parfum', 'fragrance', 'maquillage', 'rouge à lèvres', 'mèche', 'meche', 'perruque',
-            'tissage', 'cheveux', 'coiffure', 'ongle', 'vernis', 'soin', 'beauté', 'beaute', 'cosmétique', 'cosmetique'
+            'tissage', 'cheveux', 'coiffure', 'ongle', 'vernis', 'soin', 'beauté', 'beaute', 'cosmétique', 'cosmetique',
         ];
         foreach ($beautyKeywords as $kw) {
             if (str_contains($haystack, $kw)) {
@@ -203,7 +241,7 @@ class AiAdvertisingService
         // 3. Chaussures / Sneakers / Maroquinerie / Sacs
         $shoesKeywords = [
             'chaussure', 'chaussures', 'basket', 'baskets', 'sneaker', 'sneakers', 'sandale', 'sandales', 'talon', 'talons',
-            'escarpin', 'escarpins', 'mocassin', 'mocassins', 'claquette', 'claquettes', 'sac', 'sacs', 'sacoche', 'valise'
+            'escarpin', 'escarpins', 'mocassin', 'mocassins', 'claquette', 'claquettes', 'sac', 'sacs', 'sacoche', 'valise',
         ];
         foreach ($shoesKeywords as $kw) {
             if (str_contains($haystack, $kw)) {
@@ -215,7 +253,7 @@ class AiAdvertisingService
         $techKeywords = [
             'téléphone', 'telephone', 'smartphone', 'iphone', 'samsung', 'écouteur', 'ecouteur', 'airpod', 'airpods',
             'bluetooth', 'smartwatch', 'montre connectée', 'chargeur', 'câble', 'cable', 'powerbank', 'batterie',
-            'ordinateur', 'laptop', 'pc', 'tablette', 'baffle', 'enceinte', 'audio', 'tech', 'gadget', 'électronique'
+            'ordinateur', 'laptop', 'pc', 'tablette', 'baffle', 'enceinte', 'audio', 'tech', 'gadget', 'électronique',
         ];
         foreach ($techKeywords as $kw) {
             if (str_contains($haystack, $kw)) {
@@ -227,7 +265,7 @@ class AiAdvertisingService
         $fashionKeywords = [
             'robe', 'robes', 'chemise', 'chemises', 'pantalon', 'pantalons', 'veste', 'vestes', 'costume', 'costumes',
             't-shirt', 'tshirt', 'polo', 'pagne', 'wax', 'boubou', 'jupe', 'lingerie', 'sous-vêtement', 'vêtement', 'vetement',
-            'mode', 'fashion', 'tissu', 'tenue', 'style', 'taille', 'kente'
+            'mode', 'fashion', 'tissu', 'tenue', 'style', 'taille', 'kente',
         ];
         foreach ($fashionKeywords as $kw) {
             if (str_contains($haystack, $kw)) {
@@ -238,7 +276,7 @@ class AiAdvertisingService
         // 6. Maison / Décoration / Meubles / Cuisine électroménager
         $homeKeywords = [
             'salon', 'meuble', 'meubles', 'canapé', 'fauteuil', 'lit', 'matelas', 'drap', 'couette', 'oreiller',
-            'rideau', 'tapis', 'lampe', 'déco', 'decoration', 'décoration', 'mixeur', 'blender', 'friteuse', 'cuisine', 'électroménager'
+            'rideau', 'tapis', 'lampe', 'déco', 'decoration', 'décoration', 'mixeur', 'blender', 'friteuse', 'cuisine', 'électroménager',
         ];
         foreach ($homeKeywords as $kw) {
             if (str_contains($haystack, $kw)) {
@@ -249,7 +287,7 @@ class AiAdvertisingService
         // 7. Bijoux / Luxe
         $jewelryKeywords = [
             'bijou', 'bijoux', 'bague', 'collier', 'gourmette', 'chaîne', 'chaine', 'pendentif', 'boucle d\'oreille',
-            'bracelet', 'or', 'argent', 'inoxydable', 'joaillerie', 'montre'
+            'bracelet', 'or', 'argent', 'inoxydable', 'joaillerie', 'montre',
         ];
         foreach ($jewelryKeywords as $kw) {
             if (str_contains($haystack, $kw)) {
@@ -344,13 +382,13 @@ PROMPT;
             try {
                 $groqModel = config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b');
                 $response = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . $groqKey,
+                    'Authorization' => 'Bearer '.$groqKey,
                     'Content-Type' => 'application/json',
                 ])->timeout(10)->post('https://api.groq.com/openai/v1/chat/completions', [
                     'model' => $groqModel,
                     'messages' => [
                         ['role' => 'system', 'content' => 'Tu es un assistant marketing e-commerce africain haut de gamme. Tu réponds UNIQUEMENT en JSON valide strict sans balises markdown ni explications.'],
-                        ['role' => 'user', 'content' => $prompt]
+                        ['role' => 'user', 'content' => $prompt],
                     ],
                     'response_format' => ['type' => 'json_object'],
                     'max_tokens' => 1200,
@@ -362,34 +400,35 @@ PROMPT;
                     $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim((string) $raw));
                     $decoded = json_decode($cleanJson, true);
                     if (is_array($decoded) && ! empty($decoded['texts']) && ! empty($decoded['scripts'])) {
-                        $titleSlugHash = '#' . preg_replace('/\s+/', '', $title);
+                        $titleSlugHash = '#'.preg_replace('/\s+/', '', $title);
                         foreach ($decoded['texts'] as &$txt) {
                             if (str_contains($txt, $titleSlugHash) && ! str_contains($txt, $title)) {
                                 $txt = str_replace($titleSlugHash, $title, $txt);
                             }
                         }
                         unset($txt);
+
                         return $decoded;
                     }
                 }
             } catch (\Throwable $e) {
-                Log::warning('Groq API call failed in AiAdvertisingService: ' . $e->getMessage());
+                Log::warning('Groq API call failed in AiAdvertisingService: '.$e->getMessage());
             }
         }
 
         // 2. Relais OpenRouter (avec Gemini 2.5 Flash via OpenAI format)
-        if (!empty($openrouterKey)) {
+        if (! empty($openrouterKey)) {
             try {
                 $model = config('services.openrouter.model') ?: env('OPENROUTER_MODEL', 'google/gemini-2.5-flash');
                 $response = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . $openrouterKey,
+                    'Authorization' => 'Bearer '.$openrouterKey,
                     'HTTP-Referer' => 'https://zanika.tg',
                     'X-Title' => 'Zanika E-Commerce Platform',
                 ])->timeout(12)->post('https://openrouter.ai/api/v1/chat/completions', [
                     'model' => $model,
                     'messages' => [
                         ['role' => 'system', 'content' => 'Tu es un assistant marketing e-commerce africain haut de gamme. Tu réponds UNIQUEMENT en JSON valide strict sans balises markdown ni explications.'],
-                        ['role' => 'user', 'content' => $prompt]
+                        ['role' => 'user', 'content' => $prompt],
                     ],
                     'response_format' => ['type' => 'json_object'],
                     'max_tokens' => 1200,
@@ -400,53 +439,55 @@ PROMPT;
                     $raw = $response->json('choices.0.message.content');
                     $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($raw));
                     $decoded = json_decode($cleanJson, true);
-                    if (is_array($decoded) && !empty($decoded['texts']) && !empty($decoded['scripts'])) {
-                        $titleSlugHash = '#' . preg_replace('/\s+/', '', $title);
+                    if (is_array($decoded) && ! empty($decoded['texts']) && ! empty($decoded['scripts'])) {
+                        $titleSlugHash = '#'.preg_replace('/\s+/', '', $title);
                         foreach ($decoded['texts'] as &$txt) {
-                            if (str_contains($txt, $titleSlugHash) && !str_contains($txt, $title)) {
+                            if (str_contains($txt, $titleSlugHash) && ! str_contains($txt, $title)) {
                                 $txt = str_replace($titleSlugHash, $title, $txt);
                             }
                         }
                         unset($txt);
+
                         return $decoded;
                     }
                 } else {
-                    Log::warning('OpenRouter API returned status ' . $response->status() . ': ' . $response->body());
+                    Log::warning('OpenRouter API returned status '.$response->status().': '.$response->body());
                 }
             } catch (\Throwable $e) {
-                Log::warning('OpenRouter API call failed: ' . $e->getMessage());
+                Log::warning('OpenRouter API call failed: '.$e->getMessage());
             }
         }
 
         // 2. Repli Google Gemini API direct
-        if (!empty($geminiKey)) {
+        if (! empty($geminiKey)) {
             try {
                 $response = Http::timeout(10)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$geminiKey}", [
                     'contents' => [
-                        ['parts' => [['text' => $prompt]]]
+                        ['parts' => [['text' => $prompt]]],
                     ],
                     'generationConfig' => [
                         'responseMimeType' => 'application/json',
                         'temperature' => 0.7,
-                    ]
+                    ],
                 ]);
 
                 if ($response->successful()) {
                     $text = $response->json('candidates.0.content.parts.0.text');
                     $decoded = json_decode($text, true);
-                    if (is_array($decoded) && !empty($decoded['texts']) && !empty($decoded['scripts'])) {
-                        $titleSlugHash = '#' . preg_replace('/\s+/', '', $title);
+                    if (is_array($decoded) && ! empty($decoded['texts']) && ! empty($decoded['scripts'])) {
+                        $titleSlugHash = '#'.preg_replace('/\s+/', '', $title);
                         foreach ($decoded['texts'] as &$txt) {
-                            if (str_contains($txt, $titleSlugHash) && !str_contains($txt, $title)) {
+                            if (str_contains($txt, $titleSlugHash) && ! str_contains($txt, $title)) {
                                 $txt = str_replace($titleSlugHash, $title, $txt);
                             }
                         }
                         unset($txt);
+
                         return $decoded;
                     }
                 }
             } catch (\Throwable $e) {
-                Log::warning('Gemini direct API call failed: ' . $e->getMessage());
+                Log::warning('Gemini direct API call failed: '.$e->getMessage());
             }
         }
 
@@ -468,18 +509,18 @@ PROMPT;
         string $url,
         string $domain
     ): array {
-        $priceText = $promoPrice ? "🔥 Prix promo exceptionnel : {$promoPrice} (au lieu de {$price}) !" : ($price ? "💎 Prix : {$price}" : "");
+        $priceText = $promoPrice ? "🔥 Prix promo exceptionnel : {$promoPrice} (au lieu de {$price}) !" : ($price ? "💎 Prix : {$price}" : '');
         $effectivePrice = $promoPrice ?: $price;
 
         // Tags et émojis adaptés au domaine
         $hashtags = match ($domain) {
-            'food' => "#LomeFood #FastFoodLome #TogoGourmand #RestaurantLome #BonPlanLome #TikTokTogo #Zanika",
-            'beauty' => "#BeauteTogo #SoinsLome #CosmetiqueTogo #EclatLome #TikTokTogo #Zanika",
-            'shoes' => "#SneakersLome #ChaussuresTogo #ModeLome #StyleLome #TikTokTogo #Zanika",
-            'tech' => "#TechTogo #HighTechLome #GadgetTogo #BoutiqueLome #TikTokTogo #Zanika",
-            'home' => "#MaisonLome #DecoLome #ConfortTogo #BoutiqueLome #TikTokTogo #Zanika",
-            'jewelry' => "#BijouxLome #LuxeTogo #EleganceLome #TikTokTogo #Zanika",
-            default => "#LomeShopping #TogoMode #StyleLome #TikTokTogo #Zanika",
+            'food' => '#LomeFood #FastFoodLome #TogoGourmand #RestaurantLome #BonPlanLome #TikTokTogo #Zanika',
+            'beauty' => '#BeauteTogo #SoinsLome #CosmetiqueTogo #EclatLome #TikTokTogo #Zanika',
+            'shoes' => '#SneakersLome #ChaussuresTogo #ModeLome #StyleLome #TikTokTogo #Zanika',
+            'tech' => '#TechTogo #HighTechLome #GadgetTogo #BoutiqueLome #TikTokTogo #Zanika',
+            'home' => '#MaisonLome #DecoLome #ConfortTogo #BoutiqueLome #TikTokTogo #Zanika',
+            'jewelry' => '#BijouxLome #LuxeTogo #EleganceLome #TikTokTogo #Zanika',
+            default => '#LomeShopping #TogoMode #StyleLome #TikTokTogo #Zanika',
         };
 
         if ($channel === Advertisement::CHANNEL_SMS) {
@@ -572,17 +613,17 @@ PROMPT;
                         [
                             'time' => '0s - 3s',
                             'visual' => 'Plan serré sur le produit chaud et fumant, avec un mouvement gourmand vers la caméra.',
-                            'voiceover' => "Attendez, ne scrollez pas ! Regardez cette merveille bien croustillante chez {$shop->name}..."
+                            'voiceover' => "Attendez, ne scrollez pas ! Regardez cette merveille bien croustillante chez {$shop->name}...",
                         ],
                         [
                             'time' => '3s - 12s',
                             'visual' => 'Montrer la fraîcheur, la texture dorée et les sauces qui l\'accompagnent.',
-                            'voiceover' => "C'est ultra savoureux, servi bien chaud chez {$shop->name} pour seulement {$effectivePrice} !"
+                            'voiceover' => "C'est ultra savoureux, servi bien chaud chez {$shop->name} pour seulement {$effectivePrice} !",
                         ],
                         [
                             'time' => '12s - 18s',
                             'visual' => 'Pointez du doigt vers le bouton WhatsApp ou montrez la livraison en route.',
-                            'voiceover' => "Paiement à la livraison ou par T-Money. Écrivez-moi sur WhatsApp pour vous faire livrer bien chaud dès aujourd'hui !"
+                            'voiceover' => "Paiement à la livraison ou par T-Money. Écrivez-moi sur WhatsApp pour vous faire livrer bien chaud dès aujourd'hui !",
                         ],
                     ],
                 ],
@@ -593,17 +634,17 @@ PROMPT;
                         [
                             'time' => '0s - 4s',
                             'visual' => 'Personne qui a faim au travail ou devant sa télé et cherche quoi manger.',
-                            'voiceover' => "Une grosse envie gourmande au bureau ou à la maison et vous ne savez pas quoi grignoter ?"
+                            'voiceover' => 'Une grosse envie gourmande au bureau ou à la maison et vous ne savez pas quoi grignoter ?',
                         ],
                         [
                             'time' => '4s - 15s',
-                            'visual' => 'Boîte qui s\'ouvre avec ' . $title . ' bien chaud et prêt à être dégusté.',
-                            'voiceover' => "Ne cherchez plus ! Craquez pour {$title} chez {$shop->name}. Préparé minute, savoureux et pour seulement {$effectivePrice}."
+                            'visual' => 'Boîte qui s\'ouvre avec '.$title.' bien chaud et prêt à être dégusté.',
+                            'voiceover' => "Ne cherchez plus ! Craquez pour {$title} chez {$shop->name}. Préparé minute, savoureux et pour seulement {$effectivePrice}.",
                         ],
                         [
                             'time' => '15s - 22s',
                             'visual' => 'Livreur qui remet le repas avec le sourire.',
-                            'voiceover' => "On vous livre chaud et rapide partout à Lomé. Cliquez sur le lien en bio ou sur WhatsApp pour commander !"
+                            'voiceover' => 'On vous livre chaud et rapide partout à Lomé. Cliquez sur le lien en bio ou sur WhatsApp pour commander !',
                         ],
                     ],
                 ],
@@ -619,17 +660,17 @@ PROMPT;
                         [
                             'time' => '0s - 3s',
                             'visual' => 'Gros plan sur le flacon ou pot et application délicate sur une peau radieuse.',
-                            'voiceover' => "Attendez, ne scrollez pas ! Si vous rêvez d'une peau douce et éclatante, regardez ça..."
+                            'voiceover' => "Attendez, ne scrollez pas ! Si vous rêvez d'une peau douce et éclatante, regardez ça...",
                         ],
                         [
                             'time' => '3s - 12s',
                             'visual' => 'Montrer la texture onctueuse, la composition et le résultat naturel.',
-                            'voiceover' => "C'est notre soin phare chez {$shop->name}. Formule saine, résultats visibles et disponible à {$effectivePrice}."
+                            'voiceover' => "C'est notre soin phare chez {$shop->name}. Formule saine, résultats visibles et disponible à {$effectivePrice}.",
                         ],
                         [
                             'time' => '12s - 18s',
                             'visual' => 'Pointez vers le lien d\'achat avec livraison discrète.',
-                            'voiceover' => "Paiement à la livraison ou T-Money. Écrivez-nous sur WhatsApp pour recevoir votre soin dès aujourd'hui !"
+                            'voiceover' => "Paiement à la livraison ou T-Money. Écrivez-nous sur WhatsApp pour recevoir votre soin dès aujourd'hui !",
                         ],
                     ],
                 ],
@@ -640,17 +681,17 @@ PROMPT;
                         [
                             'time' => '0s - 4s',
                             'visual' => 'Face caméra touchant son visage, fatiguée des fausses promesses.',
-                            'voiceover' => "Marre des produits agressifs qui irritent votre peau ou ne donnent aucun résultat ?"
+                            'voiceover' => 'Marre des produits agressifs qui irritent votre peau ou ne donnent aucun résultat ?',
                         ],
                         [
                             'time' => '4s - 15s',
-                            'visual' => 'Présentation élégante de ' . $title . ' et mise en avant des bienfaits.',
-                            'voiceover' => "J'ai la solution pour vous ! Découvrez {$title} chez {$shop->name}, doux, efficace et disponible à seulement {$effectivePrice}."
+                            'visual' => 'Présentation élégante de '.$title.' et mise en avant des bienfaits.',
+                            'voiceover' => "J'ai la solution pour vous ! Découvrez {$title} chez {$shop->name}, doux, efficace et disponible à seulement {$effectivePrice}.",
                         ],
                         [
                             'time' => '15s - 22s',
                             'visual' => 'Colis prêt à être expédié.',
-                            'voiceover' => "Livraison discrète partout à Lomé et au Togo. Commandez vite sur WhatsApp pour illuminer votre quotidien !"
+                            'voiceover' => 'Livraison discrète partout à Lomé et au Togo. Commandez vite sur WhatsApp pour illuminer votre quotidien !',
                         ],
                     ],
                 ],
@@ -666,17 +707,17 @@ PROMPT;
                         [
                             'time' => '0s - 3s',
                             'visual' => 'Allumage rapide de l\'appareil avec effet néon et gros plan sur les finitions.',
-                            'voiceover' => "Attendez, ne scrollez pas ! Le nouveau {$title} vient tout juste d'arriver chez {$shop->name}..."
+                            'voiceover' => "Attendez, ne scrollez pas ! Le nouveau {$title} vient tout juste d'arriver chez {$shop->name}...",
                         ],
                         [
                             'time' => '3s - 12s',
                             'visual' => 'Démonstration de la puissance, de la connectivité et de la batterie.',
-                            'voiceover' => "Performance au top, autonomie impressionnante et disponible pour seulement {$effectivePrice}."
+                            'voiceover' => "Performance au top, autonomie impressionnante et disponible pour seulement {$effectivePrice}.",
                         ],
                         [
                             'time' => '12s - 18s',
                             'visual' => 'Écran de commande avec stock restant limité.',
-                            'voiceover' => "Paiement sécurisé par T-Money ou à la livraison. Cliquez sur WhatsApp pour réserver avant rupture de stock !"
+                            'voiceover' => 'Paiement sécurisé par T-Money ou à la livraison. Cliquez sur WhatsApp pour réserver avant rupture de stock !',
                         ],
                     ],
                 ],
@@ -687,17 +728,17 @@ PROMPT;
                         [
                             'time' => '0s - 4s',
                             'visual' => 'Personne frustrée par son ancien appareil qui coupe en plein appel ou morceau.',
-                            'voiceover' => "Fatigué des accessoires bas de gamme qui vous lâchent après deux semaines ?"
+                            'voiceover' => 'Fatigué des accessoires bas de gamme qui vous lâchent après deux semaines ?',
                         ],
                         [
                             'time' => '4s - 15s',
-                            'visual' => 'Déballage premium de ' . $title . ' avec test en direct.',
-                            'voiceover' => "Passez au niveau supérieur avec {$title} chez {$shop->name}. Robuste, garanti et accessible à seulement {$effectivePrice}."
+                            'visual' => 'Déballage premium de '.$title.' avec test en direct.',
+                            'voiceover' => "Passez au niveau supérieur avec {$title} chez {$shop->name}. Robuste, garanti et accessible à seulement {$effectivePrice}.",
                         ],
                         [
                             'time' => '15s - 22s',
                             'visual' => 'Livreur express en route avec le matériel.',
-                            'voiceover' => "Expédition express dans tout Lomé. Écrivez-nous tout de suite sur WhatsApp pour recevoir le vôtre !"
+                            'voiceover' => 'Expédition express dans tout Lomé. Écrivez-nous tout de suite sur WhatsApp pour recevoir le vôtre !',
                         ],
                     ],
                 ],
@@ -713,17 +754,17 @@ PROMPT;
                     [
                         'time' => '0s - 3s',
                         'visual' => 'Plan serré sur le produit tenu en main ou porté, avec un mouvement rapide vers la caméra.',
-                        'voiceover' => "Attendez, ne scrollez pas ! Si vous cherchez {$title} à Lomé, regardez ça..."
+                        'voiceover' => "Attendez, ne scrollez pas ! Si vous cherchez {$title} à Lomé, regardez ça...",
                     ],
                     [
                         'time' => '3s - 12s',
                         'visual' => 'Montrer les détails, la matière, la qualité des finitions sous une bonne lumière naturelle.',
-                        'voiceover' => "La qualité est incroyable, c'est disponible chez {$shop->name} pour seulement {$effectivePrice}."
+                        'voiceover' => "La qualité est incroyable, c'est disponible chez {$shop->name} pour seulement {$effectivePrice}.",
                     ],
                     [
                         'time' => '12s - 18s',
                         'visual' => 'Pointez du doigt vers le bas ou montrez l’écran du téléphone avec le site.',
-                        'voiceover' => "Paiement à la livraison ou par T-Money. Cliquez sur le lien en bio ou écrivez-moi sur WhatsApp pour être livré aujourd'hui !"
+                        'voiceover' => "Paiement à la livraison ou par T-Money. Cliquez sur le lien en bio ou écrivez-moi sur WhatsApp pour être livré aujourd'hui !",
                     ],
                 ],
             ],
@@ -734,17 +775,17 @@ PROMPT;
                     [
                         'time' => '0s - 4s',
                         'visual' => 'Face caméra souriant(e) ou situation du quotidien.',
-                        'voiceover' => "Envie de trouver la meilleure qualité pour {$title} sans payer le prix fort ?"
+                        'voiceover' => "Envie de trouver la meilleure qualité pour {$title} sans payer le prix fort ?",
                     ],
                     [
                         'time' => '4s - 15s',
-                        'visual' => 'Déballage ou présentation dynamique de ' . $title . '.',
-                        'voiceover' => "Voici notre modèle sélectionné chez {$shop->name}. Super soigné, élégant et disponible à {$effectivePrice}."
+                        'visual' => 'Déballage ou présentation dynamique de '.$title.'.',
+                        'voiceover' => "Voici notre modèle sélectionné chez {$shop->name}. Super soigné, élégant et disponible à {$effectivePrice}.",
                     ],
                     [
                         'time' => '15s - 22s',
                         'visual' => 'Colis prêt à être expédié avec mention livraison rapide.',
-                        'voiceover' => "On livre partout à Lomé et dans les autres villes du Togo. Commandez vite sur notre boutique !"
+                        'voiceover' => 'On livre partout à Lomé et dans les autres villes du Togo. Commandez vite sur notre boutique !',
                     ],
                 ],
             ],

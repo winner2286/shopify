@@ -43,15 +43,15 @@
         </a>
     </div>
 
-    <!-- 4 Cartes de métriques clés (RG-10 : montants en FCFA) -->
+    <!-- 4 Cartes de métriques clés (RG-10 : montants en {{ $shop->currencyLabel() }}) -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1.2rem;margin-bottom:2rem">
         <div class="card" style="padding:1.4rem">
-            <div style="font-size:.85rem;color:var(--text-soft);margin-bottom:.3rem">Chiffre d'Affaires Réalisé</div>
+            <div style="font-size:.85rem;color:var(--text-soft);margin-bottom:.3rem">Montant encaissé</div>
             <div style="font-size:1.8rem;font-weight:700;font-family:var(--font-display)" class="gradient-text">
-                {{ number_format($totalRevenue, 0, ',', ' ') }} FCFA
+                {{ number_format($totalRevenue, 0, ',', ' ') }} {{ $shop->currencyLabel() }}
             </div>
             <div style="font-size:.8rem;color:var(--ok);margin-top:.3rem;display:inline-flex;align-items:center;gap:.3rem">
-                <x-icon name="check" size="14" /> Commandes confirmées & livrées
+                <x-icon name="check" size="14" /> Commandes payées hors annulations
             </div>
         </div>
 
@@ -66,7 +66,7 @@
         <div class="card" style="padding:1.4rem">
             <div style="font-size:.85rem;color:var(--text-soft);margin-bottom:.3rem">Panier Moyen Client</div>
             <div style="font-size:1.8rem;font-weight:700;font-family:var(--font-display)">
-                {{ number_format($averageCart, 0, ',', ' ') }} FCFA
+                {{ number_format($averageCart, 0, ',', ' ') }} {{ $shop->currencyLabel() }}
             </div>
             <div style="font-size:.8rem;color:var(--text-soft);margin-top:.3rem">Par commande validée</div>
         </div>
@@ -121,7 +121,7 @@
                                 </div>
                             </div>
                             <div style="font-weight:700;font-family:var(--font-display)">
-                                {{ number_format($tp->total_amount, 0, ',', ' ') }} FCFA
+                                {{ number_format($tp->total_amount, 0, ',', ' ') }} {{ $shop->currencyLabel() }}
                             </div>
                         </div>
                     @endforeach

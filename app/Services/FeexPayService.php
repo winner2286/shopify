@@ -4,18 +4,22 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Plan;
 use App\Models\Subscription;
-use Exception;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class FeexPayService
 {
     protected string $shopId;
+
     protected string $token;
+
     protected string $mode;
+
     protected string $baseUrl;
+
     protected string $currency;
 
     public function __construct()
@@ -85,7 +89,8 @@ class FeexPayService
 
             return ['status' => 'UNKNOWN', 'raw' => $response->body()];
         } catch (\Throwable $e) {
-            Log::error("FeexPay checkTransactionStatus error: " . $e->getMessage());
+            Log::error('FeexPay checkTransactionStatus error: '.$e->getMessage());
+
             return ['status' => 'ERROR', 'error' => $e->getMessage()];
         }
     }
@@ -114,7 +119,8 @@ class FeexPayService
 
             return $response->json() ?? ['status' => 'FAILED', 'message' => 'Réponse vide de FeexPay'];
         } catch (\Throwable $e) {
-            Log::error("FeexPay initiateMobilePayment exception: " . $e->getMessage());
+            Log::error('FeexPay initiateMobilePayment exception: '.$e->getMessage());
+
             return ['status' => 'FAILED', 'message' => $e->getMessage()];
         }
     }
@@ -124,86 +130,120 @@ class FeexPayService
      */
     public function handleOrderPaymentSuccess(Order $order, string $transactionRef, ?string $payerPhone = null): void
     {
-        if ($order->payment_status === Order::PAYMENT_STATUS_PAID) {
-            return;
-        }
+        $this->processTransaction($transactionRef, 'ORDER:'.$order->id, function () use ($order, $transactionRef, $payerPhone) {
+            $lockedOrder = Order::withoutGlobalScopes()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order->setRawAttributes($lockedOrder->getAttributes(), true);
+            if ($order->payment_status === Order::PAYMENT_STATUS_PAID) {
+                return;
+            }
 
-        $previousStatus = $order->status;
+            $previousStatus = $order->status;
 
-        $order->update([
-            'payment_status' => Order::PAYMENT_STATUS_PAID,
-            'paid_at' => now(),
-            'status' => $order->status === Order::STATUS_PENDING ? Order::STATUS_CONFIRMED : $order->status,
-        ]);
-
-        /** @var Payment|null $payment */
-        $payment = $order->payments()->withoutGlobalScopes()->latest()->first();
-        if ($payment) {
-            $payment->update([
-                'status' => Payment::STATUS_PAID,
+            $order->update([
+                'payment_status' => Order::PAYMENT_STATUS_PAID,
                 'paid_at' => now(),
-                'operator_reference' => $transactionRef,
-                'payer_phone' => $payerPhone ?: $payment->payer_phone,
+                'status' => $order->status === Order::STATUS_PENDING ? Order::STATUS_CONFIRMED : $order->status,
             ]);
-        } else {
-            Payment::withoutGlobalScopes()->create([
-                'shop_id' => $order->shop_id,
-                'order_id' => $order->id,
-                'payment_reference' => 'PAY-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(4))),
-                'method' => $order->payment_method ?: Order::PAYMENT_FEEXPAY,
-                'amount' => (int) round((float) $order->total),
-                'currency' => $this->currency ?: 'XOF',
-                'status' => Payment::STATUS_PAID,
-                'operator_reference' => $transactionRef,
-                'payer_phone' => $payerPhone ?: $order->customer_phone,
-                'paid_at' => now(),
-            ]);
-        }
 
-        $order->statusHistories()->create([
-            'from_status' => $previousStatus,
-            'to_status' => $order->status,
-            'author_type' => 'system',
-            'comment' => "Paiement en ligne validé avec succès par GeniusPay (Réf: {$transactionRef}).",
-        ]);
+            /** @var Payment|null $payment */
+            $payment = $order->payments()->withoutGlobalScopes()->latest()->first();
+            if ($payment) {
+                $payment->update([
+                    'status' => Payment::STATUS_PAID,
+                    'paid_at' => now(),
+                    'operator_reference' => $transactionRef,
+                    'payer_phone' => $payerPhone ?: $payment->payer_phone,
+                ]);
+            } else {
+                Payment::withoutGlobalScopes()->create([
+                    'shop_id' => $order->shop_id,
+                    'order_id' => $order->id,
+                    'payment_reference' => 'PAY-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(4))),
+                    'method' => $order->payment_method ?: Order::PAYMENT_FEEXPAY,
+                    'amount' => (int) round((float) $order->total),
+                    'currency' => $order->currency ?: 'XOF',
+                    'status' => Payment::STATUS_PAID,
+                    'operator_reference' => $transactionRef,
+                    'payer_phone' => $payerPhone ?: $order->customer_phone,
+                    'paid_at' => now(),
+                ]);
+            }
+
+            $order->statusHistories()->create([
+                'from_status' => $previousStatus,
+                'to_status' => $order->status,
+                'author_type' => 'system',
+                'comment' => "Paiement en ligne validé avec succès par GeniusPay (Réf: {$transactionRef}).",
+            ]);
+        });
     }
 
     /**
      * Valide et active un abonnement suite à confirmation GeniusPay
      */
-    public function handleSubscriptionPaymentSuccess(Subscription $subscription, string $transactionRef, ?\App\Models\Plan $newPlan = null): void
+    public function handleSubscriptionPaymentSuccess(Subscription $subscription, string $transactionRef, ?Plan $newPlan = null): void
     {
-        if ($transactionRef !== '' && ! Cache::add("feexpay_sub_tx:{$transactionRef}", $subscription->id, now()->addYears(2))) {
-            return;
-        }
+        $target = 'SUB:'.$subscription->id.':'.($newPlan?->id ?? $subscription->plan_id);
+        $this->processTransaction($transactionRef, $target, function () use ($subscription, $transactionRef, $newPlan) {
+            $lockedSubscription = Subscription::whereKey($subscription->id)->lockForUpdate()->firstOrFail();
+            $subscription->setRawAttributes($lockedSubscription->getAttributes(), true);
+            $subscription->unsetRelation('plan');
 
-        $plan = $newPlan ?? $subscription->plan;
+            $plan = $newPlan ?? $subscription->plan;
 
-        $currentEnd = ($subscription->ends_at && $subscription->ends_at->isFuture())
-            ? $subscription->ends_at
-            : now();
+            $currentEnd = ($subscription->ends_at && $subscription->ends_at->isFuture())
+                ? $subscription->ends_at
+                : now();
 
-        $subscription->update([
-            'plan_id' => $plan ? $plan->id : $subscription->plan_id,
-            'status' => 'active',
-            'starts_at' => $subscription->starts_at ?: now(),
-            'ends_at' => $currentEnd->copy()->addMonth(),
-            'renews_at' => $currentEnd->copy()->addMonth(),
-        ]);
-
-        // Réapprovisionnement des crédits IA Système et Photoroom pour le nouveau cycle de facturation
-        $shop = $subscription->shop;
-        if ($shop) {
-            $shop->update([
-                'ai_credits_used' => 0,
-                'photoroom_credits_used' => 0,
+            $subscription->update([
+                'plan_id' => $plan ? $plan->id : $subscription->plan_id,
+                'status' => 'active',
+                'starts_at' => $subscription->starts_at ?: now(),
+                'ends_at' => $currentEnd->copy()->addMonth(),
+                'renews_at' => $currentEnd->copy()->addMonth(),
             ]);
-            $shop->unsetRelation('subscription');
-            $shop->unsetRelation('subscriptions');
-            $shop->owner?->unsetRelation('shop');
-            $shop->owner?->unsetRelation('active_shop');
+
+            // Réapprovisionnement des crédits IA Système et Photoroom pour le nouveau cycle de facturation
+            $shop = $subscription->shop;
+            if ($shop) {
+                $shop->update([
+                    'ai_credits_used' => 0,
+                    'photoroom_credits_used' => 0,
+                ]);
+                $shop->unsetRelation('subscription');
+                $shop->unsetRelation('subscriptions');
+                $shop->owner?->unsetRelation('shop');
+                $shop->owner?->unsetRelation('active_shop');
+            }
+
+            Log::info("Abonnement #{$subscription->id} activé/renouvelé avec succès via GeniusPay (Réf: {$transactionRef}).");
+        });
+    }
+
+    private function processTransaction(string $reference, string $target, \Closure $apply): void
+    {
+        if (trim($reference) === '') {
+            throw new \InvalidArgumentException('Une référence de paiement est obligatoire.');
         }
 
-        Log::info("Abonnement #{$subscription->id} activé/renouvelé avec succès via GeniusPay (Réf: {$transactionRef}).");
+        DB::transaction(function () use ($reference, $target, $apply) {
+            DB::table('payment_transactions')->insertOrIgnore([
+                'provider' => 'feexpay', 'reference' => $reference, 'target' => $target,
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
+            $transaction = DB::table('payment_transactions')->where('provider', 'feexpay')
+                ->where('reference', $reference)->lockForUpdate()->first();
+
+            if (! $transaction || $transaction->target !== $target) {
+                throw new \RuntimeException('Cette référence de paiement appartient à une autre opération.');
+            }
+            if ($transaction->processed_at !== null) {
+                return;
+            }
+
+            $apply();
+            DB::table('payment_transactions')->where('id', $transaction->id)
+                ->update(['processed_at' => now(), 'updated_at' => now()]);
+        }, 3);
     }
 }

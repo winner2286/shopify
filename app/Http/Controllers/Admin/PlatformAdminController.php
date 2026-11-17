@@ -4,7 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\TrialExpiringMail;
+use App\Models\AiAutomation;
+use App\Models\AiConversation;
+use App\Models\AiFeedback;
 use App\Models\AiGeneration;
+use App\Models\AiKnowledgeChunk;
+use App\Models\AiMessage;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\Product;
@@ -13,14 +18,19 @@ use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\SystemAlert;
 use App\Models\User;
+use App\Services\AdminNotificationService;
 use App\Support\SearchHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class PlatformAdminController extends Controller
 {
@@ -43,7 +53,9 @@ class PlatformAdminController extends Controller
         $publishedShops = Shop::where('status', Shop::PUBLISHED)->count();
         $totalProducts = Product::withoutGlobalScopes()->count();
         $totalOrders = Order::withoutGlobalScopes()->count();
-        $totalGmv = (int) Order::withoutGlobalScopes()->where('status', '!=', Order::STATUS_CANCELLED)->sum('total');
+        $gmvByCurrency = Order::withoutGlobalScopes()->where('status', '!=', Order::STATUS_CANCELLED)
+            ->select('currency')->selectRaw('SUM(total) as total_amount')->groupBy('currency')->pluck('total_amount', 'currency');
+        $totalGmv = (int) ($gmvByCurrency['XOF'] ?? 0);
 
         // Métriques Abonnements
         $activeSubsCount = Subscription::where('status', 'active')->count();
@@ -61,7 +73,7 @@ class PlatformAdminController extends Controller
 
         return view('admin.dashboard', compact(
             'totalMerchants', 'totalShops', 'publishedShops', 'totalProducts',
-            'totalOrders', 'totalGmv', 'aiCallsCount', 'aiTotalCostFcfa',
+            'totalOrders', 'totalGmv', 'gmvByCurrency', 'aiCallsCount', 'aiTotalCostFcfa',
             'aiTotalTokens', 'recentShops', 'recentOrders', 'activeSubsCount', 'trialSubsCount',
             'isMaintenanceActive'
         ));
@@ -82,8 +94,8 @@ class PlatformAdminController extends Controller
             $op = SearchHelper::likeOperator($query->getConnection());
             $query->where(function ($q) use ($search, $op) {
                 $q->where('name', $op, "%{$search}%")
-                  ->orWhere('subdomain', $op, "%{$search}%")
-                  ->orWhereHas('owner', fn ($sq) => $sq->where('name', $op, "%{$search}%")->orWhere('email', $op, "%{$search}%"));
+                    ->orWhere('subdomain', $op, "%{$search}%")
+                    ->orWhereHas('owner', fn ($sq) => $sq->where('name', $op, "%{$search}%")->orWhere('email', $op, "%{$search}%"));
             });
         }
 
@@ -124,7 +136,7 @@ class PlatformAdminController extends Controller
 
         $photoroomQuery = AiGeneration::withoutGlobalScopes()->where(function ($q) {
             $q->whereIn('model_used', ['photoroom-ai', 'photoroom-v2-edit', 'photoroom-v1-segment', 'photoroom-v1-studio'])
-              ->orWhere('type', 'like', 'ai_photoroom%');
+                ->orWhere('type', 'like', 'ai_photoroom%');
         });
         $photoroomCalls = (clone $photoroomQuery)->count();
         $photoroomCostFcfa = (int) (clone $photoroomQuery)->sum('cost_estimated_fcfa');
@@ -132,12 +144,12 @@ class PlatformAdminController extends Controller
         $systemAiCostFcfa = max(0, $totalCostFcfa - $photoroomCostFcfa);
 
         // Métriques de l'Agent IA ECOM
-        $totalConversations = \App\Models\AiConversation::withoutGlobalScopes()->count();
-        $totalMessages = \App\Models\AiMessage::withoutGlobalScopes()->count();
-        $totalAutomations = \App\Models\AiAutomation::withoutGlobalScopes()->where('is_active', true)->count();
+        $totalConversations = AiConversation::withoutGlobalScopes()->count();
+        $totalMessages = AiMessage::withoutGlobalScopes()->count();
+        $totalAutomations = AiAutomation::withoutGlobalScopes()->where('is_active', true)->count();
 
         // Top boutiques consommatrices
-        $topConsumerShops = \Illuminate\Support\Facades\Schema::hasColumn('shops', 'ai_credits_used')
+        $topConsumerShops = Schema::hasColumn('shops', 'ai_credits_used')
             ? Shop::withoutGlobalScopes()->orderByDesc('ai_credits_used')->take(10)->get()
             : Shop::withoutGlobalScopes()->latest()->take(10)->get();
 
@@ -162,7 +174,7 @@ class PlatformAdminController extends Controller
         $this->checkAdmin($request);
 
         $ratingFilter = $request->get('rating');
-        $query = \App\Models\AiFeedback::withoutGlobalScopes()
+        $query = AiFeedback::withoutGlobalScopes()
             ->with(['shop', 'user', 'message.conversation'])
             ->latest();
 
@@ -173,12 +185,12 @@ class PlatformAdminController extends Controller
         $feedbacks = $query->paginate(25);
 
         $stats = [
-            'total' => \App\Models\AiFeedback::withoutGlobalScopes()->count(),
-            'helpful' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'helpful')->count(),
-            'incorrect' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'incorrect')->count(),
-            'incomplete' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'incomplete')->count(),
-            'irrelevant' => \App\Models\AiFeedback::withoutGlobalScopes()->where('rating', 'irrelevant')->count(),
-            'reviewed' => \App\Models\AiFeedback::withoutGlobalScopes()->where('admin_reviewed', true)->count(),
+            'total' => AiFeedback::withoutGlobalScopes()->count(),
+            'helpful' => AiFeedback::withoutGlobalScopes()->where('rating', 'helpful')->count(),
+            'incorrect' => AiFeedback::withoutGlobalScopes()->where('rating', 'incorrect')->count(),
+            'incomplete' => AiFeedback::withoutGlobalScopes()->where('rating', 'incomplete')->count(),
+            'irrelevant' => AiFeedback::withoutGlobalScopes()->where('rating', 'irrelevant')->count(),
+            'reviewed' => AiFeedback::withoutGlobalScopes()->where('admin_reviewed', true)->count(),
         ];
 
         return view('admin.ai_feedbacks', compact('feedbacks', 'stats', 'ratingFilter'));
@@ -192,7 +204,7 @@ class PlatformAdminController extends Controller
     {
         $this->checkAdmin($request);
 
-        $feedback = \App\Models\AiFeedback::withoutGlobalScopes()->findOrFail($feedbackId);
+        $feedback = AiFeedback::withoutGlobalScopes()->findOrFail($feedbackId);
 
         $validated = $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
@@ -210,12 +222,12 @@ class PlatformAdminController extends Controller
 
         $chunkCreated = null;
         if (! empty($validated['create_rag_chunk']) && ! empty($validated['rag_title']) && ! empty($validated['rag_content'])) {
-            $slug = 'rule-' . \Illuminate\Support\Str::slug($validated['rag_title']);
+            $slug = 'rule-'.Str::slug($validated['rag_title']);
             $keywords = ! empty($validated['rag_keywords'])
                 ? array_values(array_filter(array_map('trim', explode(',', $validated['rag_keywords']))))
-                : array_values(array_filter(explode(' ', mb_strtolower($validated['rag_title'])), fn($w) => mb_strlen($w) >= 3));
+                : array_values(array_filter(explode(' ', mb_strtolower($validated['rag_title'])), fn ($w) => mb_strlen($w) >= 3));
 
-            $chunkCreated = \App\Models\AiKnowledgeChunk::updateOrCreate(
+            $chunkCreated = AiKnowledgeChunk::updateOrCreate(
                 ['slug' => $slug],
                 [
                     'title' => trim($validated['rag_title']),
@@ -238,7 +250,7 @@ class PlatformAdminController extends Controller
 
         $msg = $chunkCreated
             ? "Retour validé et règle corrective « {$chunkCreated->title} » publiée dans la base RAG pour tous les moteurs IA."
-            : "Retour marqué comme révisé avec succès.";
+            : 'Retour marqué comme révisé avec succès.';
 
         return back()->with('status', $msg);
     }
@@ -305,7 +317,7 @@ class PlatformAdminController extends Controller
 
         $featuresArray = [];
         if (! empty($validated['features'])) {
-            $lines = explode("\n", str_replace("\r", "", $validated['features']));
+            $lines = explode("\n", str_replace("\r", '', $validated['features']));
             foreach ($lines as $line) {
                 $trimmed = trim($line);
                 if ($trimmed !== '') {
@@ -340,6 +352,7 @@ class PlatformAdminController extends Controller
         $plan->update(['active' => ! $plan->active]);
 
         $stateMsg = $plan->active ? 'activée et visible aux marchands' : 'désactivée et masquée du site';
+
         return back()->with('status', "La formule « {$plan->name} » est désormais {$stateMsg}.");
     }
 
@@ -377,7 +390,8 @@ class PlatformAdminController extends Controller
         if ($admin && $admin->isAdmin()) {
             auth()->login($admin);
             session()->forget('admin_impersonator_id');
-            return redirect()->route('admin.shops')->with('status', "Vous avez quitté le mode support et êtes revenu sur votre espace Super-Admin.");
+
+            return redirect()->route('admin.shops')->with('status', 'Vous avez quitté le mode support et êtes revenu sur votre espace Super-Admin.');
         }
 
         return redirect()->route('dashboard');
@@ -400,8 +414,8 @@ class PlatformAdminController extends Controller
             $op = SearchHelper::likeOperator($query->getConnection());
             $query->where(function ($q) use ($search, $op) {
                 $q->where('name', $op, "%{$search}%")
-                  ->orWhere('subdomain', $op, "%{$search}%")
-                  ->orWhereHas('owner', fn ($sq) => $sq->where('name', $op, "%{$search}%")->orWhere('email', $op, "%{$search}%"));
+                    ->orWhere('subdomain', $op, "%{$search}%")
+                    ->orWhereHas('owner', fn ($sq) => $sq->where('name', $op, "%{$search}%")->orWhere('email', $op, "%{$search}%"));
             });
         }
 
@@ -504,7 +518,7 @@ class PlatformAdminController extends Controller
 
             return back()->with('status', "✉️ Email de rappel J-{$daysRemaining} envoyé avec succès à {$user->email} ({$shop->name}).");
         } catch (\Throwable $e) {
-            return back()->with('error', "Erreur lors de l'envoi de l'email : " . $e->getMessage());
+            return back()->with('error', "Erreur lors de l'envoi de l'email : ".$e->getMessage());
         }
     }
 
@@ -550,7 +564,7 @@ class PlatformAdminController extends Controller
                 'message' => $message,
                 'estimated_time' => $estimatedTime,
                 'activated_at' => now()->format('d/m/Y à H:i'),
-                'activated_by' => $request->user()->name . ' (' . $request->user()->email . ')',
+                'activated_by' => $request->user()->name.' ('.$request->user()->email.')',
                 'secret' => $secret,
             ];
             @file_put_contents(storage_path('framework/maintenance_info.json'), json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
@@ -562,7 +576,7 @@ class PlatformAdminController extends Controller
                 @unlink(storage_path('framework/maintenance_info.json'));
             }
 
-            return back()->with('status', "🟢 Le site a été REMIS EN LIGNE avec succès. La plateforme et toutes les boutiques sont à nouveau accessibles au public.");
+            return back()->with('status', '🟢 Le site a été REMIS EN LIGNE avec succès. La plateforme et toutes les boutiques sont à nouveau accessibles au public.');
         }
     }
 
@@ -579,10 +593,11 @@ class PlatformAdminController extends Controller
 
         // Auto-guérison : si la table system_alerts ou push_subscriptions n'existe pas encore, exécuter les migrations
         try {
-            if (! \Illuminate\Support\Facades\Schema::hasTable('system_alerts')) {
+            if (! Schema::hasTable('system_alerts')) {
                 Artisan::call('migrate', ['--force' => true]);
             }
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+        }
 
         try {
             $alertsQuery = SystemAlert::latest();
@@ -599,7 +614,7 @@ class PlatformAdminController extends Controller
 
             $alerts = $alertsQuery->paginate(20)->withQueryString();
         } catch (\Throwable $e) {
-            $alerts = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+            $alerts = new LengthAwarePaginator([], 0, 20);
         }
 
         // 1. Audit en temps réel des services critiques
@@ -621,7 +636,7 @@ class PlatformAdminController extends Controller
         ];
 
         try {
-            if (\Illuminate\Support\Facades\Schema::hasTable('system_alerts')) {
+            if (Schema::hasTable('system_alerts')) {
                 $stats['unread_alerts'] = SystemAlert::where('is_read', false)->count();
                 $stats['critical_alerts'] = SystemAlert::where('severity', 'critical')->where('is_read', false)->count();
             }
@@ -631,13 +646,13 @@ class PlatformAdminController extends Controller
             $stats['orders_today'] = Order::withoutGlobalScopes()->where('created_at', '>=', $today)->count();
             $stats['gmv_today'] = (int) Order::withoutGlobalScopes()->where('created_at', '>=', $today)->where('status', '!=', Order::STATUS_CANCELLED)->sum('total');
 
-            if (\Illuminate\Support\Facades\Schema::hasTable('push_subscriptions')) {
-                $stats['push_devices_admin'] = PushSubscription::whereHas('user', fn($q) => $q->where('role', User::ROLE_ADMIN))->count();
-                $stats['push_devices_merchants'] = PushSubscription::whereHas('user', fn($q) => $q->where('role', User::ROLE_MERCHANT))->count();
+            if (Schema::hasTable('push_subscriptions')) {
+                $stats['push_devices_admin'] = PushSubscription::whereHas('user', fn ($q) => $q->where('role', User::ROLE_ADMIN))->count();
+                $stats['push_devices_merchants'] = PushSubscription::whereHas('user', fn ($q) => $q->where('role', User::ROLE_MERCHANT))->count();
                 $stats['push_devices_total'] = PushSubscription::count();
             }
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('PlatformAdminController: Calcul partiel des statistiques d\'audit: ' . $e->getMessage());
+            Log::warning('PlatformAdminController: Calcul partiel des statistiques d\'audit: '.$e->getMessage());
         }
 
         return view('admin.audit', compact('alerts', 'health', 'stats', 'filterCategory', 'filterSeverity', 'onlyUnread'));
@@ -680,7 +695,7 @@ class PlatformAdminController extends Controller
                     $openRouterMsg = "Groq LPU actif ({$groqModel})";
                 } else {
                     $openRouterStatus = 'warning';
-                    $openRouterMsg = 'Groq HTTP ' . $groqRes->status();
+                    $openRouterMsg = 'Groq HTTP '.$groqRes->status();
                 }
             } catch (\Throwable $e) {
                 $openRouterStatus = 'ok';
@@ -704,28 +719,30 @@ class PlatformAdminController extends Controller
 
                     if ($isFreeTier && $remaining < 2.0) {
                         $openRouterStatus = 'warning';
-                        $openRouterMsg = "Solde bas : $" . number_format($remaining, 2) . " (Recharge conseillée)";
+                        $openRouterMsg = 'Solde bas : $'.number_format($remaining, 2).' (Recharge conseillée)';
                         try {
-                            app(\App\Services\AdminNotificationService::class)->notifyLowAiCredits(
+                            app(AdminNotificationService::class)->notifyLowAiCredits(
                                 'Solde IA OpenRouter Faible',
-                                "Votre réserve OpenRouter est de $" . number_format($remaining, 2) . ". Pour garantir le service continu de vos commerçants, prévoyez une recharge de 5$ sur https://openrouter.ai/settings/credits."
+                                'Votre réserve OpenRouter est de $'.number_format($remaining, 2).'. Pour garantir le service continu de vos commerçants, prévoyez une recharge de 5$ sur https://openrouter.ai/settings/credits.'
                             );
-                        } catch (\Throwable $e) {}
+                        } catch (\Throwable $e) {
+                        }
                     } else {
-                        $openRouterMsg = "Solde disponible : $" . number_format($remaining, 2);
+                        $openRouterMsg = 'Solde disponible : $'.number_format($remaining, 2);
                     }
                 } elseif ($response->status() === 402) {
                     $openRouterStatus = 'error';
                     $openRouterMsg = 'Crédits épuisés (Code 402)';
                     try {
-                        app(\App\Services\AdminNotificationService::class)->notifyLowAiCredits(
+                        app(AdminNotificationService::class)->notifyLowAiCredits(
                             'Crédits IA OpenRouter Épuisés (Code 402)',
                             'Le solde OpenRouter est à 0$. Le système de secours automatique Zanika a pris le relais. Veuillez recharger 5$ sur https://openrouter.ai/settings/credits.'
                         );
-                    } catch (\Throwable $e) {}
+                    } catch (\Throwable $e) {
+                    }
                 } else {
                     $openRouterStatus = 'warning';
-                    $openRouterMsg = 'HTTP ' . $response->status();
+                    $openRouterMsg = 'HTTP '.$response->status();
                 }
             } catch (\Throwable $e) {
                 $openRouterStatus = 'ok';
@@ -735,7 +752,7 @@ class PlatformAdminController extends Controller
 
         // D. FeexPay
         $feexPayStatus = 'ok';
-        $feexPayMsg = 'Configuré (Mode ' . config('feexpay.mode', 'SANDBOX') . ')';
+        $feexPayMsg = 'Configuré (Mode '.config('feexpay.mode', 'SANDBOX').')';
         if (empty(config('feexpay.shop_id')) || empty(config('feexpay.token'))) {
             $feexPayStatus = 'warning';
             $feexPayMsg = 'Identifiants incomplets';
@@ -749,11 +766,11 @@ class PlatformAdminController extends Controller
             $mailStatus = 'error';
             $mailMsg = 'Webhook Google Apps Script non renseigné';
         } else {
-            $mailMsg = $mailDriver === 'google_webhook' ? 'Relais Google Apps Script (Actif)' : 'SMTP (' . config('mail.mailers.smtp.host') . ')';
+            $mailMsg = $mailDriver === 'google_webhook' ? 'Relais Google Apps Script (Actif)' : 'SMTP ('.config('mail.mailers.smtp.host').')';
         }
 
         // F. Web Push VAPID
-        $vapidStatus = (!empty(config('services.webpush.public_key')) && !empty(config('services.webpush.private_key'))) ? 'ok' : 'error';
+        $vapidStatus = (! empty(config('services.webpush.public_key')) && ! empty(config('services.webpush.private_key'))) ? 'ok' : 'error';
 
         return [
             'database' => ['status' => $dbStatus, 'latency_ms' => $dbLatency, 'label' => 'Base de Données'],
@@ -816,4 +833,3 @@ class PlatformAdminController extends Controller
         return back()->with('status', 'Audit de santé système exécuté avec succès. Tous les indicateurs sont au vert.');
     }
 }
-

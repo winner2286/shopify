@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Advertisement;
+use App\Models\AiGeneration;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\AiAdvertisingService;
+use App\Services\PublicMediaStorage;
+use App\Services\VideoAdGeneratorService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,7 +75,7 @@ class AdvertisingController extends Controller
 
         $categories = $shop->categories()
             ->where('is_visible', true)
-            ->withCount(['products' => fn($q) => $q->where('status', Product::STATUS_ACTIVE)])
+            ->withCount(['products' => fn ($q) => $q->where('status', Product::STATUS_ACTIVE)])
             ->get();
 
         $selectedProductId = (int) $request->query('produit_id');
@@ -118,7 +121,7 @@ class AdvertisingController extends Controller
 
         // Séparation des fonctionnalités publicitaires IA selon la formule
         if (in_array($channel, ['tiktok', 'instagram'], true) && ! $shop->canUseFeature('tiktok_ads')) {
-            return back()->withInput()->with('error', "La génération de scripts vidéo TikTok & visuels Instagram est réservée aux formules Pro et Premium. Passez à la formule Pro (15 000 FCFA) pour débloquer ces canaux !");
+            return back()->withInput()->with('error', 'La génération de scripts vidéo TikTok & visuels Instagram est réservée aux formules Pro et Premium. Passez à la formule Pro (15 000 FCFA) pour débloquer ces canaux !');
         }
 
         if ($shop->aiCreditsRemaining() <= 0) {
@@ -147,7 +150,16 @@ class AdvertisingController extends Controller
         }
 
         try {
-            $ad = $this->aiAdvertisingService->regenerateAd($ad, $shop, $request->all());
+            $overrides = $request->validate([
+                'angle' => ['nullable', 'in:promotions,nouveautes,bestsellers,coup_de_coeur,boutique'],
+                'tone' => ['nullable', 'in:dynamique,luxe,fun,urgent,chaleureux,amical,premium'],
+                'platform' => ['nullable', 'in:whatsapp,tiktok,instagram,sms,facebook,general'],
+                'custom_message' => ['nullable', 'string', 'max:250'],
+                'product_id' => ['nullable', 'integer'],
+                'selected_product_ids' => ['nullable', 'array', 'max:20'],
+                'selected_product_ids.*' => ['integer'],
+            ]);
+            $ad = $this->aiAdvertisingService->regenerateAd($ad, $shop, $overrides);
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -163,7 +175,8 @@ class AdvertisingController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
             }
-            return back()->with('error', 'Erreur lors de la régénération : ' . $e->getMessage());
+
+            return back()->with('error', 'Erreur lors de la régénération : '.$e->getMessage());
         }
     }
 
@@ -183,7 +196,7 @@ class AdvertisingController extends Controller
             'platform' => ['required', 'string', 'in:tiktok,instagram,whatsapp,facebook,general'],
         ]);
 
-        $videoAdGen = app(\App\Services\VideoAdGeneratorService::class);
+        $videoAdGen = app(VideoAdGeneratorService::class);
         $platform = $videoAdGen->normalizePlatform($validated['platform']);
 
         $vc = $ad->visual_config ?? [];
@@ -202,7 +215,7 @@ class AdvertisingController extends Controller
 
         // Pré-chauffer le cache TTS pour la nouvelle voix en tâche de fond
         try {
-            $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+            $mediaCtrl = app(MediaController::class);
             if (! empty($ctaPack[$platform]['voices'])) {
                 foreach ($ctaPack[$platform]['voices'] as $voiceLine) {
                     $mediaCtrl->warmTtsCache($voiceLine);
@@ -254,7 +267,6 @@ class AdvertisingController extends Controller
         }
     }
 
-
     /**
      * H-02, H-03, H-04 : Studio Vidéo Publicitaire IA 9:16
      */
@@ -270,7 +282,7 @@ class AdvertisingController extends Controller
         $ad->load(['product.images', 'product.primaryImage']);
 
         $vc = $ad->visual_config ?? [];
-        $videoAdGen = app(\App\Services\VideoAdGeneratorService::class);
+        $videoAdGen = app(VideoAdGeneratorService::class);
 
         // Si la publicité n'a pas encore le format multi-produits (anciennes annonces en base)
         if (empty($vc['products'])) {
@@ -294,7 +306,7 @@ class AdvertisingController extends Controller
 
         // Pré-chauffage du cache audio TTS en arrière-plan pour zéro latence
         try {
-            $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+            $mediaCtrl = app(MediaController::class);
             foreach ($ctaPack[$platform]['voices'] as $ctaVoice) {
                 $mediaCtrl->warmTtsCache($ctaVoice);
             }
@@ -304,7 +316,7 @@ class AdvertisingController extends Controller
 
         try {
             $scripts = $ad->generated_scripts ?? [];
-            $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+            $mediaCtrl = app(MediaController::class);
             $scriptsModified = false;
 
             foreach ($scripts as &$scr) {
@@ -345,7 +357,7 @@ class AdvertisingController extends Controller
         // Résolution de l'avatar UGC pour le studio vidéo
         $ugcPath = public_path('images/brand/ugc_presenter.jpg');
         $ugcAvatarUrl = file_exists($ugcPath) && filesize($ugcPath) > 0
-            ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($ugcPath))
+            ? 'data:image/jpeg;base64,'.base64_encode(file_get_contents($ugcPath))
             : asset('images/brand/ugc_presenter.jpg');
 
         return view('advertising.show', compact('shop', 'ad', 'productImageUrl', 'ugcAvatarUrl', 'shopProducts', 'shopCategories', 'platform', 'ctaPack'));
@@ -378,7 +390,8 @@ class AdvertisingController extends Controller
                 if (str_starts_with($data, 'data:image')) {
                     return $data;
                 }
-                return 'data:image/webp;base64,' . $data;
+
+                return 'data:image/webp;base64,'.$data;
             }
 
             // B. Fichier physique sur le disque public -> conversion en Base64 pour le canvas
@@ -386,14 +399,16 @@ class AdvertisingController extends Controller
                 $diskPath = Storage::disk('public')->path($primary->path);
                 if (file_exists($diskPath) && filesize($diskPath) > 0) {
                     $mime = @mime_content_type($diskPath) ?: 'image/webp';
-                    return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
+
+                    return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($diskPath));
                 }
 
                 if (! empty($primary->thumbnail_path)) {
                     $thumbPath = Storage::disk('public')->path($primary->thumbnail_path);
                     if (file_exists($thumbPath) && filesize($thumbPath) > 0) {
                         $mime = @mime_content_type($thumbPath) ?: 'image/webp';
-                        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($thumbPath));
+
+                        return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($thumbPath));
                     }
                 }
 
@@ -406,13 +421,15 @@ class AdvertisingController extends Controller
             $diskPath = Storage::disk('public')->path($shop->logo_path);
             if (file_exists($diskPath) && filesize($diskPath) > 0) {
                 $mime = @mime_content_type($diskPath) ?: 'image/png';
-                return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
+
+                return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($diskPath));
             }
-            return '/storage/' . ltrim($shop->logo_path, '/');
+
+            return '/storage/'.ltrim($shop->logo_path, '/');
         }
 
         // 5. Photo de catalogue de secours selon la catégorie
-        $catHint = mb_strtolower($shop->business_category . ' ' . $shop->name);
+        $catHint = mb_strtolower($shop->business_category.' '.$shop->name);
         $catalogPath = null;
         if (str_contains($catHint, 'resto') || str_contains($catHint, 'food') || str_contains($catHint, 'burger')) {
             $catalogPath = public_path('images/catalog/burger.webp');
@@ -423,10 +440,10 @@ class AdvertisingController extends Controller
         }
 
         if ($catalogPath && file_exists($catalogPath)) {
-            return 'data:image/webp;base64,' . base64_encode(file_get_contents($catalogPath));
+            return 'data:image/webp;base64,'.base64_encode(file_get_contents($catalogPath));
         }
 
-        return '/api/placeholder-image?id=' . ($product?->id ?? '') . '&title=' . urlencode($product?->title ?? $shop->name) . '&color=' . urlencode($shop->brand_color ?: '#6d3df2');
+        return '/api/placeholder-image?id='.($product?->id ?? '').'&title='.urlencode($product?->title ?? $shop->name).'&color='.urlencode($shop->brand_color ?: '#6d3df2');
     }
 
     /**
@@ -443,7 +460,7 @@ class AdvertisingController extends Controller
         $ad->increment('shares_count');
 
         // Log de consommation IA (CDC Section 6.1 et J-04)
-        \App\Models\AiGeneration::withoutGlobalScopes()->create([
+        AiGeneration::withoutGlobalScopes()->create([
             'shop_id' => $shop->id,
             'type' => 'ad_video_export',
             'step' => 'video_rendering',
@@ -453,7 +470,7 @@ class AdvertisingController extends Controller
             'cost_estimated_fcfa' => 0,
             'duration_ms' => 14000,
             'status' => 'success',
-            'input_summary' => "Export vidéo 9:16 pour ad #{$ad->id} (" . ($ad->product?->title ?: $shop->name) . ")",
+            'input_summary' => "Export vidéo 9:16 pour ad #{$ad->id} (".($ad->product?->title ?: $shop->name).')',
             'output_data' => [
                 'ad_id' => $ad->id,
                 'channel' => $ad->channel,
@@ -495,8 +512,9 @@ class AdvertisingController extends Controller
         $extMap = ['mpga' => 'mp3', 'weba' => 'webm', 'm4a' => 'm4a'];
         $normalized = $extMap[$guessed] ?? $guessed;
         $ext = in_array($normalized, $allowedExtensions, true) ? $normalized : ($type === 'music' ? 'mp3' : 'webm');
-        $fileName = 'ad_' . $ad->id . '_' . $type . '_' . time() . '.' . $ext;
-        $path = $file->storeAs('ads/audio', $fileName, 'public');
+        $fileName = 'ad_'.$ad->id.'_'.$type.'_'.time().'.'.$ext;
+        $path = 'shops/'.$shop->id.'/ads/audio/'.$fileName;
+        app(PublicMediaStorage::class)->put($path, (string) file_get_contents($file->getRealPath()));
 
         $url = Storage::disk('public')->url($path);
 

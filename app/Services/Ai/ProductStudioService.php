@@ -3,32 +3,43 @@
 namespace App\Services\Ai;
 
 use App\Models\Shop;
+use App\Services\PublicMediaStorage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProductStudioService
 {
     public const TARGET_SIZE = 1000; // Format carré e-commerce standard 1:1
+
     public const WEBP_QUALITY = 90;
+
     public const JPEG_QUALITY = 92;
 
     public const CATEGORY_SHOES = 'shoes';
+
     public const CATEGORY_CLOTHING_HANGING = 'clothing_hanging';
+
     public const CATEGORY_CLOTHING_FLAT = 'clothing_flat';
+
     public const CATEGORY_COSMETICS = 'cosmetics';
+
     public const CATEGORY_JEWELRY = 'jewelry';
+
     public const CATEGORY_BAGS = 'bags';
+
     public const CATEGORY_ELECTRONICS = 'electronics';
+
     public const CATEGORY_FURNITURE = 'furniture';
+
     public const CATEGORY_GENERAL = 'general';
 
     public function __construct(
         protected ?AiVisionService $visionService = null,
         protected ?PhotoroomService $photoroom = null
     ) {
-        $this->visionService = $visionService ?? new AiVisionService();
+        $this->visionService = $visionService ?? new AiVisionService;
         $this->photoroom = $photoroom ?? app(PhotoroomService::class);
     }
 
@@ -36,12 +47,17 @@ class ProductStudioService
      * Traite une photo produit pour créer une collection de packshots studio professionnels
      * en garantissant la CONSERVATION ABSOLUE DU PRODUIT ORIGINAL (zéro hallucination, zéro déformation).
      *
-     * @param Shop $shop Boutique propriétaire
-     * @param string $imageBinary Contenu binaire de la photo
-     * @param string|null $categoryHint Catégorie optionnelle indiquée par le commerçant
+     * @param  Shop  $shop  Boutique propriétaire
+     * @param  string  $imageBinary  Contenu binaire de la photo
+     * @param  string|null  $categoryHint  Catégorie optionnelle indiquée par le commerçant
      * @return array<string, mixed>
      */
     public function processProductPhoto(Shop $shop, string $imageBinary, ?string $categoryHint = null): array
+    {
+        return $this->withPhotoroomReservation($shop, fn (bool $reserved) => $this->processReservedProductPhoto($shop, $imageBinary, $categoryHint, $reserved));
+    }
+
+    private function processReservedProductPhoto(Shop $shop, string $imageBinary, ?string $categoryHint, bool $reserved): array
     {
         $startTime = microtime(true);
         $uniq = uniqid();
@@ -50,7 +66,7 @@ class ProductStudioService
         // 1. Sauvegarder la photo originale pour que le commerçant conserve toujours le choix de la garder
         $sourceFilename = "source_{$uniq}.jpg";
         $sourcePath = "shops/{$shop->id}/products_ai/{$sourceFilename}";
-        Storage::disk('public')->put($sourcePath, $imageBinary);
+        app(PublicMediaStorage::class)->put($sourcePath, $imageBinary);
         $sourceUrl = Storage::disk('public')->url($sourcePath);
 
         // 2. Détection intelligente de la catégorie du produit via Vision Multimodale
@@ -59,7 +75,7 @@ class ProductStudioService
         $productTitle = $detectedCategory['title'];
 
         // 3. Détourage professionnel haute fidélité (Photoroom v1/segment -> API RMBG -> Algorithme local)
-        $cutoutResult = $this->extractCutout($imageBinary, $shop);
+        $cutoutResult = $this->extractCutout($imageBinary, $shop, $reserved);
         $cutoutPng = $cutoutResult['binary'];
         $cutoutMethod = $cutoutResult['method'];
         $usedPhotoroomEdit = false;
@@ -69,7 +85,7 @@ class ProductStudioService
         if ($cutoutPng) {
             $cutoutFilename = "cutout_{$uniq}.png";
             $cutoutPath = "shops/{$shop->id}/products_ai/{$cutoutFilename}";
-            Storage::disk('public')->put($cutoutPath, $cutoutPng);
+            app(PublicMediaStorage::class)->put($cutoutPath, $cutoutPng);
             $cutoutUrl = Storage::disk('public')->url($cutoutPath);
         }
 
@@ -104,7 +120,7 @@ class ProductStudioService
                         ];
                     }
                 } catch (\Throwable $e) {
-                    Log::warning('ProductStudioService studio_white failed: ' . $e->getMessage());
+                    Log::warning('ProductStudioService studio_white failed: '.$e->getMessage());
                 }
 
                 // B. Studio Ambiance Douce — Éclairage raffiné ivoire & ombre soyeuse
@@ -130,19 +146,19 @@ class ProductStudioService
                         ];
                     }
                 } catch (\Throwable $e) {
-                    Log::warning('ProductStudioService studio_ambient failed: ' . $e->getMessage());
+                    Log::warning('ProductStudioService studio_ambient failed: '.$e->getMessage());
                 }
 
                 // C. Décor Thématique selon la catégorie réelle du produit (Smart Cost : Photoroom v2 AI Scene uniquement sur Pro/Premium/Admin, sinon décor local GD + cutout v1/segment)
                 try {
-                    $photoroomLifestyle = ($this->photoroom->isConfigured() && $shop->canUsePhotoroomGenerativeScene() && $shop->hasEnoughPhotoroomCredits(1))
-                        ? $this->photoroom->editProductImage($imageBinary, $this->photoroom->mapStyleToEditParams('lifestyle', self::TARGET_SIZE . 'x' . self::TARGET_SIZE))
+                    $photoroomLifestyle = ($this->photoroom->isConfigured() && $shop->canUsePhotoroomGenerativeScene() && $reserved)
+                        ? $this->photoroom->editProductImage($imageBinary, $this->photoroom->mapStyleToEditParams('lifestyle', self::TARGET_SIZE.'x'.self::TARGET_SIZE))
                         : null;
 
                     if ($photoroomLifestyle !== null) {
                         $usedPhotoroomEdit = true;
                         $lifePath = "shops/{$shop->id}/products_ai/lifestyle_{$uniq}.png";
-                        Storage::disk('public')->put($lifePath, $photoroomLifestyle);
+                        app(PublicMediaStorage::class)->put($lifePath, $photoroomLifestyle);
 
                         $variations[] = [
                             'id' => 'lifestyle_staged',
@@ -180,7 +196,7 @@ class ProductStudioService
                         }
                     }
                 } catch (\Throwable $e) {
-                    Log::warning('ProductStudioService lifestyle failed: ' . $e->getMessage());
+                    Log::warning('ProductStudioService lifestyle failed: '.$e->getMessage());
                 }
 
                 // D. Studio Podium Minimaliste Premium
@@ -206,7 +222,7 @@ class ProductStudioService
                         ];
                     }
                 } catch (\Throwable $e) {
-                    Log::warning('ProductStudioService studio_podium failed: ' . $e->getMessage());
+                    Log::warning('ProductStudioService studio_podium failed: '.$e->getMessage());
                 }
 
                 imagedestroy($cutoutGd);
@@ -223,7 +239,9 @@ class ProductStudioService
                     $fallbackPath = "shops/{$shop->id}/products_ai/enhanced_{$uniq}.jpg";
                     $this->saveGdImage($framedGd, $fallbackPath);
                     imagedestroy($framedGd);
-                    if ($enhancedGd !== $srcGd) imagedestroy($enhancedGd);
+                    if ($enhancedGd !== $srcGd) {
+                        imagedestroy($enhancedGd);
+                    }
                     imagedestroy($srcGd);
 
                     $variations[] = [
@@ -240,7 +258,7 @@ class ProductStudioService
                     ];
                 }
             } catch (\Throwable $e) {
-                Log::warning('ProductStudioService fallback optimization failed: ' . $e->getMessage());
+                Log::warning('ProductStudioService fallback optimization failed: '.$e->getMessage());
             }
         }
 
@@ -263,13 +281,6 @@ class ProductStudioService
 
         $durationMs = (int) round((microtime(true) - $startTime) * 1000);
         $usedPhotoroom = ($cutoutMethod === 'photoroom_v1_segment' || $usedPhotoroomEdit);
-        if ($usedPhotoroom) {
-            try {
-                $shop->consumePhotoroomCredits(1);
-            } catch (\Throwable $e) {
-                Log::warning('ProductStudioService consumePhotoroomCredits failed: ' . $e->getMessage());
-            }
-        }
 
         $engine = $usedPhotoroom
             ? 'photoroom-ai'
@@ -299,6 +310,11 @@ class ProductStudioService
      */
     public function cutoutTransparent(Shop $shop, string $imageBinary, string $mode = 'transparent'): ?array
     {
+        return $this->withPhotoroomReservation($shop, fn (bool $reserved) => $this->cutoutReserved($shop, $imageBinary, $mode, $reserved));
+    }
+
+    private function cutoutReserved(Shop $shop, string $imageBinary, string $mode, bool $reserved): ?array
+    {
         if (trim($imageBinary) === '') {
             return null;
         }
@@ -314,7 +330,7 @@ class ProductStudioService
         if ($mode === 'studio_white') {
             // Smart Cost : studio blanc 1:1 en v1/segment (~13 FCFA) + ombre studio locale au lieu de v2/edit (~62 FCFA)
             if ($outputBinary === null) {
-                $cutoutResult = $this->extractCutout($imageBinary, $shop);
+                $cutoutResult = $this->extractCutout($imageBinary, $shop, $reserved);
                 $method = $cutoutResult['method'];
                 if ($method === 'photoroom_v1_segment') {
                     $engine = 'photoroom-ai';
@@ -337,7 +353,7 @@ class ProductStudioService
                 }
             }
         } else {
-            $cutoutResult = $this->extractCutout($imageBinary, $shop);
+            $cutoutResult = $this->extractCutout($imageBinary, $shop, $reserved);
             $outputBinary = $cutoutResult['binary'] ?? null;
             $method = $cutoutResult['method'] ?? 'failed';
             if ($method === 'photoroom_v1_segment') {
@@ -349,22 +365,14 @@ class ProductStudioService
             return null;
         }
 
-        if ($engine === 'photoroom-ai') {
-            try {
-                $shop->consumePhotoroomCredits(1);
-            } catch (\Throwable $e) {
-                Log::warning('ProductStudioService cutoutTransparent consumePhotoroomCredits failed: ' . $e->getMessage());
-            }
-        }
-
         $relativePath = "shops/{$shop->id}/products_ai/cutout_ad_{$uniq}.{$ext}";
-        Storage::disk('public')->put($relativePath, $outputBinary);
+        app(PublicMediaStorage::class)->put($relativePath, $outputBinary);
 
         return [
             'status' => 'success',
             'url' => Storage::disk('public')->url($relativePath),
             'path' => $relativePath,
-            'data_uri' => 'data:' . $mime . ';base64,' . base64_encode($outputBinary),
+            'data_uri' => 'data:'.$mime.';base64,'.base64_encode($outputBinary),
             'engine' => $engine,
             'cutout_method' => $method,
         ];
@@ -373,10 +381,6 @@ class ProductStudioService
     /**
      * Génère une variante spécifique à la demande (ex: studio blanc, ambiance ivoire, lifestyle, podium, sombre).
      *
-     * @param Shop $shop
-     * @param string $cutoutPngBinary
-     * @param string $style
-     * @param string $category
      * @return array<string, mixed>|null
      */
     public function renderVariant(Shop $shop, string $cutoutPngBinary, string $style = 'studio_dark', string $category = 'general'): ?array
@@ -460,7 +464,7 @@ class ProductStudioService
         imagedestroy($canvas);
 
         return [
-            'id' => 'var_' . $uniq,
+            'id' => 'var_'.$uniq,
             'type' => $style,
             'title' => $title,
             'subtitle' => $subtitle,
@@ -503,9 +507,9 @@ class ProductStudioService
             try {
                 $dataUrl = str_starts_with($imageBinary, 'data:image')
                     ? $imageBinary
-                    : 'data:image/jpeg;base64,' . base64_encode($imageBinary);
+                    : 'data:image/jpeg;base64,'.base64_encode($imageBinary);
 
-                $prompt = <<<PROMPT
+                $prompt = <<<'PROMPT'
 Analyse ce produit e-commerce. Détermine précisément product_category parmi STRICTEMENT :
 - "shoes" (chaussures, baskets, sneakers, sandales, talons, mules, bottes, claquettes, mocassins)
 - "clothing_hanging" (vêtements sur cintre : robes, vestes, chemises, costumes, manteaux, blazers)
@@ -587,7 +591,7 @@ PROMPT;
                     }
                 }
             } catch (\Throwable $e) {
-                Log::warning("ProductStudioService detectProductCategory vision failed: " . $e->getMessage());
+                Log::warning('ProductStudioService detectProductCategory vision failed: '.$e->getMessage());
             }
         }
 
@@ -605,11 +609,48 @@ PROMPT;
      *
      * @return array{binary: string|null, method: string}
      */
-    public function extractCutout(string $imageBinary, ?Shop $shop = null): array
+    public function extractCutout(string $imageBinary, ?Shop $shop = null, bool $reserved = false): array
+    {
+        if ($shop !== null && ! $reserved) {
+            return $this->withPhotoroomReservation($shop, fn (bool $hasReservation) => $this->extractReservedCutout($imageBinary, $shop, $hasReservation));
+        }
+
+        return $this->extractReservedCutout($imageBinary, $shop, $reserved);
+    }
+
+    private function withPhotoroomReservation(Shop $shop, \Closure $operation): mixed
+    {
+        $reserved = false;
+        if ($this->photoroom->isConfigured() && $shop->hasEnoughPhotoroomCredits()) {
+            try {
+                $shop->consumePhotoroomCredits();
+                $reserved = true;
+            } catch (ValidationException) {
+                // A competing request reserved the last credit; use the local engine.
+            }
+        }
+        try {
+            $result = $operation($reserved);
+        } catch (\Throwable $exception) {
+            if ($reserved) {
+                $shop->decrement('photoroom_credits_used');
+                $shop->refresh();
+            }
+            throw $exception;
+        }
+        if ($reserved && ($result['engine'] ?? '') !== 'photoroom-ai' && ($result['method'] ?? '') !== 'photoroom_v1_segment') {
+            $shop->decrement('photoroom_credits_used');
+            $shop->refresh();
+        }
+
+        return $result;
+    }
+
+    private function extractReservedCutout(string $imageBinary, ?Shop $shop, bool $reserved): array
     {
         // 1. Priorité Photoroom v1/segment (si clé API configurée et quota Photoroom actif)
         $canUsePhotoroom = $this->photoroom->isConfigured()
-            && ($shop === null || $shop->hasEnoughPhotoroomCredits(1));
+            && ($shop === null || $reserved);
 
         if ($canUsePhotoroom) {
             $photoroomCutout = $this->photoroom->removeBackground($imageBinary, ['format' => 'png']);
@@ -657,7 +698,7 @@ PROMPT;
         }
 
         try {
-            $b64 = 'data:image/jpeg;base64,' . base64_encode($imageBinary);
+            $b64 = 'data:image/jpeg;base64,'.base64_encode($imageBinary);
             $spaceUrl = 'https://gokaygokay-inspyrenet-rembg.hf.space/gradio_api';
 
             $payload = json_encode([
@@ -673,7 +714,7 @@ PROMPT;
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
             curl_setopt($ch, CURLOPT_TIMEOUT, 6); // Timeout strict de 6s pour ne jamais bloquer l'expérience commerçant
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
             $res = curl_exec($ch);
             $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
@@ -685,7 +726,7 @@ PROMPT;
                     $ch2 = curl_init("{$spaceUrl}/call/predict/{$eventId}");
                     curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
                     curl_setopt($ch2, CURLOPT_TIMEOUT, 8);
-                    curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+                    curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, true);
                     $stream = curl_exec($ch2);
                     curl_close($ch2);
 
@@ -694,7 +735,7 @@ PROMPT;
                         $ch3 = curl_init($fileUrl);
                         curl_setopt($ch3, CURLOPT_RETURNTRANSFER, true);
                         curl_setopt($ch3, CURLOPT_FOLLOWLOCATION, true);
-                        curl_setopt($ch3, CURLOPT_SSL_VERIFYPEER, false);
+                        curl_setopt($ch3, CURLOPT_SSL_VERIFYPEER, true);
                         curl_setopt($ch3, CURLOPT_TIMEOUT, 8);
                         $img = curl_exec($ch3);
                         $code3 = curl_getinfo($ch3, CURLINFO_HTTP_CODE);
@@ -707,7 +748,7 @@ PROMPT;
                 }
             }
         } catch (\Throwable $e) {
-            Log::info("ProductStudioService tryRemoteRmbg skipped: " . $e->getMessage());
+            Log::info('ProductStudioService tryRemoteRmbg skipped: '.$e->getMessage());
         }
 
         return null;
@@ -732,6 +773,7 @@ PROMPT;
         $h = imagesy($src);
         if ($w <= $maxDim && $h <= $maxDim) {
             imagedestroy($src);
+
             return $imageBinary;
         }
 
@@ -784,6 +826,7 @@ PROMPT;
         $h = imagesy($src);
         if ($w < 50 || $h < 50) {
             imagedestroy($src);
+
             return null;
         }
 
@@ -893,6 +936,7 @@ PROMPT;
                     $isBg[$nIdx] = "\1";
                     $queue[] = $nIdx;
                     $tail++;
+
                     continue;
                 }
 
@@ -906,6 +950,7 @@ PROMPT;
                         $isBg[$nIdx] = "\1";
                         $queue[] = $nIdx;
                         $tail++;
+
                         continue;
                     }
                 } else {
@@ -967,10 +1012,18 @@ PROMPT;
                 }
 
                 $bgNeighbors = 0;
-                if ($x > 0 && $isBg[$idx - 1] === "\1") $bgNeighbors++;
-                if ($x < $w - 1 && $isBg[$idx + 1] === "\1") $bgNeighbors++;
-                if ($y > 0 && $isBg[$idx - $w] === "\1") $bgNeighbors++;
-                if ($y < $h - 1 && $isBg[$idx + $w] === "\1") $bgNeighbors++;
+                if ($x > 0 && $isBg[$idx - 1] === "\1") {
+                    $bgNeighbors++;
+                }
+                if ($x < $w - 1 && $isBg[$idx + 1] === "\1") {
+                    $bgNeighbors++;
+                }
+                if ($y > 0 && $isBg[$idx - $w] === "\1") {
+                    $bgNeighbors++;
+                }
+                if ($y < $h - 1 && $isBg[$idx + $w] === "\1") {
+                    $bgNeighbors++;
+                }
 
                 if ($bgNeighbors >= 3) {
                     continue;
@@ -1046,7 +1099,7 @@ PROMPT;
     /**
      * Identifie le cluster de couleur dominant parmi les échantillons du périmètre extérieur.
      *
-     * @param array<int, array{0: int, 1: int, 2: int}> $samples
+     * @param  array<int, array{0: int, 1: int, 2: int}>  $samples
      * @return array{0: int, 1: int, 2: int}
      */
     protected function findDominantBackgroundColor(array $samples): array
@@ -1115,18 +1168,28 @@ PROMPT;
     {
         $w = imagesx($img);
         $h = imagesy($img);
-        $minX = $w; $maxX = 0;
-        $minY = $h; $maxY = 0;
+        $minX = $w;
+        $maxX = 0;
+        $minY = $h;
+        $maxY = 0;
         $step = ($w > 600 || $h > 600) ? 2 : 1;
 
         for ($x = 0; $x < $w; $x += $step) {
             for ($y = 0; $y < $h; $y += $step) {
                 $alpha = (imagecolorat($img, $x, $y) >> 24) & 0x7F;
                 if ($alpha < 115) { // Pixel visible
-                    if ($x < $minX) $minX = $x;
-                    if ($x > $maxX) $maxX = $x;
-                    if ($y < $minY) $minY = $y;
-                    if ($y > $maxY) $maxY = $y;
+                    if ($x < $minX) {
+                        $minX = $x;
+                    }
+                    if ($x > $maxX) {
+                        $maxX = $x;
+                    }
+                    if ($y < $minY) {
+                        $minY = $y;
+                    }
+                    if ($y > $maxY) {
+                        $maxY = $y;
+                    }
                 }
             }
         }
@@ -1143,6 +1206,7 @@ PROMPT;
         $cropH = min($h - $minY, ($maxY - $minY + 1) + ($margin * 2));
 
         $cropped = imagecrop($img, ['x' => $minX, 'y' => $minY, 'width' => $cropW, 'height' => $cropH]);
+
         return $cropped ?: $img;
     }
 
@@ -1329,9 +1393,10 @@ PROMPT;
             default => ['luxury_podium.jpg', 'Ambiance Showroom Chic', 'Podium d\'exposition en espace contemporain'],
         };
 
-        $scenePath = public_path('images/ai_scenes/' . $sceneFile);
+        $scenePath = public_path('images/ai_scenes/'.$sceneFile);
         if (! file_exists($scenePath)) {
             $fallback = $this->renderStudioPackshot($cutoutGd, 'ambient_warm', $targetSize, $category);
+
             return [
                 'canvas' => $fallback,
                 'title' => 'Studio Ambiance Douce',
@@ -1461,7 +1526,7 @@ PROMPT;
                 @imageconvolution($image, $matrix, 1.0, 0);
             }
         } catch (\Throwable $e) {
-            Log::info("enhancePhotographicQuality warning: " . $e->getMessage());
+            Log::info('enhancePhotographicQuality warning: '.$e->getMessage());
         }
 
         return $image;
@@ -1495,8 +1560,7 @@ PROMPT;
     /**
      * Contrôle qualité automatique (Quality Gate) validant la conformité e-commerce de la photo.
      *
-     * @param string $sourceBinary
-     * @param array<int, array<string, mixed>> $variations
+     * @param  array<int, array<string, mixed>>  $variations
      * @return array<string, mixed>
      */
     public function auditQuality(string $sourceBinary, array $variations): array
@@ -1509,7 +1573,7 @@ PROMPT;
             'commercially_ready' => true,     // Prête pour publication en boutique
         ];
 
-        $hasCutout = collect($variations)->contains(fn($v) => ! empty($v['cutout_path']));
+        $hasCutout = collect($variations)->contains(fn ($v) => ! empty($v['cutout_path']));
         $checks['clean_cutout'] = $hasCutout;
 
         $score = $hasCutout ? 98 : 88;
@@ -1518,7 +1582,7 @@ PROMPT;
             'score' => $score,
             'status' => $score >= 80 ? 'passed' : 'warning',
             'checks' => $checks,
-            'summary' => "Photographie contrôlée avec succès : produit original 100% fidèle, cadrage carré 1:1 et rendu studio professionnel.",
+            'summary' => 'Photographie contrôlée avec succès : produit original 100% fidèle, cadrage carré 1:1 et rendu studio professionnel.',
         ];
     }
 
@@ -1529,7 +1593,7 @@ PROMPT;
     {
         $tmp = tempnam(sys_get_temp_dir(), 'ai_p_');
         imagejpeg($gdImage, $tmp, self::JPEG_QUALITY);
-        Storage::disk('public')->put($relativePath, file_get_contents($tmp));
+        app(PublicMediaStorage::class)->put($relativePath, file_get_contents($tmp));
         @unlink($tmp);
     }
 

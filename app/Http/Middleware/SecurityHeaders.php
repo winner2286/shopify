@@ -17,6 +17,9 @@ class SecurityHeaders
         $response = $next($request);
 
         $headers = $response->headers;
+        if ($request->user() || $request->query->has('token') || $request->is('recu/*', 'b/*/commandes/*', 'b/*/suivi')) {
+            $headers->set('Cache-Control', 'private, no-store');
+        }
 
         if (! $headers->has('X-Content-Type-Options')) {
             $headers->set('X-Content-Type-Options', 'nosniff');
@@ -41,4 +44,3 @@ class SecurityHeaders
         return $response;
     }
 }
-

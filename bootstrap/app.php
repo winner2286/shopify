@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,8 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
-        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        $middleware->trustHosts(at: function () {
+            $hosts = array_filter(array_merge(
+                [(string) parse_url((string) config('app.url'), PHP_URL_HOST)],
+                config('app.trusted_hosts', [])
+            ));
+
+            return array_map(fn (string $host) => '^'.preg_quote($host, '/').'$', $hosts);
+        }, subdomains: false);
+        $middleware->append(SecurityHeaders::class);
         $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->isAdmin() ? route('admin.dashboard') : route('dashboard'));
         $middleware->preventRequestsDuringMaintenance(except: [
             'admin',

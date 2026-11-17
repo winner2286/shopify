@@ -7,13 +7,14 @@ use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\ActionTokenService;
 use App\Services\Ai\Contracts\AiToolInterface;
+use App\Support\SearchHelper;
 
 class AdjustProductPricePercentageTool implements AiToolInterface
 {
     public function __construct(
         protected ?ActionTokenService $tokenService = null
     ) {
-        $this->tokenService = $tokenService ?? new ActionTokenService();
+        $this->tokenService = $tokenService ?? new ActionTokenService;
     }
 
     public function name(): string
@@ -76,7 +77,7 @@ class AdjustProductPricePercentageTool implements AiToolInterface
 
         if (! $product && ! empty($productName)) {
             $product = Product::withoutGlobalScopes()->where('shop_id', $shop->id)
-                ->where('title', \App\Support\SearchHelper::likeOperator(), "%{$productName}%")
+                ->where('title', SearchHelper::likeOperator(), "%{$productName}%")
                 ->first();
         }
 
@@ -88,7 +89,7 @@ class AdjustProductPricePercentageTool implements AiToolInterface
 
         if ($percentage == 0) {
             return [
-                'error' => "Le pourcentage de variation doit être différent de 0 (ex: 10 pour +10% ou -15 pour -15%).",
+                'error' => 'Le pourcentage de variation doit être différent de 0 (ex: 10 pour +10% ou -15 pour -15%).',
             ];
         }
 
@@ -113,7 +114,7 @@ class AdjustProductPricePercentageTool implements AiToolInterface
 
         // Si non confirmé : renvoyer action_required pour bouton interactif avec jeton HMAC
         if (! $isConfirmed) {
-            $direction = $percentage > 0 ? "hausse" : "baisse";
+            $direction = $percentage > 0 ? 'hausse' : 'baisse';
             $initiator = $user ?? $shop->owner ?? User::first();
             $token = $this->tokenService->generateToken($shop, $initiator, $this->name(), $actionParams);
 
@@ -129,19 +130,22 @@ class AdjustProductPricePercentageTool implements AiToolInterface
                     'percentage' => $percentage,
                     'difference_fcfa' => $diff,
                 ],
-                'message' => "Confirmation requise : Appliquer une {$direction} de {$percentage}% sur \"{$product->title}\" ? Le prix passera de " . number_format($currentPrice, 0, ',', ' ') . " {$shop->currency} à " . number_format($newPrice, 0, ',', ' ') . " {$shop->currency} ({$sign}" . number_format($diff, 0, ',', ' ') . " {$shop->currency}).",
+                'message' => "Confirmation requise : Appliquer une {$direction} de {$percentage}% sur \"{$product->title}\" ? Le prix passera de ".number_format($currentPrice, 0, ',', ' ')." {$shop->currency} à ".number_format($newPrice, 0, ',', ' ')." {$shop->currency} ({$sign}".number_format($diff, 0, ',', ' ')." {$shop->currency}).",
             ];
         }
 
         // Vérification du jeton HMAC lors de l'exécution confirmée
         $token = $arguments['action_token'] ?? '';
         $executor = $user ?? $shop->owner ?? User::first();
+        if (empty($token)) {
+            return ['status' => 'security_rejection', 'error' => 'Un jeton signé est obligatoire pour confirmer cette action.'];
+        }
         if (! empty($token)) {
             $validation = $this->tokenService->validateToken($token, $shop, $executor, $this->name(), $actionParams);
             if (! $validation['valid']) {
                 return [
                     'status' => 'security_rejection',
-                    'error' => "Refus de sécurité : " . ($validation['error'] ?? 'Jeton invalide.'),
+                    'error' => 'Refus de sécurité : '.($validation['error'] ?? 'Jeton invalide.'),
                 ];
             }
         }
@@ -157,7 +161,7 @@ class AdjustProductPricePercentageTool implements AiToolInterface
             'old_price' => $currentPrice,
             'new_price' => $newPrice,
             'percentage_applied' => $percentage,
-            'summary' => "Le prix de \"{$product->title}\" a été mis à jour avec succès : " . number_format($newPrice, 0, ',', ' ') . " {$shop->currency} ({$sign}{$percentage}%).",
+            'summary' => "Le prix de \"{$product->title}\" a été mis à jour avec succès : ".number_format($newPrice, 0, ',', ' ')." {$shop->currency} ({$sign}{$percentage}%).",
         ];
     }
 }

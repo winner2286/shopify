@@ -8,34 +8,48 @@ use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 #[ScopedBy([BelongsToShopScope::class])]
 #[Fillable([
     'shop_id', 'customer_id', 'order_number',
     'customer_name', 'customer_phone', 'customer_email',
     'shipping_zone_id', 'discount_code_id', 'discount_code', 'delivery_zone_name', 'delivery_address', 'delivery_notes',
-    'subtotal', 'discount_amount', 'shipping_cost', 'total',
+    'subtotal', 'discount_amount', 'shipping_cost', 'total', 'currency',
     'payment_method', 'payment_status', 'paid_at',
     'status', 'cancellation_reason', 'cancelled_at',
 ])]
 class Order extends Model
 {
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_CONFIRMED = 'confirmed';
+
     public const STATUS_SHIPPED = 'shipped';
+
     public const STATUS_DELIVERED = 'delivered';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     public const PAYMENT_CASH = 'cash_on_delivery';
+
     public const PAYMENT_TMONEY = 'tmoney';
+
     public const PAYMENT_FLOOZ = 'flooz';
+
     public const PAYMENT_CARD = 'card';
+
     public const PAYMENT_GENIUSPAY = 'geniuspay';
+
     public const PAYMENT_FEEXPAY = 'feexpay';
 
     public const PAYMENT_STATUS_PENDING = 'pending';
+
     public const PAYMENT_STATUS_PAID = 'paid';
+
     public const PAYMENT_STATUS_FAILED = 'failed';
+
     public const PAYMENT_STATUS_REFUNDED = 'refunded';
 
     protected function casts(): array
@@ -130,16 +144,40 @@ class Order extends Model
      */
     public function recordStatusChange(string $toStatus, string $authorType = 'merchant', ?int $authorId = null, ?string $comment = null): void
     {
-        $fromStatus = $this->status;
-        $this->update(['status' => $toStatus]);
+        DB::transaction(function () use ($toStatus, $authorType, $authorId, $comment) {
+            $lockedOrder = static::withoutGlobalScopes()->whereKey($this->id)->lockForUpdate()->firstOrFail();
+            $this->setRawAttributes($lockedOrder->getAttributes(), true);
+            if ($this->status === $toStatus) {
+                return;
+            }
+            if (! in_array($toStatus, $this->allowedNextStatuses(), true) || $toStatus === self::STATUS_CANCELLED) {
+                throw ValidationException::withMessages(['status' => 'Cette transition de commande est interdite.']);
+            }
+            $fromStatus = $this->status;
+            $this->update(['status' => $toStatus]);
+            if ($toStatus === self::STATUS_DELIVERED && $this->payment_method === self::PAYMENT_CASH) {
+                $this->update(['payment_status' => self::PAYMENT_STATUS_PAID, 'paid_at' => now()]);
+                $this->payments()->withoutGlobalScopes()->update(['status' => Payment::STATUS_PAID, 'paid_at' => now()]);
+            }
 
-        $this->statusHistories()->create([
-            'from_status' => $fromStatus,
-            'to_status' => $toStatus,
-            'author_type' => $authorType,
-            'author_id' => $authorId,
-            'comment' => $comment,
-        ]);
+            $this->statusHistories()->create([
+                'from_status' => $fromStatus,
+                'to_status' => $toStatus,
+                'author_type' => $authorType,
+                'author_id' => $authorId,
+                'comment' => $comment,
+            ]);
+        });
+    }
+
+    public function allowedNextStatuses(): array
+    {
+        return match ($this->status) {
+            self::STATUS_PENDING => [self::STATUS_CONFIRMED, self::STATUS_CANCELLED],
+            self::STATUS_CONFIRMED => [self::STATUS_SHIPPED, self::STATUS_CANCELLED],
+            self::STATUS_SHIPPED => [self::STATUS_DELIVERED],
+            default => [],
+        };
     }
 
     /**
@@ -147,16 +185,16 @@ class Order extends Model
      */
     public static function generateOrderNumber(Shop $shop): string
     {
-        $prefix = 'CMD-' . date('Ymd') . '-';
+        $prefix = 'CMD-'.date('Ymd').'-';
         $countToday = self::withoutGlobalScopes()
             ->where('shop_id', $shop->id)
             ->whereDate('created_at', today())
             ->count() + 1;
 
-        $candidate = $prefix . str_pad((string) $countToday, 4, '0', STR_PAD_LEFT);
+        $candidate = $prefix.str_pad((string) $countToday, 4, '0', STR_PAD_LEFT);
 
         while (self::withoutGlobalScopes()->where('order_number', $candidate)->exists()) {
-            $candidate = $prefix . str_pad((string) random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
+            $candidate = $prefix.str_pad((string) random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
         }
 
         return $candidate;
@@ -173,6 +211,13 @@ class Order extends Model
         }
 
         return hash_hmac('sha256', "receipt:{$this->id}:{$this->order_number}:{$this->shop_id}", $key);
+    }
+
+    public function currencyLabel(): string
+    {
+        $currency = $this->currency ?: 'XOF';
+
+        return (string) config('platform.currencies.'.$currency.'.symbol', $currency);
     }
 
     /**

@@ -14,7 +14,7 @@ class ManageDiscountCodesTool implements AiToolInterface
     public function __construct(
         protected ?ActionTokenService $tokenService = null
     ) {
-        $this->tokenService = $tokenService ?? new ActionTokenService();
+        $this->tokenService = $tokenService ?? new ActionTokenService;
     }
 
     public function name(): string
@@ -103,12 +103,12 @@ class ManageDiscountCodesTool implements AiToolInterface
                 'status' => 'success',
                 'action' => 'list',
                 'codes_count' => $codes->count(),
-                'codes' => $codes->map(fn($c) => [
+                'codes' => $codes->map(fn ($c) => [
                     'id' => $c->id,
                     'code' => $c->code,
                     'type' => $c->type,
                     'value' => $c->value,
-                    'formatted_value' => $c->type === DiscountCode::TYPE_PERCENTAGE ? "-{$c->value}%" : "-" . number_format($c->value, 0, ',', ' ') . " {$shop->currency}",
+                    'formatted_value' => $c->type === DiscountCode::TYPE_PERCENTAGE ? "-{$c->value}%" : '-'.number_format($c->value, 0, ',', ' ')." {$shop->currency}",
                     'min_order_amount' => $c->min_order_amount,
                     'used_count' => $c->used_count,
                     'max_uses' => $c->max_uses,
@@ -121,7 +121,7 @@ class ManageDiscountCodesTool implements AiToolInterface
         // 3. Action de création d'un code promo
         $rawCode = trim((string) ($arguments['code'] ?? ''));
         if (empty($rawCode)) {
-            $rawCode = 'PROMO' . Str::upper(Str::random(4));
+            $rawCode = 'PROMO'.Str::upper(Str::random(4));
         }
         $code = Str::upper(preg_replace('/[^A-Za-z0-9_-]/', '', $rawCode));
 
@@ -171,8 +171,8 @@ class ManageDiscountCodesTool implements AiToolInterface
             $initiator = $user ?? $shop->owner ?? User::first();
             $token = $this->tokenService->generateToken($shop, $initiator, $this->name(), $actionParams);
 
-            $reductionText = $type === 'percentage' ? "-{$value}%" : "-" . number_format($value, 0, ',', ' ') . " {$shop->currency}";
-            $conditionText = $minAmount ? " (dès " . number_format($minAmount, 0, ',', ' ') . " {$shop->currency} d'achat)" : '';
+            $reductionText = $type === 'percentage' ? "-{$value}%" : '-'.number_format($value, 0, ',', ' ')." {$shop->currency}";
+            $conditionText = $minAmount ? ' (dès '.number_format($minAmount, 0, ',', ' ')." {$shop->currency} d'achat)" : '';
             $validityText = $daysValid ? " valable {$daysValid} jours" : '';
 
             return [
@@ -194,12 +194,15 @@ class ManageDiscountCodesTool implements AiToolInterface
         // Validation HMAC
         $token = $arguments['action_token'] ?? '';
         $executor = $user ?? $shop->owner ?? User::first();
+        if (empty($token)) {
+            return ['status' => 'security_rejection', 'error' => 'Un jeton signé est obligatoire pour confirmer cette action.'];
+        }
         if (! empty($token)) {
             $validation = $this->tokenService->validateToken($token, $shop, $executor, $this->name(), $actionParams);
             if (! $validation['valid']) {
                 return [
                     'status' => 'security_rejection',
-                    'error' => "Refus de sécurité : " . ($validation['error'] ?? 'Jeton invalide.'),
+                    'error' => 'Refus de sécurité : '.($validation['error'] ?? 'Jeton invalide.'),
                 ];
             }
         }
@@ -221,7 +224,7 @@ class ManageDiscountCodesTool implements AiToolInterface
             ]
         );
 
-        $reductionText = $type === 'percentage' ? "-{$value}%" : "-" . number_format($value, 0, ',', ' ') . " {$shop->currency}";
+        $reductionText = $type === 'percentage' ? "-{$value}%" : '-'.number_format($value, 0, ',', ' ')." {$shop->currency}";
 
         return [
             'status' => 'success',

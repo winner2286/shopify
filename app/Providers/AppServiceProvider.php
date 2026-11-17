@@ -2,6 +2,14 @@
 
 namespace App\Providers;
 
+use App\Mail\Transports\GoogleWebhookTransport;
+use App\Services\Ai\Contracts\LlmProviderInterface;
+use App\Services\Ai\Providers\GroqLlmProvider;
+use App\Services\Ai\Providers\OpenRouterLlmProvider;
+use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,13 +19,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(\App\Services\Ai\Contracts\LlmProviderInterface::class, function ($app) {
+        $this->app->bind(LlmProviderInterface::class, function ($app) {
             $provider = strtolower((string) config('services.ai.provider', 'groq'));
             if ($provider === 'openrouter') {
-                return new \App\Services\Ai\Providers\OpenRouterLlmProvider();
+                return new OpenRouterLlmProvider;
             }
 
-            return new \App\Services\Ai\Providers\GroqLlmProvider();
+            return new GroqLlmProvider;
         });
     }
 
@@ -26,19 +34,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->environment('production') || ($this->app->bound('request') && request()->header('X-Forwarded-Proto') === 'https')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+        TrustProxies::at(config('app.trusted_proxies', []));
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
         }
 
-        \Illuminate\Support\Facades\Mail::extend('google_webhook', function (array $config = []) {
-            return new \App\Mail\Transports\GoogleWebhookTransport(
+        Mail::extend('google_webhook', function (array $config = []) {
+            return new GoogleWebhookTransport(
                 (string) ($config['endpoint'] ?? $config['url'] ?? config('mail.mailers.google_webhook.endpoint', '')),
                 (string) ($config['token'] ?? config('mail.mailers.google_webhook.token', ''))
             );
         });
 
         // Pagination responsive Zanika (évite les flèches SVG géantes sans Tailwind)
-        \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.zanika');
-        \Illuminate\Pagination\Paginator::defaultSimpleView('vendor.pagination.zanika');
+        Paginator::defaultView('vendor.pagination.zanika');
+        Paginator::defaultSimpleView('vendor.pagination.zanika');
     }
 }

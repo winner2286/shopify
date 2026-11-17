@@ -6,6 +6,8 @@ use App\Models\AiGeneration;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Shop;
+use App\Services\ImageService;
+use App\Services\PublicMediaStorage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -14,9 +16,13 @@ use Illuminate\Support\Str;
 class AiVisionService
 {
     protected string $groqKey;
+
     protected string $groqModel;
+
     protected string $groqVisionModel;
+
     protected string $apiKey;
+
     protected string $model;
 
     public function __construct()
@@ -27,7 +33,7 @@ class AiVisionService
 
         $this->apiKey = (string) (config('services.openrouter.key')
             ?: env('OPENROUTER_API_KEY', ''));
-        
+
         $this->model = (string) (config('services.openrouter.model')
             ?: env('OPENROUTER_MODEL', 'google/gemini-2.5-flash'));
     }
@@ -42,12 +48,12 @@ class AiVisionService
         // Préparation du Data URL pour le LLM
         $dataUrl = str_starts_with($imageBinaryOrDataUrl, 'data:image')
             ? $imageBinaryOrDataUrl
-            : 'data:image/jpeg;base64,' . base64_encode($imageBinaryOrDataUrl);
+            : 'data:image/jpeg;base64,'.base64_encode($imageBinaryOrDataUrl);
 
         // Catégories existantes pour favoriser le matching
         $existingCategories = $shop->categories()->pluck('name')->all();
         $categoriesContext = ! empty($existingCategories)
-            ? 'Catégories déjà configurées dans cette boutique : ' . implode(', ', $existingCategories) . '.'
+            ? 'Catégories déjà configurées dans cette boutique : '.implode(', ', $existingCategories).'.'
             : 'Propose une catégorie cohérente.';
 
         $hintContext = $userHint ? "Indication fournie par le commerçant : \"{$userHint}\"." : '';
@@ -134,7 +140,7 @@ PROMPT;
 
                 $response = $groqClient->post('https://api.groq.com/openai/v1/chat/completions', $groqPayload);
                 if ($response->successful()) {
-                    $usedModel = 'groq:' . $this->groqVisionModel;
+                    $usedModel = 'groq:'.$this->groqVisionModel;
                 }
             }
 
@@ -158,7 +164,7 @@ PROMPT;
 
             if ($response->successful()) {
                 $rawContent = $response->json('choices.0.message.content') ?? '{}';
-                
+
                 // Nettoyage des balises markdown si présentes (```json ... ```)
                 $cleanJson = preg_replace('/^```(?:json)?\s*/i', '', trim($rawContent));
                 $cleanJson = preg_replace('/\s*```$/', '', $cleanJson);
@@ -192,11 +198,13 @@ PROMPT;
                 ], $data);
             }
 
-            Log::error('AiVisionService OpenRouter Error: ' . $response->body());
+            Log::error('AiVisionService OpenRouter Error: '.$response->body());
+
             return $this->fallbackProductData($userHint);
 
         } catch (\Throwable $e) {
-            Log::error('AiVisionService Exception: ' . $e->getMessage());
+            Log::error('AiVisionService Exception: '.$e->getMessage());
+
             return $this->fallbackProductData($userHint);
         }
     }
@@ -236,7 +244,7 @@ PROMPT;
 
         try {
             $response = null;
-            $usedModel = 'groq:' . $this->groqModel;
+            $usedModel = 'groq:'.$this->groqModel;
 
             // 1. Priorité Groq LPU
             if (! empty($this->groqKey)) {
@@ -252,7 +260,7 @@ PROMPT;
                 $response = $groqClient->post('https://api.groq.com/openai/v1/chat/completions', [
                     'model' => $this->groqModel,
                     'messages' => [
-                        ['role' => 'user', 'content' => $prompt]
+                        ['role' => 'user', 'content' => $prompt],
                     ],
                     'temperature' => 0.4,
                 ]);
@@ -272,7 +280,7 @@ PROMPT;
                 $response = $client->post('https://openrouter.ai/api/v1/chat/completions', [
                     'model' => $this->model,
                     'messages' => [
-                        ['role' => 'user', 'content' => $prompt]
+                        ['role' => 'user', 'content' => $prompt],
                     ],
                     'temperature' => 0.4,
                 ]);
@@ -305,7 +313,8 @@ PROMPT;
 
             return ['status' => 'error', 'message' => 'Erreur lors de l\'optimisation'];
         } catch (\Throwable $e) {
-            Log::error('optimizeExistingProduct Exception: ' . $e->getMessage());
+            Log::error('optimizeExistingProduct Exception: '.$e->getMessage());
+
             return ['status' => 'error', 'message' => $e->getMessage()];
         }
     }
@@ -411,10 +420,10 @@ PROMPT;
                 $imageBinary = $this->applyBadgeOverlay($imageBinary, $badgeText);
             }
 
-            $filename = 'ai_visual_' . uniqid() . '.' . $ext;
+            $filename = 'ai_visual_'.uniqid().'.'.$ext;
             $storageRelativePath = "shops/{$shop->id}/visuals/{$filename}";
 
-            Storage::disk('public')->put($storageRelativePath, $imageBinary);
+            app(PublicMediaStorage::class)->put($storageRelativePath, $imageBinary);
 
             // Si rattaché à un produit, enregistrer dans ProductImage
             $productImage = null;
@@ -469,8 +478,9 @@ PROMPT;
             ];
 
         } catch (\Throwable $e) {
-            Log::error('generateMarketingVisual Exception: ' . $e->getMessage());
-            return ['status' => 'error', 'message' => 'Erreur lors de la génération : ' . $e->getMessage()];
+            Log::error('generateMarketingVisual Exception: '.$e->getMessage());
+
+            return ['status' => 'error', 'message' => 'Erreur lors de la génération : '.$e->getMessage()];
         }
     }
 
@@ -500,9 +510,9 @@ PROMPT;
 
         if ($canUseGenerativeV2) {
             $editParams = $photoroom->mapStyleToEditParams($style, $photoroomSize);
+            $shop?->consumePhotoroomCredits(1);
             $edited = $photoroom->editProductImage($sourceImageBinary, $editParams);
             if ($edited !== null) {
-                $shop?->consumePhotoroomCredits(1);
 
                 return [
                     'binary' => $edited,
@@ -511,6 +521,10 @@ PROMPT;
                     'step' => 'image_studio_photoroom',
                     'ext' => 'png',
                 ];
+            }
+            if ($shop !== null) {
+                $shop->decrement('photoroom_credits_used');
+                $shop->refresh();
             }
         }
 
@@ -587,9 +601,6 @@ PROMPT;
         }
 
         $isPhotoroomCutout = ($cutout['method'] ?? '') === 'photoroom_v1_segment';
-        if ($isPhotoroomCutout) {
-            $shop?->consumePhotoroomCredits(1);
-        }
 
         return [
             'binary' => $binary,
@@ -689,14 +700,14 @@ PROMPT;
         }
 
         try {
-            $b64 = 'data:image/jpeg;base64,' . base64_encode($imageBinary);
+            $b64 = 'data:image/jpeg;base64,'.base64_encode($imageBinary);
             $spaceUrl = 'https://gokaygokay-inspyrenet-rembg.hf.space/gradio_api';
 
             $payload = json_encode([
                 'data' => [
                     ['url' => $b64],
-                    'Default'
-                ]
+                    'Default',
+                ],
             ]);
 
             $ch = curl_init("{$spaceUrl}/call/predict");
@@ -705,7 +716,7 @@ PROMPT;
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
             curl_setopt($ch, CURLOPT_TIMEOUT, 18);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
             $res = curl_exec($ch);
             $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
@@ -723,7 +734,7 @@ PROMPT;
             $ch = curl_init("{$spaceUrl}/call/predict/{$eventId}");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
             $stream = curl_exec($ch);
             curl_close($ch);
 
@@ -732,7 +743,7 @@ PROMPT;
                 $ch2 = curl_init($fileUrl);
                 curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch2, CURLOPT_FOLLOWLOCATION, true);
-                curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, true);
                 curl_setopt($ch2, CURLOPT_TIMEOUT, 20);
                 $img = curl_exec($ch2);
                 $code2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
@@ -743,7 +754,7 @@ PROMPT;
                 }
             }
         } catch (\Throwable $e) {
-            Log::warning('removeBackground error: ' . $e->getMessage());
+            Log::warning('removeBackground error: '.$e->getMessage());
         }
 
         return null;
@@ -765,7 +776,7 @@ PROMPT;
         try {
             $dataUrl = str_starts_with($imageBinary, 'data:image')
                 ? $imageBinary
-                : 'data:image/jpeg;base64,' . base64_encode($imageBinary);
+                : 'data:image/jpeg;base64,'.base64_encode($imageBinary);
 
             $client = Http::withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
@@ -784,11 +795,11 @@ PROMPT;
                         'content' => [
                             [
                                 'type' => 'text',
-                                'text' => 'Analyse ce produit e-commerce. Détermine précisément product_type parmi : "shoes" (chaussures, talons, baskets, mules, sandales, bottes), "clothing_hanging" (vêtements sur cintre : vestes, robes, chemises, manteaux), "clothing_flat" (vêtements pliés, t-shirts, pantalons), "cosmetics" (beauté, parfums, crèmes, flacons), "jewelry" (bijoux, montres), "bags" (sacs à main), ou "general" (autre). Donne aussi un titre commercial court en français. Réponds STRICTEMENT en JSON: {"product_type": "...", "title": "..."}'
+                                'text' => 'Analyse ce produit e-commerce. Détermine précisément product_type parmi : "shoes" (chaussures, talons, baskets, mules, sandales, bottes), "clothing_hanging" (vêtements sur cintre : vestes, robes, chemises, manteaux), "clothing_flat" (vêtements pliés, t-shirts, pantalons), "cosmetics" (beauté, parfums, crèmes, flacons), "jewelry" (bijoux, montres), "bags" (sacs à main), ou "general" (autre). Donne aussi un titre commercial court en français. Réponds STRICTEMENT en JSON: {"product_type": "...", "title": "..."}',
                             ],
-                            ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]]
-                        ]
-                    ]
+                            ['type' => 'image_url', 'image_url' => ['url' => $dataUrl]],
+                        ],
+                    ],
                 ],
                 'temperature' => 0.1,
                 'max_tokens' => 200,
@@ -803,23 +814,25 @@ PROMPT;
                 } elseif (! empty($parsed['category'])) {
                     $category = $parsed['category'];
                 }
-                if (! empty($parsed['title'])) $productTitle = $parsed['title'];
+                if (! empty($parsed['title'])) {
+                    $productTitle = $parsed['title'];
+                }
             }
         } catch (\Throwable $e) {
-            Log::warning('generateContextualStagings Vision meta failed: ' . $e->getMessage());
+            Log::warning('generateContextualStagings Vision meta failed: '.$e->getMessage());
         }
 
         // 2. Détourage IA chirurgical du produit réel
         $cutoutPng = $this->removeBackground($imageBinary);
 
-        /** @var \App\Services\ImageService $imageService */
-        $imageService = app(\App\Services\ImageService::class);
+        /** @var ImageService $imageService */
+        $imageService = app(ImageService::class);
 
         if ($cutoutPng) {
             // Sauvegarder le PNG transparent pour variantes futures
             $cutoutFilename = "cutout_{$uniq}.png";
             $cutoutPath = "shops/{$shop->id}/products_ai/{$cutoutFilename}";
-            Storage::disk('public')->put($cutoutPath, $cutoutPng);
+            app(PublicMediaStorage::class)->put($cutoutPath, $cutoutPng);
 
             $cutoutGd = @imagecreatefromstring($cutoutPng);
             if ($cutoutGd) {
@@ -830,7 +843,7 @@ PROMPT;
                     $lifePath = "shops/{$shop->id}/products_ai/{$lifeFilename}";
                     $tmpL = tempnam(sys_get_temp_dir(), 'ai_lf_');
                     imagejpeg($lifestyle['canvas'], $tmpL, 94);
-                    Storage::disk('public')->put($lifePath, file_get_contents($tmpL));
+                    app(PublicMediaStorage::class)->put($lifePath, file_get_contents($tmpL));
                     @unlink($tmpL);
                     imagedestroy($lifestyle['canvas']);
 
@@ -854,7 +867,7 @@ PROMPT;
                     $whitePath = "shops/{$shop->id}/products_ai/{$whiteFilename}";
                     $tmpW = tempnam(sys_get_temp_dir(), 'ai_w_');
                     imagejpeg($whitePackshot, $tmpW, 94);
-                    Storage::disk('public')->put($whitePath, file_get_contents($tmpW));
+                    app(PublicMediaStorage::class)->put($whitePath, file_get_contents($tmpW));
                     @unlink($tmpW);
                     imagedestroy($whitePackshot);
 
@@ -878,7 +891,7 @@ PROMPT;
                     $ambientPath = "shops/{$shop->id}/products_ai/{$ambientFilename}";
                     $tmpA = tempnam(sys_get_temp_dir(), 'ai_a_');
                     imagejpeg($ambientPackshot, $tmpA, 94);
-                    Storage::disk('public')->put($ambientPath, file_get_contents($tmpA));
+                    app(PublicMediaStorage::class)->put($ambientPath, file_get_contents($tmpA));
                     @unlink($tmpA);
                     imagedestroy($ambientPackshot);
 
@@ -909,7 +922,7 @@ PROMPT;
                 $fallbackPath = "shops/{$shop->id}/products_ai/{$fallbackFilename}";
                 $tmpF = tempnam(sys_get_temp_dir(), 'ai_fb_');
                 imagejpeg($studio, $tmpF, 93);
-                Storage::disk('public')->put($fallbackPath, file_get_contents($tmpF));
+                app(PublicMediaStorage::class)->put($fallbackPath, file_get_contents($tmpF));
                 @unlink($tmpF);
                 imagedestroy($studio);
 
@@ -937,10 +950,11 @@ PROMPT;
     protected function fallbackProductData(?string $userHint): array
     {
         $title = $userHint ? ucfirst($userHint) : 'Nouvel Article Tendance';
+
         return [
             'status' => 'fallback',
             'title' => $title,
-            'description' => "Découvrez cet article exceptionnel alliant élégance, confort et confection soignée. Parfait pour rehausser votre style au quotidien.",
+            'description' => 'Découvrez cet article exceptionnel alliant élégance, confort et confection soignée. Parfait pour rehausser votre style au quotidien.',
             'visible_features' => ['Confection soignée', 'Finition premium', 'Design contemporain'],
             'category_name' => 'Nouveautés',
             'price_fcfa' => 12500,

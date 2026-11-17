@@ -14,6 +14,7 @@ return [
     'shop_id' => env('GENIUSPAY_SHOP_ID', env('FEEXPAY_SHOP_ID')),
 
     'token' => env('GENIUSPAY_TOKEN', env('FEEXPAY_TOKEN')),
+    'sdk_token' => env('GENIUSPAY_SDK_TOKEN', env('FEEXPAY_SDK_TOKEN')),
 
     'mode' => env('GENIUSPAY_MODE', env('FEEXPAY_MODE', 'SANDBOX')), // 'SANDBOX' ou 'LIVE'
 
@@ -21,4 +22,3 @@ return [
 
     'currency' => env('GENIUSPAY_CURRENCY', env('FEEXPAY_CURRENCY', 'XOF')),
 ];
-

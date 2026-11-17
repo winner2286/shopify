@@ -18,8 +18,8 @@ class CreateProductFromPhotoTool implements AiToolInterface
         protected ?AiVisionService $visionService = null,
         protected ?ActionTokenService $tokenService = null
     ) {
-        $this->visionService = $visionService ?? new AiVisionService();
-        $this->tokenService = $tokenService ?? new ActionTokenService();
+        $this->visionService = $visionService ?? new AiVisionService;
+        $this->tokenService = $tokenService ?? new ActionTokenService;
     }
 
     public function name(): string
@@ -105,7 +105,7 @@ class CreateProductFromPhotoTool implements AiToolInterface
             $comparePrice = ! empty($analysis['compare_at_price_fcfa']) ? (int) $analysis['compare_at_price_fcfa'] : null;
             $categoryName = ! empty($analysis['category_name']) ? trim((string) $analysis['category_name']) : ($shop->business_category ?: 'Général');
             $stock = isset($arguments['stock']) && is_numeric($arguments['stock']) ? max(0, (int) $arguments['stock']) : 10;
-            $sku = 'ART-' . strtoupper(Str::random(6));
+            $sku = 'ART-'.strtoupper(Str::random(6));
 
             $productPayload = [
                 'title' => $title,
@@ -121,7 +121,7 @@ class CreateProductFromPhotoTool implements AiToolInterface
             $initiator = $user ?? $shop->owner ?? User::first();
             $token = $this->tokenService->generateToken($shop, $initiator, $this->name(), $productPayload);
 
-            $formattedPrice = number_format($finalPrice, 0, ',', ' ') . " {$shop->currency}";
+            $formattedPrice = number_format($finalPrice, 0, ',', ' ')." {$shop->currency}";
 
             return [
                 'status' => 'action_required',
@@ -155,12 +155,15 @@ class CreateProductFromPhotoTool implements AiToolInterface
             'status' => 'active',
         ];
 
+        if (empty($token)) {
+            return ['status' => 'security_rejection', 'error' => 'Un jeton signé est obligatoire pour confirmer cette action.'];
+        }
         if (! empty($token)) {
             $validation = $this->tokenService->validateToken($token, $shop, $executor, $this->name(), $actionParams);
             if (! $validation['valid']) {
                 return [
                     'status' => 'security_rejection',
-                    'error' => "Refus de sécurité : " . ($validation['error'] ?? 'Jeton invalide.'),
+                    'error' => 'Refus de sécurité : '.($validation['error'] ?? 'Jeton invalide.'),
                 ];
             }
         }
@@ -174,7 +177,7 @@ class CreateProductFromPhotoTool implements AiToolInterface
                     'name' => $actionParams['category_name'],
                 ],
                 [
-                    'slug' => Str::slug($actionParams['category_name']) . '-' . Str::random(4),
+                    'slug' => Str::slug($actionParams['category_name']).'-'.Str::random(4),
                     'is_visible' => true,
                     'display_order' => 1,
                 ]
@@ -183,7 +186,7 @@ class CreateProductFromPhotoTool implements AiToolInterface
 
         // Création du produit
         $baseSlug = Str::slug($actionParams['title']);
-        $uniqueSlug = $baseSlug . '-' . Str::lower(Str::random(5));
+        $uniqueSlug = $baseSlug.'-'.Str::lower(Str::random(5));
 
         $product = Product::withoutGlobalScopes()->create([
             'shop_id' => $shop->id,
@@ -214,7 +217,7 @@ class CreateProductFromPhotoTool implements AiToolInterface
             ]);
         }
 
-        $formattedPrice = number_format($product->price, 0, ',', ' ') . " {$shop->currency}";
+        $formattedPrice = number_format($product->price, 0, ',', ' ')." {$shop->currency}";
 
         return [
             'status' => 'success',

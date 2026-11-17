@@ -45,7 +45,7 @@ COPY docker/php/custom.ini /usr/local/etc/php/conf.d/custom.ini
 COPY composer.json composer.lock* /var/www/html/
 
 # Installation des dépendances Composer de production (sans vendor dev)
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts || true
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
 # Copie du code source complet
 COPY . /var/www/html

@@ -80,6 +80,8 @@ services:
         sync: false
       - key: FEEXPAY_TOKEN
         sync: false
+      - key: FEEXPAY_SDK_TOKEN
+        sync: false
       - key: FEEXPAY_MODE
         value: "SANDBOX"
       - key: FEEXPAY_BASE_URL

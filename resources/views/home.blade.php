@@ -469,7 +469,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
             <ul class="pillar-checklist">
                 <li><x-icon name="check" :size="16" /> <strong>Design responsive optimisé</strong> <span class="desktop-only">pour les connexions mobiles 3G/4G</span></li>
                 <li><x-icon name="check" :size="16" /> <strong>Catalogue & stocks en temps réel</strong> <span class="desktop-only">avec variantes de tailles et couleurs</span></li>
-                <li><x-icon name="check" :size="16" /> <strong>Adresse web personnalisée</strong> <span class="desktop-only">ou sous-domaine offert à vie (nom.zanika.tg)</span></li>
+                <li><x-icon name="check" :size="16" /> <strong>Lien de boutique personnalisé</strong> <span class="desktop-only">à partager avec vos clients (/b/ma-boutique)</span></li>
                 <li><x-icon name="check" :size="16" /> <strong>Fiches produits en 1 clic</strong> <span class="desktop-only">grâce à l'intelligence artificielle</span></li>
             </ul>
             <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Créer ma boutique maintenant →</a>

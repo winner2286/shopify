@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\Contracts\AiToolInterface;
+use App\Support\SearchHelper;
 
 class DispatchOrderToCourierTool implements AiToolInterface
 {
@@ -60,7 +61,7 @@ class DispatchOrderToCourierTool implements AiToolInterface
         if ($orderId > 0) {
             $query->where('id', $orderId);
         } elseif (! empty($orderNumber)) {
-            $query->where('order_number', \App\Support\SearchHelper::likeOperator(), "%{$orderNumber}%");
+            $query->where('order_number', SearchHelper::likeOperator(), "%{$orderNumber}%");
         } else {
             // Prend la dernière commande en attente
             $query->where('status', Order::STATUS_PENDING)->latest();
@@ -70,20 +71,17 @@ class DispatchOrderToCourierTool implements AiToolInterface
 
         if (! $order) {
             return [
-                'error' => "Commande introuvable pour cette boutique.",
+                'error' => 'Commande introuvable pour cette boutique.',
             ];
         }
 
         // Passage automatique à confirmée si demandé
-        if ($markConfirmed && $order->status === Order::STATUS_PENDING) {
-            $order->status = Order::STATUS_CONFIRMED;
-            $order->save();
-        }
+        // Generating a delivery draft does not authorize a status change.
 
         // Construction du message WhatsApp prêt à envoyer au livreur
-        $itemsText = $order->items->map(fn($i) => "• {$i->product_title} x{$i->quantity}")->implode("\n");
+        $itemsText = $order->items->map(fn ($i) => "• {$i->product_title} x{$i->quantity}")->implode("\n");
         $address = $order->delivery_address ?: ($order->delivery_zone_name ?: 'À préciser avec le client');
-        $amountToCollect = number_format($order->total, 0, ',', ' ') . " {$shop->currency}";
+        $amountToCollect = number_format($order->total, 0, ',', ' ')." {$shop->currency}";
 
         $whatsappText = "📦 *COURSE DE LIVRAISON ZANIKA*\n";
         $whatsappText .= "Commande : *{$order->order_number}*\n";
@@ -92,9 +90,9 @@ class DispatchOrderToCourierTool implements AiToolInterface
         $whatsappText .= "Zone / Repère : {$address}\n\n";
         $whatsappText .= "Articles :\n{$itemsText}\n\n";
         $whatsappText .= "💰 *Montant à encaisser : {$amountToCollect}*\n";
-        $whatsappText .= "Merci de confirmer la prise en charge !";
+        $whatsappText .= 'Merci de confirmer la prise en charge !';
 
-        $whatsappUrl = "https://wa.me/?text=" . urlencode($whatsappText);
+        $whatsappUrl = 'https://wa.me/?text='.urlencode($whatsappText);
 
         return [
             'status' => 'success',

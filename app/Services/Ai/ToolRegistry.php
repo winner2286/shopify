@@ -5,30 +5,30 @@ namespace App\Services\Ai;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\Contracts\AiToolInterface;
+use App\Services\Ai\Tools\AdjustProductPricePercentageTool;
+use App\Services\Ai\Tools\AnalyzeCodRiskTool;
+use App\Services\Ai\Tools\AnswerCustomerInquiryTool;
+use App\Services\Ai\Tools\CompareSalesPeriodsTool;
+use App\Services\Ai\Tools\CreateProductFromPhotoTool;
+use App\Services\Ai\Tools\CreateProductTool;
+use App\Services\Ai\Tools\DispatchOrderToCourierTool;
 use App\Services\Ai\Tools\DraftCustomerMessageTool;
+use App\Services\Ai\Tools\GenerateMarketingCopyTool;
+use App\Services\Ai\Tools\GenerateVideoAdScriptTool;
+use App\Services\Ai\Tools\GetBusinessRecommendationsTool;
 use App\Services\Ai\Tools\GetCatalogOverviewTool;
 use App\Services\Ai\Tools\GetInventoryAlertsTool;
 use App\Services\Ai\Tools\GetOrderDetailsTool;
 use App\Services\Ai\Tools\GetOrdersSummaryTool;
-use App\Services\Ai\Tools\GetSalesAnalyticsTool;
-use App\Services\Ai\Tools\SearchProductsTool;
-use App\Services\Ai\Tools\AnalyzeCodRiskTool;
-use App\Services\Ai\Tools\AnswerCustomerInquiryTool;
-use App\Services\Ai\Tools\CompareSalesPeriodsTool;
-use App\Services\Ai\Tools\GenerateMarketingCopyTool;
-use App\Services\Ai\Tools\GetBusinessRecommendationsTool;
 use App\Services\Ai\Tools\GetPendingCodReviewTool;
-use App\Services\Ai\Tools\UpdateProductStockOrPriceTool;
-use App\Services\Ai\Tools\AdjustProductPricePercentageTool;
+use App\Services\Ai\Tools\GetSalesAnalyticsTool;
 use App\Services\Ai\Tools\GetUnderperformingProductsTool;
-use App\Services\Ai\Tools\DispatchOrderToCourierTool;
 use App\Services\Ai\Tools\GetWeeklySalesReportTool;
-use App\Services\Ai\Tools\CreateProductTool;
-use App\Services\Ai\Tools\UpdateOrderStatusTool;
-use App\Services\Ai\Tools\ManageShippingZonesTool;
 use App\Services\Ai\Tools\ManageDiscountCodesTool;
-use App\Services\Ai\Tools\GenerateVideoAdScriptTool;
-use App\Services\Ai\Tools\CreateProductFromPhotoTool;
+use App\Services\Ai\Tools\ManageShippingZonesTool;
+use App\Services\Ai\Tools\SearchProductsTool;
+use App\Services\Ai\Tools\UpdateOrderStatusTool;
+use App\Services\Ai\Tools\UpdateProductStockOrPriceTool;
 use Illuminate\Support\Facades\Log;
 
 class ToolRegistry
@@ -46,30 +46,30 @@ class ToolRegistry
     protected function registerDefaultTools(): void
     {
         $defaultTools = [
-            new GetCatalogOverviewTool(),
-            new SearchProductsTool(),
-            new CreateProductTool(),
-            new CreateProductFromPhotoTool(),
-            new GetOrdersSummaryTool(),
-            new GetOrderDetailsTool(),
-            new UpdateOrderStatusTool(),
-            new GetSalesAnalyticsTool(),
-            new CompareSalesPeriodsTool(),
-            new GetBusinessRecommendationsTool(),
-            new GenerateMarketingCopyTool(),
-            new GenerateVideoAdScriptTool(),
-            new GetInventoryAlertsTool(),
-            new DraftCustomerMessageTool(),
-            new UpdateProductStockOrPriceTool(),
-            new AnalyzeCodRiskTool(),
-            new GetPendingCodReviewTool(),
-            new AnswerCustomerInquiryTool(),
-            new AdjustProductPricePercentageTool(),
-            new GetUnderperformingProductsTool(),
-            new DispatchOrderToCourierTool(),
-            new GetWeeklySalesReportTool(),
-            new ManageShippingZonesTool(),
-            new ManageDiscountCodesTool(),
+            new GetCatalogOverviewTool,
+            new SearchProductsTool,
+            new CreateProductTool,
+            new CreateProductFromPhotoTool,
+            new GetOrdersSummaryTool,
+            new GetOrderDetailsTool,
+            new UpdateOrderStatusTool,
+            new GetSalesAnalyticsTool,
+            new CompareSalesPeriodsTool,
+            new GetBusinessRecommendationsTool,
+            new GenerateMarketingCopyTool,
+            new GenerateVideoAdScriptTool,
+            new GetInventoryAlertsTool,
+            new DraftCustomerMessageTool,
+            new UpdateProductStockOrPriceTool,
+            new AnalyzeCodRiskTool,
+            new GetPendingCodReviewTool,
+            new AnswerCustomerInquiryTool,
+            new AdjustProductPricePercentageTool,
+            new GetUnderperformingProductsTool,
+            new DispatchOrderToCourierTool,
+            new GetWeeklySalesReportTool,
+            new ManageShippingZonesTool,
+            new ManageDiscountCodesTool,
         ];
 
         foreach ($defaultTools as $tool) {
@@ -100,6 +100,8 @@ class ToolRegistry
         $schemas = [];
         foreach ($this->tools as $tool) {
             $params = $tool->parametersSchema();
+            $params['properties'] = (array) ($params['properties'] ?? []);
+            unset($params['properties']['confirmed_by_user'], $params['properties']['action_token']);
             if (isset($params['properties']) && is_array($params['properties']) && empty($params['properties'])) {
                 $params['properties'] = (object) [];
             }
@@ -119,12 +121,20 @@ class ToolRegistry
     /**
      * Exécute un outil de manière étanche pour une boutique donnée.
      */
+    public function executeFromModel(string $name, Shop $shop, array $arguments, ?User $user = null): array
+    {
+        unset($arguments['confirmed_by_user'], $arguments['action_token']);
+
+        return $this->execute($name, $shop, $arguments, $user);
+    }
+
     public function execute(string $name, Shop $shop, array $arguments, ?User $user = null): array
     {
         $tool = $this->get($name);
 
         if (! $tool) {
             Log::warning("ToolRegistry: tentative d'appel d'un outil inconnu '{$name}'");
+
             return [
                 'error' => "L'outil '{$name}' n'est pas disponible dans le système.",
             ];
@@ -133,12 +143,12 @@ class ToolRegistry
         try {
             return $tool->execute($shop, $arguments, $user);
         } catch (\Throwable $e) {
-            Log::error("ToolRegistry exception lors de l'exécution de {$name}: " . $e->getMessage(), [
+            Log::error("ToolRegistry exception lors de l'exécution de {$name}: ".$e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
             ]);
 
             return [
-                'error' => "Erreur lors de l'exécution de l'outil {$name}: " . $e->getMessage(),
+                'error' => "L’outil {$name} n’a pas pu terminer cette opération. Réessayez ou contactez le support.",
             ];
         }
     }

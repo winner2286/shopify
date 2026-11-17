@@ -68,7 +68,11 @@
         <div class="card" style="padding:1.25rem">
             <div style="font-size:.85rem;color:var(--text-soft)">Volume d'Affaires Global (GMV)</div>
             <div style="font-size:1.65rem;font-weight:700;font-family:var(--font-display);margin:.2rem 0" class="gradient-text">
-                {{ number_format($totalGmv, 0, ',', ' ') }} FCFA
+                @forelse ($gmvByCurrency as $currency => $amount)
+                    <div>{{ number_format($amount, 0, ',', ' ') }} {{ config('platform.currencies.'.$currency.'.symbol', $currency) }}</div>
+                @empty
+                    0 FCFA
+                @endforelse
             </div>
             <div style="font-size:.8rem;color:var(--text-soft)">{{ $totalOrders }} commandes sur le réseau</div>
         </div>

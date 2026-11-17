@@ -25,6 +25,29 @@ class Subscription extends Model
         return $this->status === 'trial';
     }
 
+    public function grantsAccess(): bool
+    {
+        if (! in_array($this->status, ['active', 'trial', 'grace'], true)) {
+            return false;
+        }
+
+        if ($this->starts_at && $this->starts_at->isFuture()) {
+            return false;
+        }
+
+        if ($this->ends_at && ! $this->ends_at->isFuture()) {
+            return false;
+        }
+
+        if ($this->isTrial()) {
+            return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
+        }
+
+        // Existing manually managed active subscriptions may have no end date.
+        // Grace periods, however, must always have an explicit deadline.
+        return $this->status !== 'grace' || $this->ends_at !== null;
+    }
+
     public function isExpiringSoon(int $days = 3): bool
     {
         if (! $this->isTrial() || ! $this->trial_ends_at) {

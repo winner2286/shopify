@@ -38,7 +38,7 @@ class PhotoroomIntegrationTest extends TestCase
             'business_category' => 'mode',
             'description' => 'Boutique de mode et accessoires contemporains.',
             'status' => Shop::PUBLISHED,
-            'subdomain' => 'maison-pr-' . $user->id,
+            'subdomain' => 'maison-pr-'.$user->id,
         ]);
 
         return [$user, $shop];
@@ -133,7 +133,7 @@ class PhotoroomIntegrationTest extends TestCase
             'https://image-api.photoroom.com/v2/edit' => Http::response($fakeStudioPng, 200, ['Content-Type' => 'image/png']),
         ]);
 
-        $service = new PhotoroomService();
+        $service = new PhotoroomService;
         $this->assertTrue($service->isConfigured());
 
         $source = $this->makePngBinary(250, 250, false);
@@ -160,7 +160,7 @@ class PhotoroomIntegrationTest extends TestCase
             'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
         ]);
 
-        $service = new PhotoroomService();
+        $service = new PhotoroomService;
         $result = $service->studioPackshot($this->makePngBinary(250, 250), 'studio_white');
 
         $this->assertNotNull($result);
@@ -181,7 +181,7 @@ class PhotoroomIntegrationTest extends TestCase
             'https://image-api.photoroom.com/v2/edit' => Http::response($this->makePngBinary(1000, 1000, false), 200),
         ]);
 
-        $studio = new ProductStudioService();
+        $studio = new ProductStudioService;
         $prResult = $studio->processProductPhoto($shop, $source, 'Sac à main cuir');
 
         $this->assertSame('photoroom-ai', $prResult['engine']);
@@ -191,7 +191,7 @@ class PhotoroomIntegrationTest extends TestCase
 
         // 2. Fallback sans clé API
         config(['services.photoroom.key' => '']);
-        $localStudio = new ProductStudioService();
+        $localStudio = new ProductStudioService;
         $localResult = $localStudio->processProductPhoto($shop, $source, 'Sac à main cuir');
 
         $this->assertSame('zanika-product-studio', $localResult['engine']);
@@ -448,7 +448,7 @@ class PhotoroomIntegrationTest extends TestCase
             'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
         ]);
 
-        $service = new PhotoroomService();
+        $service = new PhotoroomService;
         $this->assertTrue($service->isConfigured());
 
         $cutout = $service->removeBackground($this->makePngBinary(180, 180, false));
@@ -470,7 +470,7 @@ class PhotoroomIntegrationTest extends TestCase
             'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
         ]);
 
-        $service = new PhotoroomService();
+        $service = new PhotoroomService;
         $cutout = $service->removeBackground($this->makePngBinary(180, 180, false));
         $this->assertSame($fakeCutoutPng, $cutout);
 
@@ -873,7 +873,7 @@ class PhotoroomIntegrationTest extends TestCase
             return Http::response(['error' => 'Unauthorized'], 401);
         });
 
-        $service = new PhotoroomService();
+        $service = new PhotoroomService;
         $source = $this->makePngBinary(200, 200, false);
 
         $cutout = $service->removeBackground($source);
@@ -922,7 +922,7 @@ class PhotoroomIntegrationTest extends TestCase
         $this->assertSame(0, $centerAlpha, 'Aucun trou blanc ne doit apparaître à l\'intérieur d\'un vêtement gris.');
     }
 
-    public function test_verify_quality_succeeds_even_if_photoroom_credit_column_requires_auto_repair(): void
+    public function test_missing_quota_column_disables_paid_photoroom_without_runtime_schema_changes(): void
     {
         Storage::fake('public');
         config(['services.photoroom.key' => 'pr_autorepair_key']);
@@ -952,11 +952,11 @@ class PhotoroomIntegrationTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('status', 'success')
-            ->assertJsonPath('engine', 'photoroom-ai');
+            ->assertJsonPath('engine', 'zanika-product-studio');
 
-        $this->assertTrue(Schema::hasColumn('shops', 'photoroom_credits_used'));
+        $this->assertFalse(Schema::hasColumn('shops', 'photoroom_credits_used'));
         $shop->refresh();
-        $this->assertSame(1, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertFalse($shop->hasEnoughPhotoroomCredits());
         $this->assertNotEmpty($response->json('variations'));
     }
 }

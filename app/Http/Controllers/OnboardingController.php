@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Shop;
 use App\Services\AiGenerationService;
+use App\Services\ImageService;
+use App\Services\PublicMediaStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class OnboardingController extends Controller
 {
@@ -150,10 +151,13 @@ class OnboardingController extends Controller
         ]);
 
         $enhancementMode = $request->input('photo_enhancement', $request->input('photo_enhancement_mode', 'studio'));
+        if (count($shop->onboarding_data['uploaded_photos'] ?? []) + count($request->file('photos', [])) > 20) {
+            throw ValidationException::withMessages(['photos' => 'Vous pouvez conserver au maximum 20 photos pour cette génération.']);
+        }
 
         $storedPaths = [];
         if ($request->hasFile('photos')) {
-            $imageService = app(\App\Services\ImageService::class);
+            $imageService = app(ImageService::class);
             foreach ($request->file('photos') as $file) {
                 $processed = $imageService->processAndStore($file, "shops/{$shop->id}/onboarding", $enhancementMode);
                 $storedPaths[] = $processed['path'];
@@ -221,10 +225,10 @@ class OnboardingController extends Controller
         if ($chosen) {
             $data = $shop->onboarding_data ?? [];
             $data['chosen_logo'] = $chosen;
-            
+
             // Si un logo customisé existait sur le disque, on l'efface pour activer le logo IA sélectionné
-            if ($shop->logo_path && Storage::disk('public')->exists($shop->logo_path)) {
-                Storage::disk('public')->delete($shop->logo_path);
+            if ($shop->logo_path) {
+                app(PublicMediaStorage::class)->delete($shop->logo_path);
             }
 
             $shop->update([
@@ -251,12 +255,12 @@ class OnboardingController extends Controller
             'custom_logo.max' => 'La taille maximale autorisée est de 5 Mo.',
         ]);
 
-        $imageService = app(\App\Services\ImageService::class);
+        $imageService = app(ImageService::class);
         $processed = $imageService->processAndStore($request->file('custom_logo'), "shops/{$shop->id}/logo");
 
-        if (!empty($processed['path'])) {
-            if ($shop->logo_path && Storage::disk('public')->exists($shop->logo_path)) {
-                Storage::disk('public')->delete($shop->logo_path);
+        if (! empty($processed['path'])) {
+            if ($shop->logo_path) {
+                app(PublicMediaStorage::class)->delete($shop->logo_path);
             }
 
             $data = $shop->onboarding_data ?? [];
@@ -264,6 +268,7 @@ class OnboardingController extends Controller
 
             $shop->update([
                 'logo_path' => $processed['path'],
+                'logo_data' => $processed['image_data'] ?? null,
                 'onboarding_data' => $data,
             ]);
         }

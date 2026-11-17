@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DiscountCode;
 use App\Models\Order;
 use App\Models\Shop;
 use App\Services\CartService;
 use App\Services\OrderService;
+use App\Services\WhatsAppNotificationService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class CheckoutController extends Controller
 {
@@ -58,7 +59,7 @@ class CheckoutController extends Controller
         $discountAmount = 0;
         $sessionCode = trim((string) session("checkout_promo_{$shop->id}", ''));
         if ($sessionCode !== '') {
-            $candidate = \App\Models\DiscountCode::withoutGlobalScopes()
+            $candidate = DiscountCode::withoutGlobalScopes()
                 ->where('shop_id', $shop->id)
                 ->whereRaw('UPPER(code) = ?', [strtoupper($sessionCode)])
                 ->first();
@@ -90,7 +91,7 @@ class CheckoutController extends Controller
 
         $codeInput = strtoupper(trim((string) $request->input('promo_code')));
 
-        $discount = \App\Models\DiscountCode::withoutGlobalScopes()
+        $discount = DiscountCode::withoutGlobalScopes()
             ->where('shop_id', $shop->id)
             ->whereRaw('UPPER(code) = ?', [$codeInput])
             ->first();
@@ -99,7 +100,8 @@ class CheckoutController extends Controller
             session()->forget("checkout_promo_{$shop->id}");
 
             if ($discount && $discount->min_order_amount && $subtotal < $discount->min_order_amount) {
-                $minFormatted = number_format($discount->min_order_amount, 0, ',', ' ') . ' ' . $shop->currencyLabel();
+                $minFormatted = number_format($discount->min_order_amount, 0, ',', ' ').' '.$shop->currencyLabel();
+
                 return back()->withInput()->with('promo_error', "Minimum d'achat requis : {$minFormatted}.");
             }
 
@@ -108,7 +110,7 @@ class CheckoutController extends Controller
 
         session(["checkout_promo_{$shop->id}" => $discount->code]);
 
-        return back()->withInput()->with('promo_status', "Code « {$discount->code} » appliqué (-" . number_format($discount->calculateDiscount($subtotal), 0, ',', ' ') . ' ' . $shop->currencyLabel() . ').');
+        return back()->withInput()->with('promo_status', "Code « {$discount->code} » appliqué (-".number_format($discount->calculateDiscount($subtotal), 0, ',', ' ').' '.$shop->currencyLabel().').');
     }
 
     /**
@@ -128,6 +130,7 @@ class CheckoutController extends Controller
     public function process(Request $request, string $subdomain): RedirectResponse
     {
         $shop = $this->resolveShop($subdomain);
+        abort_unless($shop->isPublished(), 403, 'Cette boutique ne prend pas de commandes actuellement.');
 
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:100'],
@@ -201,7 +204,7 @@ class CheckoutController extends Controller
         $cartCount = $this->cartService->getItemsCount($shop);
 
         // Lien direct WhatsApp commerçant enrichi pour confirmation
-        $waUrl = app(\App\Services\WhatsAppNotificationService::class)->getCustomerToMerchantWhatsAppUrl($order);
+        $waUrl = app(WhatsAppNotificationService::class)->getCustomerToMerchantWhatsAppUrl($order);
 
         return view('storefront.order_confirmation', compact('shop', 'order', 'payment', 'cartCount', 'waUrl'));
     }
@@ -227,7 +230,7 @@ class CheckoutController extends Controller
             abort(404);
         }
 
-        $txnId = 'TXN-' . date('Ymd') . '-' . strtoupper(substr(md5((string) microtime()), 0, 8));
+        $txnId = 'TXN-'.date('Ymd').'-'.strtoupper(substr(md5((string) microtime()), 0, 8));
         $this->orderService->confirmPayment($order, $txnId);
 
         return back()->with('status', 'Paiement Mobile Money validé avec succès ! Votre commande est désormais confirmée.');

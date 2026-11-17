@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Order;
-use App\Models\Shop;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -16,6 +15,7 @@ class WhatsAppNotificationService
     public function formatMerchantAlert(Order $order): string
     {
         $shop = $order->shop;
+        $currencyLabel = $order->currencyLabel();
         $dateStr = $order->created_at ? $order->created_at->format('d/m/Y à H:i') : date('d/m/Y à H:i');
 
         // Liste des articles
@@ -23,37 +23,37 @@ class WhatsAppNotificationService
         foreach ($order->items as $item) {
             $unitPrice = number_format($item->unit_price, 0, ',', ' ');
             $totalPrice = number_format($item->total_price, 0, ',', ' ');
-            $itemsText .= "• {$item->quantity}x *{$item->product_title}* ({$totalPrice} FCFA)\n";
+            $itemsText .= "• {$item->quantity}x *{$item->product_title}* ({$totalPrice} {$currencyLabel})\n";
         }
 
         $subtotal = number_format($order->subtotal, 0, ',', ' ');
-        $shipping = $order->shipping_cost === 0 ? 'Gratuit' : number_format($order->shipping_cost, 0, ',', ' ') . ' FCFA';
+        $shipping = $order->shipping_cost === 0 ? 'Gratuit' : number_format($order->shipping_cost, 0, ',', ' ').(' '.$currencyLabel);
         $total = number_format($order->total, 0, ',', ' ');
         $notes = $order->delivery_notes ? "\n📝 *Note client :* {$order->delivery_notes}" : '';
         $orderUrl = route('orders.show', $order);
 
         return "🛍️ *NOUVELLE COMMANDE REÇUE !*\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "🏪 Boutique : *{$shop->name}*\n"
-            . "🔖 N° Commande : *#{$order->order_number}*\n"
-            . "📅 Date : {$dateStr}\n\n"
-            . "👤 *CLIENT :*\n"
-            . "• Nom : *{$order->customer_name}*\n"
-            . "• Téléphone : *{$order->customer_phone}*\n"
-            . "• Lieu : *{$order->delivery_zone_name}*\n"
-            . "• Adresse : {$order->delivery_address}"
-            . "{$notes}\n\n"
-            . "📦 *ARTICLES COMMANDÉS :*\n"
-            . "{$itemsText}"
-            . "────────────────────\n"
-            . "💰 Sous-total : {$subtotal} FCFA\n"
-            . "🚚 Livraison : {$shipping}\n"
-            . "💵 *TOTAL À ENCAISSER : {$total} FCFA*\n"
-            . "💳 Mode de règlement : *{$order->payment_method_label}*\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "👉 Traiter la commande sur Zanika :\n"
-            . "{$orderUrl}\n\n"
-            . "🚀 _Zanika — Le commerce à votre manière_";
+            ."━━━━━━━━━━━━━━━━━━━━\n"
+            ."🏪 Boutique : *{$shop->name}*\n"
+            ."🔖 N° Commande : *#{$order->order_number}*\n"
+            ."📅 Date : {$dateStr}\n\n"
+            ."👤 *CLIENT :*\n"
+            ."• Nom : *{$order->customer_name}*\n"
+            ."• Téléphone : *{$order->customer_phone}*\n"
+            ."• Lieu : *{$order->delivery_zone_name}*\n"
+            ."• Adresse : {$order->delivery_address}"
+            ."{$notes}\n\n"
+            ."📦 *ARTICLES COMMANDÉS :*\n"
+            ."{$itemsText}"
+            ."────────────────────\n"
+            ."💰 Sous-total : {$subtotal} {$currencyLabel}\n"
+            ."🚚 Livraison : {$shipping}\n"
+            ."💵 *TOTAL À ENCAISSER : {$total} {$currencyLabel}*\n"
+            ."💳 Mode de règlement : *{$order->payment_method_label}*\n"
+            ."━━━━━━━━━━━━━━━━━━━━\n"
+            ."👉 Traiter la commande sur Zanika :\n"
+            ."{$orderUrl}\n\n"
+            .'🚀 _Zanika — Le commerce à votre manière_';
     }
 
     /**
@@ -62,16 +62,17 @@ class WhatsAppNotificationService
     public function formatCustomerToMerchantMessage(Order $order): string
     {
         $shop = $order->shop;
+        $currencyLabel = $order->currencyLabel();
         $total = number_format($order->total, 0, ',', ' ');
 
         return "Bonjour *{$shop->name}* ! 👋\n\n"
-            . "Je viens de passer la commande *#{$order->order_number}* d'un montant de *{$total} FCFA* sur votre boutique en ligne.\n\n"
-            . "👤 *Mes coordonnées :*\n"
-            . "• Nom : {$order->customer_name}\n"
-            . "• Téléphone : {$order->customer_phone}\n"
-            . "• Livraison : {$order->delivery_zone_name} ({$order->delivery_address})\n"
-            . "• Règlement : {$order->payment_method_label}\n\n"
-            . "Merci de me confirmer la prise en compte de ma commande et le délai de livraison ! 🙏";
+            ."Je viens de passer la commande *#{$order->order_number}* d'un montant de *{$total} {$currencyLabel}* sur votre boutique en ligne.\n\n"
+            ."👤 *Mes coordonnées :*\n"
+            ."• Nom : {$order->customer_name}\n"
+            ."• Téléphone : {$order->customer_phone}\n"
+            ."• Livraison : {$order->delivery_zone_name} ({$order->delivery_address})\n"
+            ."• Règlement : {$order->payment_method_label}\n\n"
+            .'Merci de me confirmer la prise en compte de ma commande et le délai de livraison ! 🙏';
     }
 
     /**
@@ -80,6 +81,7 @@ class WhatsAppNotificationService
     public function getMerchantWhatsAppUrl(Order $order): ?string
     {
         $shop = $order->shop;
+        $currencyLabel = $order->currencyLabel();
         $phoneDigits = $shop->whatsapp_formatted;
 
         if (! $phoneDigits) {
@@ -88,7 +90,7 @@ class WhatsAppNotificationService
 
         $message = $this->formatMerchantAlert($order);
 
-        return "https://wa.me/{$phoneDigits}?text=" . urlencode($message);
+        return "https://wa.me/{$phoneDigits}?text=".urlencode($message);
     }
 
     /**
@@ -97,6 +99,7 @@ class WhatsAppNotificationService
     public function getCustomerToMerchantWhatsAppUrl(Order $order): ?string
     {
         $shop = $order->shop;
+        $currencyLabel = $order->currencyLabel();
         $phoneDigits = $shop->whatsapp_formatted;
 
         if (! $phoneDigits) {
@@ -105,17 +108,18 @@ class WhatsAppNotificationService
 
         $message = $this->formatCustomerToMerchantMessage($order);
 
-        return "https://wa.me/{$phoneDigits}?text=" . urlencode($message);
+        return "https://wa.me/{$phoneDigits}?text=".urlencode($message);
     }
 
     /**
      * Formate la fiche de mission de livraison transmise au livreur (moto / Zémidjan).
      *
-     * @param array{driver_phone?: ?string, courier_fee?: ?int, notes?: ?string} $custom
+     * @param  array{driver_phone?: ?string, courier_fee?: ?int, notes?: ?string}  $custom
      */
     public function formatDeliveryMission(Order $order, array $custom = []): string
     {
         $shop = $order->shop;
+        $currencyLabel = $order->currencyLabel();
         $dateStr = $order->created_at ? $order->created_at->format('d/m/Y à H:i') : date('d/m/Y à H:i');
 
         // Articles
@@ -144,41 +148,41 @@ class WhatsAppNotificationService
         $totalFormatted = number_format($order->total, 0, ',', ' ');
         if ($order->payment_status === Order::PAYMENT_STATUS_PAID) {
             $paymentSection = "✅ *COMMANDE DÉJÀ PAYÉE EN LIGNE*\n"
-                . "👉 *Ne rien encaisser au client pour la marchandise.*";
+                .'👉 *Ne rien encaisser au client pour la marchandise.*';
         } else {
-            $paymentSection = "💵 *MONTANT À ENCAISSER DU CLIENT : {$totalFormatted} FCFA*\n"
-                . "👉 *À reverser intégralement à la boutique lors du retour.*";
+            $paymentSection = "💵 *MONTANT À ENCAISSER DU CLIENT : {$totalFormatted} {$currencyLabel}*\n"
+                .'👉 *À reverser intégralement à la boutique lors du retour.*';
         }
 
         // Frais de course livreur
         $courierFee = isset($custom['courier_fee']) && $custom['courier_fee'] !== null
             ? (int) $custom['courier_fee']
             : (int) $order->shipping_cost;
-        $courierFeeText = $courierFee > 0 ? number_format($courierFee, 0, ',', ' ') . ' FCFA' : 'À convenir avec la boutique';
+        $courierFeeText = $courierFee > 0 ? number_format($courierFee, 0, ',', ' ').(' '.$currencyLabel) : 'À convenir avec la boutique';
 
         return "🛵 *MISSION DE LIVRAISON — {$shop->name}*\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "🔖 Commande : *#{$order->order_number}*\n"
-            . "📅 Date : {$dateStr}\n\n"
-            . "📍 *POINT DE RETRAIT (Boutique) :*\n"
-            . "• Boutique : *{$shop->name}*\n"
-            . "• Adresse : {$shopAddress}\n"
-            . "• Contact boutique : *{$shopPhone}*\n\n"
-            . "🏁 *POINT DE LIVRAISON (Client) :*\n"
-            . "• Destinataire : *{$order->customer_name}*\n"
-            . "• Téléphone : *{$order->customer_phone}* 📲\n"
-            . "• Quartier / Zone : *{$deliveryZone}*\n"
-            . "• Adresse : {$deliveryAddress}"
-            . "{$mapsLink}"
-            . "{$customerNotes}"
-            . "{$driverNotes}\n\n"
-            . "📦 *COLIS :*\n"
-            . "{$itemsText}\n"
-            . "💰 *ENCAISSEMENT :*\n"
-            . "{$paymentSection}\n"
-            . "🛵 *Frais de course livreur :* {$courierFeeText}\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "⚠️ *Consigne :* Vérifiez le colis au départ et appelez le client avant d'arriver à destination ! Merci 🙏";
+            ."━━━━━━━━━━━━━━━━━━━━\n"
+            ."🔖 Commande : *#{$order->order_number}*\n"
+            ."📅 Date : {$dateStr}\n\n"
+            ."📍 *POINT DE RETRAIT (Boutique) :*\n"
+            ."• Boutique : *{$shop->name}*\n"
+            ."• Adresse : {$shopAddress}\n"
+            ."• Contact boutique : *{$shopPhone}*\n\n"
+            ."🏁 *POINT DE LIVRAISON (Client) :*\n"
+            ."• Destinataire : *{$order->customer_name}*\n"
+            ."• Téléphone : *{$order->customer_phone}* 📲\n"
+            ."• Quartier / Zone : *{$deliveryZone}*\n"
+            ."• Adresse : {$deliveryAddress}"
+            ."{$mapsLink}"
+            ."{$customerNotes}"
+            ."{$driverNotes}\n\n"
+            ."📦 *COLIS :*\n"
+            ."{$itemsText}\n"
+            ."💰 *ENCAISSEMENT :*\n"
+            ."{$paymentSection}\n"
+            ."🛵 *Frais de course livreur :* {$courierFeeText}\n"
+            ."━━━━━━━━━━━━━━━━━━━━\n"
+            ."⚠️ *Consigne :* Vérifiez le colis au départ et appelez le client avant d'arriver à destination ! Merci 🙏";
     }
 
     /**
@@ -196,7 +200,7 @@ class WhatsAppNotificationService
                 $digits = substr($digits, 2);
             }
             if (strlen($digits) === 8) {
-                $digits = '228' . $digits;
+                $digits = '228'.$digits;
             }
         }
 
@@ -213,45 +217,46 @@ class WhatsAppNotificationService
     public function formatCustomerInvoiceWhatsApp(Order $order): string
     {
         $shop = $order->shop;
+        $currencyLabel = $order->currencyLabel();
         $dateStr = $order->created_at ? $order->created_at->format('d/m/Y') : date('d/m/Y');
         $totalFormatted = number_format($order->total, 0, ',', ' ');
         $subtotal = number_format($order->subtotal, 0, ',', ' ');
-        $shipping = $order->shipping_cost === 0 ? 'Offerte' : number_format($order->shipping_cost, 0, ',', ' ') . ' FCFA';
+        $shipping = $order->shipping_cost === 0 ? 'Offerte' : number_format($order->shipping_cost, 0, ',', ' ').(' '.$currencyLabel);
 
         $itemsText = '';
         foreach ($order->items as $item) {
             $unitPrice = number_format($item->unit_price, 0, ',', ' ');
             $totalPrice = number_format($item->total_price, 0, ',', ' ');
-            $itemsText .= "• {$item->quantity}x *{$item->product_title}* : {$totalPrice} FCFA\n";
+            $itemsText .= "• {$item->quantity}x *{$item->product_title}* : {$totalPrice} {$currencyLabel}\n";
         }
 
         $paymentStatus = $order->payment_status === Order::PAYMENT_STATUS_PAID
-            ? "✅ *RÉGLÉ (Payé)*"
-            : "⏳ *À PAYER À LA LIVRAISON*";
+            ? '✅ *RÉGLÉ (Payé)*'
+            : '⏳ *À PAYER À LA LIVRAISON*';
 
         $discountLine = ($order->discount_amount ?? 0) > 0
-            ? "🏷️ Code promo ({$order->discount_code}) : -" . number_format($order->discount_amount, 0, ',', ' ') . " FCFA\n"
+            ? "🏷️ Code promo ({$order->discount_code}) : -".number_format($order->discount_amount, 0, ',', ' ')." {$currencyLabel}\n"
             : '';
         $receiptUrl = $order->publicReceiptUrl();
 
         return "🧾 *REÇU DE COMMANDE — {$shop->name}*\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "🔖 N° Reçu : *#REC-{$order->order_number}*\n"
-            . "📅 Date : {$dateStr}\n"
-            . "👤 Client : *{$order->customer_name}*\n\n"
-            . "📦 *DÉTAIL DES ACHATS :*\n"
-            . "{$itemsText}\n"
-            . "💰 Sous-total : {$subtotal} FCFA\n"
-            . "🚚 Livraison ({$order->delivery_zone_name}) : {$shipping}\n"
-            . $discountLine
-            . "────────────────────\n"
-            . "💵 *TOTAL NET : {$totalFormatted} FCFA*\n"
-            . "💳 Mode : {$order->payment_method_label}\n"
-            . "📌 Statut : {$paymentStatus}\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "👉 *Consulter et télécharger votre reçu officiel certifié :*\n"
-            . "{$receiptUrl}\n\n"
-            . "Merci pour votre achat chez *{$shop->name}* ! À très bientôt ! ✨";
+            ."━━━━━━━━━━━━━━━━━━━━\n"
+            ."🔖 N° Reçu : *#REC-{$order->order_number}*\n"
+            ."📅 Date : {$dateStr}\n"
+            ."👤 Client : *{$order->customer_name}*\n\n"
+            ."📦 *DÉTAIL DES ACHATS :*\n"
+            ."{$itemsText}\n"
+            ."💰 Sous-total : {$subtotal} {$currencyLabel}\n"
+            ."🚚 Livraison ({$order->delivery_zone_name}) : {$shipping}\n"
+            .$discountLine
+            ."────────────────────\n"
+            ."💵 *TOTAL NET : {$totalFormatted} {$currencyLabel}*\n"
+            ."💳 Mode : {$order->payment_method_label}\n"
+            ."📌 Statut : {$paymentStatus}\n"
+            ."━━━━━━━━━━━━━━━━━━━━\n"
+            ."👉 *Consulter et télécharger votre reçu officiel certifié :*\n"
+            ."{$receiptUrl}\n\n"
+            ."Merci pour votre achat chez *{$shop->name}* ! À très bientôt ! ✨";
     }
 
     /**
@@ -264,20 +269,22 @@ class WhatsAppNotificationService
             $phoneDigits = substr($phoneDigits, 2);
         }
         if (strlen($phoneDigits) === 8) {
-            $phoneDigits = '228' . $phoneDigits;
+            $phoneDigits = '228'.$phoneDigits;
         }
 
         $message = $this->formatCustomerInvoiceWhatsApp($order);
 
         if ($phoneDigits) {
-            return "https://wa.me/{$phoneDigits}?text=" . urlencode($message);
+            return "https://wa.me/{$phoneDigits}?text=".urlencode($message);
         }
 
-        return "https://api.whatsapp.com/send?text=" . urlencode($message);
+        return 'https://api.whatsapp.com/send?text='.urlencode($message);
     }
+
     public function sendOrderAlertToMerchant(Order $order): array
     {
         $shop = $order->shop;
+        $currencyLabel = $order->currencyLabel();
         $phone = $shop->whatsapp_formatted ?: $shop->whatsapp;
 
         if (! $phone) {
@@ -315,9 +322,9 @@ class WhatsAppNotificationService
                     return ['success' => true, 'mode' => 'webhook', 'phone' => $phone, 'error' => null];
                 }
 
-                Log::warning("[WhatsApp Webhook] Réponse non-succès du webhook : " . $response->body());
+                Log::warning('[WhatsApp Webhook] Réponse non-succès du webhook : '.$response->body());
             } catch (Throwable $e) {
-                Log::error("[WhatsApp Webhook] Erreur lors de l'appel webhook : " . $e->getMessage());
+                Log::error("[WhatsApp Webhook] Erreur lors de l'appel webhook : ".$e->getMessage());
             }
         } elseif ($apiUrl && $apiToken) {
             // Intégration API REST (UltraMsg, GreenAPI, Cloud API, etc.)
@@ -333,7 +340,7 @@ class WhatsAppNotificationService
                     return ['success' => true, 'mode' => 'api', 'phone' => $phone, 'error' => null];
                 }
             } catch (Throwable $e) {
-                Log::error("[WhatsApp API] Exception lors de l'appel API : " . $e->getMessage());
+                Log::error("[WhatsApp API] Exception lors de l'appel API : ".$e->getMessage());
             }
         }
 

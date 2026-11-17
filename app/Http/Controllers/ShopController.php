@@ -62,7 +62,7 @@ class ShopController extends Controller
             }
 
             return redirect()->route('shops.create')->with(
-                'upgrade_prompt', 
+                'upgrade_prompt',
                 'Vous avez atteint la limite de boutiques autorisées par votre forfait. Passez au forfait supérieur pour créer une nouvelle boutique.'
             );
         }
@@ -72,8 +72,8 @@ class ShopController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:60'],
-            'country' => ['required', 'string', 'in:' . implode(',', $validCountries)],
-            'currency' => ['required', 'string', 'in:' . implode(',', $validCurrencies)],
+            'country' => ['required', 'string', 'in:'.implode(',', $validCountries)],
+            'currency' => ['required', 'string', 'in:'.implode(',', $validCurrencies)],
         ], [
             'name.required' => 'Le nom de votre boutique est requis.',
             'name.min' => 'Le nom doit comporter au moins 2 caractères.',
@@ -107,7 +107,7 @@ class ShopController extends Controller
             ->latest('id')
             ->first();
 
-        if ($activeSub) {
+        if ($activeSub && $activeSub->grantsAccess()) {
             $shop->subscriptions()->create([
                 'plan_id' => $activeSub->plan_id,
                 'status' => $activeSub->status,
@@ -121,7 +121,7 @@ class ShopController extends Controller
         // Basculer la boutique active sur la nouvelle créée
         session(['active_shop_id' => $shop->id]);
 
-        return redirect()->route('dashboard')->with('status', 'Votre boutique "' . $shop->name . '" a été créée avec succès !');
+        return redirect()->route('dashboard')->with('status', 'Votre boutique "'.$shop->name.'" a été créée avec succès !');
     }
 
     /**
@@ -137,7 +137,6 @@ class ShopController extends Controller
 
         session(['active_shop_id' => $shop->id]);
 
-        return redirect()->route('dashboard')->with('status', 'Boutique active : ' . $shop->name);
+        return redirect()->route('dashboard')->with('status', 'Boutique active : '.$shop->name);
     }
 }
-

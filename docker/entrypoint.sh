@@ -15,8 +15,8 @@ export OPENROUTER_MODEL="${OPENROUTER_MODEL:-google/gemini-2.5-flash}"
 export FEEXPAY_MODE="${FEEXPAY_MODE:-SANDBOX}"
 export FEEXPAY_BASE_URL="${FEEXPAY_BASE_URL:-https://api-v2.feexpay.me}"
 export FEEXPAY_CURRENCY="${FEEXPAY_CURRENCY:-XOF}"
-export PHOTOROOM_API_KEY="${PHOTOROOM_API_KEY:-sk_pr_default_3ced77ab358dd4a3e4ff3b88e62cccb7d5aba97d}"
-export PHOTOROOM_SANDBOX_API_KEY="${PHOTOROOM_SANDBOX_API_KEY:-sandbox_sk_pr_default_3ced77ab358dd4a3e4ff3b88e62cccb7d5aba97d}"
+export PHOTOROOM_API_KEY="${PHOTOROOM_API_KEY:-}"
+export PHOTOROOM_SANDBOX_API_KEY="${PHOTOROOM_SANDBOX_API_KEY:-}"
 export PHOTOROOM_SEGMENT_URL="${PHOTOROOM_SEGMENT_URL:-https://sdk.photoroom.com/v1/segment}"
 export PHOTOROOM_EDIT_URL="${PHOTOROOM_EDIT_URL:-https://image-api.photoroom.com/v2/edit}"
 
@@ -39,6 +39,10 @@ case "$APP_KEY" in
         echo "Clé APP_KEY valide détectée."
         ;;
     *)
+        if [ "$APP_ENV" = "production" ]; then
+            echo "APP_KEY doit être fournie par la configuration de production." >&2
+            exit 1
+        fi
         echo "Génération d'une clé APP_KEY Laravel valide..."
         NEW_KEY=$(php artisan key:generate --show 2>/dev/null || true)
         if [ -n "$NEW_KEY" ]; then
@@ -77,24 +81,24 @@ php artisan storage:link --force || ln -s /var/www/html/storage/app/public /var/
 # 6. Exécution des migrations de base de données
 if [ "$AUTO_MIGRATE" = "true" ] || [ "$1" = "start-web" ] || [ -n "$RENDER" ]; then
     echo "Exécution des migrations de base de données..."
-    php artisan migrate --force --verbose || true
+    php artisan migrate --force --verbose
 
     echo "Initialisation des formules d'abonnement (PlanSeeder)..."
-    php artisan db:seed --class=PlanSeeder --force || true
+    php artisan db:seed --class=PlanSeeder --force
 
     echo "Initialisation de la base de connaissances RAG IA (AiKnowledgeSeeder)..."
-    php artisan db:seed --class=AiKnowledgeSeeder --force || true
+    php artisan db:seed --class=AiKnowledgeSeeder --force
 
     echo "Vérification et restauration persistante des médias..."
-    php artisan media:restore-defaults || true
+    # Missing merchant media must never be replaced with unrelated catalog photos.
 fi
 
 # 7. Optimisation du cache pour production
 if [ "$APP_ENV" = "production" ]; then
     echo "Mise en cache de la configuration et des routes..."
-    php artisan config:cache || true
-    php artisan route:cache || true
-    php artisan view:cache || true
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
 fi
 
 # 8. Démarrage du serveur Web (Render / Production) ou commande personnalisée (Local)
@@ -110,10 +114,15 @@ if [ "$1" = "start-web" ] || [ -z "$1" ] || [ -n "$PORT" -a "$1" != "php-fpm" ];
     rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
     
     # Test de configuration Nginx
-    nginx -t || true
+    nginx -t
 
     echo "Démarrage de PHP-FPM 8.4..."
     php-fpm -D
+    # Run Laravel's scheduler alongside the single web instance. On sleeping
+    # hosting, a persistent scheduler or an external cron is still required.
+    if [ "${RUN_SCHEDULER:-true}" = "true" ]; then
+        php artisan schedule:work --no-interaction &
+    fi
 
     # Démon de keep-alive en tâche de fond (envoie un ping toutes les 9 min pour empêcher la mise en veille)
     if [ -n "$APP_URL" ] && [ "$APP_URL" != "http://localhost" ]; then

@@ -7,8 +7,10 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\ShopPage;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AiGenerationService
 {
@@ -20,6 +22,28 @@ class AiGenerationService
         $startTime = microtime(true);
 
         return DB::transaction(function () use ($shop, $data, $uploadedPhotoPaths, $startTime) {
+            $lockedShop = Shop::whereKey($shop->id)->lockForUpdate()->firstOrFail();
+            $shop->setRawAttributes($lockedShop->getAttributes(), true);
+            $storedData = $shop->onboarding_data ?? [];
+            $generationInput = Arr::except($data, ['generated_logos', 'chosen_logo', 'generation_signature', 'generations_used', 'generation_result']);
+            $signature = hash('sha256', json_encode([$generationInput, $uploadedPhotoPaths], JSON_THROW_ON_ERROR));
+            if (($storedData['generation_signature'] ?? '') === $signature) {
+                $ids = $storedData['generation_result'] ?? [];
+
+                return [
+                    'profile' => $this->buildBrandProfile($data), 'theme' => $shop->theme,
+                    'logos' => $storedData['generated_logos'] ?? [],
+                    'categories' => $shop->categories()->whereIn('id', $ids['categories'] ?? [])->get()->all(),
+                    'products' => $shop->products()->whereIn('id', $ids['products'] ?? [])->get()->all(),
+                ];
+            }
+            $used = max((int) ($storedData['generations_used'] ?? 0), $shop->aiGenerations()->where('type', 'shop_init')->count());
+            if ($used >= (int) $shop->currentPlan()->full_generations) {
+                throw ValidationException::withMessages(['generation' => 'Le quota de générations complètes de votre forfait est atteint.']);
+            }
+            if (count($uploadedPhotoPaths) > 20 || $shop->products()->count() + (empty($uploadedPhotoPaths) ? 2 : count($uploadedPhotoPaths)) > $shop->maxProducts()) {
+                throw ValidationException::withMessages(['photos' => 'La génération dépasserait les limites de photos ou de produits de votre forfait.']);
+            }
             // Étape 1 : Profil de marque
             $profile = $this->buildBrandProfile($data);
 
@@ -55,6 +79,12 @@ class AiGenerationService
                 'onboarding_step' => 5, // Prêt pour l'aperçu
                 'onboarding_data' => array_merge($data, [
                     'generated_logos' => $logos,
+                    'generation_signature' => $signature,
+                    'generations_used' => $used + 1,
+                    'generation_result' => [
+                        'products' => array_map(fn (Product $product) => $product->id, $products),
+                        'categories' => array_map(fn (Category $category) => $category->id, $categories),
+                    ],
                 ]),
             ]);
 
@@ -65,10 +95,10 @@ class AiGenerationService
                 'shop_id' => $shop->id,
                 'type' => 'shop_init',
                 'step' => 'full_pipeline',
-                'model_used' => 'gemini-2.5-flash',
-                'prompt_tokens' => 850,
-                'completion_tokens' => 620,
-                'cost_estimated_fcfa' => 15, // Estimé ~15 FCFA par génération complète
+                'model_used' => 'zanika-local-template',
+                'prompt_tokens' => 0,
+                'completion_tokens' => 0,
+                'cost_estimated_fcfa' => 0,
                 'duration_ms' => $durationMs,
                 'status' => 'success',
                 'input_summary' => "Description: {$data['description']}",
@@ -144,9 +174,13 @@ class AiGenerationService
         $initials = '';
         foreach ($words as $w) {
             $initials .= mb_strtoupper(mb_substr($w, 0, 1));
-            if (mb_strlen($initials) >= 2) break;
+            if (mb_strlen($initials) >= 2) {
+                break;
+            }
         }
-        if (empty($initials)) $initials = 'BQ';
+        if (empty($initials)) {
+            $initials = 'BQ';
+        }
         $safeInitials = htmlspecialchars($initials, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $safeColor = preg_match('/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/', trim($color)) ? trim($color) : '#6d3df2';
 
@@ -213,8 +247,8 @@ class AiGenerationService
         if (empty($photoPaths)) {
             // Si aucune photo n'a été fournie à l'onboarding, on génère 2 fiches modèles
             $demoItems = [
-                ['title' => 'Article Phare de la Collection', 'desc' => "Découvrez cet article incontournable soigneusement sélectionné pour son style et sa qualité supérieure. Idéal pour sublimer votre quotidien."],
-                ['title' => 'Nouveauté Tendance', 'desc' => "Un modèle moderne qui allie confort, finitions haut de gamme et élégance."],
+                ['title' => 'Article Phare de la Collection', 'desc' => 'Découvrez cet article incontournable soigneusement sélectionné pour son style et sa qualité supérieure. Idéal pour sublimer votre quotidien.'],
+                ['title' => 'Nouveauté Tendance', 'desc' => 'Un modèle moderne qui allie confort, finitions haut de gamme et élégance.'],
             ];
 
             foreach ($demoItems as $item) {
@@ -228,7 +262,7 @@ class AiGenerationService
                     'track_stock' => true,
                     'status' => Product::STATUS_ACTIVE,
                     'created_via' => 'ai',
-                    'ai_confidence' => 92,
+                    'ai_confidence' => null,
                 ]);
 
                 if ($firstCat) {
@@ -258,7 +292,7 @@ class AiGenerationService
                 'track_stock' => true,
                 'status' => Product::STATUS_ACTIVE,
                 'created_via' => 'ai',
-                'ai_confidence' => 92,
+                'ai_confidence' => null,
             ]);
 
             // Optimisation et conversion WebP de l'image selon le mode choisi par le commerçant
@@ -297,7 +331,7 @@ class AiGenerationService
     {
         $cleanName = pathinfo($path, PATHINFO_FILENAME);
         $cleanName = preg_replace('/^(img_|thumb_)/', '', $cleanName);
-        $isRandomHash = strlen($cleanName) >= 16 && !str_contains($cleanName, '-') && !str_contains($cleanName, '_') && !str_contains($cleanName, ' ');
+        $isRandomHash = strlen($cleanName) >= 16 && ! str_contains($cleanName, '-') && ! str_contains($cleanName, '_') && ! str_contains($cleanName, ' ');
 
         // Si l'utilisateur a donné un nom de fichier explicite (ex: pantalon-noir.jpg)
         if (! $isRandomHash && strlen($cleanName) >= 4 && ! is_numeric($cleanName)) {
@@ -343,10 +377,11 @@ class AiGenerationService
         if (! empty($categories)) {
             $cat = $categories[$index % count($categories)];
             $catName = is_object($cat) ? $cat->name : ($cat['name'] ?? 'Collection');
-            return "Article {$catName} Signature #" . ($index + 1);
+
+            return "Article {$catName} Signature #".($index + 1);
         }
 
-        return "Article Tendance #" . ($index + 1);
+        return 'Article Tendance #'.($index + 1);
     }
 
     /**
@@ -377,12 +412,12 @@ class AiGenerationService
             [
                 'type' => 'shipping',
                 'title' => 'Livraison et Paiement',
-                'content' => "Nous livrons rapidement à Lomé et dans les autres villes du Togo. Règlement facile et sécurisé par T-Money, Moov Money ou à la livraison lors de la remise de votre colis.",
+                'content' => 'Nous livrons rapidement à Lomé et dans les autres villes du Togo. Règlement facile et sécurisé par T-Money, Moov Money ou à la livraison lors de la remise de votre colis.',
             ],
             [
                 'type' => 'terms',
                 'title' => 'Conditions Générales de Vente',
-                'content' => "Les commandes passées sur la boutique sont traitées sous 24h. En cas de non-conformité, contactez-nous dans les 48h suivant la réception pour un échange ou un arrangement.",
+                'content' => 'Les commandes passées sur la boutique sont traitées sous 24h. En cas de non-conformité, contactez-nous dans les 48h suivant la réception pour un échange ou un arrangement.',
             ],
         ];
 

@@ -1,7 +1,21 @@
 <?php
 
+use App\Mail\VerificationCodeMail;
+use App\Models\Product;
+use App\Models\ProductImage;
+use App\Models\Shop;
+use App\Models\Subscription;
+use App\Models\User;
+use App\Services\Ai\AiMarketingAutomationService;
+use App\Services\PublicMediaStorage;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schedule;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -20,10 +34,10 @@ Artisan::command('media:restore-defaults', function () {
     ];
 
     // 1. Pour toutes les images ayant déjà du image_data en base : restaurer sur disque
-    $imagesWithData = \App\Models\ProductImage::whereNotNull('image_data')->where('image_data', '!=', '')->get();
+    $imagesWithData = ProductImage::whereNotNull('image_data')->where('image_data', '!=', '')->get();
     foreach ($imagesWithData as $img) {
         $cleanPath = ltrim(str_replace(['../', '..\\'], '', $img->thumbnail_path ?: $img->path), '/');
-        $diskPath = \Illuminate\Support\Facades\Storage::disk('public')->path($cleanPath);
+        $diskPath = Storage::disk('public')->path($cleanPath);
         if (! file_exists($diskPath) || filesize($diskPath) === 0) {
             $bin = @base64_decode($img->image_data);
             if ($bin) {
@@ -34,7 +48,7 @@ Artisan::command('media:restore-defaults', function () {
         }
         if ($img->path && $img->path !== $img->thumbnail_path) {
             $mainClean = ltrim(str_replace(['../', '..\\'], '', $img->path), '/');
-            $mainDisk = \Illuminate\Support\Facades\Storage::disk('public')->path($mainClean);
+            $mainDisk = Storage::disk('public')->path($mainClean);
             if (! file_exists($mainDisk) || filesize($mainDisk) === 0) {
                 $bin = @base64_decode($img->image_data);
                 if ($bin) {
@@ -46,7 +60,7 @@ Artisan::command('media:restore-defaults', function () {
     }
 
     // 2. Pour les images sans image_data : associer un visuel catalogue réaliste et persister en base
-    $imagesWithoutData = \App\Models\ProductImage::where(function ($q) {
+    $imagesWithoutData = ProductImage::where(function ($q) {
         $q->whereNull('image_data')->orWhere('image_data', '');
     })->with('product.categories')->get();
 
@@ -77,13 +91,13 @@ Artisan::command('media:restore-defaults', function () {
 
             // Restauration sur disque
             $cleanPath = ltrim(str_replace(['../', '..\\'], '', $img->path), '/');
-            $diskPath = \Illuminate\Support\Facades\Storage::disk('public')->path($cleanPath);
+            $diskPath = Storage::disk('public')->path($cleanPath);
             @mkdir(dirname($diskPath), 0755, true);
             @file_put_contents($diskPath, file_get_contents($sourceFile));
 
             if ($img->thumbnail_path) {
                 $thumbClean = ltrim(str_replace(['../', '..\\'], '', $img->thumbnail_path), '/');
-                $thumbDisk = \Illuminate\Support\Facades\Storage::disk('public')->path($thumbClean);
+                $thumbDisk = Storage::disk('public')->path($thumbClean);
                 @mkdir(dirname($thumbDisk), 0755, true);
                 @file_put_contents($thumbDisk, $thumbBin);
             }
@@ -93,7 +107,7 @@ Artisan::command('media:restore-defaults', function () {
     }
 
     // 3. Pour les produits n'ayant aucune image associée
-    $productsWithoutImages = \App\Models\Product::doesntHave('images')->with('categories')->get();
+    $productsWithoutImages = Product::doesntHave('images')->with('categories')->get();
     foreach ($productsWithoutImages as $prod) {
         $title = mb_strtolower($prod->title);
         $cat = mb_strtolower($prod->categories?->first()?->name ?? '');
@@ -115,13 +129,13 @@ Artisan::command('media:restore-defaults', function () {
 
         if (file_exists($sourceFile)) {
             $thumbBin = file_exists($thumbFile) ? file_get_contents($thumbFile) : file_get_contents($sourceFile);
-            $filename = 'img_' . \Illuminate\Support\Str::random(16) . '.webp';
-            $thumbName = 'thumb_' . $filename;
+            $filename = 'img_'.Str::random(16).'.webp';
+            $thumbName = 'thumb_'.$filename;
             $relPath = "shops/{$prod->shop_id}/products/{$filename}";
             $relThumb = "shops/{$prod->shop_id}/products/{$thumbName}";
 
-            $diskPath = \Illuminate\Support\Facades\Storage::disk('public')->path($relPath);
-            $thumbDisk = \Illuminate\Support\Facades\Storage::disk('public')->path($relThumb);
+            $diskPath = Storage::disk('public')->path($relPath);
+            $thumbDisk = Storage::disk('public')->path($relThumb);
             @mkdir(dirname($diskPath), 0755, true);
             @file_put_contents($diskPath, file_get_contents($sourceFile));
             @file_put_contents($thumbDisk, $thumbBin);
@@ -145,34 +159,35 @@ Artisan::command('mail:test {to?}', function (?string $to = null) {
     $this->info("--- Test d'envoi d'email Zanika ---");
     $this->info("Destinataire : {$to}");
     $mailer = config('mail.default');
-    $this->line("Mailer actif : " . $mailer);
+    $this->line('Mailer actif : '.$mailer);
     if ($mailer === 'google_webhook') {
         $webhookUrl = config('mail.mailers.google_webhook.endpoint') ?: config('mail.mailers.google_webhook.url');
-        $this->line("Webhook URL : " . ($webhookUrl ? 'Configurée (HTTPS port 443)' : '(NON configurée)'));
+        $this->line('Webhook URL : '.($webhookUrl ? 'Configurée (HTTPS port 443)' : '(NON configurée)'));
     } else {
-        $this->line("Host : " . config('mail.mailers.smtp.host'));
-        $this->line("Port : " . config('mail.mailers.smtp.port'));
-        $this->line("Encryption : " . config('mail.mailers.smtp.encryption'));
-        $this->line("Username : " . (config('mail.mailers.smtp.username') ?: '(aucun)'));
+        $this->line('Host : '.config('mail.mailers.smtp.host'));
+        $this->line('Port : '.config('mail.mailers.smtp.port'));
+        $this->line('Encryption : '.config('mail.mailers.smtp.encryption'));
+        $this->line('Username : '.(config('mail.mailers.smtp.username') ?: '(aucun)'));
     }
-    $this->line("From : " . config('mail.from.name') . ' <' . config('mail.from.address') . '>');
+    $this->line('From : '.config('mail.from.name').' <'.config('mail.from.address').'>');
 
     try {
-        \Illuminate\Support\Facades\Mail::to($to)->send(
-            new \App\Mail\VerificationCodeMail('Client Zanika', '482915', 10)
+        Mail::to($to)->send(
+            new VerificationCodeMail('Client Zanika', '482915', 10)
         );
         $this->info("✅ Succès ! L'email de test (code OTP) a été envoyé avec succès à {$to} !");
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         $this->error("❌ Échec de l'envoi de l'email :");
         $this->error($e->getMessage());
     }
 })->purpose('Teste l\'envoi d\'un email OTP via la configuration SMTP active');
 
 Artisan::command('admin:list', function () {
-    $this->info("--- Liste des Utilisateurs & Administrateurs Zanika ---");
-    $users = \App\Models\User::with('shop')->get();
+    $this->info('--- Liste des Utilisateurs & Administrateurs Zanika ---');
+    $users = User::with('shop')->get();
     if ($users->isEmpty()) {
-        $this->warn("Aucun utilisateur trouvé.");
+        $this->warn('Aucun utilisateur trouvé.');
+
         return;
     }
 
@@ -180,8 +195,8 @@ Artisan::command('admin:list', function () {
         'ID' => $u->id,
         'Nom' => $u->name,
         'Email' => $u->email,
-        'Rôle' => $u->role === \App\Models\User::ROLE_ADMIN ? '⭐ SUPER-ADMIN' : 'Marchand',
-        'Boutique' => $u->shop ? $u->shop->name . ' (' . $u->shop->subdomain . ')' : '(aucune)',
+        'Rôle' => $u->role === User::ROLE_ADMIN ? '⭐ SUPER-ADMIN' : 'Marchand',
+        'Boutique' => $u->shop ? $u->shop->name.' ('.$u->shop->subdomain.')' : '(aucune)',
         'Vérifié' => $u->isVerified() ? 'Oui' : 'Non',
     ]);
 
@@ -189,40 +204,43 @@ Artisan::command('admin:list', function () {
 })->purpose('Affiche la liste de tous les utilisateurs et leur rôle sur Zanika');
 
 Artisan::command('admin:promote {email}', function (string $email) {
-    $user = \App\Models\User::where('email', trim($email))->first();
+    $user = User::where('email', trim($email))->first();
     if (! $user) {
         $this->error("Utilisateur introuvable avec l'email : {$email}");
+
         return 1;
     }
 
     $user->update([
-        'role' => \App\Models\User::ROLE_ADMIN,
+        'role' => User::ROLE_ADMIN,
         'email_verified_at' => $user->email_verified_at ?: now(),
         'terms_accepted_at' => $user->terms_accepted_at ?: now(),
     ]);
 
     $this->info("✅ Succès : L'utilisateur {$user->name} ({$user->email}) a été promu SUPER-ADMINISTRATEUR !");
+
     return 0;
 })->purpose('Promeut un utilisateur existant au rang de Super-Administrateur');
 
 Artisan::command('admin:create {email} {password} {name?}', function (string $email, string $password, ?string $name = null) {
     $name = $name ?: 'Super Administrateur';
-    $user = \App\Models\User::updateOrCreate(
+    $user = User::updateOrCreate(
         ['email' => trim($email)],
         [
             'name' => $name,
-            'password' => \Illuminate\Support\Facades\Hash::make($password),
-            'role' => \App\Models\User::ROLE_ADMIN,
+            'password' => Hash::make($password),
+            'role' => User::ROLE_ADMIN,
             'email_verified_at' => now(),
             'terms_accepted_at' => now(),
             'country' => 'TG',
         ]
     );
 
-    $this->info("✅ Compte Super-Administrateur prêt !");
+    $this->info('✅ Compte Super-Administrateur prêt !');
     $this->line("Email : {$user->email}");
     $this->line("Rôle  : {$user->role}");
-    $this->line("Accès direct : " . url('/admin'));
+    $this->line('Accès direct : '.url('/admin'));
+
     return 0;
 })->purpose('Crée ou met à jour un compte Super-Administrateur avec mot de passe');
 
@@ -248,50 +266,53 @@ Artisan::command('admin:maintenance {action=status : on, off ou status} {--messa
         ];
         @file_put_contents(storage_path('framework/maintenance_info.json'), json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-        $this->warn("🔴 La plateforme Zanika est maintenant en MODE MAINTENANCE.");
+        $this->warn('🔴 La plateforme Zanika est maintenant en MODE MAINTENANCE.');
         $this->line("Message affiché : {$message}");
-        $this->info("Lien secret de contournement : " . url('/' . $secret));
+        $this->info('Lien secret de contournement : '.url('/'.$secret));
+
         return 0;
     } elseif ($action === 'off' || $action === 'up') {
         Artisan::call('up');
         if (file_exists(storage_path('framework/maintenance_info.json'))) {
             @unlink(storage_path('framework/maintenance_info.json'));
         }
-        $this->info("🟢 La plateforme Zanika est à nouveau EN LIGNE (Accès public rétabli).");
+        $this->info('🟢 La plateforme Zanika est à nouveau EN LIGNE (Accès public rétabli).');
+
         return 0;
     } else {
         $isDown = app()->isDownForMaintenance();
         if ($isDown) {
-            $this->warn("🔴 Statut : MODE MAINTENANCE ACTIF");
+            $this->warn('🔴 Statut : MODE MAINTENANCE ACTIF');
             $infoFile = storage_path('framework/maintenance_info.json');
             if (file_exists($infoFile)) {
                 $info = json_decode(file_get_contents($infoFile), true) ?: [];
-                $this->line("Activé le : " . ($info['activated_at'] ?? 'inconnu'));
-                $this->line("Message   : " . ($info['message'] ?? ''));
-                $this->info("Bypass    : " . url('/' . ($info['secret'] ?? 'zanika-admin-bypass')));
+                $this->line('Activé le : '.($info['activated_at'] ?? 'inconnu'));
+                $this->line('Message   : '.($info['message'] ?? ''));
+                $this->info('Bypass    : '.url('/'.($info['secret'] ?? 'zanika-admin-bypass')));
             }
         } else {
-            $this->info("🟢 Statut : EN LIGNE (Fonctionnement normal)");
+            $this->info('🟢 Statut : EN LIGNE (Fonctionnement normal)');
         }
+
         return 0;
     }
 })->purpose('Contrôle ou affiche le statut du mode maintenance de la plateforme');
 
 // Planification automatique quotidienne des rappels de fin d'essai à J-3
-\Illuminate\Support\Facades\Schedule::command('subscriptions:send-trial-reminders')
+Schedule::command('subscriptions:send-trial-reminders')
     ->dailyAt('09:00')
     ->name('send-trial-expiring-reminders')
     ->withoutOverlapping();
 
 // Commande et planification des Automatisations IA (Module 10)
-Artisan::command('ai:run-automations', function (\App\Services\Ai\AiMarketingAutomationService $service) {
+Artisan::command('ai:run-automations', function (AiMarketingAutomationService $service) {
     $this->info("Exécution des règles d'automatisation IA ECOM pour toutes les boutiques...");
-    $shops = \App\Models\Shop::where('status', \App\Models\Shop::PUBLISHED)->get();
+    $shops = Shop::where('status', Shop::PUBLISHED)->get();
     $totalTriggered = 0;
 
     foreach ($shops as $shop) {
         $result = $service->runPendingAutomations($shop);
-        $triggered = array_filter($result['reports'] ?? [], fn($r) => ($r['status'] ?? '') === 'triggered');
+        $triggered = array_filter($result['reports'] ?? [], fn ($r) => ($r['status'] ?? '') === 'triggered');
         $count = count($triggered);
         if ($count > 0) {
             $totalTriggered += $count;
@@ -300,18 +321,42 @@ Artisan::command('ai:run-automations', function (\App\Services\Ai\AiMarketingAut
     }
 
     $this->info("Exécution terminée avec succès. Total règles déclenchées : {$totalTriggered}.");
+
     return 0;
 })->purpose('Exécute les règles d\'automatisation proactive IA (stocks critiques, relances COD, briefing)');
 
-\Illuminate\Support\Facades\Schedule::command('ai:run-automations')
+Schedule::command('ai:run-automations')
     ->hourly()
     ->name('ai-run-hourly-automations')
     ->withoutOverlapping();
 
 // Réinitialisation mensuelle des crédits IA le 1er jour de chaque mois à minuit
-\Illuminate\Support\Facades\Schedule::call(function () {
-    \App\Models\Shop::withoutGlobalScopes()->update(['ai_credits_used' => 0]);
+Schedule::call(function () {
+    Shop::withoutGlobalScopes()->update(['ai_credits_used' => 0, 'photoroom_credits_used' => 0]);
 })->monthlyOn(1, '00:00')->name('reset-monthly-ai-credits');
 
+Schedule::command('ai:morning-briefing')
+    ->dailyAt('07:00')->withoutOverlapping()->name('ai-morning-briefing');
 
+Schedule::call(function () {
+    Subscription::whereIn('status', ['active', 'trial', 'grace'])->where(function ($query) {
+        $query->where('ends_at', '<=', now())->orWhere(function ($trial) {
+            $trial->where('status', 'trial')->where('trial_ends_at', '<=', now());
+        });
+    })->update(['status' => 'expired']);
+})->hourly()->name('expire-subscriptions')->withoutOverlapping();
 
+Schedule::call(function () {
+    $disk = Storage::disk('public');
+    $backups = DB::table('public_media')->where('path', 'like', '%/ai_draft_%')
+        ->where('updated_at', '<', now()->subDay())->pluck('path')->all();
+    foreach (array_unique(array_merge($disk->allFiles('shops'), $backups)) as $path) {
+        if (! preg_match('#/ai_draft_[a-zA-Z0-9]+\.(?:jpg|jpeg|png|webp)$#', $path)
+            || ($disk->exists($path) && $disk->lastModified($path) >= now()->subDay()->timestamp)) {
+            continue;
+        }
+        if (! ProductImage::where('path', $path)->orWhere('thumbnail_path', $path)->exists()) {
+            app(PublicMediaStorage::class)->delete($path);
+        }
+    }
+})->dailyAt('03:00')->name('prune-unattached-ai-drafts')->withoutOverlapping();

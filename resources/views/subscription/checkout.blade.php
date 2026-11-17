@@ -134,7 +134,7 @@
         const triggerBtn = document.getElementById('feexpay-trigger-sub-btn');
         const kycNotice = document.getElementById('feexpay-sub-kyc-notice');
         const feexShopId = @json(config('feexpay.shop_id'));
-        const feexToken = @json(config('feexpay.token'));
+        const feexToken = @json(config('feexpay.sdk_token'));
 
         if (typeof FeexPayButton !== 'undefined' && feexShopId && feexToken) {
             try {

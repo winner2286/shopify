@@ -1,10 +1,9 @@
 // Service Worker Officiel Zanika PWA
 // Cache Versioning
-const CACHE_NAME = 'zanika-pwa-v1.1';
+const CACHE_NAME = 'zanika-pwa-v2-public-assets';
 
 // Ressources statiques essentielles mises en cache
 const PRECACHE_ASSETS = [
-    '/',
     '/manifest.json',
     '/site.webmanifest',
     '/favicon.ico',
@@ -33,7 +32,7 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
+                    if (cache !== CACHE_NAME && cache.startsWith('zanika-pwa-')) {
                         return caches.delete(cache);
                     }
                 })
@@ -55,6 +54,14 @@ self.addEventListener('fetch', (event) => {
 
     // Ignorer les requêtes spécifiques (téléchargements, auth tokens, webhooks, etc.)
     if (url.origin !== location.origin) {
+        return;
+    }
+
+    // Only explicitly public assets may enter Cache Storage. Private navigations,
+    // JSON endpoints, signed receipts and uploaded shop media always use the network.
+    const isPublicAsset = PRECACHE_ASSETS.includes(url.pathname)
+        || /^\/(css|js|images|fonts)\//.test(url.pathname);
+    if (!isPublicAsset || url.searchParams.has('token')) {
         return;
     }
 
@@ -112,8 +119,7 @@ self.addEventListener('fetch', (event) => {
                     if (cachedResponse) {
                         return cachedResponse;
                     }
-                    // Optionnel : page d'accueil en dernier recours
-                    return caches.match('/');
+                    return Response.error();
                 });
             })
     );

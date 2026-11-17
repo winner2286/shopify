@@ -685,8 +685,8 @@
                                 @endif
                             </td>
                             <td>{{ $item->quantity }}</td>
-                            <td>{{ number_format($item->unit_price, 0, ',', ' ') }} FCFA</td>
-                            <td style="font-weight:700">{{ number_format($item->total_price, 0, ',', ' ') }} FCFA</td>
+                            <td>{{ number_format($item->unit_price, 0, ',', ' ') }} {{ $order->currencyLabel() }}</td>
+                            <td style="font-weight:700">{{ number_format($item->total_price, 0, ',', ' ') }} {{ $order->currencyLabel() }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -719,7 +719,8 @@
                     <!-- QR Code de vérification publique en ligne -->
                     <div class="receipt-qr-section">
                         @php
-                            $qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urlencode($publicReceiptUrl);
+                            $qrWriter = new \BaconQrCode\Writer(new \BaconQrCode\Renderer\GDLibRenderer(150));
+                            $qrUrl = 'data:image/png;base64,' . base64_encode($qrWriter->writeString($publicReceiptUrl));
                         @endphp
                         <img src="{{ $qrUrl }}" alt="QR Code Reçu" class="receipt-qr-img" loading="lazy">
                         <div class="receipt-qr-text">
@@ -733,21 +734,21 @@
                 <div class="receipt-totals">
                     <div class="tot-row">
                         <span>Sous-total articles :</span>
-                        <span>{{ number_format($order->subtotal, 0, ',', ' ') }} FCFA</span>
+                        <span>{{ number_format($order->subtotal, 0, ',', ' ') }} {{ $order->currencyLabel() }}</span>
                     </div>
                     <div class="tot-row">
                         <span>Frais de livraison :</span>
-                        <span>{{ $order->shipping_cost === 0 ? 'Offerte (0 FCFA)' : number_format($order->shipping_cost, 0, ',', ' ') . ' FCFA' }}</span>
+                        <span>{{ $order->shipping_cost === 0 ? 'Offerte (0 ' . $order->currencyLabel() . ')' : number_format($order->shipping_cost, 0, ',', ' ') . ' ' . $order->currencyLabel() }}</span>
                     </div>
                     @if (($order->discount_amount ?? 0) > 0)
                     <div class="tot-row" style="color:#16a34a;font-weight:600">
                         <span>Code promo ({{ $order->discount_code ?? 'Réduction' }}) :</span>
-                        <span>-{{ number_format($order->discount_amount, 0, ',', ' ') }} FCFA</span>
+                        <span>-{{ number_format($order->discount_amount, 0, ',', ' ') }} {{ $order->currencyLabel() }}</span>
                     </div>
                     @endif
                     <div class="tot-row grand-total">
                         <span>TOTAL NET :</span>
-                        <span class="val">{{ number_format($order->total, 0, ',', ' ') }} FCFA</span>
+                        <span class="val">{{ number_format($order->total, 0, ',', ' ') }} {{ $order->currencyLabel() }}</span>
                     </div>
                 </div>
             </div>

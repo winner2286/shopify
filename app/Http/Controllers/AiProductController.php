@@ -5,23 +5,62 @@ namespace App\Http\Controllers;
 use App\Models\AiGeneration;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductImage;
+use App\Models\Shop;
 use App\Services\Ai\AiVisionService;
 use App\Services\Ai\PhotoroomService;
 use App\Services\Ai\ProductStudioService;
-use App\Services\ImageService;
+use App\Services\PublicMediaStorage;
 use App\Support\SearchHelper;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AiProductController extends Controller
 {
+    private function withVisualCredits(Shop $shop, \Closure $operation): ?array
+    {
+        $reserved = $shop->hasEnoughAiCredits(1);
+        if ($reserved) {
+            $shop->consumeAiCredits(1);
+        }
+        try {
+            $result = $operation();
+        } catch (\Throwable $exception) {
+            if ($reserved) {
+                $shop->decrement('ai_credits_used');
+                $shop->refresh();
+            }
+            throw $exception;
+        }
+        $succeeded = ($result['status'] ?? '') === 'success';
+        $photoroom = ($result['engine'] ?? '') === 'photoroom-ai';
+        if ($reserved && (! $succeeded || $photoroom)) {
+            $shop->decrement('ai_credits_used');
+            $shop->refresh();
+        }
+        if ($succeeded && ! $photoroom && ! $reserved) {
+            throw ValidationException::withMessages(['credits' => 'Crédits IA insuffisants pour le moteur local.']);
+        }
+
+        return $result;
+    }
+
     protected function isDecodableImageBinary(?string $binary): bool
     {
         if (! is_string($binary) || trim($binary) === '') {
+            return false;
+        }
+
+        if (strlen($binary) > 15 * 1024 * 1024) {
+            return false;
+        }
+        $dimensions = @getimagesizefromstring($binary);
+        if (! $dimensions || $dimensions[0] > 6000 || $dimensions[1] > 6000
+            || $dimensions[0] * $dimensions[1] > 16000000) {
             return false;
         }
 
@@ -31,6 +70,7 @@ class AiProductController extends Controller
                 return false;
             }
             imagedestroy($img);
+
             return true;
         }
 
@@ -51,7 +91,7 @@ class AiProductController extends Controller
         ]);
 
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
@@ -75,17 +115,15 @@ class AiProductController extends Controller
             // Sauvegarder la photo pour pouvoir l'attacher au produit lors de la soumission finale
             $guessedExt = strtolower((string) ($file->guessExtension() ?: $file->getClientOriginalExtension()));
             $ext = in_array($guessedExt, ['jpg', 'jpeg', 'png', 'webp'], true) ? $guessedExt : 'jpg';
-            $filename = 'ai_draft_' . uniqid() . '.' . $ext;
+            $filename = 'ai_draft_'.uniqid().'.'.$ext;
             $tempPhotoPath = "shops/{$shop->id}/products/{$filename}";
-            Storage::disk('public')->put($tempPhotoPath, $imageBinary);
             $tempPhotoUrl = Storage::disk('public')->url($tempPhotoPath);
         } elseif ($request->filled('photo_base64')) {
             $base64 = $request->input('photo_base64');
             $imageBinary = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $base64));
 
-            $filename = 'ai_draft_' . uniqid() . '.jpg';
+            $filename = 'ai_draft_'.uniqid().'.jpg';
             $tempPhotoPath = "shops/{$shop->id}/products/{$filename}";
-            Storage::disk('public')->put($tempPhotoPath, $imageBinary);
             $tempPhotoUrl = Storage::disk('public')->url($tempPhotoPath);
         }
 
@@ -96,9 +134,9 @@ class AiProductController extends Controller
             ], 422);
         }
 
+        app(PublicMediaStorage::class)->put($tempPhotoPath, $imageBinary);
         $userHint = $request->input('user_hint');
-        $analysis = $visionService->analyzeProductPhoto($imageBinary, $shop, $userHint);
-        $shop->consumeAiCredits(1);
+        $analysis = $shop->withAiCredits(1, fn () => $visionService->analyzeProductPhoto($imageBinary, $shop, $userHint));
 
         // Si une catégorie correspondante existe dans la boutique, renvoyer son ID
         $matchedCategoryId = null;
@@ -123,7 +161,7 @@ class AiProductController extends Controller
      * Analyse le produit, sépare fidèlement le sujet sans altération (Règle 4.A),
      * adapte le décor et l'éclairage selon la catégorie et génère les packshots comparatifs 1:1.
      */
-    public function verifyQuality(Request $request, \App\Services\Ai\ProductStudioService $studioService): JsonResponse
+    public function verifyQuality(Request $request, ProductStudioService $studioService): JsonResponse
     {
         $request->validate([
             'photo' => 'nullable|file|max:15360',
@@ -133,7 +171,7 @@ class AiProductController extends Controller
         ]);
 
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
@@ -170,11 +208,10 @@ class AiProductController extends Controller
 
         try {
             $categoryHint = $request->input('category_hint');
-            $studioResult = $studioService->processProductPhoto($shop, $imageBinary, $categoryHint);
+            $studioResult = $shop->withAiCredits(12, fn () => $studioService->processProductPhoto($shop, $imageBinary, $categoryHint));
 
             // Journalisation et débit des crédits isolés pour ne jamais bloquer la restitution des packshots
             try {
-                $shop->consumeAiCredits(12);
                 $studioEngine = $studioResult['engine'] ?? 'zanika-product-studio';
                 $studioCostFcfa = $studioEngine === 'photoroom-ai'
                     ? ($shop->canUsePhotoroomGenerativeScene() ? 62 : 13)
@@ -190,10 +227,10 @@ class AiProductController extends Controller
                     'cost_estimated_fcfa' => $studioCostFcfa,
                     'duration_ms' => $studioResult['duration_ms'] ?? 1200,
                     'status' => 'success',
-                    'input_summary' => "Studio Packshot [{$studioResult['category']}] : " . ($studioResult['product_title'] ?? 'Article'),
+                    'input_summary' => "Studio Packshot [{$studioResult['category']}] : ".($studioResult['product_title'] ?? 'Article'),
                 ]);
             } catch (\Throwable $logError) {
-                Log::warning('Studio Photo IA credit/audit log skipped: ' . $logError->getMessage());
+                Log::warning('Studio Photo IA credit/audit log skipped: '.$logError->getMessage());
             }
 
             return response()->json([
@@ -213,7 +250,7 @@ class AiProductController extends Controller
             ]);
         } catch (\Throwable $e) {
             report($e);
-            Log::warning('Studio Photo IA verifyQuality failure: ' . $e->getMessage());
+            Log::warning('Studio Photo IA verifyQuality failure: '.$e->getMessage());
 
             return response()->json([
                 'status' => 'error',
@@ -225,7 +262,7 @@ class AiProductController extends Controller
     /**
      * Génère une variante de décor studio supplémentaire (+6 crédits).
      */
-    public function generateVariant(Request $request, \App\Services\Ai\ProductStudioService $studioService): JsonResponse
+    public function generateVariant(Request $request, ProductStudioService $studioService): JsonResponse
     {
         $request->validate([
             'photo' => 'nullable|file|max:15360',
@@ -237,7 +274,7 @@ class AiProductController extends Controller
         ]);
 
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
@@ -293,10 +330,9 @@ class AiProductController extends Controller
             $style = $request->input('style', 'studio_dark');
             $category = $request->input('category', 'general');
 
-            $variation = $studioService->renderVariant($shop, $cutoutPngBinary, $style, $category);
+            $variation = $shop->withAiCredits(6, fn () => $studioService->renderVariant($shop, $cutoutPngBinary, $style, $category));
 
             if ($variation) {
-                $shop->consumeAiCredits(6);
                 AiGeneration::create([
                     'shop_id' => $shop->id,
                     'type' => 'ai_quality_check',
@@ -337,10 +373,7 @@ class AiProductController extends Controller
             ], 402);
         }
 
-        $result = $visionService->optimizeExistingProduct($product, $shop);
-        if (($result['status'] ?? '') === 'success') {
-            $shop->consumeAiCredits(1);
-        }
+        $result = $shop->withAiCredits(1, fn () => $visionService->optimizeExistingProduct($product, $shop));
 
         // Si l'utilisateur a cliqué sur "Appliquer directement"
         if ($request->boolean('apply') && $result['status'] === 'success') {
@@ -364,10 +397,10 @@ class AiProductController extends Controller
     /**
      * Espace Studio Visuel IA pour les affiches, bannières et mises en situation.
      */
-    public function studio(Request $request, PhotoroomService $photoroom): View|\Illuminate\Http\RedirectResponse
+    public function studio(Request $request, PhotoroomService $photoroom): View|RedirectResponse
     {
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
         }
@@ -376,7 +409,7 @@ class AiProductController extends Controller
             ->where('status', Product::STATUS_ACTIVE)
             ->with(['primaryImage', 'images'])
             ->get(['id', 'title', 'price']);
-        
+
         // Historique des visuels générés par l'IA pour cette boutique
         $recentVisuals = AiGeneration::where('shop_id', $shop->id)
             ->where('type', 'ai_visual_generation')
@@ -411,7 +444,7 @@ class AiProductController extends Controller
         ]);
 
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
@@ -428,16 +461,16 @@ class AiProductController extends Controller
             $sourceImageBinary = file_get_contents($request->file('image')->getRealPath()) ?: null;
         }
 
-        $result = $visionService->generateMarketingVisual(
+        if ($sourceImageBinary === null && ! $shop->hasEnoughAiCredits(1)) {
+            return response()->json(['status' => 'error', 'error' => 'Crédits IA insuffisants.'], 402);
+        }
+        $result = $this->withVisualCredits($shop, fn () => $visionService->generateMarketingVisual(
             $shop,
             $request->except('image'),
             $sourceImageBinary
-        );
+        ));
 
         if (($result['status'] ?? '') === 'success') {
-            if (($result['engine'] ?? '') !== 'photoroom-ai') {
-                $shop->consumeAiCredits(1);
-            }
             $shop->refresh();
             $result['photoroom_credits_remaining'] = $shop->photoroomCreditsRemaining();
             $result['ai_credits_remaining'] = $shop->aiCreditsRemaining();
@@ -460,7 +493,7 @@ class AiProductController extends Controller
         ]);
 
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
@@ -513,7 +546,7 @@ class AiProductController extends Controller
         }
 
         $mode = (string) $request->input('mode', 'transparent');
-        $cutout = $studioService->cutoutTransparent($shop, $imageBinary, $mode);
+        $cutout = $this->withVisualCredits($shop, fn () => $studioService->cutoutTransparent($shop, $imageBinary, $mode));
 
         if (! $cutout || ($cutout['status'] ?? '') !== 'success') {
             return response()->json([
@@ -522,9 +555,6 @@ class AiProductController extends Controller
             ], 500);
         }
 
-        if (($cutout['engine'] ?? '') !== 'photoroom-ai') {
-            $shop->consumeAiCredits(1);
-        }
         $shop->refresh();
         AiGeneration::create([
             'shop_id' => $shop->id,

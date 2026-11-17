@@ -14,7 +14,7 @@ class UpdateProductStockOrPriceTool implements AiToolInterface
     public function __construct(
         protected ?ActionTokenService $tokenService = null
     ) {
-        $this->tokenService = $tokenService ?? new ActionTokenService();
+        $this->tokenService = $tokenService ?? new ActionTokenService;
     }
 
     public function name(): string
@@ -113,12 +113,15 @@ class UpdateProductStockOrPriceTool implements AiToolInterface
         // Vérification du jeton HMAC lors de l'exécution confirmée
         $token = $arguments['action_token'] ?? '';
         $executor = $user ?? $shop->owner ?? User::first();
+        if (empty($token)) {
+            return ['status' => 'security_rejection', 'error' => 'Un jeton signé est obligatoire pour confirmer cette action.'];
+        }
         if (! empty($token)) {
             $validation = $this->tokenService->validateToken($token, $shop, $executor, $this->name(), $actionParams);
             if (! $validation['valid']) {
                 return [
                     'status' => 'security_rejection',
-                    'error' => "Refus de sécurité : " . ($validation['error'] ?? 'Jeton invalide.'),
+                    'error' => 'Refus de sécurité : '.($validation['error'] ?? 'Jeton invalide.'),
                 ];
             }
         }
@@ -127,7 +130,7 @@ class UpdateProductStockOrPriceTool implements AiToolInterface
         $updatedFields = [];
         if ($newPrice !== null && $newPrice >= 0) {
             $product->price = $newPrice;
-            $updatedFields[] = "Prix mis à jour : " . number_format($newPrice, 0, ',', ' ') . " {$shop->currency}";
+            $updatedFields[] = 'Prix mis à jour : '.number_format($newPrice, 0, ',', ' ')." {$shop->currency}";
         }
 
         if ($newStock !== null && $newStock >= 0) {
@@ -143,7 +146,7 @@ class UpdateProductStockOrPriceTool implements AiToolInterface
                 'quantity_change' => $newStock - $previousStock,
                 'new_stock' => $newStock,
                 'reason' => 'manual_adjustment',
-                'comment' => "Ajustement de stock opéré via le Copilote IA Zanika",
+                'comment' => 'Ajustement de stock opéré via le Copilote IA Zanika',
             ]);
         }
 

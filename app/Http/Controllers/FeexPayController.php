@@ -5,13 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Plan;
-use App\Models\Shop;
 use App\Models\Subscription;
 use App\Services\FeexPayService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class FeexPayController extends Controller
@@ -45,7 +44,7 @@ class FeexPayController extends Controller
                 return response()->json(['success' => false, 'message' => 'Order not found'], 404);
             }
 
-            $verification = $this->verifyApprovedTransaction($reference, $customId, (int) round((float) $order->total));
+            $verification = $this->verifyApprovedTransaction($reference, $customId, (int) round((float) $order->total), $order->currency);
             if (! $verification) {
                 return response()->json(['success' => false, 'message' => 'Transaction FeexPay non vérifiée'], 422);
             }
@@ -100,7 +99,7 @@ class FeexPayController extends Controller
             $order = Order::withoutGlobalScopes()->with('shop')->find($orderId);
             if ($order) {
                 if ($reference !== '') {
-                    $verification = $this->verifyApprovedTransaction($reference, $customId, (int) round((float) $order->total));
+                    $verification = $this->verifyApprovedTransaction($reference, $customId, (int) round((float) $order->total), $order->currency);
                     if ($verification) {
                         $this->feexPayService->handleOrderPaymentSuccess($order, $reference, $verification['phoneNumber'] ?? null);
 
@@ -131,7 +130,7 @@ class FeexPayController extends Controller
                 if ($verification) {
                     $this->feexPayService->handleSubscriptionPaymentSuccess($sub, $reference, $plan);
 
-                    return redirect()->route('dashboard')->with('status', '🎉 Félicitations ! Votre forfait Zanika ' . $plan->name . ' a été activé avec succès.');
+                    return redirect()->route('dashboard')->with('status', '🎉 Félicitations ! Votre forfait Zanika '.$plan->name.' a été activé avec succès.');
                 }
             }
 
@@ -144,13 +143,14 @@ class FeexPayController extends Controller
     /**
      * Vérifie la transaction directement auprès de l'API FeexPay et empêche la réutilisation d'une référence.
      */
-    private function verifyApprovedTransaction(string $reference, string $expectedCustomId, int $expectedAmount): ?array
+    private function verifyApprovedTransaction(string $reference, string $expectedCustomId, int $expectedAmount, string $expectedCurrency = 'XOF'): ?array
     {
-        if ($reference === '') {
+        if ($reference === '' || strlen($reference) > 150 || ! preg_match('/^[a-zA-Z0-9_.:-]+$/', $reference)) {
             return null;
         }
 
-        $boundTarget = Cache::get("feexpay_tx_target:{$reference}");
+        $boundTarget = DB::table('payment_transactions')->where('provider', 'feexpay')
+            ->where('reference', $reference)->value('target');
         if ($boundTarget !== null && $boundTarget !== $expectedCustomId) {
             Log::warning('FeexPay replay attempt blocked', [
                 'reference' => $reference,
@@ -179,7 +179,7 @@ class FeexPayController extends Controller
         $verifiedCustomId = $verification['custom_id']
             ?? $verification['customId']
             ?? ($verification['data']['custom_id'] ?? ($verification['data']['customId'] ?? null));
-        if ($verifiedCustomId !== null && (string) $verifiedCustomId !== '' && (string) $verifiedCustomId !== $expectedCustomId) {
+        if ((string) $verifiedCustomId !== $expectedCustomId) {
             Log::warning('FeexPay custom_id mismatch', [
                 'reference' => $reference,
                 'expected' => $expectedCustomId,
@@ -190,7 +190,7 @@ class FeexPayController extends Controller
         }
 
         $verifiedAmount = $verification['amount'] ?? ($verification['data']['amount'] ?? null);
-        if ($expectedAmount > 0 && ($verifiedAmount === null || (int) $verifiedAmount < $expectedAmount)) {
+        if (! is_numeric($verifiedAmount) || (float) $verifiedAmount !== (float) $expectedAmount) {
             Log::warning('FeexPay amount mismatch', [
                 'reference' => $reference,
                 'expected' => $expectedAmount,
@@ -200,7 +200,19 @@ class FeexPayController extends Controller
             return null;
         }
 
-        Cache::put("feexpay_tx_target:{$reference}", $expectedCustomId, now()->addYears(2));
+        $verifiedCurrency = strtoupper((string) ($verification['currency'] ?? ($verification['data']['currency'] ?? '')));
+        if ($verifiedCurrency !== strtoupper($expectedCurrency)) {
+            return null;
+        }
+        $verifiedShop = $verification['shop_id'] ?? $verification['shopId'] ?? $verification['shop']
+            ?? ($verification['data']['shop_id'] ?? $verification['data']['shopId'] ?? $verification['data']['shop'] ?? null);
+        if (is_array($verifiedShop)) {
+            $verifiedShop = $verifiedShop['id'] ?? $verifiedShop['_id'] ?? null;
+        }
+        $expectedShop = (string) config('feexpay.shop_id', '');
+        if ($expectedShop === '' || (string) $verifiedShop !== $expectedShop) {
+            return null;
+        }
 
         return $verification;
     }
@@ -248,7 +260,7 @@ class FeexPayController extends Controller
             abort(403, 'Accès non autorisé à cet abonnement.');
         }
 
-        $ref = 'SIM-SUB-' . strtoupper(bin2hex(random_bytes(4)));
+        $ref = 'SIM-SUB-'.strtoupper(bin2hex(random_bytes(4)));
         $this->feexPayService->handleSubscriptionPaymentSuccess($subscription, $ref, $plan);
         $user->unsetRelation('shop');
         $user->unsetRelation('active_shop');

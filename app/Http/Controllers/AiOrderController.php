@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\AiGeneration;
 use App\Models\Order;
+use App\Models\Shop;
 use App\Services\Ai\AiCustomerService;
 use App\Services\Ai\AiOrderIntelligenceService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -19,7 +21,7 @@ class AiOrderController extends Controller
     public function analyzeRisk(Request $request, Order $order, AiOrderIntelligenceService $orderAiService): JsonResponse
     {
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop || (! $user->isAdmin() && $order->shop_id !== $shop->id)) {
             return response()->json(['error' => 'Non autorisé.'], 403);
         }
@@ -35,10 +37,10 @@ class AiOrderController extends Controller
     /**
      * Revue globale intelligente des commandes Cash on Delivery (COD) et tournées de livraison.
      */
-    public function codReview(Request $request, AiOrderIntelligenceService $orderAiService): View|JsonResponse|\Illuminate\Http\RedirectResponse
+    public function codReview(Request $request, AiOrderIntelligenceService $orderAiService): View|JsonResponse|RedirectResponse
     {
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return redirect()->route('dashboard')->with('status', "Veuillez d'abord configurer une boutique.");
         }
@@ -66,7 +68,7 @@ class AiOrderController extends Controller
         ]);
 
         $user = $request->user();
-        $shop = $user->shop ?? ($user->isAdmin() ? \App\Models\Shop::first() : null);
+        $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
@@ -82,8 +84,7 @@ class AiOrderController extends Controller
         $question = $request->input('question');
         $phone = $request->input('phone');
 
-        $result = $customerService->answerCustomerInquiry($shop, $question, $phone);
-        $shop->consumeAiCredits(1);
+        $result = $shop->withAiCredits(1, fn () => $customerService->answerCustomerInquiry($shop, $question, $phone));
         AiGeneration::create([
             'shop_id' => $shop->id,
             'type' => 'ai_customer_reply',

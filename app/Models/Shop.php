@@ -7,22 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 #[Fillable([
     'user_id', 'name', 'subdomain', 'status', 'onboarding_step', 'onboarding_data',
     'locale', 'currency', 'description', 'business_category', 'theme', 'contact',
-    'logo_path', 'brand_color', 'visual_style', 'target_audience', 'ai_credits_used',
+    'logo_path', 'logo_data', 'brand_color', 'visual_style', 'target_audience', 'ai_credits_used',
     'photoroom_credits_used',
 ])]
 class Shop extends Model
 {
     public const DRAFT = 'draft';
+
     public const PUBLISHED = 'published';
+
     public const PAUSED = 'paused';
+
     public const SUSPENDED = 'suspended';
 
     protected function casts(): array
@@ -58,11 +59,11 @@ class Shop extends Model
     public function currentPlan(): Plan
     {
         $sub = $this->subscription;
-        if ($sub && in_array($sub->status, ['active', 'trial', 'grace'], true) && $sub->plan) {
+        if ($sub && $sub->grantsAccess() && $sub->plan && $sub->plan->active) {
             return $sub->plan;
         }
 
-        return Plan::where('slug', 'essentiel')->first() ?? Plan::first() ?? new Plan([
+        return Plan::where('slug', 'essentiel')->where('active', true)->first() ?? new Plan([
             'slug' => 'essentiel',
             'name' => 'Essentiel',
             'monthly_price' => 10000,
@@ -145,6 +146,13 @@ class Shop extends Model
 
     public function hasEnoughPhotoroomCredits(int $cost = 1): bool
     {
+        if (! array_key_exists('photoroom_credits_used', $this->getAttributes())) {
+            $this->refresh();
+            if (! array_key_exists('photoroom_credits_used', $this->getAttributes())) {
+                return false;
+            }
+        }
+
         return $this->photoroomCreditsRemaining() >= max(1, $cost);
     }
 
@@ -160,27 +168,33 @@ class Shop extends Model
     protected function safeIncrementCreditColumn(string $column, int $cost): void
     {
         $amount = max(1, $cost);
+        $limit = $column === 'photoroom_credits_used' ? $this->photoroomCreditsMonthly() : $this->aiCreditsMonthly();
+        $query = static::whereKey($this->id);
+        if (! $this->owner?->isAdmin()) {
+            $query->where($column, '<=', $limit - $amount);
+        }
+        if ($query->increment($column, $amount) !== 1) {
+            throw ValidationException::withMessages(['credits' => 'Crédits insuffisants pour cette opération.']);
+        }
+        $this->refresh();
+    }
 
+    public function withAiCredits(int $cost, \Closure $operation): mixed
+    {
+        $this->consumeAiCredits($cost);
         try {
-            $this->increment($column, $amount);
+            $result = $operation();
+        } catch (\Throwable $exception) {
+            $this->decrement('ai_credits_used', max(1, $cost));
             $this->refresh();
-            return;
-        } catch (\Throwable $e) {
-            Log::warning("Credit increment failed for shops.{$column}: " . $e->getMessage());
+            throw $exception;
+        }
+        if ($result === null || $result === false || (is_array($result) && ($result['status'] ?? '') === 'error')) {
+            $this->decrement('ai_credits_used', max(1, $cost));
+            $this->refresh();
         }
 
-        try {
-            if (! Schema::hasColumn('shops', $column)) {
-                Schema::table('shops', function (Blueprint $table) use ($column) {
-                    $table->integer($column)->default(0);
-                });
-            }
-
-            $this->increment($column, $amount);
-            $this->refresh();
-        } catch (\Throwable $e2) {
-            Log::warning("Auto-repair credit increment failed for shops.{$column}: " . $e2->getMessage());
-        }
+        return $result;
     }
 
     /**
@@ -196,7 +210,7 @@ class Shop extends Model
         if ($this->user_id) {
             $owner = $this->relationLoaded('user')
                 ? $this->getRelation('user')
-                : \App\Models\User::find($this->user_id);
+                : User::find($this->user_id);
 
             if ($owner && $owner->isAdmin()) {
                 return true;
@@ -367,7 +381,7 @@ class Shop extends Model
      */
     public function formatAmount(int|float $amount): string
     {
-        return number_format((float) $amount, 0, ',', ' ') . ' ' . $this->currencyLabel();
+        return number_format((float) $amount, 0, ',', ' ').' '.$this->currencyLabel();
     }
 
     /**
@@ -420,7 +434,6 @@ class Shop extends Model
         }
     }
 
-
     public function isPublished(): bool
     {
         return $this->status === self::PUBLISHED;
@@ -438,7 +451,7 @@ class Shop extends Model
 
     public function getPublicUrlAttribute(): string
     {
-        return url('/b/' . ($this->subdomain ?: 'boutique'));
+        return url('/b/'.($this->subdomain ?: 'boutique'));
     }
 
     public function getPhoneAttribute(): ?string
@@ -476,9 +489,11 @@ class Shop extends Model
         }
         if (! empty($this->address)) {
             $defaultCity = $this->countryProfile()['city'] ?? 'Lomé';
-            $query = trim($this->address . ($this->city ? ', ' . $this->city : ', ' . $defaultCity));
-            return 'https://www.google.com/maps/search/?api=1&query=' . urlencode($query);
+            $query = trim($this->address.($this->city ? ', '.$this->city : ', '.$defaultCity));
+
+            return 'https://www.google.com/maps/search/?api=1&query='.urlencode($query);
         }
+
         return null;
     }
 
@@ -494,8 +509,9 @@ class Shop extends Model
         }
         // Par défaut pour le Togo si 8 chiffres (ex: 90123456), ajouter l'indicatif 228
         if (strlen($digits) === 8) {
-            $digits = '228' . $digits;
+            $digits = '228'.$digits;
         }
+
         return $digits;
     }
 
@@ -596,10 +612,9 @@ class Shop extends Model
                 ->exists()
         ) {
             $counter++;
-            $candidate = substr($base, 0, 24) . '-' . $counter;
+            $candidate = substr($base, 0, 24).'-'.$counter;
         }
 
         return $candidate;
     }
 }
-

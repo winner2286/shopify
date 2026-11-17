@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use App\Models\DiscountCode;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -12,8 +13,8 @@ use App\Models\Shop;
 use App\Models\StockMovement;
 use App\Models\User;
 use Exception;
-use App\Services\WhatsAppNotificationService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class OrderService
@@ -30,7 +31,14 @@ class OrderService
      */
     public function createFromCart(Shop $shop, array $data): Order
     {
+        if (! $shop->fresh()->isPublished()) {
+            throw new Exception('Cette boutique ne prend pas de commandes actuellement.');
+        }
         $cart = $this->cartService->get($shop);
+        if (in_array($data['payment_method'] ?? '', ['feexpay', 'geniuspay', 'card'], true)
+            && ($shop->currencyCode() !== 'XOF' || strtoupper((string) config('feexpay.currency', 'XOF')) !== 'XOF')) {
+            throw new Exception('Le paiement en ligne n’est pas disponible dans cette devise. Choisissez un règlement direct auprès de la boutique.');
+        }
 
         if (empty($cart)) {
             throw new Exception('Votre panier est vide.');
@@ -67,7 +75,7 @@ class OrderService
                 ->get()
                 ->keyBy('id');
 
-            foreach ($cart as $productId => $item) {
+            foreach ($cart as $productId => &$item) {
                 /** @var Product|null $product */
                 $product = $lockedProducts->get((int) $productId);
 
@@ -78,7 +86,16 @@ class OrderService
                 if ($product->track_stock && $product->stock < (int) $item['quantity']) {
                     throw new Exception("Stock insuffisant pour « {$product->title} ». Disponible : {$product->stock} exemplaire(s).");
                 }
+                if ((int) $product->price <= 0 || (int) $item['quantity'] <= 0) {
+                    throw new Exception('Un article du panier n’est plus disponible à la vente.');
+                }
+                if ((int) $item['price'] !== (int) $product->price) {
+                    throw new Exception('Le prix d’un article a changé. Retirez-le puis ajoutez-le à nouveau au panier pour confirmer le nouveau prix.');
+                }
+                $item['price'] = (int) $product->price;
+                $item['title'] = $product->title;
             }
+            unset($item);
 
             $subtotal = $this->cartService->getSubtotal($shop);
             $shippingCost = $zone->calculateFee($subtotal);
@@ -87,8 +104,8 @@ class OrderService
             $discountAmount = 0;
 
             if ($promoCodeInput !== '') {
-                /** @var \App\Models\DiscountCode|null $discountCode */
-                $discountCode = \App\Models\DiscountCode::withoutGlobalScopes()
+                /** @var DiscountCode|null $discountCode */
+                $discountCode = DiscountCode::withoutGlobalScopes()
                     ->where('shop_id', $shop->id)
                     ->whereRaw('UPPER(code) = ?', [strtoupper($promoCodeInput)])
                     ->lockForUpdate()
@@ -158,6 +175,7 @@ class OrderService
                 'discount_amount' => $discountAmount,
                 'shipping_cost' => $shippingCost,
                 'total' => $total,
+                'currency' => $shop->currencyCode(),
                 'payment_method' => $data['payment_method'],
                 'payment_status' => Order::PAYMENT_STATUS_PENDING,
                 'status' => Order::STATUS_PENDING,
@@ -199,14 +217,14 @@ class OrderService
             }
 
             // 5. Initialisation du paiement (CDC Module F)
-            $paymentRef = 'PAY-' . date('Ymd') . '-' . strtoupper(Str::random(8));
+            $paymentRef = 'PAY-'.date('Ymd').'-'.strtoupper(Str::random(8));
             Payment::withoutGlobalScopes()->create([
                 'shop_id' => $shop->id,
                 'order_id' => $order->id,
                 'payment_reference' => $paymentRef,
                 'method' => $data['payment_method'],
                 'amount' => $total,
-                'currency' => 'XOF',
+                'currency' => $shop->currencyCode(),
                 'status' => Payment::STATUS_PENDING,
                 'payer_phone' => $phone,
                 'expires_at' => now()->addMinutes(15), // CDC F-01 : compte à rebours 15 min
@@ -231,14 +249,14 @@ class OrderService
         try {
             $this->whatsAppService->sendOrderAlertToMerchant($order);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Notification WhatsApp échouée pour #{$order->order_number} : " . $e->getMessage());
+            Log::warning("Notification WhatsApp échouée pour #{$order->order_number} : ".$e->getMessage());
         }
 
         // 9. Notification Push Mobile instantanée du commerçant (PWA Web Push avec vibration/son)
         try {
-            app(\App\Services\AdminNotificationService::class)->notifyMerchantOrder($order);
+            app(AdminNotificationService::class)->notifyMerchantOrder($order);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("Notification Web Push commande échouée pour #{$order->order_number} : " . $e->getMessage());
+            Log::warning("Notification Web Push commande échouée pour #{$order->order_number} : ".$e->getMessage());
         }
 
         return $order;
@@ -256,11 +274,17 @@ class OrderService
         }
 
         DB::transaction(function () use ($order, $reason, $user) {
+            $lockedOrder = Order::withoutGlobalScopes()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if (! $lockedOrder->canBeCancelled()) {
+                throw new Exception('Cette commande ne peut plus être annulée.');
+            }
+            $order->setRawAttributes($lockedOrder->getAttributes(), true);
+            $order->unsetRelation('items');
             $fromStatus = $order->status;
 
             // Restitution automatique du stock pour chaque article
             foreach ($order->items as $item) {
-                $product = Product::withoutGlobalScopes()->find($item->product_id);
+                $product = Product::withoutGlobalScopes()->where('shop_id', $order->shop_id)->lockForUpdate()->find($item->product_id);
                 if ($product && $product->track_stock) {
                     $product->increment('stock', $item->quantity);
                     $newStock = $product->fresh()->stock;

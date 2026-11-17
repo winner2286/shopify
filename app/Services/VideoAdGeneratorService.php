@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\MediaController;
 use App\Models\AiGeneration;
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Shop;
@@ -16,22 +16,34 @@ use Illuminate\Support\Facades\Storage;
 class VideoAdGeneratorService
 {
     public const ANGLE_PROMOTIONS = 'promotions';
+
     public const ANGLE_NOUVEAUTES = 'nouveautes';
+
     public const ANGLE_BESTSELLERS = 'bestsellers';
+
     public const ANGLE_COUP_DE_COEUR = 'coup_de_coeur';
+
     public const ANGLE_BOUTIQUE = 'boutique';
 
     public const TONE_DYNAMIQUE = 'dynamique';
+
     public const TONE_LUXE = 'luxe';
+
     public const TONE_FUN = 'fun';
+
     public const TONE_URGENT = 'urgent';
+
     public const TONE_CHALEUREUX = 'chaleureux';
 
     /** Plateformes de diffusion : elles changent la phrase finale (où trouver le lien). */
     public const PLATFORM_TIKTOK = 'tiktok';
+
     public const PLATFORM_INSTAGRAM = 'instagram';
+
     public const PLATFORM_WHATSAPP = 'whatsapp';
+
     public const PLATFORM_FACEBOOK = 'facebook';
+
     public const PLATFORM_GENERAL = 'general';
 
     public const PLATFORMS = [
@@ -229,9 +241,9 @@ class VideoAdGeneratorService
                 'id' => $p->id,
                 'title' => mb_substr($p->title, 0, 36),
                 'full_title' => $p->title,
-                'price' => $hidePrices ? '' : number_format($p->price, 0, ',', ' ') . ' ' . $currency,
+                'price' => $hidePrices ? '' : number_format($p->price, 0, ',', ' ').' '.$currency,
                 'raw_price' => $p->price,
-                'old_price' => ($hidePrices || ! $hasDiscount) ? null : number_format($p->compare_at_price, 0, ',', ' ') . ' ' . $currency,
+                'old_price' => ($hidePrices || ! $hasDiscount) ? null : number_format($p->compare_at_price, 0, ',', ' ').' '.$currency,
                 'discount_pct' => $hidePrices ? 0 : $discountPct,
                 'badge' => $hasDiscount && ! $hidePrices ? "-{$discountPct}%" : 'TOP VENTE',
                 'category' => $catName,
@@ -264,7 +276,8 @@ class VideoAdGeneratorService
                 if (str_starts_with($data, 'data:image')) {
                     return $data;
                 }
-                return 'data:image/webp;base64,' . $data;
+
+                return 'data:image/webp;base64,'.$data;
             }
 
             // 3. Fichier physique sur le disque public -> conversion Base64 zéro latence
@@ -272,14 +285,16 @@ class VideoAdGeneratorService
                 $diskPath = Storage::disk('public')->path($primary->path);
                 if (file_exists($diskPath) && filesize($diskPath) > 0) {
                     $mime = @mime_content_type($diskPath) ?: 'image/webp';
-                    return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
+
+                    return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($diskPath));
                 }
 
                 if (! empty($primary->thumbnail_path)) {
                     $thumbPath = Storage::disk('public')->path($primary->thumbnail_path);
                     if (file_exists($thumbPath) && filesize($thumbPath) > 0) {
                         $mime = @mime_content_type($thumbPath) ?: 'image/webp';
-                        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($thumbPath));
+
+                        return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($thumbPath));
                     }
                 }
 
@@ -288,7 +303,7 @@ class VideoAdGeneratorService
         }
 
         // 3. Fallback catalogue selon la catégorie
-        $catHint = mb_strtolower(($product->title ?? '') . ' ' . ($shop->business_category ?? ''));
+        $catHint = mb_strtolower(($product->title ?? '').' '.($shop->business_category ?? ''));
         $catalogPath = null;
         if (str_contains($catHint, 'burger') || str_contains($catHint, 'resto') || str_contains($catHint, 'fast food')) {
             $catalogPath = public_path('images/catalog/burger.webp');
@@ -299,7 +314,7 @@ class VideoAdGeneratorService
         }
 
         if ($catalogPath && file_exists($catalogPath)) {
-            return 'data:image/webp;base64,' . base64_encode(file_get_contents($catalogPath));
+            return 'data:image/webp;base64,'.base64_encode(file_get_contents($catalogPath));
         }
 
         // 4. Logo boutique si disponible
@@ -320,7 +335,7 @@ class VideoAdGeneratorService
         if (Storage::disk('public')->exists($cacheRelPath)) {
             $cached = Storage::disk('public')->get($cacheRelPath);
             if (is_string($cached) && $cached !== '') {
-                return 'data:image/png;base64,' . base64_encode($cached);
+                return 'data:image/png;base64,'.base64_encode($cached);
             }
         }
 
@@ -349,16 +364,19 @@ class VideoAdGeneratorService
         }
 
         $useGenerativeTier = $shop->canUsePhotoroomGenerativeScene();
+        $shop->consumePhotoroomCredits(1);
         $prBinary = $useGenerativeTier
             ? $photoroom->studioPackshot($rawBinary, 'studio_white', '1000x1000')
             : $photoroom->removeBackground($rawBinary, ['format' => 'png']);
 
         if (! is_string($prBinary) || $prBinary === '') {
+            $shop->decrement('photoroom_credits_used');
+            $shop->refresh();
+
             return null;
         }
 
-        Storage::disk('public')->put($cacheRelPath, $prBinary);
-        $shop->consumePhotoroomCredits(1);
+        app(PublicMediaStorage::class)->put($cacheRelPath, $prBinary);
 
         AiGeneration::create([
             'shop_id' => $shop->id,
@@ -373,7 +391,7 @@ class VideoAdGeneratorService
             'input_summary' => 'Sublimation & mise en cache Photoroom pour Studio Vidéo IA',
         ]);
 
-        return 'data:image/png;base64,' . base64_encode($prBinary);
+        return 'data:image/png;base64,'.base64_encode($prBinary);
     }
 
     /**
@@ -385,9 +403,11 @@ class VideoAdGeneratorService
             $diskPath = Storage::disk('public')->path($shop->logo_path);
             if (file_exists($diskPath) && filesize($diskPath) > 0) {
                 $mime = @mime_content_type($diskPath) ?: 'image/png';
-                return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($diskPath));
+
+                return 'data:'.$mime.';base64,'.base64_encode(file_get_contents($diskPath));
             }
-            return '/storage/' . ltrim($shop->logo_path, '/');
+
+            return '/storage/'.ltrim($shop->logo_path, '/');
         }
 
         return '';
@@ -485,7 +505,7 @@ class VideoAdGeneratorService
             'products_count' => count($formattedProducts),
             'platform' => $platform,
             'shop_url' => $shop->public_url,
-            'visual_engine' => app(\App\Services\Ai\PhotoroomService::class)->isConfigured() && $shop->hasEnoughPhotoroomCredits(1)
+            'visual_engine' => app(PhotoroomService::class)->isConfigured() && $shop->hasEnoughPhotoroomCredits(1)
                 ? 'photoroom-ai'
                 : 'zanika-studio',
         ];
@@ -493,6 +513,8 @@ class VideoAdGeneratorService
         return [
             'scripts' => $scripts,
             'texts' => $texts,
+            'generation_source' => $aiPayload['_generation']['model'] ?? 'zanika-local-template',
+            'usage' => $aiPayload['_generation']['usage'] ?? [],
             'visual_config' => $visualConfig,
             'products' => $formattedProducts,
         ];
@@ -520,44 +542,44 @@ class VideoAdGeneratorService
 
         $voices = $hasWhatsapp ? [
             self::PLATFORM_TIKTOK => [
-                "Commandez sur notre boutique en ligne, le lien est dans la bio, ou écrivez-nous sur WhatsApp !",
+                'Commandez sur notre boutique en ligne, le lien est dans la bio, ou écrivez-nous sur WhatsApp !',
                 "Le lien de la boutique {$name} est dans la bio : commandez en ligne ou sur WhatsApp !",
             ],
             self::PLATFORM_INSTAGRAM => [
-                "Commandez sur notre boutique en ligne, le lien est dans la bio, ou écrivez-nous sur WhatsApp !",
+                'Commandez sur notre boutique en ligne, le lien est dans la bio, ou écrivez-nous sur WhatsApp !',
                 "Le lien de la boutique {$name} est dans la bio : commandez en ligne ou sur WhatsApp !",
             ],
             self::PLATFORM_WHATSAPP => [
-                "Commandez en ligne grâce au lien de notre boutique, ou répondez-nous directement ici sur WhatsApp !",
+                'Commandez en ligne grâce au lien de notre boutique, ou répondez-nous directement ici sur WhatsApp !',
                 "Cliquez sur le lien pour visiter la boutique {$name}, ou écrivez-nous ici sur WhatsApp !",
             ],
             self::PLATFORM_FACEBOOK => [
-                "Commandez sur notre boutique en ligne, le lien est dans la publication, ou écrivez-nous sur WhatsApp !",
+                'Commandez sur notre boutique en ligne, le lien est dans la publication, ou écrivez-nous sur WhatsApp !',
                 "Le lien de la boutique {$name} est dans la publication : commandez en ligne ou sur WhatsApp !",
             ],
             self::PLATFORM_GENERAL => [
-                "Commandez sur notre boutique en ligne ou directement sur WhatsApp, le lien est juste ici !",
+                'Commandez sur notre boutique en ligne ou directement sur WhatsApp, le lien est juste ici !',
                 "Visitez la boutique en ligne {$name} et commandez en quelques clics, ou sur WhatsApp !",
             ],
         ] : [
             self::PLATFORM_TIKTOK => [
-                "Commandez en quelques clics sur notre boutique en ligne, le lien est dans la bio !",
+                'Commandez en quelques clics sur notre boutique en ligne, le lien est dans la bio !',
                 "Le lien de la boutique {$name} est dans la bio, commandez en ligne dès maintenant !",
             ],
             self::PLATFORM_INSTAGRAM => [
-                "Commandez en quelques clics sur notre boutique en ligne, le lien est dans la bio !",
+                'Commandez en quelques clics sur notre boutique en ligne, le lien est dans la bio !',
                 "Le lien de la boutique {$name} est dans la bio, commandez en ligne dès maintenant !",
             ],
             self::PLATFORM_WHATSAPP => [
-                "Cliquez sur le lien pour commander directement sur notre boutique en ligne !",
+                'Cliquez sur le lien pour commander directement sur notre boutique en ligne !',
                 "Visitez la boutique {$name} grâce au lien et commandez en ligne !",
             ],
             self::PLATFORM_FACEBOOK => [
-                "Commandez sur notre boutique en ligne, le lien est dans la publication !",
+                'Commandez sur notre boutique en ligne, le lien est dans la publication !',
                 "Le lien de la boutique {$name} est dans la publication, commandez en ligne !",
             ],
             self::PLATFORM_GENERAL => [
-                "Commandez dès maintenant sur notre boutique en ligne, le lien est juste ici !",
+                'Commandez dès maintenant sur notre boutique en ligne, le lien est juste ici !',
                 "Visitez la boutique en ligne {$name} et commandez en quelques clics !",
             ],
         ];
@@ -632,14 +654,14 @@ class VideoAdGeneratorService
         $city = $this->resolveShopCity($shop);
         $delivery = $shop->contact['delivery'] ?? null;
         if (! empty($delivery)) {
-            return "Livraison disponible : " . $delivery;
+            return 'Livraison disponible : '.$delivery;
         }
 
         if ($city) {
-            return "Boutique basée à " . $city . " • Commande simple et rapide";
+            return 'Boutique basée à '.$city.' • Commande simple et rapide';
         }
 
-        return "Service client disponible 7j/7 sur WhatsApp";
+        return 'Service client disponible 7j/7 sur WhatsApp';
     }
 
     private function resolveShopCity(Shop $shop): string
@@ -671,7 +693,7 @@ class VideoAdGeneratorService
 
         $productsSummary = [];
         foreach ($products as $i => $p) {
-            $productsSummary[] = ($i + 1) . ". \"" . $p['title'] . "\" (Prix: " . ($isStorePresentation ? 'Non affiché' : $p['price']) . ", Catégorie: " . $p['category'] . ")";
+            $productsSummary[] = ($i + 1).'. "'.$p['title'].'" (Prix: '.($isStorePresentation ? 'Non affiché' : $p['price']).', Catégorie: '.$p['category'].')';
         }
         $productsListStr = implode("\n", $productsSummary);
 
@@ -730,7 +752,7 @@ PROMPT;
             try {
                 $groqModel = config('services.groq.model') ?: env('GROQ_MODEL', 'openai/gpt-oss-120b');
                 $response = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . $groqKey,
+                    'Authorization' => 'Bearer '.$groqKey,
                     'Content-Type' => 'application/json',
                 ])->timeout(7)->post('https://api.groq.com/openai/v1/chat/completions', [
                     'model' => $groqModel,
@@ -748,11 +770,13 @@ PROMPT;
                     $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim((string) $raw));
                     $decoded = json_decode($cleanJson, true);
                     if (is_array($decoded) && ! empty($decoded['scripts'])) {
+                        $decoded['_generation'] = ['model' => 'groq:'.$groqModel, 'usage' => $response->json('usage', [])];
+
                         return $this->sanitizeAiScriptsDuration($decoded);
                     }
                 }
             } catch (\Throwable $e) {
-                Log::info('VideoAdGeneratorService: Groq timeout or error, trying fallback: ' . $e->getMessage());
+                Log::info('VideoAdGeneratorService: Groq timeout or error, trying fallback: '.$e->getMessage());
             }
         }
 
@@ -762,7 +786,7 @@ PROMPT;
                 $model = config('services.openrouter.model') ?: env('OPENROUTER_MODEL', 'google/gemini-2.5-flash');
                 $cleanUrl = trim(preg_replace('/[\r\n\t]+/', '', (string) config('app.url', 'https://zanika.shop')));
                 $response = Http::withHeaders([
-                    'Authorization' => 'Bearer ' . $openrouterKey,
+                    'Authorization' => 'Bearer '.$openrouterKey,
                     'HTTP-Referer' => $cleanUrl ?: 'https://zanika.shop',
                     'X-Title' => config('platform.name', 'Zanika E-Commerce'),
                 ])->timeout(7)->post('https://openrouter.ai/api/v1/chat/completions', [
@@ -781,11 +805,13 @@ PROMPT;
                     $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($raw));
                     $decoded = json_decode($cleanJson, true);
                     if (is_array($decoded) && ! empty($decoded['scripts'])) {
+                        $decoded['_generation'] = ['model' => $model, 'usage' => $response->json('usage', [])];
+
                         return $this->sanitizeAiScriptsDuration($decoded);
                     }
                 }
             } catch (\Throwable $e) {
-                Log::info('VideoAdGeneratorService: OpenRouter timeout or error, switching to deterministic engine: ' . $e->getMessage());
+                Log::info('VideoAdGeneratorService: OpenRouter timeout or error, switching to deterministic engine: '.$e->getMessage());
             }
         }
 
@@ -806,11 +832,13 @@ PROMPT;
                     $text = $response->json('candidates.0.content.parts.0.text');
                     $decoded = json_decode($text, true);
                     if (is_array($decoded) && ! empty($decoded['scripts'])) {
+                        $decoded['_generation'] = ['model' => 'gemini-2.5-flash', 'usage' => ['prompt_tokens' => $response->json('usageMetadata.promptTokenCount', 0), 'completion_tokens' => $response->json('usageMetadata.candidatesTokenCount', 0)]];
+
                         return $this->sanitizeAiScriptsDuration($decoded);
                     }
                 }
             } catch (\Throwable $e) {
-                Log::info('VideoAdGeneratorService: Gemini direct error, switching to deterministic engine: ' . $e->getMessage());
+                Log::info('VideoAdGeneratorService: Gemini direct error, switching to deterministic engine: '.$e->getMessage());
             }
         }
 
@@ -827,7 +855,7 @@ PROMPT;
             return $aiPayload;
         }
 
-        $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+        $mediaCtrl = app(MediaController::class);
 
         foreach ($aiPayload['scripts'] as &$scObj) {
             if (! empty($scObj['scenes']) && is_array($scObj['scenes'])) {
@@ -851,14 +879,15 @@ PROMPT;
      */
     public function formatPriceForSpeech($rawPrice): string
     {
-        $mediaCtrl = app(\App\Http\Controllers\MediaController::class);
+        $mediaCtrl = app(MediaController::class);
 
         if (is_numeric($rawPrice)) {
             $val = (int) $rawPrice;
             if ($val <= 0) {
                 return 'prix réduit';
             }
-            return $mediaCtrl->frenchNumberToWords($val) . ' francs';
+
+            return $mediaCtrl->frenchNumberToWords($val).' francs';
         }
 
         return $mediaCtrl->normalizeSpeechText((string) $rawPrice);
@@ -875,6 +904,7 @@ PROMPT;
             return $min;
         }
         $calculated = ($words / 2.15) + 1.0;
+
         return round(min(max($calculated, $min), $max), 1);
     }
 
@@ -913,7 +943,7 @@ PROMPT;
                 'type' => 'hook',
                 'duration' => $this->estimateSceneDuration($hookText, 4.0, 5.0),
                 'title' => $shopName,
-                'subtitle' => $customMessage ?: "Votre boutique en ligne de référence",
+                'subtitle' => $customMessage ?: 'Votre boutique en ligne de référence',
                 'voiceover' => $hookText,
                 'product_index' => null,
             ];
@@ -930,11 +960,11 @@ PROMPT;
                 'type' => 'hook',
                 'duration' => $this->estimateSceneDuration($hookText, 4.0, 5.0),
                 'title' => match ($angle) {
-                    self::ANGLE_PROMOTIONS => "🔥 OFFRES DU MOMENT",
-                    self::ANGLE_NOUVEAUTES => "✨ NOUVELLE COLLECTION",
-                    self::ANGLE_BESTSELLERS => "🏆 VOS PRÉFÉRÉS",
-                    self::ANGLE_COUP_DE_COEUR => "❤️ COUP DE CŒUR",
-                    default => "SÉLECTION EXCLUSIVE"
+                    self::ANGLE_PROMOTIONS => '🔥 OFFRES DU MOMENT',
+                    self::ANGLE_NOUVEAUTES => '✨ NOUVELLE COLLECTION',
+                    self::ANGLE_BESTSELLERS => '🏆 VOS PRÉFÉRÉS',
+                    self::ANGLE_COUP_DE_COEUR => '❤️ COUP DE CŒUR',
+                    default => 'SÉLECTION EXCLUSIVE'
                 },
                 'subtitle' => "Chez {$shopName}",
                 'voiceover' => $hookText,
@@ -961,10 +991,10 @@ PROMPT;
                 ];
             } else {
                 $prefix = match ($idx) {
-                    0 => "On commence avec",
-                    1 => "Ensuite, découvrez",
-                    2 => "Ne manquez pas non plus",
-                    default => "Et aussi"
+                    0 => 'On commence avec',
+                    1 => 'Ensuite, découvrez',
+                    2 => 'Ne manquez pas non plus',
+                    default => 'Et aussi'
                 };
                 $pSpokenPrice = $this->formatPriceForSpeech($p['raw_price'] ?? $pPrice);
                 $pVoiceover = "{$prefix} {$pTitle}, disponible pour seulement {$pSpokenPrice}.";
@@ -981,24 +1011,24 @@ PROMPT;
         }
 
         // 3. Plan Atout / Argument fort
-        $featureVoiceover = $assetPhrase . ".";
+        $featureVoiceover = $assetPhrase.'.';
         $scenes1[] = [
             'id' => count($scenes1),
             'type' => 'feature',
             'duration' => $this->estimateSceneDuration($featureVoiceover, 3.8, 5.2),
-            'title' => "NOTRE ENGAGEMENT",
+            'title' => 'NOTRE ENGAGEMENT',
             'subtitle' => $assetPhrase,
             'voiceover' => $featureVoiceover,
             'product_index' => null,
         ];
 
         // 4. Plan Call To Action Final
-        $ctaVoiceover = "Commandez dès maintenant sur notre boutique ou contactez-nous sur WhatsApp !";
+        $ctaVoiceover = 'Commandez dès maintenant sur notre boutique ou contactez-nous sur WhatsApp !';
         $scenes1[] = [
             'id' => count($scenes1),
             'type' => 'cta',
             'duration' => $this->estimateSceneDuration($ctaVoiceover, 4.0, 5.2),
-            'title' => "COMMANDEZ EN 1 CLIC",
+            'title' => 'COMMANDEZ EN 1 CLIC',
             'subtitle' => $shopName,
             'voiceover' => $ctaVoiceover,
             'product_index' => null,
@@ -1013,18 +1043,18 @@ PROMPT;
                 'id' => 0,
                 'type' => 'hook',
                 'duration' => $this->estimateSceneDuration($hookText2, 4.0, 5.0),
-                'title' => "TOUT AU MÊME ENDROIT",
+                'title' => 'TOUT AU MÊME ENDROIT',
                 'subtitle' => "Chez {$shopName}",
                 'voiceover' => $hookText2,
                 'product_index' => null,
             ];
         } else {
-            $hookText2 = "Une envie de nouveauté sans vous compliquer la vie ? Regardez ça !";
+            $hookText2 = 'Une envie de nouveauté sans vous compliquer la vie ? Regardez ça !';
             $scenes2[] = [
                 'id' => 0,
                 'type' => 'hook',
                 'duration' => $this->estimateSceneDuration($hookText2, 4.0, 5.0),
-                'title' => "FAITES-VOUS PLAISIR",
+                'title' => 'FAITES-VOUS PLAISIR',
                 'subtitle' => "Arrivage Spécial chez {$shopName}",
                 'voiceover' => $hookText2,
                 'product_index' => null,
@@ -1067,7 +1097,7 @@ PROMPT;
             'id' => count($scenes2),
             'type' => 'feature',
             'duration' => $this->estimateSceneDuration($featureVoiceover2, 3.8, 5.2),
-            'title' => "SERVICE RAPIDE",
+            'title' => 'SERVICE RAPIDE',
             'subtitle' => $assetPhrase,
             'voiceover' => $featureVoiceover2,
             'product_index' => null,
@@ -1078,24 +1108,24 @@ PROMPT;
             'id' => count($scenes2),
             'type' => 'cta',
             'duration' => $this->estimateSceneDuration($ctaVoiceover2, 4.0, 5.2),
-            'title' => "DISPONIBLE IMMÉDIATEMENT",
-            'subtitle' => "Écrivez-nous sur WhatsApp",
+            'title' => 'DISPONIBLE IMMÉDIATEMENT',
+            'subtitle' => 'Écrivez-nous sur WhatsApp',
             'voiceover' => $ctaVoiceover2,
             'product_index' => null,
         ];
 
         return [
             [
-                'title' => "Variante A : Présentation Rythmée & Percutante",
+                'title' => 'Variante A : Présentation Rythmée & Percutante',
                 'concept' => $isStorePresentation
                     ? "Mise en avant fluide des catégories et de l'identité de {$shopName}"
-                    : "Accroche immédiate avec annonce claire des articles et des prix",
+                    : 'Accroche immédiate avec annonce claire des articles et des prix',
                 'scenes' => $scenes1,
                 'steps' => $this->convertScenesToSteps($scenes1),
             ],
             [
                 'title' => "Variante B : Proximité & Confort d'Achat",
-                'concept' => "Accent sur le service, la disponibilité et la facilité de commande",
+                'concept' => 'Accent sur le service, la disponibilité et la facilité de commande',
                 'scenes' => $scenes2,
                 'steps' => $this->convertScenesToSteps($scenes2),
             ],
@@ -1109,8 +1139,8 @@ PROMPT;
     {
         return array_map(function ($s) {
             return [
-                'time' => $s['duration'] . 's',
-                'visual' => $s['title'] . ' - ' . $s['subtitle'],
+                'time' => $s['duration'].'s',
+                'visual' => $s['title'].' - '.$s['subtitle'],
                 'voiceover' => $s['voiceover'],
             ];
         }, $scenes);
@@ -1133,40 +1163,40 @@ PROMPT;
 
         if ($isStorePresentation) {
             return [
-                "✨ Bienvenue chez *{$shopName}* ! Votre nouvelle adresse shopping pour tous vos besoins en {$businessType}.\n\n" .
-                ($customMessage ? "📍 {$customMessage}\n\n" : "") .
-                "🛍️ Découvrez nos univers et passez commande facilement en 1 clic sur WhatsApp !\n\n" .
+                "✨ Bienvenue chez *{$shopName}* ! Votre nouvelle adresse shopping pour tous vos besoins en {$businessType}.\n\n".
+                ($customMessage ? "📍 {$customMessage}\n\n" : '').
+                "🛍️ Découvrez nos univers et passez commande facilement en 1 clic sur WhatsApp !\n\n".
                 "👉 Visitez la boutique ici : {$url}",
 
-                "POV : Tu découvres la boutique *{$shopName}* et tu trouves exactement ce que tu cherchais 😍\n\n" .
-                "Large choix, qualité et service attentionné !\n" .
+                "POV : Tu découvres la boutique *{$shopName}* et tu trouves exactement ce que tu cherchais 😍\n\n".
+                "Large choix, qualité et service attentionné !\n".
                 "📲 Commandes ouvertes sur WhatsApp : {$url}",
 
-                "🛍️ Envie de nouveautés ? *{$shopName}* vous ouvre ses portes !\n\n" .
-                "Commandez en ligne ou directement via WhatsApp en toute sécurité.\n" .
+                "🛍️ Envie de nouveautés ? *{$shopName}* vous ouvre ses portes !\n\n".
+                "Commandez en ligne ou directement via WhatsApp en toute sécurité.\n".
                 "👉 Accédez à la vitrine complète : {$url}",
             ];
         }
 
         $itemsSummary = [];
         foreach (array_slice($products, 0, 3) as $p) {
-            $itemsSummary[] = "• {$p['title']} : {$p['price']}" . ($p['old_price'] ? " (au lieu de {$p['old_price']})" : "");
+            $itemsSummary[] = "• {$p['title']} : {$p['price']}".($p['old_price'] ? " (au lieu de {$p['old_price']})" : '');
         }
         $summaryText = implode("\n", $itemsSummary);
 
         return [
-            "🔥 Arrivage exclusif chez *{$shopName}* !\n\n" .
-            $summaryText . "\n\n" .
-            ($customMessage ? "💡 {$customMessage}\n\n" : "") .
-            "📦 Expédition rapide et commande directe en 1 clic.\n" .
+            "🔥 Arrivage exclusif chez *{$shopName}* !\n\n".
+            $summaryText."\n\n".
+            ($customMessage ? "💡 {$customMessage}\n\n" : '').
+            "📦 Expédition rapide et commande directe en 1 clic.\n".
             "👉 Cliquez ici pour voir la sélection : {$url}",
 
-            "Stop au scrolling 🛑 Ne manquez pas les incontournables du jour chez *{$shopName}* !\n\n" .
-            $summaryText . "\n\n" .
-            "📲 Commandez dès maintenant via le lien en bio ou sur WhatsApp !",
+            "Stop au scrolling 🛑 Ne manquez pas les incontournables du jour chez *{$shopName}* !\n\n".
+            $summaryText."\n\n".
+            '📲 Commandez dès maintenant via le lien en bio ou sur WhatsApp !',
 
-            "✨ Coup de projecteur sur la sélection *{$shopName}* !\n\n" .
-            $summaryText . "\n\n" .
+            "✨ Coup de projecteur sur la sélection *{$shopName}* !\n\n".
+            $summaryText."\n\n".
             "🛒 Quantités limitées. Cliquez pour commander en toute sécurité : {$url}",
         ];
     }

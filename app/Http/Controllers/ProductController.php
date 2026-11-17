@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Shop;
+use App\Services\ImageService;
+use App\Services\PublicMediaStorage;
 use App\Support\SearchHelper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -61,15 +61,15 @@ class ProductController extends Controller
             // Filtre stock bas / épuisé / en stock
             if ($request->input('filter') === 'low_stock') {
                 $query->where('track_stock', true)
-                      ->where('stock', '>', 0)
-                      ->whereColumn('stock', '<=', 'low_stock_threshold');
+                    ->where('stock', '>', 0)
+                    ->whereColumn('stock', '<=', 'low_stock_threshold');
             } elseif ($request->input('filter') === 'out_of_stock') {
                 $query->where('track_stock', true)
-                      ->where('stock', '<=', 0);
+                    ->where('stock', '<=', 0);
             } elseif ($request->input('filter') === 'in_stock') {
                 $query->where(function ($q) {
                     $q->where('track_stock', false)
-                      ->orWhere('stock', '>', 0);
+                        ->orWhere('stock', '>', 0);
                 });
             }
 
@@ -79,11 +79,12 @@ class ProductController extends Controller
             return view('products.index', compact('products', 'categories'));
         } catch (\Throwable $e) {
             report($e);
-            Log::error('Erreur catalogue produits: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            Log::error('Erreur catalogue produits: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
             $categories = collect();
             $products = (new LengthAwarePaginator([], 0, 20))->withPath(route('products.index'));
+
             return view('products.index', compact('products', 'categories'))
-                ->with('error', 'Chargement du catalogue : ' . $e->getMessage());
+                ->with('error', 'Chargement du catalogue : '.$e->getMessage());
         }
     }
 
@@ -127,7 +128,7 @@ class ProductController extends Controller
         ], [
             'title.required' => 'Le titre du produit est obligatoire.',
             'price.required' => 'Le prix est obligatoire.',
-            'price.min' => 'Le prix doit être supérieur à 0 ' . $shop->currencyLabel() . '.',
+            'price.min' => 'Le prix doit être supérieur à 0 '.$shop->currencyLabel().'.',
             'category_ids.max' => 'Vous pouvez choisir au maximum 3 catégories.',
             'photos.max' => 'Vous ne pouvez pas ajouter plus de 8 photos.',
         ]);
@@ -137,7 +138,7 @@ class ProductController extends Controller
 
         $product = $shop->products()->create([
             'title' => $validated['title'],
-            'slug' => Str::slug($validated['title']) . '-' . Str::random(5),
+            'slug' => Str::slug($validated['title']).'-'.Str::random(5),
             'description' => $validated['description'] ?? null,
             'price' => $validated['price'],
             'compare_at_price' => $validated['compare_at_price'] ?? null,
@@ -166,7 +167,7 @@ class ProductController extends Controller
 
         // Traitement et stockage des photos (C-06)
         if ($request->hasFile('photos')) {
-            $imageService = app(\App\Services\ImageService::class);
+            $imageService = app(ImageService::class);
             $sortOrder = 0;
             foreach ($request->file('photos') as $file) {
                 $processed = $imageService->processAndStore($file, "shops/{$shop->id}/products");
@@ -180,8 +181,8 @@ class ProductController extends Controller
             }
         } elseif ($request->filled('ai_temp_photo_path')) {
             $tempPath = ltrim((string) $request->input('ai_temp_photo_path'), '/');
-            if ($shop->ownsPublicPath($tempPath) && Storage::disk('public')->exists($tempPath)) {
-                $rawBytes = (string) Storage::disk('public')->get($tempPath);
+            if ($shop->ownsPublicPath($tempPath) && app(PublicMediaStorage::class)->exists($tempPath)) {
+                $rawBytes = (string) app(PublicMediaStorage::class)->get($tempPath);
                 $product->images()->create([
                     'path' => $tempPath,
                     'sort_order' => 0,
@@ -287,9 +288,11 @@ class ProductController extends Controller
             $currentCount = $product->images()->count();
             $sortOrder = $currentCount;
 
-            $imageService = app(\App\Services\ImageService::class);
+            $imageService = app(ImageService::class);
             foreach ($request->file('photos') as $file) {
-                if ($currentCount >= 8) break; // Limite de 8 photos
+                if ($currentCount >= 8) {
+                    break;
+                } // Limite de 8 photos
 
                 $processed = $imageService->processAndStore($file, "shops/{$shop->id}/products");
                 $product->images()->create([
@@ -303,8 +306,8 @@ class ProductController extends Controller
             }
         } elseif ($request->filled('ai_temp_photo_path')) {
             $tempPath = ltrim((string) $request->input('ai_temp_photo_path'), '/');
-            if ($shop->ownsPublicPath($tempPath) && Storage::disk('public')->exists($tempPath)) {
-                $rawBytes = (string) Storage::disk('public')->get($tempPath);
+            if ($shop->ownsPublicPath($tempPath) && app(PublicMediaStorage::class)->exists($tempPath)) {
+                $rawBytes = (string) app(PublicMediaStorage::class)->get($tempPath);
                 $product->images()->create([
                     'path' => $tempPath,
                     'sort_order' => $product->images()->count(),
@@ -341,7 +344,7 @@ class ProductController extends Controller
     public function destroyImage(Product $product, ProductImage $image): RedirectResponse
     {
         if ($image->product_id === $product->id) {
-            Storage::disk('public')->delete($image->path);
+            app(PublicMediaStorage::class)->delete($image->path);
             $image->delete();
         }
 

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -26,6 +28,7 @@ class MediaController extends Controller
         if ($contentType) {
             $headers['Content-Type'] = $contentType;
         }
+
         return $headers;
     }
 
@@ -71,12 +74,16 @@ class MediaController extends Controller
         }
 
         $cleanPath = ltrim($normalized, '/');
+        if (! preg_match('#^shops/\d+/[a-zA-Z0-9_./-]+\.(?:png|jpe?g|webp|gif|mp3|wav|ogg|m4a|aac|mp4|webm)$#i', $cleanPath)
+            && ! preg_match('#^ads/audio/ad_\d+_(?:voice|music)_\d+\.(?:mp3|wav|ogg|m4a|aac|mp4|webm)$#i', $cleanPath)) {
+            abort(404);
+        }
         $diskPath = Storage::disk('public')->path($cleanPath);
         $publicRoot = realpath(Storage::disk('public')->path(''));
         $realDiskPath = realpath($diskPath);
 
         if ($publicRoot !== false && $realDiskPath !== false) {
-            if (! str_starts_with($realDiskPath, $publicRoot . DIRECTORY_SEPARATOR)) {
+            if (! str_starts_with($realDiskPath, $publicRoot.DIRECTORY_SEPARATOR)) {
                 abort(403, 'Accès refusé.');
             }
             if ($served = $this->tryServeFile($realDiskPath)) {
@@ -89,8 +96,8 @@ class MediaController extends Controller
         // 2. Recherche en base de données limitée au chemin exact demandé (sans fuite inter-boutiques par basename)
         $productImage = ProductImage::where('path', $cleanPath)
             ->orWhere('thumbnail_path', $cleanPath)
-            ->orWhere('path', '/' . $cleanPath)
-            ->orWhere('thumbnail_path', '/' . $cleanPath)
+            ->orWhere('path', '/'.$cleanPath)
+            ->orWhere('thumbnail_path', '/'.$cleanPath)
             ->first();
 
         if ($productImage && ! empty($productImage->image_data)) {
@@ -104,49 +111,33 @@ class MediaController extends Controller
             }
         }
 
-        // 3. Fichier manquant : association avec le catalogue réaliste permanent
-        $product = $productImage?->product;
-        if (! $product) {
-            if (preg_match('/shops\/(\d+)/', $cleanPath, $m)) {
-                $product = Product::where('shop_id', $m[1])->first();
+        $backup = DB::table('public_media')->where('path', $cleanPath)->first();
+        if ($backup) {
+            $binary = base64_decode($backup->data, true);
+            if ($binary !== false) {
+                $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binary) ?: 'application/octet-stream';
+
+                return response($binary, 200, $this->imageHeaders(86400, $mime));
             }
         }
-
-        $catalogPhoto = $this->resolveCatalogPhoto($product, $cleanPath);
-        if ($catalogPhoto && file_exists($catalogPhoto)) {
-            $content = @file_get_contents($catalogPhoto);
-            if ($content !== false && $content !== '') {
-                @mkdir(dirname($diskPath), 0755, true);
-                @file_put_contents($diskPath, $content);
-
-                // Persistance définitive dans PostgreSQL
-                if ($productImage && empty($productImage->image_data)) {
-                    $productImage->update(['image_data' => base64_encode($content)]);
-                }
-
-                if ($served = $this->tryServeFile($diskPath, 2592000, $content)) {
-                    return $served;
-                }
+        $logoShop = Shop::where('logo_path', $cleanPath)->first();
+        if ($logoShop && $logoShop->logo_data) {
+            $binary = base64_decode($logoShop->logo_data, true);
+            if ($binary !== false) {
+                return response($binary, 200, $this->imageHeaders(86400, 'image/webp'));
             }
         }
-
-        // 4. Génération dynamique WebP avec GD
-        if ($this->generateWebPPlaceholder($product, $diskPath)) {
-            $generatedBinary = file_exists($diskPath) ? @file_get_contents($diskPath) : null;
-            if ($productImage && empty($productImage->image_data) && is_string($generatedBinary) && $generatedBinary !== '') {
-                $productImage->update(['image_data' => base64_encode($generatedBinary)]);
-            }
-            if ($served = $this->tryServeFile($diskPath, 86400, is_string($generatedBinary) ? $generatedBinary : null)) {
-                return $served;
-            }
+        if (! $productImage) {
+            abort(404);
         }
 
-        // 5. Fallback vectoriel SVG pur
-        $svg = $this->generateSvgPlaceholder($product);
-        return response($svg, 200, array_merge(
+        // A missing original is shown as an explicit placeholder, never replaced
+        // with another product's photo or persisted under an arbitrary request path.
+        return response($this->generateSvgPlaceholder($productImage->product), 200, array_merge(
             $this->imageHeaders(86400, 'image/svg+xml'),
             ['Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'"]
         ));
+
     }
 
     /**
@@ -156,7 +147,8 @@ class MediaController extends Controller
     {
         $product = null;
         if ($request->filled('id')) {
-            $product = Product::find($request->id);
+            $product = Product::where('status', Product::STATUS_ACTIVE)
+                ->whereHas('shop', fn ($query) => $query->where('status', 'published'))->find($request->id);
         }
 
         $title = $request->input('title', $product?->title ?? 'Article Signature');
@@ -164,32 +156,15 @@ class MediaController extends Controller
         $color = $request->input('color', $product?->shop?->brand_color ?? '#10b981');
 
         // Vérifier si une photo réaliste correspond à l'article
-        $catalogPhoto = $this->resolveCatalogPhoto($product, $title . ' ' . $cat);
+        $catalogPhoto = $this->resolveCatalogPhoto($product, $title.' '.$cat);
         if ($catalogPhoto && file_exists($catalogPhoto)) {
-            if ($product) {
-                $primary = $product->primaryImage;
-                $b64 = base64_encode(file_get_contents($catalogPhoto));
-                if ($primary) {
-                    if (empty($primary->image_data)) {
-                        $primary->update(['image_data' => $b64]);
-                    }
-                } else {
-                    $product->images()->create([
-                        'path' => "shops/{$product->shop_id}/products/" . basename($catalogPhoto),
-                        'thumbnail_path' => "shops/{$product->shop_id}/products/thumb_" . basename($catalogPhoto),
-                        'sort_order' => 0,
-                        'size_bytes' => filesize($catalogPhoto),
-                        'image_data' => $b64,
-                    ]);
-                }
-            }
-
             if ($served = $this->tryServeFile($catalogPhoto, 86400)) {
                 return $served;
             }
         }
 
         $svg = $this->buildSvgContent($title, $cat, $color);
+
         return response($svg, 200, array_merge(
             $this->imageHeaders(86400, 'image/svg+xml'),
             ['Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'"]
@@ -201,27 +176,36 @@ class MediaController extends Controller
      */
     private function resolveCatalogPhoto(?Product $product, string $hint = ''): ?string
     {
-        $text = mb_strtolower(($product?->title ?? '') . ' ' . ($product?->categories?->first()?->name ?? '') . ' ' . $hint);
+        $text = mb_strtolower(($product?->title ?? '').' '.($product?->categories?->first()?->name ?? '').' '.$hint);
         $isThumb = str_contains($hint, 'thumb');
 
         if (str_contains($text, 'frite') || str_contains($text, 'snack')) {
             $file = $isThumb ? 'thumb_frites.webp' : 'frites.webp';
             $path = public_path("images/catalog/{$file}");
-            if (file_exists($path)) return $path;
+            if (file_exists($path)) {
+                return $path;
+            }
+
             return public_path('images/catalog/frites.webp');
         }
 
         if (str_contains($text, 'poisson') || str_contains($text, 'fish')) {
             $file = $isThumb ? 'thumb_poisson.webp' : 'poisson.webp';
             $path = public_path("images/catalog/{$file}");
-            if (file_exists($path)) return $path;
+            if (file_exists($path)) {
+                return $path;
+            }
+
             return public_path('images/catalog/poisson.webp');
         }
 
         if (str_contains($text, 'burger') || str_contains($text, 'sandwich') || str_contains($text, 'pain')) {
             $file = $isThumb ? 'thumb_burger.webp' : 'burger.webp';
             $path = public_path("images/catalog/{$file}");
-            if (file_exists($path)) return $path;
+            if (file_exists($path)) {
+                return $path;
+            }
+
             return public_path('images/catalog/burger.webp');
         }
 
@@ -286,7 +270,7 @@ class MediaController extends Controller
             $catName = mb_strtoupper($product?->categories?->first()?->name ?? 'BOUTIQUE EXCLUSIVE');
             $prodTitle = $product?->title ?? 'Article Signature';
             if (mb_strlen($prodTitle) > 30) {
-                $prodTitle = mb_substr($prodTitle, 0, 27) . '...';
+                $prodTitle = mb_substr($prodTitle, 0, 27).'...';
             }
 
             // Catégorie
@@ -298,7 +282,7 @@ class MediaController extends Controller
             imagestring($im, 5, $titleX, 450, $prodTitle, $textWhite);
 
             // Mention Zanika
-            $shopName = 'Zanika - ' . ($product?->shop?->name ?: 'Commerce');
+            $shopName = 'Zanika - '.($product?->shop?->name ?: 'Commerce');
             $shopX = max(40, (int) (300 - (mb_strlen($shopName) * 4)));
             imagestring($im, 2, $shopX, 490, $shopName, $textSoft);
 
@@ -309,6 +293,7 @@ class MediaController extends Controller
             return file_exists($targetPath) && filesize($targetPath) > 0;
         } catch (\Throwable $e) {
             report($e);
+
             return false;
         }
     }
@@ -400,7 +385,7 @@ SVG;
     {
         $hex = ltrim($hex, '#');
         if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
         if (strlen($hex) !== 6) {
             return [16, 185, 129];
@@ -442,7 +427,7 @@ SVG;
             return 'zéro';
         }
         if ($n < 0) {
-            return 'moins ' . $this->fallbackFrenchSpellout(-$n);
+            return 'moins '.$this->fallbackFrenchSpellout(-$n);
         }
 
         $units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
@@ -455,10 +440,10 @@ SVG;
             $t = intdiv($n, 10);
             $u = $n % 10;
             if ($t === 7) {
-                return $u === 1 ? 'soixante-et-onze' : 'soixante-' . $units[10 + $u];
+                return $u === 1 ? 'soixante-et-onze' : 'soixante-'.$units[10 + $u];
             }
             if ($t === 9) {
-                return 'quatre-vingt-' . $units[10 + $u];
+                return 'quatre-vingt-'.$units[10 + $u];
             }
             if ($t === 8 && $u === 0) {
                 return 'quatre-vingts';
@@ -467,30 +452,30 @@ SVG;
                 return $tens[$t];
             }
             if ($u === 1 && $t < 8) {
-                return $tens[$t] . '-et-un';
+                return $tens[$t].'-et-un';
             }
 
-            return $tens[$t] . '-' . $units[$u];
+            return $tens[$t].'-'.$units[$u];
         }
         if ($n < 1000) {
             $h = intdiv($n, 100);
             $rem = $n % 100;
-            $prefix = $h === 1 ? 'cent' : $units[$h] . ' cent' . ($rem === 0 ? 's' : '');
+            $prefix = $h === 1 ? 'cent' : $units[$h].' cent'.($rem === 0 ? 's' : '');
 
-            return $rem === 0 ? $prefix : $prefix . ' ' . $this->fallbackFrenchSpellout($rem);
+            return $rem === 0 ? $prefix : $prefix.' '.$this->fallbackFrenchSpellout($rem);
         }
         if ($n < 1000000) {
             $th = intdiv($n, 1000);
             $rem = $n % 1000;
-            $prefix = $th === 1 ? 'mille' : $this->fallbackFrenchSpellout($th) . ' mille';
+            $prefix = $th === 1 ? 'mille' : $this->fallbackFrenchSpellout($th).' mille';
 
-            return $rem === 0 ? $prefix : $prefix . ' ' . $this->fallbackFrenchSpellout($rem);
+            return $rem === 0 ? $prefix : $prefix.' '.$this->fallbackFrenchSpellout($rem);
         }
         $mil = intdiv($n, 1000000);
         $rem = $n % 1000000;
-        $prefix = $mil === 1 ? 'un million' : $this->fallbackFrenchSpellout($mil) . ' millions';
+        $prefix = $mil === 1 ? 'un million' : $this->fallbackFrenchSpellout($mil).' millions';
 
-        return $rem === 0 ? $prefix : $prefix . ' ' . $this->fallbackFrenchSpellout($rem);
+        return $rem === 0 ? $prefix : $prefix.' '.$this->fallbackFrenchSpellout($rem);
     }
 
     /**
@@ -530,7 +515,7 @@ SVG;
             };
 
             // Formulation orale naturelle pour la voix-off publicitaire
-            return $words . ' ' . $spokenUnit;
+            return $words.' '.$spokenUnit;
         }, $text);
 
         // 3. Nombres isolés formatés avec séparateurs de milliers (ex: 1 000, 15 000, 100 000)
@@ -569,7 +554,7 @@ SVG;
         if (! file_exists($cacheDir)) {
             @mkdir($cacheDir, 0755, true);
         }
-        $cacheFile = $cacheDir . '/' . md5('fr_' . $cleanText) . '.mp3';
+        $cacheFile = $cacheDir.'/'.md5('fr_'.$cleanText).'.mp3';
 
         if (file_exists($cacheFile) && filesize($cacheFile) > 0) {
             $mp3 = file_get_contents($cacheFile);
@@ -602,7 +587,7 @@ SVG;
         if (! file_exists($cacheDir)) {
             @mkdir($cacheDir, 0755, true);
         }
-        $cacheFile = $cacheDir . '/' . md5('fr_' . $cleanText) . '.mp3';
+        $cacheFile = $cacheDir.'/'.md5('fr_'.$cleanText).'.mp3';
 
         if (file_exists($cacheFile) && filesize($cacheFile) > 0) {
             return true;
@@ -611,6 +596,7 @@ SVG;
         $mp3 = $this->fetchGoogleTts($cleanText);
         if ($mp3 && strlen($mp3) > 300) {
             @file_put_contents($cacheFile, $mp3);
+
             return true;
         }
 
@@ -653,4 +639,3 @@ SVG;
         return null;
     }
 }
-

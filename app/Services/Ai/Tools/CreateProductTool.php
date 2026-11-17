@@ -16,7 +16,7 @@ class CreateProductTool implements AiToolInterface
     public function __construct(
         protected ?ActionTokenService $tokenService = null
     ) {
-        $this->tokenService = $tokenService ?? new ActionTokenService();
+        $this->tokenService = $tokenService ?? new ActionTokenService;
     }
 
     public function name(): string
@@ -124,7 +124,7 @@ class CreateProductTool implements AiToolInterface
         $rawStatus = (string) ($arguments['status'] ?? 'active');
         $status = in_array($rawStatus, ['active', 'hidden'], true) ? $rawStatus : 'active';
         $categoryName = trim((string) ($arguments['category_name'] ?? ''));
-        $sku = ! empty($arguments['sku']) ? trim((string) $arguments['sku']) : strtoupper(Str::slug(mb_substr($title, 0, 4)) . '-' . Str::random(4));
+        $sku = ! empty($arguments['sku']) ? trim((string) $arguments['sku']) : strtoupper(Str::slug(mb_substr($title, 0, 4)).'-'.Str::random(4));
 
         $isConfirmed = ! empty($arguments['confirmed_by_user']);
 
@@ -146,9 +146,9 @@ class CreateProductTool implements AiToolInterface
             $initiator = $user ?? $shop->owner ?? User::first();
             $token = $this->tokenService->generateToken($shop, $initiator, $this->name(), $actionParams);
 
-            $formattedPrice = number_format($price, 0, ',', ' ') . " {$shop->currency}";
+            $formattedPrice = number_format($price, 0, ',', ' ')." {$shop->currency}";
             $promoInfo = $compareAtPrice && $compareAtPrice > $price
-                ? " (Prix d'origine barré : " . number_format($compareAtPrice, 0, ',', ' ') . " {$shop->currency})"
+                ? " (Prix d'origine barré : ".number_format($compareAtPrice, 0, ',', ' ')." {$shop->currency})"
                 : '';
 
             return [
@@ -185,18 +185,21 @@ class CreateProductTool implements AiToolInterface
         ];
 
         $executor = $user ?? $shop->owner ?? User::first();
+        if (empty($token)) {
+            return ['status' => 'security_rejection', 'error' => 'Un jeton signé est obligatoire pour confirmer cette action.'];
+        }
         if (! empty($token)) {
             $validation = $this->tokenService->validateToken($token, $shop, $executor, $this->name(), $actionParams);
             if (! $validation['valid']) {
                 return [
                     'status' => 'security_rejection',
-                    'error' => "Refus de sécurité : " . ($validation['error'] ?? 'Jeton invalide.'),
+                    'error' => 'Refus de sécurité : '.($validation['error'] ?? 'Jeton invalide.'),
                 ];
             }
         }
 
         // 4. Création effective du produit
-        $uniqueSlug = Str::slug($title) . '-' . Str::random(5);
+        $uniqueSlug = Str::slug($title).'-'.Str::random(5);
 
         $product = Product::withoutGlobalScopes()->create([
             'shop_id' => $shop->id,
@@ -224,7 +227,7 @@ class CreateProductTool implements AiToolInterface
                 $category = Category::withoutGlobalScopes()->create([
                     'shop_id' => $shop->id,
                     'name' => $categoryName,
-                    'slug' => Str::slug($categoryName) . '-' . Str::random(4),
+                    'slug' => Str::slug($categoryName).'-'.Str::random(4),
                     'display_order' => 1,
                     'is_visible' => true,
                 ]);
@@ -241,11 +244,11 @@ class CreateProductTool implements AiToolInterface
                 'quantity_change' => $stock,
                 'new_stock' => $stock,
                 'reason' => 'initial_creation',
-                'comment' => "Création de fiche produit par le Copilote IA Zanika",
+                'comment' => 'Création de fiche produit par le Copilote IA Zanika',
             ]);
         }
 
-        $formattedPrice = number_format($product->price, 0, ',', ' ') . " {$shop->currency}";
+        $formattedPrice = number_format($product->price, 0, ',', ' ')." {$shop->currency}";
 
         return [
             'status' => 'success',

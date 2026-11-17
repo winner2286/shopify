@@ -27,7 +27,7 @@
                 Paiement à la livraison
             </h3>
             <p style="margin:0;color:var(--text);line-height:1.6">
-                Vous avez choisi de régler en espèces à la livraison. Veuillez préparer le montant exact de <strong>{{ number_format($order->total, 0, ',', ' ') }} FCFA</strong> qui sera remis au livreur lors de la réception de votre colis.
+                Vous avez choisi de régler en espèces à la livraison. Veuillez préparer le montant exact de <strong>{{ number_format($order->total, 0, ',', ' ') }} {{ $order->currencyLabel() }}</strong> qui sera remis au livreur lors de la réception de votre colis.
             </p>
         </div>
     @elseif (in_array($order->payment_method, ['tmoney', 'flooz'], true))
@@ -50,7 +50,7 @@
                 </div>
             @else
                 <p style="color:var(--text-soft);margin-bottom:1.2rem;line-height:1.6">
-                    Effectuez le transfert du montant de <strong>{{ number_format($order->total, 0, ',', ' ') }} FCFA</strong> vers le numéro marchand de la boutique ({{ $shop->phone ?: '+228 90 00 00 00' }}) en indiquant votre numéro de commande <strong>{{ $order->order_number }}</strong> en référence.
+                    Effectuez le transfert du montant de <strong>{{ number_format($order->total, 0, ',', ' ') }} {{ $order->currencyLabel() }}</strong> vers le numéro marchand de la boutique ({{ $shop->phone ?: '+228 90 00 00 00' }}) en indiquant votre numéro de commande <strong>{{ $order->order_number }}</strong> en référence.
                 </p>
 
                 <!-- Bouton de simulation pour tests et démonstration immédiate (local/test uniquement) -->
@@ -84,7 +84,7 @@
 
             @if ($order->payment_status === 'paid')
                 <div style="color:var(--ok);font-weight:600;font-size:1.05rem;display:flex;align-items:center;gap:.4rem">
-                    <x-icon name="check-circle" size="18" /> Votre paiement de {{ number_format($order->total, 0, ',', ' ') }} FCFA a été validé avec succès par GeniusPay !
+                    <x-icon name="check-circle" size="18" /> Votre paiement de {{ number_format($order->total, 0, ',', ' ') }} {{ $order->currencyLabel() }} a été validé avec succès par GeniusPay !
                 </div>
             @else
                 <p style="color:var(--text-soft);margin-bottom:1.2rem;line-height:1.6">
@@ -95,7 +95,7 @@
                 <div style="display:flex;flex-direction:column;align-items:center;gap:.8rem;margin:1.5rem 0">
                     <div id="feexpay-btn-order" style="width:100%;max-width:380px;min-height:50px;display:flex;justify-content:center;align-items:center">
                         <button type="button" id="feexpay-trigger-btn" class="btn btn-primary" style="background:#FF2D6D;border-color:#FF2D6D;color:#fff;width:100%;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.4rem;border-radius:10px;box-shadow:0 6px 20px rgba(255,45,109,0.3)">
-                            <x-icon name="credit-card" size="18" /> Payer {{ number_format($order->total, 0, ',', ' ') }} FCFA via GeniusPay
+                            <x-icon name="credit-card" size="18" /> Payer {{ number_format($order->total, 0, ',', ' ') }} {{ $order->currencyLabel() }} via GeniusPay
                         </button>
                     </div>
                     <div id="feexpay-kyc-notice" style="display:none;width:100%;max-width:440px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.85rem 1rem;font-size:.84rem;color:#92400e;line-height:1.45;text-align:center">
@@ -123,7 +123,7 @@
                         const triggerBtn = document.getElementById('feexpay-trigger-btn');
                         const kycNotice = document.getElementById('feexpay-kyc-notice');
                         const feexShopId = @json(config('feexpay.shop_id'));
-                        const feexToken = @json(config('feexpay.token'));
+                        const feexToken = @json(config('feexpay.sdk_token'));
 
                         if (typeof FeexPayButton !== 'undefined' && feexShopId && feexToken) {
                             try {
@@ -136,7 +136,7 @@
                                     custom_id: 'ORDER:{{ $order->id }}',
                                     description: 'Commande #{{ $order->order_number }} sur {{ addslashes($shop->name) }}',
                                     currency: 'XOF',
-                                    buttonText: 'Payer {{ number_format($order->total, 0, ',', ' ') }} FCFA via GeniusPay',
+                                    buttonText: 'Payer {{ number_format($order->total, 0, ',', ' ') }} {{ $order->currencyLabel() }} via GeniusPay',
                                     callback: function(response) {
                                         if (response && (response.status === 'SUCCESSFUL' || response.status === 'SUCCESS')) {
                                             window.location.href = '{{ route('geniuspay.callback') }}?custom_id=ORDER:{{ $order->id }}&reference=' + (response.reference || '');
@@ -205,7 +205,7 @@
                 @foreach ($order->items as $it)
                     <div style="display:flex;justify-content:space-between;font-size:.95rem">
                         <span>{{ $it->quantity }}x {{ $it->product_title }}</span>
-                        <span style="font-weight:600">{{ number_format($it->total_price, 0, ',', ' ') }} FCFA</span>
+                        <span style="font-weight:600">{{ number_format($it->total_price, 0, ',', ' ') }} {{ $order->currencyLabel() }}</span>
                     </div>
                 @endforeach
             </div>
@@ -213,21 +213,21 @@
             <div style="background:var(--bg-soft);padding:1rem;border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:.4rem;font-size:.95rem">
                 <div style="display:flex;justify-content:space-between;color:var(--text-soft)">
                     <span>Sous-total :</span>
-                    <span>{{ number_format($order->subtotal, 0, ',', ' ') }} FCFA</span>
+                    <span>{{ number_format($order->subtotal, 0, ',', ' ') }} {{ $order->currencyLabel() }}</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;color:var(--text-soft)">
                     <span>Livraison :</span>
-                    <span>{{ $order->shipping_cost === 0 ? 'Gratuit' : number_format($order->shipping_cost, 0, ',', ' ') . ' FCFA' }}</span>
+                    <span>{{ $order->shipping_cost === 0 ? 'Gratuit' : number_format($order->shipping_cost, 0, ',', ' ') . ' ' . $order->currencyLabel() }}</span>
                 </div>
                 @if (($order->discount_amount ?? 0) > 0)
                 <div style="display:flex;justify-content:space-between;color:#16a34a;font-weight:600">
                     <span>Réduction ({{ $order->discount_code ?? 'Promo' }}) :</span>
-                    <span>-{{ number_format($order->discount_amount, 0, ',', ' ') }} FCFA</span>
+                    <span>-{{ number_format($order->discount_amount, 0, ',', ' ') }} {{ $order->currencyLabel() }}</span>
                 </div>
                 @endif
                 <div style="display:flex;justify-content:space-between;font-size:1.2rem;font-weight:700;border-top:1px solid var(--border);padding-top:.5rem;margin-top:.3rem">
                     <span>Total :</span>
-                    <span style="color:var(--text)">{{ number_format($order->total, 0, ',', ' ') }} FCFA</span>
+                    <span style="color:var(--text)">{{ number_format($order->total, 0, ',', ' ') }} {{ $order->currencyLabel() }}</span>
                 </div>
             </div>
         </div>
