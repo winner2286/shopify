@@ -43,6 +43,8 @@
             if (!this.canvas) return;
 
             this.ctx = this.canvas.getContext('2d');
+            this.ctx.imageSmoothingEnabled = true;
+            this.ctx.imageSmoothingQuality = 'high';
             this.currentTime = 0.0;
             this.isPlaying = false;
             this.isRecording = false;
@@ -77,7 +79,7 @@
             this.shopLogoImg = null;
             this.shopLogoLoaded = false;
 
-            this.preloadImages();
+            this.imagesReady = this.preloadImages();
             this.initAudio();
             this.buildTimelineFromActiveScript();
             this.initEvents();
@@ -90,27 +92,25 @@
         preloadImages: function () {
             const products = this.config.products || [];
             this.productImages = new Array(products.length).fill(null);
+            const pending = [];
 
             products.forEach((p, idx) => {
                 if (!p.imageUrl) return;
                 const img = new Image();
+                this.productImages[idx] = img;
+                let finish;
+                pending.push(new Promise(resolve => { finish = resolve; }));
                 if (!p.imageUrl.startsWith('data:')) {
                     img.crossOrigin = 'anonymous';
                 }
                 img.onload = () => {
                     this.productImages[idx] = img;
                     this.render();
+                    finish();
                 };
                 img.onerror = () => {
-                    // Retry sans crossOrigin si bloqué
-                    if (!p.imageUrl.startsWith('data:')) {
-                        const fallbackImg = new Image();
-                        fallbackImg.onload = () => {
-                            this.productImages[idx] = fallbackImg;
-                            this.render();
-                        };
-                        fallbackImg.src = p.imageUrl;
-                    }
+                    this.productImages[idx] = null;
+                    finish();
                 };
                 img.src = p.imageUrl;
             });
@@ -128,6 +128,8 @@
                 };
                 logo.src = this.config.shopLogoUrl;
             }
+            this.imagesReady = Promise.all(pending);
+            return this.imagesReady;
         },
 
         // --- MOTEUR AUDIO (WEB AUDIO API & FALLBACK SYNTHÈSE VOCALE) ---
@@ -423,7 +425,7 @@
                     });
             });
 
-            return Promise.all(promises).then(() => {
+            this.voiceoverReady = Promise.all(promises).then(() => {
                 this.recalculateTimeline();
                 if (statusEl) {
                     const loaded = this.voiceBuffers.filter(b => b !== null).length;
@@ -431,11 +433,12 @@
                         statusEl.textContent = `Voix prête (${loaded}/${scenes.length} plans)`;
                         statusEl.className = 'badge badge-ok';
                     } else {
-                        statusEl.textContent = 'Voix vocale active';
-                        statusEl.className = 'badge badge-ok';
+                        statusEl.textContent = 'Voix indisponible pour l’export — enregistrez votre voix ou réessayez';
+                        statusEl.className = 'badge badge-draft';
                     }
                 }
             });
+            return this.voiceoverReady;
         },
 
         // --- GESTION DES AUDIOS PERSONNALISÉS (VOIX COMMERÇANT & MUSIQUE) ---
@@ -979,6 +982,20 @@
             }
 
             if (!activeScene) return;
+
+            if (window.AdCreativeRenderer) {
+                ctx.save();
+                ctx.scale(w / 720, h / 1280);
+                window.AdCreativeRenderer.video(ctx, { ...this.config, tone: this.tone || this.config.tone }, activeScene, this.productImages || [],
+                    this.shopLogoLoaded ? this.shopLogoImg : null,
+                    Math.max(0, t - activeScene.startTime),
+                    Math.min(Math.max(0, t - activeScene.startTime) / activeScene.duration, 1),
+                    this.getPlatformLinkHint());
+                ctx.restore();
+                const indicator = document.getElementById('ad-scene-indicator');
+                if (indicator) indicator.textContent = `Plan ${activeScene.index + 1}/${this.timelineScenes.length} : ${activeScene.title}`;
+                return;
+            }
 
             // Temps écoulé dans le plan courant
             const sceneElapsed = t - activeScene.startTime;
@@ -1800,8 +1817,34 @@
         },
 
         // --- ENREGISTREMENT & EXPORT VIDÉO HD (MP4 / WEBM) ---
-        startExport: function () {
-            if (this.isRecording) return;
+        startExport: async function () {
+            if (this.isRecording || this.isPreparingExport) return;
+            if (!window.MediaRecorder || !this.canvas.captureStream) {
+                alert('Ce navigateur ne permet pas l’export vidéo. Essayez un navigateur récent.');
+                return;
+            }
+            this.isPreparingExport = true;
+            try {
+                await Promise.race([
+                    Promise.all([this.imagesReady, this.voiceoverReady, document.fonts && document.fonts.ready]),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Chargement trop long. Réessayez dans quelques instants.')), 15000))
+                ]);
+                if ((this.config.products || []).some((p, i) => p.imageUrl && !(this.productImages[i] && this.productImages[i].naturalWidth))) {
+                    throw new Error('Une photo produit est indisponible. Ajoutez une photo valide avant l’export.');
+                }
+                if (this.voiceoverEnabled && this.voiceMode !== 'custom' && (this.timelineScenes || []).some((scene, i) => scene.voiceover && !this.voiceBuffers[i])) {
+                    throw new Error('La voix n’est pas prête pour tous les plans. Réessayez ou enregistrez votre propre voix.');
+                }
+                if (this.voiceoverEnabled && this.voiceMode === 'custom' && !this.customVoiceBuffer) {
+                    throw new Error('Ajoutez votre enregistrement vocal avant l’export.');
+                }
+            } catch (error) {
+                alert(error.message);
+                this.isPreparingExport = false;
+                return;
+            }
+            this.isPreparingExport = false;
+            this.pause();
             this.ensureAudioActive();
 
             const exportBtn = document.getElementById('ad-btn-export');
@@ -1811,10 +1854,22 @@
 
             this.isRecording = true;
             this.currentTime = 0;
+            this.voicePlayed = {};
             this.recordedChunks = [];
+            this.render();
 
             // Flux vidéo du canvas (30 fps fluide)
-            const canvasStream = this.canvas.captureStream(30);
+            let canvasStream;
+            try {
+                canvasStream = this.canvas.captureStream(30);
+            } catch (error) {
+                this.isRecording = false;
+                if (exportBtn) exportBtn.style.display = 'block';
+                if (progressWrap) progressWrap.style.display = 'none';
+                alert('Une image ne peut pas être exportée. Importez-la dans votre catalogue puis réessayez.');
+                return;
+            }
+            this.recordingVideoTracks = canvasStream.getVideoTracks();
 
             // Mixage avec le flux audio destination
             let combinedStream = canvasStream;
@@ -1829,8 +1884,8 @@
             }
 
             // Détection du mimeType supporté
-            let mimeType = 'video/webm;codecs=vp9';
-            if (this.selectedFormat === 'mp4') {
+            let mimeType = window.AdCreativeRenderer.recordingFormat(MediaRecorder, this.selectedFormat);
+            if (!window.AdCreativeRenderer && this.selectedFormat === 'mp4') {
                 if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2')) {
                     mimeType = 'video/mp4;codecs=avc1,mp4a.40.2';
                 } else if (MediaRecorder.isTypeSupported('video/mp4')) {
@@ -1838,7 +1893,7 @@
                 } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
                     mimeType = 'video/webm;codecs=h264';
                 }
-            } else {
+            } else if (!window.AdCreativeRenderer) {
                 if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
                     mimeType = 'video/webm;codecs=vp8,opus';
                 }
@@ -1847,11 +1902,13 @@
             try {
                 this.mediaRecorder = new MediaRecorder(combinedStream, {
                     mimeType: mimeType,
-                    videoBitsPerSecond: 4500000 // 4.5 Mbps HD
+                    videoBitsPerSecond: 8000000,
+                    audioBitsPerSecond: 192000
                 });
             } catch (err) {
                 this.mediaRecorder = new MediaRecorder(combinedStream);
             }
+            this.recordingMimeType = this.mediaRecorder.mimeType || mimeType || 'video/webm';
 
             this.mediaRecorder.ondataavailable = (e) => {
                 if (e.data && e.data.size > 0) {
@@ -1877,11 +1934,12 @@
         },
 
         finishExport: function () {
+            (this.recordingVideoTracks || []).forEach(track => track.stop());
             const blob = new Blob(this.recordedChunks, {
-                type: this.selectedFormat === 'mp4' ? 'video/mp4' : 'video/webm'
+                type: this.recordingMimeType
             });
 
-            const ext = this.selectedFormat === 'mp4' ? 'mp4' : 'webm';
+            const ext = this.recordingMimeType.includes('mp4') ? 'mp4' : 'webm';
             const cleanShopName = (this.config.shopName || 'pub').toLowerCase().replace(/[^a-z0-9]/g, '_');
             const filename = `pub_video_${cleanShopName}_${Date.now()}.${ext}`;
 
@@ -1914,7 +1972,7 @@
                     },
                     body: JSON.stringify({
                         tone: this.tone,
-                        format: this.selectedFormat,
+                        format: ext,
                         script_index: this.currentScriptIndex
                     })
                 }).catch(() => {});

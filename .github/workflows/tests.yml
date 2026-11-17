@@ -31,4 +31,5 @@ jobs:
       - run: composer audit --locked
       - run: php vendor/bin/phpunit --do-not-cache-result
       - run: node docs/audit-2026-11-17/verify-service-worker.mjs
+      - run: node --test tests/ad-creative.test.cjs
       - run: for file in public/js/*.js resources/js/*.js; do node --check "$file"; done

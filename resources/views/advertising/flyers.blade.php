@@ -351,21 +351,21 @@
                             <span style="position:absolute;left:.75rem;color:var(--brand-1);pointer-events:none;display:flex;align-items:center">
                                 <x-icon name="truck" :size="16" />
                             </span>
-                            <input type="text" id="inputShopFeature1" class="input" value="Livraison rapide partout au Togo" placeholder="Ex. Livraison rapide partout au Togo" oninput="updateFlyer()" style="padding-left:2.25rem">
+                            <input type="text" id="inputShopFeature1" class="input" value="" placeholder="Un service réellement proposé" oninput="updateFlyer()" style="padding-left:2.25rem">
                         </div>
 
                         <div style="display:flex;align-items:center;position:relative">
                             <span style="position:absolute;left:.75rem;color:var(--brand-1);pointer-events:none;display:flex;align-items:center">
                                 <x-icon name="credit-card" :size="16" />
                             </span>
-                            <input type="text" id="inputShopFeature2" class="input" value="Paiement sécurisé & à la livraison" placeholder="Ex. Paiement sécurisé & à la livraison" oninput="updateFlyer()" style="padding-left:2.25rem">
+                            <input type="text" id="inputShopFeature2" class="input" value="" placeholder="Une option de paiement disponible" oninput="updateFlyer()" style="padding-left:2.25rem">
                         </div>
 
                         <div style="display:flex;align-items:center;position:relative">
                             <span style="position:absolute;left:.75rem;color:var(--brand-1);pointer-events:none;display:flex;align-items:center">
                                 <x-icon name="check-circle" :size="16" />
                             </span>
-                            <input type="text" id="inputShopFeature3" class="input" value="Produits de qualité 100% garantis" placeholder="Ex. Produits de qualité 100% garantis" oninput="updateFlyer()" style="padding-left:2.25rem">
+                            <input type="text" id="inputShopFeature3" class="input" value="" placeholder="Un avantage vérifiable" oninput="updateFlyer()" style="padding-left:2.25rem">
                         </div>
                     </div>
                 </div>
@@ -494,8 +494,8 @@
 
                 <!-- 7. Accroche / Sous-titre -->
                 <div style="margin-bottom:1rem">
-                    <label for="inputHook" class="label" style="font-size:.85rem">Phrase d'urgence ou sous-titre</label>
-                    <input type="text" id="inputHook" class="input" value="Stock très limité — Faites vite !" placeholder="Ex. Livraison rapide partout à Lomé" oninput="updateFlyer()">
+                    <label for="inputHook" class="label" style="font-size:.85rem">Sous-titre ou avantage confirmé</label>
+                    <input type="text" id="inputHook" class="input" value="Découvrez les détails dans la boutique" placeholder="Un avantage réel du produit" oninput="updateFlyer()">
                 </div>
 
                 <!-- 8. Appel à l'action WhatsApp -->
@@ -542,6 +542,7 @@
     </div>
 </div>
 
+<script src="{{ asset('js/ad-creative-renderer.js') }}?v={{ filemtime(public_path('js/ad-creative-renderer.js')) }}"></script>
 <script>
     // Données injectées
     const productsData = @json($productsJson);
@@ -549,6 +550,7 @@
     const shopWhatsapp = @json($shop->whatsapp ?: $shop->phone ?: '');
     const shopLogoUrl = @json($shopLogo);
     const shopUrl = @json($shopUrl);
+    const shopCurrency = @json($shop->currencyLabel());
 
     let currentMode = 'product'; // 'product' ou 'shop'
     let currentFormat = 'story'; // 'story' (9:16) ou 'square' (1:1)
@@ -654,6 +656,7 @@
 
     // Initialisation
     document.addEventListener('DOMContentLoaded', () => {
+        if (document.fonts) document.fonts.ready.then(updateFlyer);
         if (productsData.length > 0) {
             const initialId = @json($selectedProductId) || productsData[0].id;
             onProductSelect(initialId);
@@ -701,8 +704,8 @@
             badgePresetsProd.style.display = 'flex';
             badgePresetsShop.style.display = 'none';
 
-            document.getElementById('inputBadge').value = 'PROMO FLASH';
-            document.getElementById('inputHook').value = 'Stock très limité — Faites vite !';
+            document.getElementById('inputBadge').value = 'LA SÉLECTION';
+            document.getElementById('inputHook').value = 'Découvrez les détails dans la boutique';
             document.getElementById('inputCta').value = `Commandez vite au ${shopWhatsapp}`;
         } else {
             optShop.classList.add('active');
@@ -781,7 +784,7 @@
         document.getElementById('inputProductTitle').value = p.title;
         document.getElementById('inputPrice').value = p.price;
         document.getElementById('inputOldPrice').value = p.compare_at_price || '';
-        document.getElementById('inputBadge').value = document.getElementById('inputBadge').value || 'PROMO FLASH';
+        document.getElementById('inputBadge').value = document.getElementById('inputBadge').value || 'LA SÉLECTION';
 
         if (p.image_url) {
             const img = new Image();
@@ -915,6 +918,28 @@
 
         const ctx = canvas.getContext('2d');
         const theme = themes[currentTheme] || themes.neon;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        if (window.AdCreativeRenderer) {
+            const value = id => document.getElementById(id)?.value.trim() || '';
+            const price = Number(value('inputPrice'));
+            const oldPrice = Number(value('inputOldPrice'));
+            const money = amount => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(amount) + ' ' + shopCurrency;
+            window.AdCreativeRenderer.poster(ctx, W, H, {
+                shopName, logo: loadedLogoImg,
+                image: currentMode === 'product' ? loadedProductImg : customShopImg || loadedLogoImg,
+                title: value(currentMode === 'product' ? 'inputProductTitle' : 'inputShopHeadline'),
+                price: currentMode === 'product' && price > 0 ? money(price) : '',
+                oldPrice: currentMode === 'product' && oldPrice > price && price > 0 ? money(oldPrice) : '',
+                badge: value('inputBadge'),
+                hook: value(currentMode === 'product' ? 'inputHook' : 'inputShopTagline'),
+                features: currentMode === 'shop' ? [1, 2, 3].map(n => value('inputShopFeature' + n)).filter(Boolean) : [],
+                cta: value('inputCta'),
+                contact: shopWhatsapp ? `WhatsApp · ${shopWhatsapp}` : shopUrl,
+                color: theme.bgGlow, light: currentTheme === 'white'
+            });
+            return;
+        }
 
         // 1. Fond et Halos lumineux
         ctx.fillStyle = theme.bgDark;
@@ -1468,6 +1493,8 @@
     async function downloadFlyerPNG() {
         const canvas = document.getElementById('flyerCanvas');
         if (!canvas) return;
+        if (document.fonts) await document.fonts.ready;
+        updateFlyer();
 
         const btn = document.getElementById('btnDownloadFlyer');
         const textSpan = document.getElementById('btnDownloadFlyerText');

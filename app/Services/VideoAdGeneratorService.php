@@ -7,6 +7,7 @@ use App\Models\AiGeneration;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Shop;
+use App\Services\Ai\AdCreativeDirection;
 use App\Services\Ai\PhotoroomService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -239,13 +240,13 @@ class VideoAdGeneratorService
 
             return [
                 'id' => $p->id,
-                'title' => mb_substr($p->title, 0, 36),
+                'title' => $p->title,
                 'full_title' => $p->title,
                 'price' => $hidePrices ? '' : number_format($p->price, 0, ',', ' ').' '.$currency,
                 'raw_price' => $p->price,
                 'old_price' => ($hidePrices || ! $hasDiscount) ? null : number_format($p->compare_at_price, 0, ',', ' ').' '.$currency,
                 'discount_pct' => $hidePrices ? 0 : $discountPct,
-                'badge' => $hasDiscount && ! $hidePrices ? "-{$discountPct}%" : 'TOP VENTE',
+                'badge' => $hasDiscount && ! $hidePrices ? "-{$discountPct}%" : '',
                 'category' => $catName,
                 'imageUrl' => $imageUrl,
             ];
@@ -302,23 +303,7 @@ class VideoAdGeneratorService
             }
         }
 
-        // 3. Fallback catalogue selon la catégorie
-        $catHint = mb_strtolower(($product->title ?? '').' '.($shop->business_category ?? ''));
-        $catalogPath = null;
-        if (str_contains($catHint, 'burger') || str_contains($catHint, 'resto') || str_contains($catHint, 'fast food')) {
-            $catalogPath = public_path('images/catalog/burger.webp');
-        } elseif (str_contains($catHint, 'poisson') || str_contains($catHint, 'fish')) {
-            $catalogPath = public_path('images/catalog/poisson.webp');
-        } elseif (str_contains($catHint, 'frite') || str_contains($catHint, 'snack')) {
-            $catalogPath = public_path('images/catalog/frites.webp');
-        }
-
-        if ($catalogPath && file_exists($catalogPath)) {
-            return 'data:image/webp;base64,'.base64_encode(file_get_contents($catalogPath));
-        }
-
-        // 4. Logo boutique si disponible
-        return $this->resolveShopLogoUrl($shop);
+        return '';
     }
 
     /**
@@ -661,7 +646,7 @@ class VideoAdGeneratorService
             return 'Boutique basée à '.$city.' • Commande simple et rapide';
         }
 
-        return 'Service client disponible 7j/7 sur WhatsApp';
+        return 'Découvrez la sélection sur notre boutique en ligne';
     }
 
     private function resolveShopCity(Shop $shop): string
@@ -693,12 +678,18 @@ class VideoAdGeneratorService
 
         $productsSummary = [];
         foreach ($products as $i => $p) {
-            $productsSummary[] = ($i + 1).'. "'.$p['title'].'" (Prix: '.($isStorePresentation ? 'Non affiché' : $p['price']).', Catégorie: '.$p['category'].')';
+            $productsSummary[] = ($i + 1).'. "'.$p['title'].'" (Prix: '.($isStorePresentation ? 'Non affiché' : $p['price']).', Ancien prix: '.($isStorePresentation ? 'Non affiché' : ($p['old_price'] ?? 'aucun')).', Catégorie: '.$p['category'].')';
         }
         $productsListStr = implode("\n", $productsSummary);
+        $creativeDirection = app(AdCreativeDirection::class);
+        $creativeInstructions = $creativeDirection->instructions();
+        $creativeExamples = $creativeDirection->promptExamples();
 
         $prompt = <<<PROMPT
 Tu es un réalisateur publicitaire professionnel spécialisé dans les vidéos courtes verticales 9:16 (TikTok, Instagram Reels, Statuts WhatsApp) pour les boutiques e-commerce.
+
+{$creativeInstructions}
+EXEMPLES PÉDAGOGIQUES : {$creativeExamples}
 
 CONTEXTE DE LA BOUTIQUE :
 - Nom : "{$shop->name}"
@@ -949,7 +940,7 @@ PROMPT;
             ];
         } else {
             $hookText = match ($angle) {
-                self::ANGLE_PROMOTIONS => "Attention, baisse de prix choc chez {$shopName} !",
+                self::ANGLE_PROMOTIONS => "Découvrez les prix de notre sélection chez {$shopName} !",
                 self::ANGLE_NOUVEAUTES => "Regardez ce qui vient d'arriver chez {$shopName} !",
                 self::ANGLE_BESTSELLERS => "Voici les articles les plus demandés chez {$shopName} !",
                 self::ANGLE_COUP_DE_COEUR => "Notre coup de cœur absolu du moment chez {$shopName} !",
@@ -997,7 +988,7 @@ PROMPT;
                     default => 'Et aussi'
                 };
                 $pSpokenPrice = $this->formatPriceForSpeech($p['raw_price'] ?? $pPrice);
-                $pVoiceover = "{$prefix} {$pTitle}, disponible pour seulement {$pSpokenPrice}.";
+                $pVoiceover = "{$pTitle}, à {$pSpokenPrice}.";
                 $scenes1[] = [
                     'id' => count($scenes1),
                     'type' => 'product',

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AiKnowledgeChunk;
+use App\Services\Ai\AdCreativeDirection;
 use Illuminate\Database\Seeder;
 
 class AiKnowledgeSeeder extends Seeder
@@ -20,7 +21,7 @@ class AiKnowledgeSeeder extends Seeder
                 'keywords' => ['ajouter', 'nouveau', 'produit', 'creer', 'article', 'catalogue', 'stock', 'prix', 'fiche'],
                 'target_routes' => 'products.create, products.index, ai.studio',
                 'sort_order' => 1,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Pour ajouter un produit dans votre boutique Zanika, vous disposez de 3 méthodes officielles :
 Méthode 1 — Depuis l'interface Catalogue :
 1. Rendez-vous dans le menu latéral : cliquez sur "Produits" (URL : /produits).
@@ -50,7 +51,7 @@ TEXT
                 'keywords' => ['modifier', 'changer', 'prix', 'stock', 'tarif', 'mettre a jour', 'reajuster', 'article'],
                 'target_routes' => 'products.edit, products.index',
                 'sort_order' => 2,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Il existe 2 manières officielles de modifier le prix ou le stock d'un produit sur Zanika :
 Méthode 1 (Manuelle via l'interface) :
 1. Allez dans le menu "Produits" (/produits).
@@ -71,7 +72,7 @@ TEXT
                 'keywords' => ['rupture', 'stock', 'epuise', 'seuil', 'alerte', 'critique', 'inventaire', 'savoir', 'manque'],
                 'target_routes' => 'products.index, dashboard',
                 'sort_order' => 3,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Pour savoir immédiatement si un produit est en rupture de stock ou sous son seuil critique :
 1. Sur le Tableau de bord (/tableau-de-bord) : le bloc "Alertes de stock" signale en temps réel les articles épuisés ou proches de la rupture.
 2. Dans le Catalogue Produits (/produits) :
@@ -89,7 +90,7 @@ TEXT
                 'keywords' => ['reduction', 'promotion', 'code promo', 'solde', 'prix barre', 'remise', 'rabais', 'offre', 'coupon'],
                 'target_routes' => 'products.edit, ads.create, ai.marketing',
                 'sort_order' => 4,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Sur Zanika, vous disposez de 3 mécanismes complémentaires pour créer une réduction :
 1. Le Prix Barré sur une fiche produit (accessible à tous les forfaits) :
    - Ouvrez la fiche du produit (/produits/{id}/modifier).
@@ -116,7 +117,7 @@ TEXT
                 'keywords' => ['commandes', 'consulter', 'voir', 'statut', 'livraison', 'suivi', 'ventes', 'facture', 'recu'],
                 'target_routes' => 'orders.index, orders.show',
                 'sort_order' => 5,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Pour consulter et gérer vos commandes sur Zanika :
 1. Cliquez sur "Commandes" dans le menu principal (/commandes).
 2. Filtrez vos commandes par statut grâce aux onglets :
@@ -140,7 +141,7 @@ TEXT
                 'keywords' => ['livreur', 'coursier', 'depecher', 'moto', 'zemidjan', 'whatsapp', 'expedition', 'feuille de route'],
                 'target_routes' => 'orders.show',
                 'sort_order' => 6,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Zanika facilite la coordination avec vos livreurs et coursiers moto :
 1. Ouvrez la fiche de la commande (/commandes/{id}) et cliquez sur "Dépêcher au livreur", ou demandez à l'IA : « Prépare la feuille de route livreur pour la commande #[Numéro] » (outil dispatch_order_to_courier).
 2. Le système génère un message WhatsApp structuré prêt à envoyer contenant :
@@ -158,7 +159,7 @@ TEXT
                 'keywords' => ['livraison', 'zones', 'frais', 'expedition', 'tarif', 'quartier', 'ville', 'transport'],
                 'target_routes' => 'shipping.index',
                 'sort_order' => 7,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Pour gérer vos zones et frais de livraison :
 1. Allez dans le menu "Livraison" (/livraison).
 2. Ajoutez ou modifiez vos zones tarifaires :
@@ -177,7 +178,7 @@ TEXT
                 'keywords' => ['annuler', 'annulation', 'retour', 'remboursement', 'reclamation', 'sav', 'litige', 'stock'],
                 'target_routes' => 'orders.show, shop.pages.index',
                 'sort_order' => 8,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Règles métier Zanika pour les annulations et retours :
 1. Annulation d'une commande :
    - Lorsqu'une commande est annulée (via la fiche commande /commandes/{id} ou via l'outil IA update_order_status avec confirmation obligatoire), Zanika restitue automatiquement les quantités commandées dans le stock physique de chaque produit et crée une écriture d'audit "cancellation" dans stock_movements.
@@ -198,7 +199,7 @@ TEXT
                 'keywords' => ['paiement', 'tmoney', 'moov', 'moov money', 'flooz', 'geniuspay', 'feexpay', 'cash', 'especes', 'carte', 'mobile money', 'wave', 'momo'],
                 'target_routes' => 'shop.settings, storefront.checkout',
                 'sort_order' => 9,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Zanika combine deux modes d'encaissement complémentaires :
 1. Paiement à la livraison (Cash on Delivery - COD) :
    - Le client valide sa commande en ligne et règle en espèces ou par transfert Mobile Money au moment où le livreur lui remet le colis.
@@ -216,7 +217,7 @@ TEXT
                 'keywords' => ['studio', 'photo', 'image', 'detourage', 'packshot', 'video', 'tiktok', 'publicite', 'affiche'],
                 'target_routes' => 'ai.studio, ads.index, ads.create, ai.marketing',
                 'sort_order' => 10,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Zanika met à votre disposition deux studios créatifs propulsés par l'IA :
 1. Studio Visuel Produit IA (/assistant-ia/studio) :
    - Détoure automatiquement la photo réelle de votre produit sans jamais déformer ni inventer l'objet (conservation 100% fidèle).
@@ -234,7 +235,7 @@ TEXT
                 'keywords' => ['clients', 'crm', 'fidelisation', 'parametres', 'boutique', 'pages', 'roles', 'forfaits', 'abonnement'],
                 'target_routes' => 'customers.index, shop.settings, shop.pages.index, subscription.checkout',
                 'sort_order' => 11,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Organisation de votre espace commerçant Zanika :
 1. Fichier Clients CRM (/clients) :
    - Agrège automatiquement chaque acheteur avec son historique de commandes, son chiffre d'affaires cumulé (LTV) et son contact WhatsApp pour vos campagnes de fidélisation et relances VIP.
@@ -256,7 +257,7 @@ TEXT
                 'keywords' => ['cod', 'cash on delivery', 'refus', 'annulations', 'livraison', 'faux bond', 'reconfirmation'],
                 'target_routes' => 'orders.index, ai.orders.cod_review',
                 'sort_order' => 12,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 En Afrique de l'Ouest, le taux d'annulation en Cash on Delivery dépasse 25% sans méthodologie stricte.
 Protocole officiel Zanika pour abaisser les refus sous les 7% :
 1. Règle d'or des 30 minutes :
@@ -277,7 +278,7 @@ TEXT
                 'keywords' => ['whatsapp', 'negociation', 'rabais', 'prix', 'objection', 'vente', 'persuasion', 'cher', 'fidelisation'],
                 'target_routes' => 'ai.marketing',
                 'sort_order' => 13,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Techniques de persuasion commerciale éthique sur WhatsApp et les réseaux sociaux :
 1. Face à l'objection « C'est trop cher / Fais-moi un prix » :
    - Ne bradez jamais votre prix unitaire sèchement (cela détruit votre marge et la valeur perçue).
@@ -297,7 +298,7 @@ TEXT
                 'keywords' => ['benefice', 'benefices', 'rentabilite', 'marge', 'marges', 'faibles', 'perte', 'couts', 'diagnostic', 'chiffre affaires'],
                 'target_routes' => 'analytics.index, analytics.advisor',
                 'sort_order' => 14,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Lorsqu'un commerçant indique avoir beaucoup de commandes mais des bénéfices faibles, l'agent IA doit impérativement diagnostiquer ces 4 causes racines chiffrées :
 1. Frais logistiques mal répercutés :
    - Si le coursier moto coûte 1 500 ou 2 000 FCFA mais que la zone de livraison est facturée 1 000 FCFA au client, chaque commande grignote la marge nette.
@@ -320,7 +321,7 @@ TEXT
                 'keywords' => ['togo', 'benin', 'cote ivoire', 'senegal', 'burkina', 'cameroun', 'maroc', 'afrique', 'devise', 'quartiers'],
                 'target_routes' => 'shipping.index, shop.settings',
                 'sort_order' => 15,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Chaque marché africain possède ses propres codes monétaires, logistiques et culturels qu'il ne faut jamais confondre :
 - Togo (XOF / FCFA) : Paiements dominés par T-Money (Mixx by Yas) et Moov Money. Livraison urbaine par coursiers moto (zemidjans) structurée autour de Lomé Intra-muros, Grand Lomé (Agoè, Adidogomé, Baguida) et l'intérieur (Kara, Sokodé, Atakpamé). Français et expressions locales (Éwé, Mina).
 - Bénin (XOF / FCFA) : Paiements MTN Mobile Money et Moov Money. Logistique active sur Cotonou, Abomey-Calavi et Porto-Novo. Français, Fon, Yoruba.
@@ -337,7 +338,7 @@ TEXT
                 'keywords' => ['seo', 'copywriting', 'description', 'titre', 'conversion', 'fiche produit', 'optimiser', 'vendre'],
                 'target_routes' => 'products.edit, ai.marketing',
                 'sort_order' => 16,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Méthode pour transformer une fiche produit ordinaire en page à haute conversion sur Zanika :
 1. Titre optimisé SEO & WhatsApp (max 60 caractères) :
    - Structure : [Type d'article] + [Matière ou Caractéristique clé] + [Bénéfice ou Style]. Exemple : « Robe Longue Wax Authentique — Coupe Élégante & Confort ».
@@ -361,7 +362,7 @@ TEXT
                 'keywords' => ['multi-boutiques', 'plusieurs boutiques', 'creer boutique', 'nouvelle boutique', 'forfait', 'essentiel', 'pro', 'premium', 'limite', 'quota', 'basculer'],
                 'target_routes' => 'shops.create, dashboard, subscription.checkout',
                 'sort_order' => 17,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Sur Zanika, un même compte commerçant peut créer et piloter plusieurs boutiques distinctes selon son forfait actif :
 1. Quotas de boutiques par formule d'abonnement :
    - Formule Essentiel (10 000 FCFA / mois) : 1 boutique incluse, jusqu'à 50 produits, 80 crédits IA/mois.
@@ -383,7 +384,7 @@ TEXT
                 'keywords' => ['ajustement', 'rapide', 'stock', 'variation', 'motif', 'optionnel', 'justificatif', 'inventaire', 'quantite', 'seuil'],
                 'target_routes' => 'products.edit, products.index',
                 'sort_order' => 18,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Zanika simplifie la mise à jour quotidienne de vos stocks sur mobile comme sur ordinateur :
 1. Ajustement direct sur la fiche produit (/produits/{id}/modifier) :
    - Dans la section "Gestion du stock", saisissez directement la nouvelle quantité en stock ou la variation (+5, -2) : le motif ou justificatif écrit est 100% optionnel (non obligatoire).
@@ -401,7 +402,7 @@ TEXT
                 'keywords' => ['photo', 'onboarding', 'sublimer', 'original', 'originale', 'brut', 'studio ia', 'retouche', 'garder', 'qualite'],
                 'target_routes' => 'onboarding.step3, ai.studio, products.create',
                 'sort_order' => 19,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Lors de la création de votre boutique (/onboarding/photos) ou de l'ajout d'articles, Zanika vous laisse le contrôle total sur le rendu de vos photos produits :
 1. Option « Sublimer avec l'IA » (Recommandé — mode 'studio') :
    - L'IA équilibre la lumière, renforce la netteté, nettoie l'arrière-plan et présente votre article sur un fond studio propre et professionnel, tout en respectant à 100% la forme et la couleur réelle de votre produit.
@@ -419,7 +420,7 @@ TEXT
                 'keywords' => ['affiche', 'flyer', 'poster', 'visuel', 'tiktok', 'reels', 'statut whatsapp', 'video', 'publicite', 'campagne', 'audio'],
                 'target_routes' => 'ads.flyers, ads.create, ads.index',
                 'sort_order' => 20,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Pour attirer des clients depuis WhatsApp, TikTok, Instagram et Facebook sans graphiste :
 1. Générateur d'Affiches & Flyers Promotionnels (/publicite/affiches) :
    - Sélectionnez un produit de votre catalogue, choisissez un modèle d'affiche (Promo Flash, Nouvel Arrivage, Spécial Fêtes, Luxe Minimaliste), personnalisez l'accroche et téléchargez l'image HD prête à être postée en Statut WhatsApp ou sur Facebook/Instagram.
@@ -437,7 +438,7 @@ TEXT
                 'keywords' => ['memoire', 'souvenir', 'objectif', 'automatisation', 'proactif', 'briefing', 'matinal', 'conseiller'],
                 'target_routes' => 'ai.memory.index, ai.automations, analytics.advisor',
                 'sort_order' => 21,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Zanika AI n'est pas un simple chatbot : il mémorise le contexte de votre entreprise et travaille en arrière-plan.
 1. Mémoire Intelligente de la Boutique (/assistant-ia/memoire) :
    - Enregistre automatiquement ou manuellement vos objectifs financiers (ex: "Atteindre 2 000 000 FCFA ce mois"), vos habitudes logistiques, votre ton de marque et vos règles de remise.
@@ -457,7 +458,7 @@ TEXT
                 'keywords' => ['tabaski', 'ramadan', 'korite', 'aid', 'noel', 'fin annee', 'rentree', 'saint valentin', 'black friday', 'saison', 'fete', 'stock', 'pack'],
                 'target_routes' => 'ads.create, discounts.index, ai.marketing',
                 'sort_order' => 22,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Réussir ses pics de ventes saisonniers sur les marchés africains (Togo, Bénin, Côte d'Ivoire, Sénégal, Cameroun, Maroc) :
 1. Ramadan & Korité (Aïd el-Fitr) / Tabaski (Aïd el-Kébir) :
    - Anticipez votre stock 15 à 20 jours avant la fête et lancez les précommandes (forte demande sur le prêt-à-porter traditionnel, bazin, wax, chaussures, parfums, paniers garnis et décoration).
@@ -477,7 +478,7 @@ TEXT
                 'keywords' => ['credit', 'fin du mois', 'avance', 'acompte', 'reservation', 'garder', 'payer apres', 'dette'],
                 'target_routes' => 'ai.assistant, orders.index',
                 'sort_order' => 23,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 La vente à crédit non encadrée est la première cause de faillite des petits commerces en Afrique. Voici comment refuser le crédit sur WhatsApp sans jamais braquer ni perdre le client :
 1. Règle absolue : Ne jamais livrer un produit sans encaissement intégral (au départ via Mobile Money ou à la remise en main propre COD).
 2. La technique de la "Réservation Privilège avec Acompte" :
@@ -493,7 +494,7 @@ TEXT
                 'keywords' => ['securite', 'mot de passe', 'verrouillage', 'tentatives', 'publier', 'pause', 'maintenance', 'sous-domaine', 'recu'],
                 'target_routes' => 'shop.settings, login',
                 'sort_order' => 24,
-                'content' => <<<TEXT
+                'content' => <<<'TEXT'
 Sécurité et cycle de vie d'une boutique sur Zanika :
 1. Protection contre les mots de passe erronés (Anti-Brute Force) :
    - Après 5 tentatives de connexion infructueuses sur /connexion, l'accès est temporairement bloqué pendant 60 secondes (Rate Limiting Laravel) afin de protéger le compte marchand contre le piratage.
@@ -504,6 +505,16 @@ Sécurité et cycle de vie d'une boutique sur Zanika :
    - Chaque commande possède un lien de reçu numérique (/recu/{orderNumber}) partageable sur WhatsApp pour rassurer immédiatement l'acheteur.
 TEXT
             ],
+        ];
+
+        $chunks[] = [
+            'category' => 'marketing_playbooks',
+            'title' => 'Créer une publicité TikTok ou Reels lisible et fidèle au produit',
+            'slug' => 'direction-creative-tiktok-reels',
+            'keywords' => ['publicite', 'video', 'affiche', 'tiktok', 'reels', 'montage', 'script'],
+            'target_routes' => 'advertising.create',
+            'sort_order' => 25,
+            'content' => app(AdCreativeDirection::class)->instructions(),
         ];
 
         foreach ($chunks as $chunk) {

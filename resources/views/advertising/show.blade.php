@@ -84,8 +84,8 @@
                         Chargement de la vidéo...
                     </div>
 
-                    <!-- Canvas HD 9:16 (720 x 1280) -->
-                    <canvas id="ad-video-canvas" width="720" height="1280" class="ad-canvas"></canvas>
+                    <!-- Canvas Full HD 9:16 -->
+                    <canvas id="ad-video-canvas" width="1080" height="1920" class="ad-canvas"></canvas>
 
                     <!-- Overlay Play/Pause discret -->
                     <div id="ad-center-play-overlay" class="center-play-overlay">
@@ -1577,6 +1577,7 @@
 </script>
 
 <!-- INITIALISATION DU STUDIO VIDÉO PUBLICITAIRE IA -->
+<script src="{{ asset('js/ad-creative-renderer.js') }}?v={{ filemtime(public_path('js/ad-creative-renderer.js')) }}"></script>
 <script src="{{ asset('js/ad-video-studio.js') }}?v={{ file_exists(public_path('js/ad-video-studio.js')) ? filemtime(public_path('js/ad-video-studio.js')) : '2.0' }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {

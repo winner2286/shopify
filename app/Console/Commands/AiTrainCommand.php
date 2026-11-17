@@ -11,12 +11,13 @@ class AiTrainCommand extends Command
 {
     protected $signature = 'ai:train';
 
-    protected $description = 'Exécute l\'entraînement complet des modèles IA Zanika (Indexation RAG 24 guides, Génération des datasets SFT/DPO/Tools JSONL et Benchmark de validation)';
+    protected $description = 'Prépare les exemples IA, actualise le RAG et contrôle le moteur local sans réentraîner les modèles cloud';
 
     public function handle(AiBenchmarkAndDatasetService $service): int
     {
         $this->info('=========================================================================');
-        $this->info('   ZANIKA AI — PIPELINE D\'ENTRAÎNEMENT & CALIBRATION DES MODÈLES IA');
+        $this->info('   ZANIKA AI — PRÉPARATION DES DONNÉES & CALIBRATION LOCALE');
+        $this->warn('Aucun modèle cloud ne sera réentraîné. Les exemples synthétiques nécessitent une revue humaine avant tout fine-tuning.');
         $this->info('=========================================================================');
 
         $user = User::first() ?? new User(['name' => 'Marchand Test', 'role' => 'merchant']);
@@ -28,23 +29,24 @@ class AiTrainCommand extends Command
 
         $this->newLine();
         $this->info('1. BASE DE CONNAISSANCES HYBRIDE RAG (BM25 + Trigrammes Sørensen-Dice)');
-        $this->line('   • Fragments experts actifs : ' . $manifest['rag_knowledge_base']['active_chunks_count']);
+        $this->line('   • Fragments experts actifs : '.$manifest['rag_knowledge_base']['active_chunks_count']);
         foreach ($manifest['rag_knowledge_base']['categories'] as $cat => $count) {
             $this->line("     - {$cat} : {$count} guide(s)");
         }
 
         $this->newLine();
-        $this->info('2. DATASETS D\'ENTRAÎNEMENT GÉNÉRÉS (Format JSONL certifié)');
-        $this->line('   • Dataset SFT (Supervised Fine-Tuning) : ' . $manifest['datasets']['sft']['examples_count'] . ' conversations (' . count($manifest['datasets']['sft']['categories_covered']) . ' catégories)');
-        $this->line('     Fichier : ' . $manifest['datasets']['sft']['path']);
-        $this->line('   • Dataset DPO (Direct Preference Optimization) : ' . $manifest['datasets']['dpo']['pairs_count'] . ' paires {prompt, chosen, rejected}');
-        $this->line('     Fichier : ' . $manifest['datasets']['dpo']['path']);
-        $this->line('   • Dataset Tool-Calling (Function Calling) : ' . $manifest['datasets']['tool_calling']['examples_count'] . ' scénarios d\'outils');
-        $this->line('     Fichier : ' . $manifest['datasets']['tool_calling']['path']);
-        $this->line('   • Manifeste d\'entraînement : ' . $result['manifest_path']);
+        $this->info('2. EXEMPLES PÉDAGOGIQUES GÉNÉRÉS (JSONL, non validés pour un entraînement fournisseur)');
+        $this->line('   • Dataset SFT (Supervised Fine-Tuning) : '.$manifest['datasets']['sft']['examples_count'].' conversations ('.count($manifest['datasets']['sft']['categories_covered']).' catégories)');
+        $this->line('     Fichier : '.$manifest['datasets']['sft']['path']);
+        $this->line('   • Dataset DPO (Direct Preference Optimization) : '.$manifest['datasets']['dpo']['pairs_count'].' paires {prompt, chosen, rejected}');
+        $this->line('     Fichier : '.$manifest['datasets']['dpo']['path']);
+        $this->line('   • Dataset Tool-Calling (Function Calling) : '.$manifest['datasets']['tool_calling']['examples_count'].' scénarios d\'outils');
+        $this->line('     Fichier : '.$manifest['datasets']['tool_calling']['path']);
+        $this->line('   • Manifeste d\'entraînement : '.$result['manifest_path']);
+        $this->line('   • Direction créative TikTok/Reels : '.$manifest['datasets']['creative_direction']['examples_count'].' exemples fictifs');
 
         $this->newLine();
-        $this->info('3. ÉVALUATION & BENCHMARK POST-ENTRAÎNEMENT (' . $benchmark['total_cases'] . ' cas de test)');
+        $this->info('3. CONTRÔLES LOCAUX RAG & ARCHITECTURE ('.$benchmark['total_cases'].' cas ; aucune évaluation de modèle cloud)');
         foreach ($benchmark['results'] as $res) {
             $icon = $res['passed'] ? '[PASS]' : '[FAIL]';
             $this->line(sprintf(
