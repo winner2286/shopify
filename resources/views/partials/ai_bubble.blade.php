@@ -292,6 +292,9 @@
         border-radius: 0 !important;
         border: none !important;
         box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        isolation: isolate;
         z-index: 99999 !important;
         display: flex;
         flex-direction: column;
@@ -311,17 +314,23 @@
     }
 
     .ai-window-header {
+        position: relative;
+        z-index: 1;
         padding-top: max(0.85rem, env(safe-area-inset-top, 0px)) !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
         padding-bottom: 0.75rem !important;
-        background: rgba(16, 20, 35, 0.98) !important;
+        background: #101423 !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
         flex-shrink: 0;
     }
 
     .ai-btn-expand {
         display: none !important;
+    }
+
+    body.ai-chat-open .nav {
+        visibility: hidden;
     }
 
     .ai-btn-icon {
