@@ -21,9 +21,8 @@
             <a class="creative-project" href="{{ route('ads.show', $ad) }}">
                 <div class="creative-project-art">
                     @if($ad->product?->primaryImage?->url)<img src="{{ $ad->product->primaryImage->url }}" alt="{{ $ad->product->title }}" loading="lazy">@endif
-                    <b>{{ $scripts[0]['title'] ?? 'Votre création' }}</b>
                 </div>
-                <div class="creative-project-meta"><h3>{{ $ad->product?->title ?: $shop->name }}</h3><small>{{ $ad->channel_label }} · {{ count($scripts) }} direction(s) · {{ $ad->updated_at->format('d/m/Y') }}</small></div>
+                <div class="creative-project-meta"><p class="creative-project-direction">{{ $scripts[0]['title'] ?? 'Votre création' }}</p><h3>{{ $ad->product?->title ?: $shop->name }}</h3><small>{{ $ad->channel_label }} · {{ count($scripts) }} direction(s) · {{ $ad->updated_at->format('d/m/Y') }}</small></div>
             </a>
         @endforeach
         </div>
