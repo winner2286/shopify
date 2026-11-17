@@ -1,5 +1,5 @@
 # Image de base PHP 8.4 FPM
-FROM php:8.4-fpm
+FROM php:8.4-fpm-bookworm
 
 # Répertoire de travail
 WORKDIR /var/www/html
@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     git \
     curl \
+    python3 \
+    python3-venv \
+    libgomp1 \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
@@ -38,6 +41,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Récupération de Composer officiel
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# CPU-only cutout runtime is built on Render, never installed on the developer PC.
+COPY docker/rembg/requirements.txt /tmp/rembg-requirements.txt
+RUN python3 -m venv /opt/rembg \
+    && /opt/rembg/bin/pip install --no-cache-dir -r /tmp/rembg-requirements.txt \
+    && mkdir -p /opt/rembg/models \
+    && curl --fail --location --retry 3 --output /opt/rembg/models/u2netp.onnx \
+        https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx \
+    && echo '8e83ca70e441ab06c318d82300c84806  /opt/rembg/models/u2netp.onnx' | md5sum -c - \
+    && chmod -R a+rX /opt/rembg
+
+ENV REMBG_ENABLED=true \
+    REMBG_PYTHON=/opt/rembg/bin/python \
+    REMBG_MODEL_PATH=/opt/rembg/models/u2netp.onnx \
+    PYTHONDONTWRITEBYTECODE=1 \
+    NUMBA_DISABLE_JIT=1 \
+    OMP_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1
+
 # Configuration PHP personnalisée
 COPY docker/php/custom.ini /usr/local/etc/php/conf.d/custom.ini
 
@@ -66,6 +87,9 @@ RUN mkdir -p /var/www/html/storage/framework/sessions \
              /var/www/html/database \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+
+# Fail the build before deployment if the bundled runtime or model cannot execute.
+RUN php tests/rembg-runtime.php && rm -f storage/framework/cache/rembg.lock
 
 # Ports exposés (Render écoute sur 10000 ou $PORT)
 EXPOSE 10000 80 9000

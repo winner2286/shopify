@@ -8,6 +8,15 @@ permissions:
   contents: read
 
 jobs:
+  photo-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t zanika-photo-runtime .
+      - name: Verify the real PHP and RemBG bridge within 512 MB
+        run: docker run --rm --memory=512m --memory-swap=512m --entrypoint php zanika-photo-runtime tests/rembg-runtime.php
+
   tests:
     runs-on: ubuntu-latest
     env:

@@ -7,12 +7,16 @@ yarn-error.log
 .phpunit.result.cache
 storage/logs/*.log
 storage/framework/cache/data/*
+storage/framework/cache/rembg.lock
 storage/framework/sessions/*
 storage/framework/views/*
 .idea
 .vscode
 .env
 .env.*
+!.env.example
+storage/app/private
+storage/framework/testing
 database/database.sqlite*
 *.bat
 docker-compose.override.yml

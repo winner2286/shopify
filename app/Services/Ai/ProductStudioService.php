@@ -65,17 +65,22 @@ class ProductStudioService
      */
     public function previewProductPhoto(Shop $shop, string $imageBinary, string $style, ?string $hint = null, string $scene = '', array $options = []): array
     {
-        if ($style === 'lifestyle' && (! $this->photoroom->isConfigured() || ! $shop->canUsePhotoroomGenerativeScene())) {
+        $openAiScene = $style === 'lifestyle' && config('services.product_studio.scene_provider', 'openai') === 'openai';
+        if ($openAiScene && ! app(OpenAiProductSceneService::class)->isConfigured()) {
+            throw ValidationException::withMessages(['style' => 'La génération de décors nécessite une clé API OpenAI configurée sur le serveur.']);
+        }
+        if ($style === 'lifestyle' && ! $openAiScene && (! $this->photoroom->isConfigured() || ! $shop->canUsePhotoroomGenerativeScene())) {
             throw ValidationException::withMessages(['style' => 'Les décors IA nécessitent Photoroom et une formule compatible. Choisissez une retouche ou un fond uni.']);
         }
 
-        $operation = function (bool $reserved) use ($shop, $imageBinary, $style, $hint, $scene, $options): array {
+        $operation = function (bool $reserved) use ($shop, $imageBinary, $style, $hint, $scene, $options, $openAiScene): array {
             $composer = app(ProductPhotoComposer::class);
             $started = microtime(true);
             $engine = 'zanika-product-studio';
             $method = 'none';
             $binary = null;
             $cutout = null;
+            $generation = null;
             $title = match ($style) {
                 'retouch' => 'Retouche légère',
                 'studio_ambient' => 'Fond ivoire',
@@ -87,7 +92,7 @@ class ProductStudioService
             };
             $category = $this->matchCategoryKeywords(mb_strtolower((string) $hint));
 
-            if ($style === 'lifestyle') {
+            if ($style === 'lifestyle' && ! $openAiScene) {
                 if (! $reserved) {
                     throw ValidationException::withMessages(['credits' => 'Quota Photoroom insuffisant pour créer ce décor.']);
                 }
@@ -115,6 +120,14 @@ class ProductStudioService
                     ? $composer->maskSubject($this->normalizeImageBinary($imageBinary), $options['subject_mask'])
                     : ($this->hasUsableTransparency($imageBinary) ? $imageBinary : null);
                 $method = $cutout ? (! empty($options['subject_mask']) ? 'manual_mask' : 'source_transparency') : 'none';
+                if (! $cutout && app(RembgService::class)->isConfigured()) {
+                    $mask = app(RembgService::class)->removeBackground($this->normalizeImageBinary($imageBinary));
+                    if ($mask && $this->hasUsableTransparency($mask)) {
+                        $cutout = $composer->maskSubject($this->normalizeImageBinary($imageBinary), $mask);
+                        $method = 'rembg_u2netp';
+                        $engine = 'rembg';
+                    }
+                }
                 if (! $cutout && $reserved) {
                     $cutout = $this->photoroom->removeBackground($imageBinary, ['format' => 'png']);
                     if ($cutout && $this->hasUsableTransparency($cutout)) {
@@ -133,9 +146,18 @@ class ProductStudioService
                 }
                 $subject = imagecreatefromstring($cutout);
                 $composer->adjust($subject, $options);
-                if (in_array($style, ['scene_template', 'custom_background'], true)) {
+                if ($openAiScene) {
+                    $reference = imagecreatefromstring($this->normalizeImageBinary($imageBinary, 1024));
+                    ob_start();
+                    imagepng($reference);
+                    $referenceBinary = (string) ob_get_clean();
+                    imagedestroy($reference);
+                    $generation = app(OpenAiProductSceneService::class)->generateBackground($referenceBinary, trim($scene), (string) $hint, $shop->id);
+                    $engine = 'openai-image';
+                }
+                if ($openAiScene || in_array($style, ['scene_template', 'custom_background'], true)) {
                     $cropped = $this->cropTransparentBoundingBox($subject);
-                    $canvas = $composer->compose($cropped, $options['scene_template'] ?? ($style === 'scene_template' ? 'podium' : 'parquet'), $options + ['category' => $category], $options['background'] ?? null);
+                    $canvas = $composer->compose($cropped, $options['scene_template'] ?? ($style === 'scene_template' ? 'podium' : 'parquet'), $options + ['category' => $category], $generation['binary'] ?? $options['background'] ?? null);
                     if ($cropped !== $subject) {
                         imagedestroy($cropped);
                     }
@@ -173,6 +195,8 @@ class ProductStudioService
                 'cutout_url' => $cutoutPath ? Storage::disk('public')->url($cutoutPath) : null,
                 'source_path' => $sourcePath, 'source_url' => Storage::disk('public')->url($sourcePath),
                 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+                'model_used' => $generation['model'] ?? $engine,
+                'usage' => $generation['usage'] ?? [],
                 'quality_audit' => ['status' => 'review_required', 'summary' => 'Comparez les contours, les couleurs et les inscriptions avant de valider.'],
                 'variations' => [
                     ['id' => $id, 'title' => $title, 'type' => $style, 'path' => $path, 'url' => Storage::disk('public')->url($path), 'is_source' => false, 'selected' => true],
@@ -181,9 +205,9 @@ class ProductStudioService
             ];
         };
 
-        return $style === 'retouch' || ($style !== 'lifestyle' && (! empty($options['subject_mask']) || $this->hasUsableTransparency($imageBinary)))
+        return $openAiScene || $style === 'retouch' || ($style !== 'lifestyle' && (! empty($options['subject_mask']) || $this->hasUsableTransparency($imageBinary) || app(RembgService::class)->isConfigured()))
             ? $operation(false)
-            : $this->withPhotoroomReservation($shop, $operation);
+            : $this->withPhotoroomReservation($shop, $operation, $style === 'lifestyle');
     }
 
     private function hasUsableTransparency(string $binary): bool
@@ -784,10 +808,10 @@ PROMPT;
         return $this->extractReservedCutout($imageBinary, $shop, $reserved);
     }
 
-    private function withPhotoroomReservation(Shop $shop, \Closure $operation): mixed
+    private function withPhotoroomReservation(Shop $shop, \Closure $operation, bool $forcePhotoroom = false): mixed
     {
         $reserved = false;
-        if ($this->photoroom->isConfigured() && $shop->hasEnoughPhotoroomCredits()) {
+        if (($forcePhotoroom || ! app(RembgService::class)->isConfigured()) && $this->photoroom->isConfigured() && $shop->hasEnoughPhotoroomCredits()) {
             try {
                 $shop->consumePhotoroomCredits();
                 $reserved = true;
@@ -814,8 +838,20 @@ PROMPT;
 
     private function extractReservedCutout(string $imageBinary, ?Shop $shop, bool $reserved): array
     {
+        if ($this->hasUsableTransparency($imageBinary)) {
+            return ['binary' => $imageBinary, 'method' => 'source_transparency'];
+        }
+        if (app(RembgService::class)->isConfigured()) {
+            $mask = app(RembgService::class)->removeBackground($this->normalizeImageBinary($imageBinary));
+            if ($mask && $this->hasUsableTransparency($mask)) {
+                return ['binary' => app(ProductPhotoComposer::class)->maskSubject($this->normalizeImageBinary($imageBinary), $mask), 'method' => 'rembg_u2netp'];
+            }
+            if (! $this->hasUniformBorder($imageBinary)) {
+                return ['binary' => null, 'method' => 'failed'];
+            }
+        }
         // 1. Priorité Photoroom v1/segment (si clé API configurée et quota Photoroom actif)
-        $canUsePhotoroom = $this->photoroom->isConfigured()
+        $canUsePhotoroom = ! app(RembgService::class)->isConfigured() && $this->photoroom->isConfigured()
             && ($shop === null || $reserved);
 
         if ($canUsePhotoroom) {

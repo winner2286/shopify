@@ -17,6 +17,12 @@ class ProductStudioServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['services.product_studio.scene_provider' => 'photoroom', 'services.rembg.enabled' => false]);
+    }
+
     private function createMerchant(string $email = 'merchant.studio@example.test'): array
     {
         $user = User::factory()->create([

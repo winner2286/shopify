@@ -169,7 +169,7 @@ class AiProductController extends Controller
             'photo_path' => 'nullable|string',
             'category_hint' => 'nullable|string|max:200',
             'style' => 'nullable|string|in:retouch,studio_white,studio_ambient,studio_dark,lifestyle,scene_template,custom_background',
-            'scene_prompt' => 'nullable|string|max:500|required_if:style,lifestyle',
+            'scene_prompt' => 'nullable|string|max:500',
             'scene_template' => 'nullable|string|in:podium,parquet,spa,marble,dressing',
             'background' => 'nullable|required_if:style,custom_background|image|mimes:jpeg,jpg,png,webp|max:5120',
             'subject_mask' => 'nullable|image|mimes:png|max:5120',
@@ -240,17 +240,24 @@ class AiProductController extends Controller
                 $studioCostFcfa = $studioEngine === 'photoroom-ai'
                     ? ($shop->canUsePhotoroomGenerativeScene() ? 62 : 13)
                     : 6;
+                $openAiCostUsd = null;
+                if ($studioEngine === 'openai-image') {
+                    $usage = $studioResult['usage'] ?? [];
+                    $openAiCostUsd = (($usage['input_tokens'] ?? 0) * 8 + ($usage['output_tokens'] ?? 0) * 30) / 1_000_000;
+                    $studioCostFcfa = (int) ceil($openAiCostUsd * (float) config('services.openai_images.usd_to_fcfa_estimate', 650));
+                }
 
                 AiGeneration::create([
                     'shop_id' => $shop->id,
                     'type' => 'ai_quality_check',
                     'step' => 'studio_packshot',
-                    'model_used' => $studioEngine,
-                    'prompt_tokens' => 0,
-                    'completion_tokens' => 0,
+                    'model_used' => $studioResult['model_used'] ?? $studioEngine,
+                    'prompt_tokens' => $studioResult['usage']['input_tokens'] ?? 0,
+                    'completion_tokens' => $studioResult['usage']['output_tokens'] ?? 0,
                     'cost_estimated_fcfa' => $studioCostFcfa,
                     'duration_ms' => $studioResult['duration_ms'] ?? 1200,
                     'status' => 'success',
+                    'output_data' => ['usage' => $studioResult['usage'] ?? [], 'engine' => $studioEngine, 'cost_estimated_usd' => $openAiCostUsd],
                     'input_summary' => "Studio Packshot [{$studioResult['category']}] : ".($studioResult['product_title'] ?? 'Article'),
                 ]);
             } catch (\Throwable $logError) {

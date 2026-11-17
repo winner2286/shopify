@@ -90,7 +90,7 @@
         const option = $('decor').selectedOptions[0];
         $('decor-preview').src = option.dataset.image;
         for (const [id, key, fallback] of [['position-x','x',50],['position-y','y',85],['scale','scale',65],['shadow','shadow',22]]) {
-            $(id).value = style() === 'custom_background' ? fallback : option.dataset[key];
+            $(id).value = ['custom_background','lifestyle'].includes(style()) ? fallback : option.dataset[key];
             $(id).nextElementSibling.value = $(id).value;
         }
     }
@@ -98,13 +98,14 @@
         const selected = root.querySelector('input[name="photo_studio_style"]:checked');
         $('style-summary').textContent = '2. ' + selected.closest('label').querySelector('strong').textContent;
         $('style-picker').open = false;
-        const composed = ['scene_template','custom_background'].includes(style());
+        const generated = style() === 'lifestyle' && root.dataset.sceneProvider === 'openai';
+        const composed = generated || ['scene_template','custom_background'].includes(style());
         $('scene-field').hidden = style() !== 'lifestyle';
         $('decor-field').hidden = style() !== 'scene_template';
         $('background-field').hidden = style() !== 'custom_background';
         $('placement').hidden = !composed;
-        $('adjustments').hidden = style() === 'lifestyle';
-        $('mask-editor').hidden = ['retouch','lifestyle'].includes(style());
+        $('adjustments').hidden = style() === 'lifestyle' && !generated;
+        $('mask-editor').hidden = style() === 'retouch' || (style() === 'lifestyle' && !generated);
         if (composed) sceneDefaults();
         resetPreview();
     }
@@ -150,7 +151,7 @@
     $('scene').oninput = resetPreview;
     $('generate').onclick = async () => {
         if (busy || !source || (preview && style() !== 'lifestyle')) return;
-        if (style() === 'lifestyle' && !$('scene').value.trim()) return message('Décrivez le décor souhaité avant de préparer l’aperçu.', true);
+        if (style() === 'lifestyle' && root.dataset.sceneProvider !== 'openai' && !$('scene').value.trim()) return message('Décrivez le décor souhaité avant de préparer l’aperçu.', true);
         const background = $('background').files[0];
         if (style() === 'custom_background' && !background) return message('Choisissez une photo de décor à importer.', true);
         if (style() === 'custom_background' && background.size > 5 * 1024 * 1024) return message('Le décor doit faire moins de 5 Mo.', true);
@@ -170,7 +171,7 @@
             const body = new FormData(); body.append('photo', file); body.append('style', style());
             body.append('scene_prompt', $('scene').value.trim());
             body.append('category_hint', document.getElementById('title')?.value.slice(0,200) || '');
-            if (style() !== 'lifestyle') {
+            if (style() !== 'lifestyle' || root.dataset.sceneProvider === 'openai') {
                 for (const id of ['brightness','contrast','scale','position-x','position-y','shadow']) body.append(id.replaceAll('-','_'), $(id).value);
                 body.append('sharpen', $('sharpen').checked ? '1' : '0');
                 body.append('scene_template', $('decor').value);

@@ -69,6 +69,25 @@ return [
         'subject' => env('VAPID_SUBJECT', env('MAIL_FROM_ADDRESS') ? 'mailto:'.env('MAIL_FROM_ADDRESS') : null),
     ],
 
+    'rembg' => [
+        'enabled' => (bool) env('REMBG_ENABLED', false),
+        'python' => env('REMBG_PYTHON', '/opt/rembg/bin/python'),
+        'model_path' => env('REMBG_MODEL_PATH', '/opt/rembg/models/u2netp.onnx'),
+        'timeout' => 45,
+    ],
+
+    'product_studio' => [
+        'scene_provider' => env('PRODUCT_SCENE_PROVIDER', 'openai'),
+    ],
+
+    'openai_images' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_IMAGE_MODEL', 'gpt-image-2.5-flare'),
+        'quality' => env('OPENAI_IMAGE_QUALITY', 'medium'),
+        'daily_limit' => (int) env('OPENAI_IMAGE_DAILY_LIMIT', 50),
+        'usd_to_fcfa_estimate' => (float) env('USD_TO_FCFA', 650),
+    ],
+
     'photoroom' => [
         'key' => env('PHOTOROOM_API_KEY'),
         'sandbox_key' => env('PHOTOROOM_SANDBOX_API_KEY'),
