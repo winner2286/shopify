@@ -12,7 +12,9 @@ use App\Services\VideoAdGeneratorService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class AdvertisingController extends Controller
 {
@@ -31,9 +33,9 @@ class AdvertisingController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $ads = $shop->advertisements()->with('product')->paginate(12);
+        $ads = $shop->advertisements()->with('product.primaryImage')->latest('id')->paginate(12);
 
-        return view('advertising.index', compact('shop', 'ads'));
+        return view('advertising.library', compact('shop', 'ads'));
     }
 
     /**
@@ -91,11 +93,13 @@ class AdvertisingController extends Controller
         $shop = $request->user()->shop;
 
         $validated = $request->validate([
+            'creative_brief' => ['nullable', 'string', 'max:1200'],
+            'audience' => ['nullable', 'string', 'max:180'],
             'angle' => ['nullable', 'string', 'in:promotions,nouveautes,bestsellers,coup_de_coeur,boutique'],
             'tone' => ['nullable', 'string', 'in:dynamique,luxe,fun,urgent,chaleureux,amical,premium'],
             'business_type' => ['nullable', 'string', 'max:100'],
             'voice' => ['nullable', 'string', 'in:femme,homme,douce'],
-            'target_duration' => ['nullable', 'integer', 'in:15,20,25'],
+            'target_duration' => ['nullable', 'integer', 'in:15,20,25,30,45'],
             'custom_message' => ['nullable', 'string', 'max:250'],
             'product_id' => ['nullable', 'integer'],
             'category_ids' => ['nullable', 'array'],
@@ -133,6 +137,8 @@ class AdvertisingController extends Controller
 
             return redirect()->route('ads.show', $ad)->with('status', 'Votre publicité vidéo 9:16 a été générée avec succès à partir de vos vraies données !');
 
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -151,6 +157,8 @@ class AdvertisingController extends Controller
 
         try {
             $overrides = $request->validate([
+                'creative_brief' => ['nullable', 'string', 'max:1200'],
+                'revision' => ['nullable', 'integer', 'min:0'],
                 'angle' => ['nullable', 'in:promotions,nouveautes,bestsellers,coup_de_coeur,boutique'],
                 'tone' => ['nullable', 'in:dynamique,luxe,fun,urgent,chaleureux,amical,premium'],
                 'platform' => ['nullable', 'in:whatsapp,tiktok,instagram,sms,facebook,general'],
@@ -167,10 +175,13 @@ class AdvertisingController extends Controller
                     'message' => 'Variation régénérée avec succès !',
                     'scripts' => $ad->generated_scripts,
                     'visual_config' => $ad->visual_config,
+                    'texts' => $ad->generated_texts,
                 ]);
             }
 
             return redirect()->route('ads.show', $ad)->with('status', 'Votre publicité vidéo a été régénérée avec une nouvelle variation !');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             if ($request->wantsJson()) {
                 return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
@@ -457,7 +468,11 @@ class AdvertisingController extends Controller
             return response()->json(['error' => 'Non autorisé'], 403);
         }
 
-        $ad->increment('shares_count');
+        $data = $request->validate([
+            'duration_seconds' => ['nullable', 'numeric', 'between:0,90'],
+            'format' => ['nullable', 'in:mp4,webm'],
+            'script_index' => ['nullable', 'integer', 'between:0,2'],
+        ]);
 
         // Log de consommation IA (CDC Section 6.1 et J-04)
         AiGeneration::withoutGlobalScopes()->create([
@@ -468,16 +483,18 @@ class AdvertisingController extends Controller
             'prompt_tokens' => 0,
             'completion_tokens' => 0,
             'cost_estimated_fcfa' => 0,
-            'duration_ms' => 14000,
+            'duration_ms' => (int) round(($data['duration_seconds'] ?? 0) * 1000),
             'status' => 'success',
             'input_summary' => "Export vidéo 9:16 pour ad #{$ad->id} (".($ad->product?->title ?: $shop->name).')',
             'output_data' => [
                 'ad_id' => $ad->id,
                 'channel' => $ad->channel,
                 'theme' => $request->input('theme', 'boutique'),
-                'video_style' => $request->input('video_style', 'capcut'),
+                'video_style' => ($ad->visual_config['studio_version'] ?? 0) === 2 ? 'creative_studio_v2' : 'motion_canvas',
                 'script_index' => $request->input('script_index', 0),
                 'format' => '9:16_vertical_hd',
+                'container' => $data['format'] ?? null,
+                'duration_source' => 'browser_reported',
             ],
         ]);
 
@@ -518,16 +535,18 @@ class AdvertisingController extends Controller
 
         $url = Storage::disk('public')->url($path);
 
-        $vc = $ad->visual_config ?? [];
-        if ($type === 'voice') {
-            $vc['custom_voice_url'] = $url;
-            $vc['voice_mode'] = 'custom';
-        } else {
-            $vc['custom_music_url'] = $url;
-            $vc['music_mode'] = 'custom';
-        }
-
-        $ad->update(['visual_config' => $vc]);
+        DB::transaction(function () use ($ad, $type, $url) {
+            $locked = Advertisement::whereKey($ad->id)->lockForUpdate()->firstOrFail();
+            $vc = $locked->visual_config ?? [];
+            if ($type === 'voice') {
+                $vc['custom_voice_url'] = $url;
+                $vc['voice_mode'] = 'custom';
+            } else {
+                $vc['custom_music_url'] = $url;
+                $vc['music_mode'] = 'custom';
+            }
+            $locked->update(['visual_config' => $vc]);
+        });
 
         return response()->json([
             'success' => true,

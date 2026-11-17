@@ -10,7 +10,7 @@ function context() {
     const calls = { images: [], texts: [] };
     const ctx = {
         calls, font: '20px Arial',
-        save() {}, restore() {}, scale() {}, translate() {}, beginPath() {}, roundRect() {}, fill() {}, arc() {}, fillRect() {},
+        save() {}, restore() {}, scale() {}, translate() {}, rotate() {}, rect() {}, clip() {}, beginPath() {}, roundRect() {}, fill() {}, arc() {}, fillRect() {},
         measureText(text) { return { width: [...String(text)].length * (parseFloat(this.font.match(/[\d.]+px/)[0]) * 0.55) }; },
         drawImage(...args) { calls.images.push(args); },
         fillText(...args) { calls.texts.push(args); }
@@ -98,4 +98,42 @@ test('story and square posters preserve the supplied photo and render the exact 
         assert.ok(ctx.calls.texts.every(([, x, y]) => x >= 0 && y < height * 720 / 1080));
         assert.ok(!ctx.calls.texts.some(([text]) => /certifi|garanti|stock limité/i.test(text)));
     }
+});
+
+vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/creative-canvas.js'), 'utf8'), sandbox);
+test('the new directions produce different visual compositions using real photos', () => {
+    const images = [{width:300,height:500},{width:500,height:300},{width:400,height:400}];
+    const signatures = [];
+    for (const layout of ['typography','split','collage','hero','detail','price','cta']) {
+        const ctx = context();
+        sandbox.CreativeCanvas.frame(ctx, {shopName:'Atelier',shopColor:'#cb2753',products:[{title:'Article Alba',price:'12 000 XOF'}]},
+            {layout,type:'product',product_index:0,title:'Article Alba',duration:3,fit:'contain',motion:'push'}, images[0], images, 0.4, 1.2);
+        assert.ok(ctx.calls.images.length > 0);
+        assert.ok(ctx.calls.texts.map(([text]) => text).join(' ').includes('Article Alba'));
+        signatures.push(JSON.stringify(ctx.calls.images.map(args => args.slice(1))));
+        for (const [image,,,w,h] of ctx.calls.images) assert.ok(Math.abs(w/h-image.width/image.height)<0.000001);
+    }
+    assert.equal(new Set(signatures).size, 7);
+});
+
+test('four poster directions render the price in both supported poster dimensions', () => {
+    for (const height of [720,1280]) for (const layout of ['editorial','bold','split','grid']) {
+        const ctx = context();
+        sandbox.CreativeCanvas.poster(ctx, {shopName:'Atelier',shopColor:'#cb2753',products:[{title:'Article Alba',price:'12 000 XOF'}]},
+            {title:'Article Alba',product_index:0,fit:'contain'}, {width:300,height:500}, [], layout, height);
+        assert.ok(ctx.calls.texts.some(([text]) => text === '12 000 XOF'));
+        assert.ok(ctx.calls.texts.every(([,x,y]) => x>=0 && x<720 && y>=0 && y<height));
+    }
+});
+
+test('zoom moves a contained photo while preserving the complete product inside its frame', () => {
+    const sizes = [];
+    for (const progress of [0,1]) {
+        const ctx = context(); const image = {width:300,height:500};
+        sandbox.CreativeCanvas.photo(ctx,image,40,180,600,600,'contain','push',progress);
+        const [,x,y,w,h] = ctx.calls.images[0];
+        assert.ok(x >= 40 && y >= 180 && x+w <= 640 && y+h <= 780);
+        sizes.push(w);
+    }
+    assert.ok(sizes[1] > sizes[0]);
 });

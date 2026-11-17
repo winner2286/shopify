@@ -223,7 +223,8 @@
         return [...(preferred === 'mp4' ? mp4.concat(webm) : webm.concat(mp4))].find(value => recorder.isTypeSupported(value)) || '';
     }
 
-    const api = { video, poster, contain, captionWords, recordingFormat, wrap };
+    const api = { video, poster, contain, captionWords, recordingFormat, wrap,
+        helpers: { rect, text, palette, brand, background } };
     root.AdCreativeRenderer = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class Sprint6FeatureTest extends TestCase
@@ -69,7 +70,7 @@ class Sprint6FeatureTest extends TestCase
         return Product::create([
             'shop_id' => $shop->id,
             'title' => $name,
-            'slug' => \Illuminate\Support\Str::slug($name),
+            'slug' => Str::slug($name),
             'description' => 'Superbe robe wax cousue à la main.',
             'price' => $price,
             'stock' => 20,
@@ -85,11 +86,11 @@ class Sprint6FeatureTest extends TestCase
 
         $response = $this->actingAs($merchant)->get(route('ads.index'));
         $response->assertStatus(200);
-        $response->assertSee('Bibliothèque de Publicités');
+        $response->assertSee('Vos projets');
 
         $responseCreate = $this->actingAs($merchant)->get(route('ads.create'));
         $responseCreate->assertStatus(200);
-        $responseCreate->assertSee('Assistant Publicitaire IA');
+        $responseCreate->assertSee('Votre intention créative');
         $responseCreate->assertSee('Robe Wax Royale');
     }
 
@@ -116,9 +117,9 @@ class Sprint6FeatureTest extends TestCase
         $this->assertNotNull($ad);
         $response->assertRedirect(route('ads.show', $ad));
 
-        // CDC Module H validation: 3 copy variations (H-02) & 2 video scripts (H-04)
+        // Three creative directions share the same factual product catalog.
         $this->assertCount(3, $ad->generated_texts);
-        $this->assertCount(2, $ad->generated_scripts);
+        $this->assertCount(3, $ad->generated_scripts);
         $this->assertNotNull($ad->visual_config);
 
         // Verification of strict AI pricing rule: 45 000 FCFA must be present, no hallucinated price
@@ -136,9 +137,9 @@ class Sprint6FeatureTest extends TestCase
         // Detail view display & Studio Vidéo IA verification
         $showResponse = $this->actingAs($merchant)->get(route('ads.show', $ad));
         $showResponse->assertStatus(200);
-        $showResponse->assertSee('Studio Vidéo & Publicité IA');
-        $showResponse->assertSee('ad-video-canvas');
-        $showResponse->assertSee('Idées & Scripts de Vidéos TikTok', false);
+        $showResponse->assertSee('Votre montage');
+        $showResponse->assertSee('studio-canvas');
+        $showResponse->assertSee('Mise en scène');
         $showResponse->assertSee('45 000 FCFA');
 
         // Test logging video export
@@ -272,7 +273,7 @@ class Sprint6FeatureTest extends TestCase
         $shopsResponse->assertSee('boutique-a-suspendre');
 
         // Storefront initially works
-        $storefront = $this->get('/b/' . $shop->subdomain);
+        $storefront = $this->get('/b/'.$shop->subdomain);
         $storefront->assertStatus(200);
 
         // Admin suspends shop (J-02)
@@ -283,7 +284,7 @@ class Sprint6FeatureTest extends TestCase
         $this->assertEquals(Shop::SUSPENDED, $shop->status);
 
         // Suspended storefront is blocked
-        $blockedStorefront = $this->get('/b/' . $shop->subdomain);
+        $blockedStorefront = $this->get('/b/'.$shop->subdomain);
         $blockedStorefront->assertStatus(403);
 
         // Admin re-activates shop
@@ -294,7 +295,7 @@ class Sprint6FeatureTest extends TestCase
         $this->assertEquals(Shop::PUBLISHED, $shop->status);
 
         // Storefront is active again
-        $reactivatedStorefront = $this->get('/b/' . $shop->subdomain);
+        $reactivatedStorefront = $this->get('/b/'.$shop->subdomain);
         $reactivatedStorefront->assertStatus(200);
     }
 

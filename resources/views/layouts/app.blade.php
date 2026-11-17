@@ -55,7 +55,7 @@
         <script src="{{ asset('js/order-notifications.js') }}?v={{ file_exists(public_path('js/order-notifications.js')) ? filemtime(public_path('js/order-notifications.js')) : '1.1' }}" defer></script>
         <script src="{{ asset('js/pwa-push.js') }}?v={{ file_exists(public_path('js/pwa-push.js')) ? filemtime(public_path('js/pwa-push.js')) : '1.0' }}" defer></script>
     @endauth
-<body class="@auth has-bottom-nav @endauth">
+<body class="@auth has-bottom-nav @endauth {{ request()->routeIs('ads.show') ? 'creative-focus' : '' }}">
     @guest
         @include('partials.splash-screen')
     @endguest

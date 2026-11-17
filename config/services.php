@@ -40,6 +40,11 @@ return [
         'driver' => env('AI_PROVIDER', 'groq'),
     ],
 
+    'runway' => [
+        'key' => env('RUNWAYML_API_SECRET') ?: env('RUNWAY_API_KEY'),
+        'credit_cost' => (int) env('RUNWAY_CREDIT_COST', 0),
+    ],
+
     'openrouter' => [
         'key' => env('OPENROUTER_API_KEY'),
         'model' => env('OPENROUTER_MODEL', 'google/gemini-2.5-flash'),
@@ -61,7 +66,7 @@ return [
     'webpush' => [
         'public_key' => env('VAPID_PUBLIC_KEY'),
         'private_key' => env('VAPID_PRIVATE_KEY'),
-        'subject' => env('VAPID_SUBJECT', env('MAIL_FROM_ADDRESS') ? 'mailto:' . env('MAIL_FROM_ADDRESS') : null),
+        'subject' => env('VAPID_SUBJECT', env('MAIL_FROM_ADDRESS') ? 'mailto:'.env('MAIL_FROM_ADDRESS') : null),
     ],
 
     'photoroom' => [

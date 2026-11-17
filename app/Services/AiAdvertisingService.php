@@ -7,6 +7,7 @@ use App\Models\AiGeneration;
 use App\Models\Product;
 use App\Models\Shop;
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -56,6 +57,9 @@ class AiAdvertisingService
 
         $videoAdGen = app(VideoAdGeneratorService::class);
         $campaignData = [
+            'creative_brief' => $data['creative_brief'] ?? '',
+            'initial_format' => $data['initial_format'] ?? 'video',
+            'audience' => $data['audience'] ?? '',
             'angle' => $angle,
             'tone' => $tone,
             'business_type' => $data['business_type'] ?? ($shop->business_category ?: 'general'),
@@ -155,6 +159,8 @@ class AiAdvertisingService
 
         $videoAdGen = app(VideoAdGeneratorService::class);
         $campaignData = [
+            'creative_brief' => $overrides['creative_brief'] ?? $vc['creative_brief'] ?? '',
+            'audience' => $overrides['audience'] ?? $vc['audience'] ?? '',
             'angle' => $angle,
             'tone' => $tone,
             'business_type' => $overrides['business_type'] ?? $vc['business_type'] ?? ($shop->business_category ?: 'general'),
@@ -163,7 +169,7 @@ class AiAdvertisingService
             'custom_message' => $overrides['custom_message'] ?? $vc['custom_message'] ?? '',
             'product_id' => ! empty($overrides['product_id']) ? (int) $overrides['product_id'] : $ad->product_id,
             'category_ids' => (array) ($overrides['category_ids'] ?? $vc['category_ids'] ?? []),
-            'selected_product_ids' => (array) ($overrides['selected_product_ids'] ?? []),
+            'selected_product_ids' => (array) ($overrides['selected_product_ids'] ?? array_column($vc['products'] ?? [], 'id')),
             'platform' => $overrides['platform'] ?? $vc['platform'] ?? $ad->channel,
         ];
 
@@ -174,6 +180,8 @@ class AiAdvertisingService
             : null;
 
         $visualConfig = array_merge($vc, $campaign['visual_config'], [
+            'media' => $vc['media'] ?? [],
+            'revision' => ($vc['revision'] ?? 0) + 1,
             'product_title' => $firstProduct?->title ?: $shop->name,
             'price' => $campaign['products'][0]['price'] ?? '',
             'old_price' => $campaign['products'][0]['old_price'] ?? null,
@@ -181,13 +189,25 @@ class AiAdvertisingService
             'phone' => $shop->phone ?: $shop->whatsapp,
         ]);
 
-        $ad->update([
-            'product_id' => $firstProduct?->id,
-            'tone' => $tone,
-            'generated_texts' => $campaign['texts'],
-            'generated_scripts' => $campaign['scripts'],
-            'visual_config' => $visualConfig,
-        ]);
+        $ad = DB::transaction(function () use ($ad, $vc, $overrides, $firstProduct, $tone, $campaign, $visualConfig) {
+            $locked = Advertisement::whereKey($ad->id)->lockForUpdate()->firstOrFail();
+            $current = $locked->visual_config ?? [];
+            if (($current['revision'] ?? 0) !== ($overrides['revision'] ?? $vc['revision'] ?? 0)) {
+                throw ValidationException::withMessages(['revision' => 'Le projet a changé pendant la préparation. Rechargez-le avant de demander une nouvelle direction.']);
+            }
+            foreach (['media', 'custom_voice_url', 'custom_music_url', 'voice_mode', 'music_mode'] as $key) {
+                if (array_key_exists($key, $current)) {
+                    $visualConfig[$key] = $current[$key];
+                }
+            }
+            $locked->update([
+                'product_id' => $firstProduct?->id, 'tone' => $tone,
+                'generated_texts' => $campaign['texts'], 'generated_scripts' => $campaign['scripts'],
+                'visual_config' => $visualConfig,
+            ]);
+
+            return $locked;
+        });
 
         AiGeneration::create([
             'shop_id' => $shop->id, 'type' => 'ad_text', 'step' => 'ad_regeneration',

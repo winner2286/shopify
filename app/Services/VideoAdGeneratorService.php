@@ -249,6 +249,7 @@ class VideoAdGeneratorService
                 'badge' => $hasDiscount && ! $hidePrices ? "-{$discountPct}%" : '',
                 'category' => $catName,
                 'imageUrl' => $imageUrl,
+                'gallery' => array_values(array_unique(array_merge([$imageUrl], $p->images->take(4)->map(fn ($image) => $image->url)->filter()->all()))),
             ];
         })->values()->toArray();
     }
@@ -429,7 +430,7 @@ class VideoAdGeneratorService
         $assetPhrase = $this->resolveShopAssetPhrase($shop, $customMessage);
 
         // Tentative d'appel IA avec timeout strict de 7 secondes
-        $aiPayload = $this->tryGenerateWithAi(
+        $aiPayload = ! empty($data['skip_ai']) ? null : $this->tryGenerateWithAi(
             $shop,
             $formattedProducts,
             $angle,
@@ -438,23 +439,11 @@ class VideoAdGeneratorService
             $targetDuration,
             $customMessage,
             $assetPhrase,
-            $isStorePresentation
+            $isStorePresentation,
+            $data
         );
 
-        // Si l'IA échoue ou prend trop de temps, le générateur déterministe haute fidélité prend le relais
-        $scripts = (! empty($aiPayload['scripts']))
-            ? $aiPayload['scripts']
-            : $this->generateDeterministicScripts(
-                $shop,
-                $formattedProducts,
-                $angle,
-                $tone,
-                $businessType,
-                $targetDuration,
-                $customMessage,
-                $assetPhrase,
-                $isStorePresentation
-            );
+        $scripts = app(CreativeCampaignPlanner::class)->plan($shop, $formattedProducts, $data, $aiPayload['scripts'] ?? []);
 
         // Phrase finale garantie : boutique en ligne + WhatsApp + où trouver le lien selon la plateforme
         $scripts = $this->applyPlatformCta($scripts, $shop, $platform);
@@ -473,6 +462,14 @@ class VideoAdGeneratorService
 
         // Configuration visuelle enrichie pour le Canvas Studio
         $visualConfig = [
+            'studio_version' => 2,
+            'generation_source' => $aiPayload['_generation']['model'] ?? 'composed',
+            'initial_format' => $data['initial_format'] ?? 'video',
+            'revision' => 0,
+            'audience' => $data['audience'] ?? '',
+            'creative_brief' => $data['creative_brief'] ?? $customMessage,
+            'active_concept' => 0,
+            'media' => [],
             'angle' => $angle,
             'tone' => $tone,
             'business_type' => $businessType,
@@ -619,7 +616,9 @@ class VideoAdGeneratorService
 
             $script['scenes'][$ctaIndex]['voiceover'] = $voice;
             $script['scenes'][$ctaIndex]['subtitle'] = $pack['hint'];
-            $script['scenes'][$ctaIndex]['duration'] = $this->estimateSceneDuration($voice, 4.5, 7.5);
+            if (! isset($script['seed'])) {
+                $script['scenes'][$ctaIndex]['duration'] = $this->estimateSceneDuration($voice, 4.5, 7.5);
+            }
             $script['steps'] = $this->convertScenesToSteps($script['scenes']);
         }
         unset($script);
@@ -666,7 +665,8 @@ class VideoAdGeneratorService
         int $duration,
         string $customMessage,
         string $assetPhrase,
-        bool $isStorePresentation
+        bool $isStorePresentation,
+        array $creativeBrief = []
     ): ?array {
         $groqKey = (string) (config('services.groq.key') ?: '');
         $openrouterKey = (string) (config('services.openrouter.key') ?: '');
@@ -684,12 +684,19 @@ class VideoAdGeneratorService
         $creativeDirection = app(AdCreativeDirection::class);
         $creativeInstructions = $creativeDirection->instructions();
         $creativeExamples = $creativeDirection->promptExamples();
+        $briefText = json_encode(array_intersect_key($creativeBrief, array_flip(['creative_brief', 'audience'])), JSON_UNESCAPED_UNICODE);
+        $recentHooks = $shop->advertisements()->latest('id')->limit(6)->get(['generated_scripts'])
+            ->flatMap(fn ($ad) => collect($ad->generated_scripts ?? [])->flatMap(fn ($script) => collect($script['scenes'] ?? [])->where('type', 'hook')->pluck('title')))
+            ->take(12)->implode(' ; ');
 
         $prompt = <<<PROMPT
 Tu es un réalisateur publicitaire professionnel spécialisé dans les vidéos courtes verticales 9:16 (TikTok, Instagram Reels, Statuts WhatsApp) pour les boutiques e-commerce.
 
 {$creativeInstructions}
 EXEMPLES PÉDAGOGIQUES : {$creativeExamples}
+BRIEF CRÉATIF DU MARCHAND : {$briefText}
+ACCROCHES RÉCENTES À NE PAS REPRENDRE : {$recentHooks}
+Propose trois concepts réellement distincts : un lancement rythmé, une approche éditoriale et une découverte de collection. Varie la narration, les accroches et les angles de vue ; ne fais pas trois synonymes du même texte.
 
 CONTEXTE DE LA BOUTIQUE :
 - Nom : "{$shop->name}"
@@ -704,14 +711,16 @@ CONTEXTE DE LA BOUTIQUE :
 PRODUITS SÉLECTIONNÉS :
 {$productsListStr}
 
-STRUCTURE DU SCRIPT VIDÉO (SYNCHRONISÉE PLAN PAR PLAN) :
-1. Plan 0 Hook (4.0s - 5.0s) : Accroche courte, captivante liée à l'angle et au secteur.
-2. Plans Produits (4.2s - 5.5s par produit) : Pour chaque produit listé, un plan dédié. LA VOIX DOIT PRONONCER EXACTEMENT LE NOM DU PRODUIT DU PLAN.
-3. Plan Argument (3.8s - 4.8s) : Un atout fort ("{$assetPhrase}").
-4. Plan CTA (4.0s - 5.0s) : Nom de la boutique "{$shop->name}", appel chaleureux à commander sur WhatsApp.
+STRUCTURE CRÉATIVE :
+Produis exactement trois scripts complets et trois textes de publication, un pour chaque concept.
+Chaque script contient 5 à 8 plans : une accroche concrète, une succession de vues produit et de détails avec des titres différents, puis une invitation finale.
+Utilise product_index (index à partir de zéro dans le catalogue fourni) pour rattacher chaque plan produit à son vrai visuel. Ne parle pas d'un autre article.
+Donne à chaque concept un titre original et une intention de réalisation spécifique au brief, pas « Variante 1 » ni « Impact direct ».
+Les titres à l'écran racontent une progression ; ne répète pas le nom du produit sur tous les plans.
+Pour les plans, choisis aussi layout parmi hero, split, collage, detail, typography, price, cta ; motion parmi push, pan, rise, none ; transition parmi cut, dissolve, wipe. Chaque concept doit varier ses compositions et ses raccords.
 
 RÈGLES CRITIQUES :
-- IMPORTANT TEMPS DE PAROLE : Chaque phrase doit être lue confortablement sans se presser. Les durées des plans doivent être de 4.0 à 5.5 secondes pour que la voix ne soit jamais coupée.
+- RYTHME : La somme des durées doit viser {$duration} secondes. Les textes de voix doivent rester courts, avec des plans sans voix pour laisser respirer les images. Le montage doit fonctionner sans son.
 - IMPORTANT PRONONCIATION DES PRIX (SYNTHÈSE VOCALE) : Dans les champs 'voiceover', écris TOUJOURS les prix en toutes lettres suivi de 'francs' (par exemple : 'mille francs', 'cinq mille francs', 'dix mille francs'). N'écris JAMAIS de chiffres avec des espaces comme '1 000' et n'écris JAMAIS 'FCFA' brut car la voix lirait 'un zéro zéro zéro'.
 - Phrases orales courtes, dynamiques, naturelles.
 - Pas de texte robotique, pas de faux superlatifs inventés.
@@ -725,7 +734,7 @@ Réponds STRICTEMENT en JSON valide avec ce format :
   ],
   "scripts": [
     {
-      "title": "Variante 1 : Impact Direct ({$duration}s)",
+      "title": "Un titre créatif spécifique à cette campagne",
       "concept": "Accroche immédiate et présentation fluide de la collection",
       "scenes": [
         {"id": 0, "type": "hook", "duration": 4.2, "title": "Accroche", "subtitle": "Sous-titre court", "voiceover": "Phrase d'accroche orale..."},
@@ -745,15 +754,15 @@ PROMPT;
                 $response = Http::withHeaders([
                     'Authorization' => 'Bearer '.$groqKey,
                     'Content-Type' => 'application/json',
-                ])->timeout(7)->post('https://api.groq.com/openai/v1/chat/completions', [
+                ])->timeout(20)->post('https://api.groq.com/openai/v1/chat/completions', [
                     'model' => $groqModel,
                     'messages' => [
                         ['role' => 'system', 'content' => 'Tu es un directeur de création publicitaire e-commerce. Tu réponds UNIQUEMENT en JSON strict sans balises markdown.'],
                         ['role' => 'user', 'content' => $prompt],
                     ],
                     'response_format' => ['type' => 'json_object'],
-                    'max_tokens' => 1400,
-                    'temperature' => 0.65,
+                    'max_tokens' => 3200,
+                    'temperature' => 0.85,
                 ]);
 
                 if ($response->successful()) {
@@ -780,15 +789,15 @@ PROMPT;
                     'Authorization' => 'Bearer '.$openrouterKey,
                     'HTTP-Referer' => $cleanUrl ?: 'https://zanika.shop',
                     'X-Title' => config('platform.name', 'Zanika E-Commerce'),
-                ])->timeout(7)->post('https://openrouter.ai/api/v1/chat/completions', [
+                ])->timeout(20)->post('https://openrouter.ai/api/v1/chat/completions', [
                     'model' => $model,
                     'messages' => [
                         ['role' => 'system', 'content' => 'Tu es un directeur de création publicitaire e-commerce. Tu réponds UNIQUEMENT en JSON strict sans balises markdown.'],
                         ['role' => 'user', 'content' => $prompt],
                     ],
                     'response_format' => ['type' => 'json_object'],
-                    'max_tokens' => 1400,
-                    'temperature' => 0.65,
+                    'max_tokens' => 3200,
+                    'temperature' => 0.85,
                 ]);
 
                 if ($response->successful()) {
@@ -851,16 +860,23 @@ PROMPT;
         foreach ($aiPayload['scripts'] as &$scObj) {
             if (! empty($scObj['scenes']) && is_array($scObj['scenes'])) {
                 foreach ($scObj['scenes'] as &$scene) {
+                    $scene['voiceover'] = (string) ($scene['voiceover'] ?? '');
+                    $scene['title'] = (string) ($scene['title'] ?? '');
+                    $scene['subtitle'] = (string) ($scene['subtitle'] ?? '');
                     if (! empty($scene['voiceover'])) {
                         // Normalisation des prix et sigles pour la synthèse vocale
                         $scene['voiceover'] = $mediaCtrl->normalizeSpeechText($scene['voiceover']);
                     }
                     $voiceText = $scene['voiceover'] ?? '';
-                    $scene['duration'] = $this->estimateSceneDuration($voiceText, 3.8, 6.2);
+                    $scene['duration'] = is_numeric($scene['duration'] ?? null)
+                        ? max(0.5, min(15, (float) $scene['duration']))
+                        : $this->estimateSceneDuration($voiceText, 2.5, 6.2);
                 }
+                unset($scene);
                 $scObj['steps'] = $this->convertScenesToSteps($scObj['scenes']);
             }
         }
+        unset($scObj);
 
         return $aiPayload;
     }
