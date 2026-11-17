@@ -13,6 +13,9 @@
     };
     let sources = [], source, preview, sourceFile, busy = false, version = 0, previousFocus, previousOverflow;
     const objectUrls = [];
+    const maskCanvas = $('mask-canvas'), maskContext = maskCanvas.getContext('2d');
+    const maskOriginal = document.createElement('canvas');
+    let maskMode = 'erase', maskEdited = false, maskEnabled = false, maskReady = false, drawing = false, lastPoint;
     const message = (text, error = false) => { $('status').textContent = text; $('status').dataset.error = String(error); };
     const style = () => root.querySelector('input[name="photo_studio_style"]:checked').value;
     const objectUrl = file => {const url = URL.createObjectURL(file); objectUrls.push(url); return url;};
@@ -21,13 +24,16 @@
         $('apply').textContent = 'Préparez un aperçu pour continuer';
         $('generate').disabled = busy;
         $('generate').textContent = 'Préparer l’aperçu · 12 crédits IA';
-        $('result').src = $('source').src; $('result-label').textContent = 'Aperçu à préparer';
+        if ($('source').getAttribute('src')) $('result').src = $('source').src;
+        else $('result').removeAttribute('src');
+        $('result-label').textContent = 'Aperçu à préparer';
         message('Votre photo reste inchangée tant que vous ne validez pas un rendu.');
     }
     function chooseSource() {
         source = sources[Number($('source-select').value)];
         if (!source) return;
         sourceFile = source.file || null;
+        maskEnabled = false; maskEdited = false; maskReady = false;
         $('source').src = source.url;
         resetPreview();
     }
@@ -67,6 +73,10 @@
         $('source-select').disabled = value;
         $('styles').disabled = value;
         $('scene').disabled = value;
+        $('decor').disabled = value;
+        $('background').disabled = value;
+        $('adjustment-fields').disabled = value;
+        $('mask-tools').disabled = value;
         $('generate').disabled = value || Boolean(preview && style() !== 'lifestyle');
         $('close').disabled = value;
         $('original').disabled = value;
@@ -76,13 +86,74 @@
         root.setAttribute('aria-busy', String(value));
     }
     $('source-select').onchange = chooseSource;
-    root.querySelectorAll('input[name="photo_studio_style"]').forEach(input => input.onchange = () => {
-        $('scene-field').hidden = style() !== 'lifestyle'; resetPreview();
-    });
+    function sceneDefaults() {
+        const option = $('decor').selectedOptions[0];
+        $('decor-preview').src = option.dataset.image;
+        for (const [id, key, fallback] of [['position-x','x',50],['position-y','y',85],['scale','scale',65],['shadow','shadow',22]]) {
+            $(id).value = style() === 'custom_background' ? fallback : option.dataset[key];
+            $(id).nextElementSibling.value = $(id).value;
+        }
+    }
+    function updateControls() {
+        const selected = root.querySelector('input[name="photo_studio_style"]:checked');
+        $('style-summary').textContent = '2. ' + selected.closest('label').querySelector('strong').textContent;
+        $('style-picker').open = false;
+        const composed = ['scene_template','custom_background'].includes(style());
+        $('scene-field').hidden = style() !== 'lifestyle';
+        $('decor-field').hidden = style() !== 'scene_template';
+        $('background-field').hidden = style() !== 'custom_background';
+        $('placement').hidden = !composed;
+        $('adjustments').hidden = style() === 'lifestyle';
+        $('mask-editor').hidden = ['retouch','lifestyle'].includes(style());
+        if (composed) sceneDefaults();
+        resetPreview();
+    }
+    root.querySelectorAll('input[name="photo_studio_style"]').forEach(input => input.onchange = updateControls);
+    $('decor').onchange = () => {sceneDefaults(); resetPreview();};
+    $('background').onchange = resetPreview;
+    ['brightness','contrast','scale','position-x','position-y','shadow'].forEach(id => $(id).oninput = () => {$(id).nextElementSibling.value = $(id).value; resetPreview();});
+    $('sharpen').onchange = resetPreview;
+    $('source').onload = () => {
+        const image = $('source');
+        const ratio = Math.min(1, 720 / Math.max(image.naturalWidth, image.naturalHeight));
+        maskCanvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+        maskCanvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+        maskOriginal.width = maskCanvas.width; maskOriginal.height = maskCanvas.height;
+        maskOriginal.getContext('2d').drawImage(image, 0, 0, maskCanvas.width, maskCanvas.height);
+        maskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+        maskContext.drawImage(maskOriginal, 0, 0); maskReady = true; maskEdited = false; maskEnabled = false;
+        $('mask-use').disabled = true;
+    };
+    function paint(event) {
+        if (!drawing || busy || !maskReady) return;
+        const rect = maskCanvas.getBoundingClientRect();
+        const point = {x:(event.clientX - rect.left) * maskCanvas.width / rect.width, y:(event.clientY - rect.top) * maskCanvas.height / rect.height};
+        maskContext.save();
+        maskContext.globalCompositeOperation = maskMode === 'erase' ? 'destination-out' : 'source-over';
+        maskContext.strokeStyle = maskMode === 'erase' ? '#000' : maskContext.createPattern(maskOriginal, 'no-repeat');
+        maskContext.lineWidth = Number($('brush').value) * maskCanvas.width / rect.width;
+        maskContext.lineCap = 'round'; maskContext.lineJoin = 'round';
+        maskContext.beginPath(); maskContext.moveTo(lastPoint?.x ?? point.x, lastPoint?.y ?? point.y);
+        maskContext.lineTo(point.x + .01, point.y + .01); maskContext.stroke(); maskContext.restore();
+        lastPoint = point; maskEdited = true; maskEnabled = false; $('mask-use').disabled = false;
+    }
+    maskCanvas.onpointerdown = event => {if (busy || !maskReady) return;event.preventDefault();drawing = true; lastPoint = null; maskCanvas.setPointerCapture(event.pointerId); resetPreview();paint(event);};
+    maskCanvas.onpointermove = paint;
+    maskCanvas.onpointerup = maskCanvas.onpointercancel = () => {drawing = false;lastPoint = null;};
+    for (const mode of ['erase','restore']) $("mask-"+mode).onclick = () => {
+        maskMode = mode; for (const other of ['erase','restore']) $('mask-'+other).setAttribute('aria-pressed', String(other === mode));
+    };
+    $('mask-reset').onclick = () => {maskContext.clearRect(0,0,maskCanvas.width,maskCanvas.height);maskContext.drawImage(maskOriginal,0,0);maskEdited=false;maskEnabled=false;$('mask-use').disabled=true;resetPreview();};
+    $('mask-use').onclick = () => {if (!maskEdited) return;maskEnabled=true;resetPreview();message('Détourage manuel sélectionné. Préparez l’aperçu pour vérifier le résultat dans le décor.');};
+    $('mask-disable').onclick = () => {maskEnabled=false;resetPreview();message('Le prochain aperçu utilisera le détourage automatique disponible.');};
+    updateControls();
     $('scene').oninput = resetPreview;
     $('generate').onclick = async () => {
         if (busy || !source || (preview && style() !== 'lifestyle')) return;
         if (style() === 'lifestyle' && !$('scene').value.trim()) return message('Décrivez le décor souhaité avant de préparer l’aperçu.', true);
+        const background = $('background').files[0];
+        if (style() === 'custom_background' && !background) return message('Choisissez une photo de décor à importer.', true);
+        if (style() === 'custom_background' && background.size > 5 * 1024 * 1024) return message('Le décor doit faire moins de 5 Mo.', true);
         const requestVersion = ++version;
         preview = null; lock(true); message('Préparation du rendu choisi. Cela peut prendre quelques instants.');
         try {
@@ -93,11 +164,23 @@
                 sourceFile = new File([blob], 'photo-produit', {type:blob.type});
             }
             let file = sourceFile;
-            if (window.prepareProductPhotoForAi) file = await window.prepareProductPhotoForAi(file);
+            const prepare = window.prepareProductPhotoForAi || window.prepareEditPhotoForAi;
+            if (prepare) file = await prepare(file);
             if (!file) throw new Error('Cette photo ne peut pas être préparée.');
             const body = new FormData(); body.append('photo', file); body.append('style', style());
             body.append('scene_prompt', $('scene').value.trim());
             body.append('category_hint', document.getElementById('title')?.value.slice(0,200) || '');
+            if (style() !== 'lifestyle') {
+                for (const id of ['brightness','contrast','scale','position-x','position-y','shadow']) body.append(id.replaceAll('-','_'), $(id).value);
+                body.append('sharpen', $('sharpen').checked ? '1' : '0');
+                body.append('scene_template', $('decor').value);
+                if (style() === 'custom_background') body.append('background', background);
+                if (maskEnabled && style() !== 'retouch') {
+                    const mask = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
+                    if (!mask) throw new Error('Le détourage manuel ne peut pas être préparé.');
+                    body.append('subject_mask', mask, 'contours.png');
+                }
+            }
             const response = await fetch(root.dataset.url, {method:'POST', headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body});
             const data = await response.json().catch(() => ({}));
             if (!response.ok || data.status !== 'success') throw new Error(Object.values(data.errors || {}).flat()[0] || data.error || data.message || 'La préparation a échoué. Votre photo reste inchangée.');

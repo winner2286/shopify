@@ -63,13 +63,14 @@ class ProductStudioService
      *
      * @return array<string, mixed>
      */
-    public function previewProductPhoto(Shop $shop, string $imageBinary, string $style, ?string $hint = null, string $scene = ''): array
+    public function previewProductPhoto(Shop $shop, string $imageBinary, string $style, ?string $hint = null, string $scene = '', array $options = []): array
     {
         if ($style === 'lifestyle' && (! $this->photoroom->isConfigured() || ! $shop->canUsePhotoroomGenerativeScene())) {
             throw ValidationException::withMessages(['style' => 'Les décors IA nécessitent Photoroom et une formule compatible. Choisissez une retouche ou un fond uni.']);
         }
 
-        $operation = function (bool $reserved) use ($shop, $imageBinary, $style, $hint, $scene): array {
+        $operation = function (bool $reserved) use ($shop, $imageBinary, $style, $hint, $scene, $options): array {
+            $composer = app(ProductPhotoComposer::class);
             $started = microtime(true);
             $engine = 'zanika-product-studio';
             $method = 'none';
@@ -80,6 +81,8 @@ class ProductStudioService
                 'studio_ambient' => 'Fond ivoire',
                 'studio_dark' => 'Fond graphite',
                 'lifestyle' => 'Décor personnalisé',
+                'scene_template' => ProductPhotoComposer::SCENES[$options['scene_template'] ?? 'podium']['title'],
+                'custom_background' => 'Votre décor importé',
                 default => 'Fond blanc',
             };
             $category = $this->matchCategoryKeywords(mb_strtolower((string) $hint));
@@ -101,15 +104,17 @@ class ProductStudioService
             } elseif ($style === 'retouch') {
                 $source = imagecreatefromstring($this->normalizeImageBinary($imageBinary));
                 $canvas = $this->frameSquareStudio($source, self::TARGET_SIZE);
-                imagefilter($canvas, IMG_FILTER_CONTRAST, -3);
+                $composer->adjust($canvas, $options);
                 ob_start();
                 imagejpeg($canvas, null, self::JPEG_QUALITY);
                 $binary = (string) ob_get_clean();
                 imagedestroy($canvas);
                 imagedestroy($source);
             } else {
-                $cutout = $this->hasUsableTransparency($imageBinary) ? $imageBinary : null;
-                $method = $cutout ? 'source_transparency' : 'none';
+                $cutout = ! empty($options['subject_mask'])
+                    ? $composer->maskSubject($this->normalizeImageBinary($imageBinary), $options['subject_mask'])
+                    : ($this->hasUsableTransparency($imageBinary) ? $imageBinary : null);
+                $method = $cutout ? (! empty($options['subject_mask']) ? 'manual_mask' : 'source_transparency') : 'none';
                 if (! $cutout && $reserved) {
                     $cutout = $this->photoroom->removeBackground($imageBinary, ['format' => 'png']);
                     if ($cutout && $this->hasUsableTransparency($cutout)) {
@@ -127,9 +132,18 @@ class ProductStudioService
                     throw ValidationException::withMessages(['photo' => 'Le fond ne peut pas être retiré proprement. Essayez une photo nette sur fond uni, ou choisissez « Retouche légère » pour conserver le décor.']);
                 }
                 $subject = imagecreatefromstring($cutout);
-                $canvas = $this->renderStudioPackshot($subject, match ($style) {
-                    'studio_dark' => 'dark', 'studio_ambient' => 'ambient_warm', default => 'white',
-                }, self::TARGET_SIZE, $category);
+                $composer->adjust($subject, $options);
+                if (in_array($style, ['scene_template', 'custom_background'], true)) {
+                    $cropped = $this->cropTransparentBoundingBox($subject);
+                    $canvas = $composer->compose($cropped, $options['scene_template'] ?? ($style === 'scene_template' ? 'podium' : 'parquet'), $options + ['category' => $category], $options['background'] ?? null);
+                    if ($cropped !== $subject) {
+                        imagedestroy($cropped);
+                    }
+                } else {
+                    $canvas = $this->renderStudioPackshot($subject, match ($style) {
+                        'studio_dark' => 'dark', 'studio_ambient' => 'ambient_warm', default => 'white',
+                    }, self::TARGET_SIZE, $category);
+                }
                 ob_start();
                 imagejpeg($canvas, null, self::JPEG_QUALITY);
                 $binary = (string) ob_get_clean();
@@ -156,6 +170,7 @@ class ProductStudioService
             return [
                 'status' => 'success', 'engine' => $engine, 'category' => $category,
                 'product_title' => $hint, 'cutout_method' => $method, 'cutout_path' => $cutoutPath,
+                'cutout_url' => $cutoutPath ? Storage::disk('public')->url($cutoutPath) : null,
                 'source_path' => $sourcePath, 'source_url' => Storage::disk('public')->url($sourcePath),
                 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
                 'quality_audit' => ['status' => 'review_required', 'summary' => 'Comparez les contours, les couleurs et les inscriptions avant de valider.'],
@@ -166,7 +181,7 @@ class ProductStudioService
             ];
         };
 
-        return $style === 'retouch' || ($style !== 'lifestyle' && $this->hasUsableTransparency($imageBinary))
+        return $style === 'retouch' || ($style !== 'lifestyle' && (! empty($options['subject_mask']) || $this->hasUsableTransparency($imageBinary)))
             ? $operation(false)
             : $this->withPhotoroomReservation($shop, $operation);
     }

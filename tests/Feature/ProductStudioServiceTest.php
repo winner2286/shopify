@@ -58,6 +58,141 @@ class ProductStudioServiceTest extends TestCase
         return $binary;
     }
 
+    private function sampleMask(): string
+    {
+        $image = imagecreatetruecolor(300, 300);
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
+        imagefilledellipse($image, 150, 150, 180, 120, imagecolorallocatealpha($image, 0, 255, 0, 0));
+        ob_start();
+        imagepng($image);
+        $binary = (string) ob_get_clean();
+        imagedestroy($image);
+
+        return $binary;
+    }
+
+    public function test_manual_mask_and_prepared_scene_work_without_any_photoroom_configuration(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => '', 'services.photoroom.sandbox_key' => '']);
+        [$merchant, $shop] = $this->createMerchant();
+        $source = $this->createSampleProductImage();
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->createWithContent('photo.jpg', $source),
+            'subject_mask' => UploadedFile::fake()->createWithContent('contours.png', $this->sampleMask()),
+            'style' => 'scene_template', 'scene_template' => 'podium', 'shadow' => 20,
+        ])->assertOk()->assertJsonPath('cutout_method', 'manual_mask')->assertJsonPath('variations.0.title', 'Podium en pierre');
+
+        $binary = Storage::disk('public')->get($response->json('variations.0.path'));
+        $size = getimagesizefromstring($binary);
+        $this->assertSame([1000, 1000], [$size[0], $size[1]]);
+        $cutout = imagecreatefromstring(Storage::disk('public')->get($response->json('cutout_path')));
+        $center = imagecolorsforindex($cutout, imagecolorat($cutout, 150, 150));
+        $this->assertGreaterThan(150, $center['red']);
+        $this->assertLessThan(50, $center['green'], 'Only the mask alpha is used; its green RGB pixels must never replace the product.');
+        $this->assertSame(127, imagecolorsforindex($cutout, imagecolorat($cutout, 0, 0))['alpha']);
+        imagedestroy($cutout);
+        $this->assertSame($source, Storage::disk('public')->get($response->json('source_path')));
+        $this->assertSame(12, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
+        Http::assertNothingSent();
+    }
+
+    public function test_custom_background_preserves_backdrop_and_obeys_product_placement(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        [$merchant, $shop] = $this->createMerchant();
+        $background = imagecreatetruecolor(600, 300);
+        imagefill($background, 0, 0, imagecolorallocate($background, 20, 40, 180));
+        ob_start();
+        imagepng($background);
+        $backdrop = (string) ob_get_clean();
+        imagedestroy($background);
+        $bounds = [];
+        foreach ([20, 80] as $x) {
+            $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+                'photo' => UploadedFile::fake()->createWithContent('photo.jpg', $this->createSampleProductImage()),
+                'subject_mask' => UploadedFile::fake()->createWithContent('contours.png', $this->sampleMask()),
+                'background' => UploadedFile::fake()->createWithContent('decor.png', $backdrop),
+                'style' => 'custom_background', 'position_x' => $x, 'position_y' => 80, 'scale' => 30, 'shadow' => 0,
+            ])->assertOk()->assertJsonPath('variations.0.title', 'Votre décor importé');
+            $image = imagecreatefromstring(Storage::disk('public')->get($response->json('variations.0.path')));
+            $corner = imagecolorsforindex($image, imagecolorat($image, 0, 0));
+            $this->assertEqualsWithDelta(180, $corner['blue'], 5);
+            $left = 1000;
+            $right = 0;
+            for ($row = 0; $row < 1000; $row += 5) {
+                for ($col = 0; $col < 1000; $col += 5) {
+                    $pixel = imagecolorsforindex($image, imagecolorat($image, $col, $row));
+                    if ($pixel['red'] > 130 && $pixel['blue'] < 80) {
+                        $left = min($left, $col);
+                        $right = max($right, $col);
+                    }
+                }
+            }
+            $this->assertGreaterThanOrEqual(15, $left);
+            $this->assertLessThanOrEqual(985, $right);
+            $bounds[] = ($left + $right) / 2;
+            imagedestroy($image);
+        }
+        $this->assertGreaterThan(400, $bounds[1] - $bounds[0]);
+        $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
+        Http::assertNothingSent();
+    }
+
+    public function test_incomplete_manual_cutout_does_not_call_a_paid_provider_or_spend_credits(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        config(['services.photoroom.key' => 'test-key']);
+        [$merchant, $shop] = $this->createMerchant();
+        $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->image('source.jpg', 300, 300),
+            'subject_mask' => UploadedFile::fake()->image('contours.png', 300, 300),
+            'style' => 'scene_template', 'scene_template' => 'podium',
+        ])->assertUnprocessable()->assertJsonValidationErrors('photo');
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
+        Http::assertNothingSent();
+    }
+
+    public function test_scene_validation_rejects_missing_backdrop_unsafe_template_and_excessive_adjustment(): void
+    {
+        Http::preventStrayRequests();
+        [$merchant, $shop] = $this->createMerchant();
+        $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->image('source.jpg'), 'style' => 'custom_background',
+            'scene_template' => '../outside', 'brightness' => 80,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['background', 'scene_template', 'brightness']);
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        Http::assertNothingSent();
+    }
+
+    public function test_light_adjustment_changes_luminance_without_changing_source_file(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        [$merchant] = $this->createMerchant();
+        $source = $this->createSampleProductImage();
+        $reds = [];
+        foreach ([-10, 10] as $brightness) {
+            $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+                'photo' => UploadedFile::fake()->createWithContent('photo.jpg', $source),
+                'style' => 'retouch', 'brightness' => $brightness, 'contrast' => 0, 'sharpen' => false,
+            ])->assertOk();
+            $image = imagecreatefromstring(Storage::disk('public')->get($response->json('variations.0.path')));
+            $reds[] = imagecolorsforindex($image, imagecolorat($image, 500, 500))['red'];
+            imagedestroy($image);
+            $this->assertSame($source, Storage::disk('public')->get($response->json('source_path')));
+        }
+        $this->assertGreaterThan(15, $reds[1] - $reds[0]);
+        Http::assertNothingSent();
+    }
+
     /**
      * Test 1 : Détection intelligente de la catégorie pour toutes les catégories e-commerce requises
      */

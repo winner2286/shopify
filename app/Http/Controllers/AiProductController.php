@@ -168,8 +168,18 @@ class AiProductController extends Controller
             'photo_base64' => 'nullable|string',
             'photo_path' => 'nullable|string',
             'category_hint' => 'nullable|string|max:200',
-            'style' => 'nullable|string|in:retouch,studio_white,studio_ambient,studio_dark,lifestyle',
+            'style' => 'nullable|string|in:retouch,studio_white,studio_ambient,studio_dark,lifestyle,scene_template,custom_background',
             'scene_prompt' => 'nullable|string|max:500|required_if:style,lifestyle',
+            'scene_template' => 'nullable|string|in:podium,parquet,spa,marble,dressing',
+            'background' => 'nullable|required_if:style,custom_background|image|mimes:jpeg,jpg,png,webp|max:5120',
+            'subject_mask' => 'nullable|image|mimes:png|max:5120',
+            'brightness' => 'nullable|integer|between:-15,15',
+            'contrast' => 'nullable|integer|between:-10,10',
+            'sharpen' => 'nullable|boolean',
+            'position_x' => 'nullable|integer|between:10,90',
+            'position_y' => 'nullable|integer|between:30,90',
+            'scale' => 'nullable|integer|between:20,85',
+            'shadow' => 'nullable|integer|between:0,50',
         ]);
 
         $user = $request->user();
@@ -210,8 +220,18 @@ class AiProductController extends Controller
 
         try {
             $categoryHint = $request->input('category_hint');
+            $options = $request->only(['scene_template', 'brightness', 'contrast', 'sharpen', 'position_x', 'position_y', 'scale', 'shadow']);
+            foreach (['background', 'subject_mask'] as $field) {
+                if ($request->hasFile($field)) {
+                    $binary = file_get_contents($request->file($field)->getRealPath());
+                    if (! $this->isDecodableImageBinary($binary)) {
+                        throw ValidationException::withMessages([$field => 'Image invalide ou trop grande. Choisissez un fichier JPG, PNG ou WebP de moins de 16 mégapixels.']);
+                    }
+                    $options[$field] = $binary;
+                }
+            }
             $studioResult = $shop->withAiCredits(12, fn () => $studioService->previewProductPhoto(
-                $shop, $imageBinary, $request->input('style') ?: 'retouch', $categoryHint, (string) $request->input('scene_prompt', '')
+                $shop, $imageBinary, $request->input('style') ?: 'retouch', $categoryHint, (string) $request->input('scene_prompt', ''), $options
             ));
 
             // Journalisation et débit des crédits isolés pour ne jamais bloquer la restitution des packshots

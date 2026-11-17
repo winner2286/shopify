@@ -436,8 +436,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 canvas.width = w;
                 canvas.height = h;
                 const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, w, h);
+                const exportMime = /image\/(png|webp)/i.test(file.type || '') ? 'image/png' : 'image/jpeg';
+                if (exportMime === 'image/jpeg') {ctx.fillStyle = '#ffffff';ctx.fillRect(0, 0, w, h);}
                 ctx.drawImage(img, 0, 0, w, h);
 
                 const baseName = (file.name || 'photo').replace(/\.[^/.]+$/, '');
@@ -449,8 +449,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         URL.revokeObjectURL(url);
                         if (blob && blob.size <= 5 * 1024 * 1024) {
-                            resolve(new File([blob], baseName + '.jpg', {
-                                type: 'image/jpeg',
+                            resolve(new File([blob], baseName + (exportMime === 'image/png' ? '.png' : '.jpg'), {
+                                type: exportMime,
                                 lastModified: Date.now()
                             }));
                         } else if (file.size <= 5 * 1024 * 1024) {
@@ -459,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             alert('La photo "' + file.name + '" dépasse la taille maximale autorisée (5 Mo).');
                             resolve(null);
                         }
-                    }, 'image/jpeg', quality);
+                    }, exportMime, quality);
                 };
 
                 exportAt(0.88);
@@ -571,10 +571,11 @@ document.addEventListener('DOMContentLoaded', function() {
             ctx.translate(canvas.width / 2, canvas.height / 2);
             ctx.rotate(90 * Math.PI / 180);
             ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            const exportMime = /image\/(png|webp)/i.test(file.type || '') ? 'image/png' : 'image/jpeg';
             canvas.toBlob(function(blob) {
                 if (blob) {
-                    const rotatedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                        type: 'image/jpeg',
+                    const rotatedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + (exportMime === 'image/png' ? '.png' : '.jpg'), {
+                        type: exportMime,
                         lastModified: Date.now()
                     });
                     selectedFiles[index] = rotatedFile;
@@ -582,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderPreviews();
                 }
                 URL.revokeObjectURL(url);
-            }, 'image/jpeg', 0.92);
+            }, exportMime, 0.92);
         };
         img.src = url;
     };
