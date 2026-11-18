@@ -32,6 +32,7 @@ use App\Http\Controllers\ShopController;
 use App\Http\Controllers\ShopPageController;
 use App\Http\Controllers\ShopSettingsController;
 use App\Http\Controllers\StorefrontController;
+use App\Http\Middleware\RequirePlanFeature;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -105,7 +106,7 @@ Route::middleware('auth')->group(function () {
     // Module E - Commandes (E-01, E-02, E-05)
     Route::get('/commandes', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/commandes/notifications/check', [OrderController::class, 'checkNewOrders'])->name('orders.notifications.check');
-    Route::get('/commandes/exporter', [OrderController::class, 'exportCsv'])->name('orders.export_csv');
+    Route::get('/commandes/exporter', [OrderController::class, 'exportCsv'])->middleware(RequirePlanFeature::class.':export_accounting')->name('orders.export_csv');
     Route::get('/commandes/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/commandes/{order}/recu', [OrderController::class, 'receipt'])->name('orders.receipt');
     Route::post('/commandes/{order}/livreur', [OrderController::class, 'dispatchToDriver'])->name('orders.dispatch_driver');
@@ -123,36 +124,42 @@ Route::middleware('auth')->group(function () {
         ->names('shipping');
 
     // Codes promo & réductions
-    Route::get('/codes-promo', [DiscountCodeController::class, 'index'])->name('discounts.index');
-    Route::post('/codes-promo', [DiscountCodeController::class, 'store'])->name('discounts.store');
-    Route::post('/codes-promo/{discountCode}/toggle', [DiscountCodeController::class, 'toggle'])->name('discounts.toggle');
-    Route::delete('/codes-promo/{discountCode}', [DiscountCodeController::class, 'destroy'])->name('discounts.destroy');
+    Route::middleware(RequirePlanFeature::class.':promo_codes')->group(function () {
+        Route::get('/codes-promo', [DiscountCodeController::class, 'index'])->name('discounts.index');
+        Route::post('/codes-promo', [DiscountCodeController::class, 'store'])->name('discounts.store');
+        Route::post('/codes-promo/{discountCode}/toggle', [DiscountCodeController::class, 'toggle'])->name('discounts.toggle');
+        Route::delete('/codes-promo/{discountCode}', [DiscountCodeController::class, 'destroy'])->name('discounts.destroy');
+    });
 
     // Module H - Publicité & Studio Affiches Promo (H-01 à H-05)
-    Route::get('/publicite', [AdvertisingController::class, 'index'])->name('ads.index');
-    Route::get('/publicite/affiches', [CreativeStudioController::class, 'create'])->name('ads.flyers');
-    Route::get('/publicite/creer', [CreativeStudioController::class, 'create'])->name('ads.create');
-    Route::post('/publicite/projets', [CreativeStudioController::class, 'store'])->name('ads.studio.store');
-    Route::post('/publicite', [AdvertisingController::class, 'store'])->name('ads.store');
-    Route::get('/publicite/{ad}', [CreativeStudioController::class, 'show'])->name('ads.show');
-    Route::put('/publicite/{ad}/montage', [CreativeStudioController::class, 'save'])->name('ads.studio.save');
-    Route::post('/publicite/{ad}/medias', [CreativeStudioController::class, 'upload'])->name('ads.studio.upload');
-    Route::get('/publicite/{ad}/medias/{media}', [CreativeStudioController::class, 'media'])->name('ads.studio.media');
-    Route::delete('/publicite/{ad}/medias/{media}', [CreativeStudioController::class, 'deleteMedia'])->name('ads.studio.delete_media');
-    Route::post('/publicite/{ad}/plans-ia', [CreativeStudioController::class, 'generateShot'])->middleware('throttle:6,1')->name('ads.studio.ai');
-    Route::get('/publicite/{ad}/plans-ia/{job}', [CreativeStudioController::class, 'shotStatus'])->middleware('throttle:20,1')->name('ads.studio.ai_status');
-    Route::post('/publicite/{ad}/log-video-export', [AdvertisingController::class, 'logVideoExport'])->name('ads.log_video_export');
-    Route::post('/publicite/{ad}/regenerate', [AdvertisingController::class, 'regenerate'])->name('ads.regenerate');
-    Route::post('/publicite/{ad}/update-products', [AdvertisingController::class, 'updateProducts'])->name('ads.update_products');
-    Route::post('/publicite/{ad}/platform', [AdvertisingController::class, 'updatePlatform'])->name('ads.update_platform');
-    Route::post('/publicite/{ad}/upload-audio', [AdvertisingController::class, 'uploadCustomAudio'])->name('ads.upload_custom_audio');
-    Route::post('/publicite/{ad}/reset-audio', [AdvertisingController::class, 'resetCustomAudio'])->name('ads.reset_custom_audio');
+    Route::middleware(RequirePlanFeature::class.':ai_visuals')->group(function () {
+        Route::get('/publicite', [AdvertisingController::class, 'index'])->name('ads.index');
+        Route::get('/publicite/affiches', [CreativeStudioController::class, 'create'])->name('ads.flyers');
+        Route::get('/publicite/creer', [CreativeStudioController::class, 'create'])->name('ads.create');
+        Route::post('/publicite/projets', [CreativeStudioController::class, 'store'])->name('ads.studio.store');
+        Route::post('/publicite', [AdvertisingController::class, 'store'])->name('ads.store');
+        Route::get('/publicite/{ad}', [CreativeStudioController::class, 'show'])->name('ads.show');
+        Route::put('/publicite/{ad}/montage', [CreativeStudioController::class, 'save'])->name('ads.studio.save');
+        Route::post('/publicite/{ad}/medias', [CreativeStudioController::class, 'upload'])->name('ads.studio.upload');
+        Route::get('/publicite/{ad}/medias/{media}', [CreativeStudioController::class, 'media'])->name('ads.studio.media');
+        Route::delete('/publicite/{ad}/medias/{media}', [CreativeStudioController::class, 'deleteMedia'])->name('ads.studio.delete_media');
+        Route::post('/publicite/{ad}/plans-ia', [CreativeStudioController::class, 'generateShot'])->middleware('throttle:6,1')->name('ads.studio.ai');
+        Route::get('/publicite/{ad}/plans-ia/{job}', [CreativeStudioController::class, 'shotStatus'])->middleware('throttle:20,1')->name('ads.studio.ai_status');
+        Route::post('/publicite/{ad}/log-video-export', [AdvertisingController::class, 'logVideoExport'])->name('ads.log_video_export');
+        Route::post('/publicite/{ad}/regenerate', [AdvertisingController::class, 'regenerate'])->name('ads.regenerate');
+        Route::post('/publicite/{ad}/update-products', [AdvertisingController::class, 'updateProducts'])->name('ads.update_products');
+        Route::post('/publicite/{ad}/platform', [AdvertisingController::class, 'updatePlatform'])->name('ads.update_platform');
+        Route::post('/publicite/{ad}/upload-audio', [AdvertisingController::class, 'uploadCustomAudio'])->name('ads.upload_custom_audio');
+        Route::post('/publicite/{ad}/reset-audio', [AdvertisingController::class, 'resetCustomAudio'])->name('ads.reset_custom_audio');
+    });
 
     // Module I - Statistiques & Performance (I-01 à I-03)
-    Route::get('/statistiques', [AnalyticsController::class, 'index'])->name('analytics.index');
-    Route::get('/statistiques/exporter', [AnalyticsController::class, 'exportCsv'])->name('analytics.export_csv');
-    Route::get('/statistiques/conseiller-ia', [AiAdvisorController::class, 'index'])->name('analytics.advisor');
-    Route::post('/statistiques/conseiller-ia/briefing', [AiAdvisorController::class, 'generateBriefing'])->name('analytics.advisor.briefing');
+    Route::middleware(RequirePlanFeature::class.':advanced_stats')->group(function () {
+        Route::get('/statistiques', [AnalyticsController::class, 'index'])->name('analytics.index');
+        Route::get('/statistiques/conseiller-ia', [AiAdvisorController::class, 'index'])->name('analytics.advisor');
+        Route::post('/statistiques/conseiller-ia/briefing', [AiAdvisorController::class, 'generateBriefing'])->name('analytics.advisor.briefing');
+    });
+    Route::get('/statistiques/exporter', [AnalyticsController::class, 'exportCsv'])->middleware(RequirePlanFeature::class.':export_accounting')->name('analytics.export_csv');
 
     // ECOM AI ASSISTANT - Copilote Commercial & Opérationnel
     Route::get('/assistant-ia', [AiAssistantController::class, 'index'])->name('ai.assistant');
@@ -175,10 +182,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/assistant-ia/produits/verifier-qualite', [AiProductController::class, 'verifyQuality'])->name('ai.products.verify_quality');
         Route::post('/assistant-ia/produits/generer-variante', [AiProductController::class, 'generateVariant'])->name('ai.products.generate_variant');
         Route::post('/assistant-ia/produits/{product}/optimiser', [AiProductController::class, 'optimizeProduct'])->name('ai.products.optimize');
-        Route::post('/assistant-ia/produits/detourer-photoroom', [AiProductController::class, 'cutoutForAd'])->name('ai.products.photoroom_cutout');
-        Route::post('/assistant-ia/studio/generer', [AiProductController::class, 'generateVisual'])->name('ai.studio.generate');
+        Route::post('/assistant-ia/produits/detourer-photoroom', [AiProductController::class, 'cutoutForAd'])->middleware(RequirePlanFeature::class.':ai_visuals')->name('ai.products.photoroom_cutout');
+        Route::post('/assistant-ia/studio/generer', [AiProductController::class, 'generateVisual'])->middleware(RequirePlanFeature::class.':ai_visuals')->name('ai.studio.generate');
     });
-    Route::get('/assistant-ia/studio', [AiProductController::class, 'studio'])->name('ai.studio');
+    Route::get('/assistant-ia/studio', [AiProductController::class, 'studio'])->middleware(RequirePlanFeature::class.':ai_visuals')->name('ai.studio');
 
     // AI Orders & AI Customer (Module 6 & 7)
     Route::get('/assistant-ia/commandes/{order}/analyse-risque', [AiOrderController::class, 'analyzeRisk'])->name('ai.orders.analyze_risk');
@@ -188,9 +195,11 @@ Route::middleware('auth')->group(function () {
     // AI Marketing & Automations (Module 9 & 10)
     Route::get('/assistant-ia/marketing', [AiMarketingController::class, 'index'])->name('ai.marketing');
     Route::post('/assistant-ia/marketing/generer', [AiMarketingController::class, 'generate'])->name('ai.marketing.generate');
-    Route::get('/assistant-ia/automatisations', [AiMarketingController::class, 'automations'])->name('ai.automations');
-    Route::post('/assistant-ia/automatisations/{automation}/basculer', [AiMarketingController::class, 'toggleAutomation'])->name('ai.automations.toggle');
-    Route::post('/assistant-ia/automatisations/executer-maintenant', [AiMarketingController::class, 'runAutomationsNow'])->name('ai.automations.run_now');
+    Route::middleware(RequirePlanFeature::class.':stock_alerts')->group(function () {
+        Route::get('/assistant-ia/automatisations', [AiMarketingController::class, 'automations'])->name('ai.automations');
+        Route::post('/assistant-ia/automatisations/{automation}/basculer', [AiMarketingController::class, 'toggleAutomation'])->name('ai.automations.toggle');
+        Route::post('/assistant-ia/automatisations/executer-maintenant', [AiMarketingController::class, 'runAutomationsNow'])->name('ai.automations.run_now');
+    });
 
     // Web Push Notifications PWA (Commerçants & Super-Admins)
     Route::get('/push/vapid-key', [PushNotificationController::class, 'vapidPublicKey'])->name('push.vapid_key');
@@ -270,7 +279,7 @@ Route::get('/api/placeholder-image', [MediaController::class, 'placeholder'])
 
 // API Synthèse vocale IA (Voix-off pour le studio vidéo)
 Route::get('/api/tts', [MediaController::class, 'tts'])
-    ->middleware('throttle:60,1')
+    ->middleware(['auth', RequirePlanFeature::class.':ai_visuals', 'throttle:60,1'])
     ->name('api.tts');
 
 // Passerelle de paiement GeniusPay (Mobile Money & Cartes Bancaires) + rétrocompatibilité FeexPay

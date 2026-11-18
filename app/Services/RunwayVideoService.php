@@ -41,6 +41,8 @@ class RunwayVideoService
         abort_unless(str_starts_with($image, 'data:image/') && strlen($image) < 6500000, 422, 'Ajoutez une photo produit de moins de 5 Mo dans le catalogue.');
         $cost = (int) config('services.runway.credit_cost');
         [$job, $created] = DB::transaction(function () use ($ad, $data, $cost) {
+            $ownerId = (int) $ad->shop()->value('user_id');
+            app(AccountCreditService::class)->lockAccount($ownerId);
             $shop = $ad->shop()->lockForUpdate()->firstOrFail();
             $existing = AiGeneration::where('shop_id', $shop->id)->where('step', 'creative_video_shot')
                 ->where('output_data->request_id', $data['request_id'])->first();
@@ -50,12 +52,12 @@ class RunwayVideoService
                 return [$existing, false];
             }
             abort_if(AiGeneration::where('shop_id', $shop->id)->where('step', 'creative_video_shot')->whereIn('status', ['pending', 'unknown'])->exists(), 409, 'Un plan vidéo est déjà en cours. Vérifiez son état avant d’en lancer un autre.');
-            $shop->consumeAiCredits($cost);
+            $creditVersion = $shop->consumeAiCredits($cost);
             $job = AiGeneration::create([
                 'shop_id' => $shop->id, 'type' => 'ai_video', 'step' => 'creative_video_shot',
                 'model_used' => 'runway:gen4_turbo', 'status' => 'pending',
                 'input_summary' => 'Plan vidéo produit de 5 secondes',
-                'output_data' => ['ad_id' => $ad->id, 'request_id' => $data['request_id'], 'cost' => $cost, 'prompt' => $data['prompt']],
+                'output_data' => ['ad_id' => $ad->id, 'request_id' => $data['request_id'], 'cost' => $cost, 'credit_version' => $creditVersion, 'prompt' => $data['prompt']],
             ]);
 
             return [$job, true];
@@ -140,8 +142,11 @@ class RunwayVideoService
         DB::transaction(function () use ($job) {
             $job = AiGeneration::whereKey($job->id)->lockForUpdate()->firstOrFail();
             if (in_array($job->status, ['pending', 'unknown'], true)) {
-                $shop = $job->shop()->lockForUpdate()->firstOrFail();
-                $shop->update(['ai_credits_used' => max(0, $shop->ai_credits_used - (int) $job->output_data['cost'])]);
+                $shop = $job->shop()->firstOrFail();
+                $version = $job->output_data['credit_version'] ?? null;
+                if ($version !== null || $job->created_at?->format('Y-m') === now()->format('Y-m')) {
+                    $shop->refundAiCredits((int) $job->output_data['cost'], (int) $version);
+                }
                 $job->update(['status' => 'failed']);
             }
         });

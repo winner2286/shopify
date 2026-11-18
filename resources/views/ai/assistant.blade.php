@@ -54,18 +54,24 @@
             <!-- Raccourcis Modules IA Spécialisés -->
             <div style="padding:.6rem 1rem;display:flex;flex-direction:column;gap:.4rem;border-bottom:1px solid var(--border)">
                 <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-soft);margin-bottom:.2rem">Modules Métier IA</div>
-                <a href="{{ route('ai.studio') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
-                    <x-icon name="image" size="14" /> Studio Visuel IA
-                </a>
+                @if (auth()->user()->isAdmin() || $shop->canUseFeature('ai_visuals'))
+                    <a href="{{ route('ai.studio') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
+                        <x-icon name="image" size="14" /> Studio visuel IA
+                    </a>
+                @endif
                 <a href="{{ route('ai.marketing') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
-                    <x-icon name="edit-3" size="14" /> Studio Marketing & Pubs
+                    <x-icon name="edit-3" size="14" /> Textes marketing
                 </a>
-                <a href="{{ route('ai.automations') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
-                    <x-icon name="zap" size="14" /> Automatisations
-                </a>
-                <a href="{{ route('analytics.advisor') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
-                    <x-icon name="bar-chart-2" size="14" /> Conseiller d'Affaires
-                </a>
+                @if (auth()->user()->isAdmin() || $shop->canUseFeature('stock_alerts'))
+                    <a href="{{ route('ai.automations') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
+                        <x-icon name="zap" size="14" /> Automatisations
+                    </a>
+                @endif
+                @if (auth()->user()->isAdmin() || $shop->canUseFeature('advanced_stats'))
+                    <a href="{{ route('analytics.advisor') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
+                        <x-icon name="bar-chart-2" size="14" /> Conseiller d'affaires
+                    </a>
+                @endif
                 <a href="{{ route('ai.orders.cod_review') }}" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:.45rem;padding:.4rem .6rem;font-size:.8rem;justify-content:flex-start">
                     <x-icon name="truck" size="14" /> Revue COD Intelligente
                 </a>

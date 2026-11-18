@@ -76,9 +76,11 @@ class FullPlatformEndToEndTest extends TestCase
             ->assertSee('Essentiel')
             ->assertSee('Pro')
             ->assertSee('Premium')
-            ->assertSee('25 photos Photoroom HD')
-            ->assertSee('60 photos Photoroom HD')
-            ->assertSee('180 photos Photoroom HD');
+            ->assertSee('7 500')
+            ->assertSee('<dt>Crédits Photoroom par mois</dt><dd>25</dd>', false)
+            ->assertSee('<dt>Crédits Photoroom par mois</dt><dd>60</dd>', false)
+            ->assertSee('<dt>Crédits Photoroom par mois</dt><dd>180</dd>', false)
+            ->assertDontSee('Facturation Annuelle');
 
         $this->get('/api/keep-alive')
             ->assertOk()
@@ -282,37 +284,37 @@ class FullPlatformEndToEndTest extends TestCase
         // =========================================================================
         // 6. RÈGLES FORMULE ESSENTIEL VS UPGRADE PRO, CODES PROMO & PUBLICITÉ
         // =========================================================================
-        // Sur Essentiel : promo et TikTok sont verrouillés, WhatsApp est autorisé
+        // Sur Essentiel, les textes marketing restent accessibles et le studio pub est réservé à Pro.
         $this->post('/codes-promo', [
             'code' => 'BIENVENUE10',
             'type' => 'percentage',
             'value' => 10,
-        ])->assertSessionHas('error');
+        ])->assertForbidden();
 
         $this->post('/publicite', [
             'angle' => VideoAdGeneratorService::ANGLE_COUP_DE_COEUR,
             'product_id' => $createdProduct->id,
             'channel' => VideoAdGeneratorService::PLATFORM_TIKTOK,
-        ])->assertSessionHas('error');
+        ])->assertForbidden();
 
         $this->post('/publicite', [
             'angle' => VideoAdGeneratorService::ANGLE_COUP_DE_COEUR,
             'product_id' => $createdProduct->id,
             'channel' => VideoAdGeneratorService::PLATFORM_WHATSAPP,
             'target_duration' => 15,
-        ])->assertRedirect();
+        ])->assertForbidden();
 
-        $this->get('/publicite/affiches')->assertOk();
+        $this->get('/publicite/affiches')->assertForbidden();
         $this->postJson(route('ai.products.photoroom_cutout'), [
             'image' => UploadedFile::fake()->image('affiche-produit.png', 280, 280),
             'mode' => 'transparent',
-        ])->assertOk()->assertJsonPath('engine', 'photoroom-ai');
+        ])->assertForbidden();
 
         // Passage au forfait Pro via Checkout Abonnement + Simulation Sandbox
         $proPlan = Plan::where('slug', 'pro')->firstOrFail();
         $this->get("/abonnement/paiement/{$proPlan->slug}")
             ->assertOk()
-            ->assertSee('60 photos Photoroom HD / mois');
+            ->assertSee('<dt>Crédits Photoroom par mois</dt><dd>60</dd>', false);
 
         $subscription = Subscription::where('shop_id', $shop->id)->latest('id')->firstOrFail();
         $this->post("/abonnement/simulate/{$subscription->id}/{$proPlan->id}")

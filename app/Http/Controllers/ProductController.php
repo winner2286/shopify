@@ -136,7 +136,7 @@ class ProductController extends Controller
         $trackStock = $request->boolean('track_stock', true);
         $initialStock = $trackStock ? ($validated['stock'] ?? 0) : 0;
 
-        $product = $shop->products()->create([
+        $product = $shop->createCatalogProduct([
             'title' => $validated['title'],
             'slug' => Str::slug($validated['title']).'-'.Str::random(5),
             'description' => $validated['description'] ?? null,

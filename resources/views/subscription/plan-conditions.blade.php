@@ -1,0 +1,1 @@
+<p class="plan-conditions">Les crédits IA, décors générés et crédits Photoroom sont des quotas distincts, partagés entre les boutiques d’un compte. Les retouches locales sont incluses. La génération de décors et les traitements Photoroom dépendent de la disponibilité de leurs services.</p>

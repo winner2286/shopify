@@ -893,27 +893,24 @@ PROMPT;
 
     private function withPhotoroomReservation(Shop $shop, \Closure $operation, bool $forcePhotoroom = false): mixed
     {
-        $reserved = false;
+        $version = null;
         if (($forcePhotoroom || ! app(RembgService::class)->isConfigured()) && $this->photoroom->isConfigured() && $shop->hasEnoughPhotoroomCredits()) {
             try {
-                $shop->consumePhotoroomCredits();
-                $reserved = true;
+                $version = $shop->consumePhotoroomCredits();
             } catch (ValidationException) {
                 // A competing request reserved the last credit; use the local engine.
             }
         }
         try {
-            $result = $operation($reserved);
+            $result = $operation($version !== null);
         } catch (\Throwable $exception) {
-            if ($reserved) {
-                $shop->decrement('photoroom_credits_used');
-                $shop->refresh();
+            if ($version !== null) {
+                $shop->refundPhotoroomCredits(1, $version);
             }
             throw $exception;
         }
-        if ($reserved && ($result['engine'] ?? '') !== 'photoroom-ai' && ($result['method'] ?? '') !== 'photoroom_v1_segment') {
-            $shop->decrement('photoroom_credits_used');
-            $shop->refresh();
+        if ($version !== null && ($result['engine'] ?? '') !== 'photoroom-ai' && ($result['method'] ?? '') !== 'photoroom_v1_segment') {
+            $shop->refundPhotoroomCredits(1, $version);
         }
 
         return $result;

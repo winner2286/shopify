@@ -87,10 +87,21 @@
     @endif
     @guest
         <div class="top-announcement">
-            <span>Plateforme e-commerce tout-en-un pour l'Afrique de l'Ouest • Paiements T-Money & Moov Money intégrés • Essai gratuit 14 jours</span>
+            <span>Plateforme e-commerce pour l'Afrique de l'Ouest</span>
             <a href="{{ route('register') }}">Commencer maintenant →</a>
         </div>
     @endguest
+
+    @auth
+        @php
+            $navigationUser = auth()->user();
+            $navigationShop = $navigationUser->activeShop();
+            $canOpenAdStudio = $navigationUser->isAdmin() || $navigationShop?->canUseFeature('ai_visuals');
+            $canOpenAdvancedStats = $navigationUser->isAdmin() || $navigationShop?->canUseFeature('advanced_stats');
+            $canOpenDiscounts = $navigationUser->isAdmin() || $navigationShop?->canUseFeature('promo_codes');
+            $marketingRoute = $canOpenAdStudio ? 'ads.index' : 'ai.marketing';
+        @endphp
+    @endauth
 
     <header class="nav">
         <div class="nav-container nav-inner">
@@ -115,17 +126,20 @@
                         <a id="nav-dashboard" href="{{ route('dashboard') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('dashboard') ? 'btn-primary' : '' }}">Accueil</a>
                         <a id="nav-orders" href="{{ route('orders.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('orders.*') ? 'btn-primary' : '' }}">Commandes</a>
                         <a id="nav-products" href="{{ route('products.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('products.*') ? 'btn-primary' : '' }}">Produits</a>
-                        <a id="nav-ads" href="{{ route('ads.index') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ads.*') ? 'btn-primary' : '' }}">Publicité</a>
+                        <a id="nav-ads" href="{{ route($marketingRoute) }}" class="btn btn-ghost btn-sm {{ request()->routeIs($canOpenAdStudio ? 'ads.*' : 'ai.marketing') ? 'btn-primary' : '' }}">{{ $canOpenAdStudio ? 'Publicité' : 'Textes marketing' }}</a>
                         <a id="nav-ai-assistant" href="{{ route('ai.assistant') }}" class="btn btn-ghost btn-sm {{ request()->routeIs('ai.*') ? 'btn-primary' : '' }}" style="display:inline-flex;align-items:center;gap:.35rem">
                             <x-icon name="sparkles" :size="14" />
                             <span>Assistant IA</span>
-                            <span style="font-size:0.65rem;background:linear-gradient(135deg, #e11d48, #7c3aed);color:#ffffff;padding:1px 5px;border-radius:6px;font-weight:700">PRO</span>
                         </a>
 
                         <!-- Liens secondaires (visibles directement sur écran large >= 1240px) -->
                         <a id="nav-categories" href="{{ route('categories.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('categories.*') ? 'btn-primary' : '' }}">Catégories</a>
-                        <a id="nav-discounts" href="{{ route('discounts.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('discounts.*') ? 'btn-primary' : '' }}">Codes Promo</a>
-                        <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
+                        @if ($canOpenDiscounts)
+                            <a id="nav-discounts" href="{{ route('discounts.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('discounts.*') ? 'btn-primary' : '' }}">Codes promo</a>
+                        @endif
+                        @if ($canOpenAdvancedStats)
+                            <a id="nav-analytics" href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('analytics.*') ? 'btn-primary' : '' }}">Statistiques</a>
+                        @endif
                         <a id="nav-shop" href="{{ route('shop.settings') }}" class="btn btn-ghost btn-sm nav-desktop-secondary {{ request()->routeIs('shop.*') ? 'btn-primary' : '' }}">Paramètres</a>
 
                         <!-- Menu déroulant "Plus ▾" (actif sur écran compact 769px à 1239px) -->
@@ -139,14 +153,18 @@
                                     <x-icon name="folder" :size="15" />
                                     <span>Catégories</span>
                                 </a>
-                                <a href="{{ route('discounts.index') }}" class="nav-more-item {{ request()->routeIs('discounts.*') ? 'active' : '' }}">
-                                    <x-icon name="tag" :size="15" />
-                                    <span>Codes Promo</span>
-                                </a>
-                                <a href="{{ route('analytics.index') }}" class="nav-more-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}">
-                                    <x-icon name="trending-up" :size="15" />
-                                    <span>Statistiques</span>
-                                </a>
+                                @if ($canOpenDiscounts)
+                                    <a href="{{ route('discounts.index') }}" class="nav-more-item {{ request()->routeIs('discounts.*') ? 'active' : '' }}">
+                                        <x-icon name="tag" :size="15" />
+                                        <span>Codes promo</span>
+                                    </a>
+                                @endif
+                                @if ($canOpenAdvancedStats)
+                                    <a href="{{ route('analytics.index') }}" class="nav-more-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}">
+                                        <x-icon name="trending-up" :size="15" />
+                                        <span>Statistiques</span>
+                                    </a>
+                                @endif
                                 <a href="{{ route('shop.settings') }}" class="nav-more-item {{ request()->routeIs('shop.*') ? 'active' : '' }}">
                                     <x-icon name="settings" :size="15" />
                                     <span>Paramètres</span>
@@ -197,8 +215,8 @@
                 @else
                     <a id="nav-login" href="{{ route('login') }}" class="btn btn-ghost btn-sm">Connexion</a>
                     <a id="nav-register" href="{{ route('register') }}" class="btn btn-primary btn-sm">
-                        <span class="btn-full-text">Démarrer l'essai gratuit</span>
-                        <span class="btn-short-text">Essai gratuit</span>
+                        <span class="btn-full-text">Créer un compte</span>
+                        <span class="btn-short-text">S’inscrire</span>
                     </a>
 
                     <!-- Bouton de thème pour visiteurs non connectés -->
@@ -236,9 +254,9 @@
                     <span class="icon" aria-hidden="true"><x-icon name="products" :size="23" /></span>
                     <span>Produits</span>
                 </a>
-                <a href="{{ route('ads.index') }}" class="bottom-nav-item {{ request()->routeIs('ads.*') ? 'active' : '' }}">
+                <a href="{{ route($marketingRoute) }}" class="bottom-nav-item {{ request()->routeIs($canOpenAdStudio ? 'ads.*' : 'ai.marketing') ? 'active' : '' }}">
                     <span class="icon" aria-hidden="true"><x-icon name="ads" :size="23" /></span>
-                    <span>Publicité</span>
+                    <span>{{ $canOpenAdStudio ? 'Publicité' : 'Marketing' }}</span>
                 </a>
                 <button type="button" class="bottom-nav-item bottom-nav-plus-btn {{ request()->routeIs(['analytics.*', 'shop.*', 'customers.*', 'shipping.*', 'categories.*']) ? 'active' : '' }}" onclick="toggleMobilePlusMenu(event)" aria-label="Menu Plus d'options">
                     <span class="icon" aria-hidden="true"><x-icon name="grid" :size="23" /></span>
@@ -263,21 +281,23 @@
                         <x-icon name="sparkles" :size="22" />
                     </div>
                     <div class="mobile-plus-info">
-                        <strong>Assistant IA Commercial <span style="font-size:0.65rem;background:linear-gradient(135deg, #e11d48, #7c3aed);color:#ffffff;padding:1px 5px;border-radius:6px;font-weight:700;margin-left:4px">PRO</span></strong>
+                        <strong>Assistant IA commercial</strong>
                         <span>Copilote intelligent connecté à vos ventes & stocks</span>
                     </div>
                     <x-icon name="arrow-right" :size="16" />
                 </a>
-                <a href="{{ route('analytics.index') }}" class="mobile-plus-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
-                    <div class="mobile-plus-icon" style="background:rgba(158, 27, 50, 0.12);color:var(--brand-1)">
-                        <x-icon name="analytics" :size="22" />
-                    </div>
-                    <div class="mobile-plus-info">
-                        <strong>Statistiques & Performance</strong>
-                        <span>Chiffre d'affaires, panier moyen & alertes de stock</span>
-                    </div>
-                    <x-icon name="arrow-right" :size="16" />
-                </a>
+                @if ($canOpenAdvancedStats)
+                    <a href="{{ route('analytics.index') }}" class="mobile-plus-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                        <div class="mobile-plus-icon" style="background:rgba(158, 27, 50, 0.12);color:var(--brand-1)">
+                            <x-icon name="analytics" :size="22" />
+                        </div>
+                        <div class="mobile-plus-info">
+                            <strong>Statistiques & Performance</strong>
+                            <span>Chiffre d'affaires, panier moyen & alertes de stock</span>
+                        </div>
+                        <x-icon name="arrow-right" :size="16" />
+                    </a>
+                @endif
 
                 <a href="{{ route('shop.settings') }}" class="mobile-plus-item {{ request()->routeIs('shop.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
                     <div class="mobile-plus-icon" style="background:rgba(59, 130, 246, 0.12);color:#3b82f6">
@@ -323,16 +343,18 @@
                     <x-icon name="arrow-right" :size="16" />
                 </a>
 
-                <a href="{{ route('discounts.index') }}" class="mobile-plus-item {{ request()->routeIs('discounts.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
-                    <div class="mobile-plus-icon" style="background:rgba(16, 185, 129, 0.12);color:#10b981">
-                        <x-icon name="tag" :size="22" />
-                    </div>
-                    <div class="mobile-plus-info">
-                        <strong>Codes Promo &amp; Réductions</strong>
-                        <span>Coupons, remises % ou FCFA et dates de validité</span>
-                    </div>
-                    <x-icon name="arrow-right" :size="16" />
-                </a>
+                @if ($canOpenDiscounts)
+                    <a href="{{ route('discounts.index') }}" class="mobile-plus-item {{ request()->routeIs('discounts.*') ? 'active' : '' }}" onclick="closeMobilePlusMenu()">
+                        <div class="mobile-plus-icon" style="background:rgba(16, 185, 129, 0.12);color:#10b981">
+                            <x-icon name="tag" :size="22" />
+                        </div>
+                        <div class="mobile-plus-info">
+                            <strong>Codes promo &amp; réductions</strong>
+                            <span>Coupons, remises % ou FCFA et dates de validité</span>
+                        </div>
+                        <x-icon name="arrow-right" :size="16" />
+                    </a>
+                @endif
 
                 <button type="button" class="mobile-plus-item" onclick="var t=document.getElementById('theme-toggle');if(t){t.click();}else{document.dispatchEvent(new Event('theme-toggle-click'));}closeMobilePlusMenu();" style="width:100%;text-align:left;background:transparent;border:none;cursor:pointer">
                     <div class="mobile-plus-icon" style="background:rgba(245, 158, 11, 0.15);color:#f59e0b">

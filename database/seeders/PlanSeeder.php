@@ -9,74 +9,8 @@ class PlanSeeder extends Seeder
 {
     public function run(): void
     {
-        $plans = [
-            [
-                'slug' => 'essentiel',
-                'name' => 'Essentiel',
-                'monthly_price' => 10000,
-                'max_products' => 50,
-                'max_shops' => 1,
-                'storage_mb' => 2048,
-                'ai_credits' => 80,
-                'photoroom_credits' => 25,
-                'full_generations' => 1,
-                'features' => [
-                    '1 boutique e-commerce incluse',
-                    'Détourage automatique & Packshot studio blanc (Photoroom HD)',
-                    'Publicité IA : textes & accroches simples',
-                    'Tableau de bord de vente simple',
-                    'Support standard par email',
-                ],
-                'active' => true,
-            ],
-            [
-                'slug' => 'pro',
-                'name' => 'Pro',
-                'monthly_price' => 15000,
-                'max_products' => 300,
-                'max_shops' => 3,
-                'storage_mb' => 8192,
-                'ai_credits' => 350,
-                'photoroom_credits' => 60,
-                'full_generations' => 2,
-                'features' => [
-                    'Jusqu\'à 3 boutiques distinctes gérées',
-                    'Studio Photo IA Pro : décors générés, ombres réalistes & PNG HD',
-                    'Publicité IA : textes, visuels & scripts TikTok',
-                    'Codes promo & soldes programmées',
-                    'Alertes rupture de stock (WhatsApp/SMS)',
-                    'Statistiques complètes & top ventes',
-                    'Support prioritaire par WhatsApp',
-                ],
-                'active' => true,
-            ],
-            [
-                'slug' => 'premium',
-                'name' => 'Premium',
-                'monthly_price' => 30000,
-                'max_products' => 2500,
-                'max_shops' => 999,
-                'storage_mb' => 25600,
-                'ai_credits' => 1200,
-                'photoroom_credits' => 180,
-                'full_generations' => 5,
-                'features' => [
-                    'Boutiques illimitées sans restriction',
-                    'Suite Studio Photoroom Max : showrooms luxe, lifestyle & podiums IA',
-                    'Retouche catalogue haute capacité & détourage pub en 1 clic',
-                    'Campagnes IA sponsorisées complètes',
-                    'Codes promo illimités & ventes privées',
-                    'Gestion multi-collaborateurs (jusqu\'à 3 accès)',
-                    'Export comptable des commandes (Excel / PDF)',
-                    'Connexion de nom de domaine personnalisé',
-                    'Chargé de compte dédié & Support VIP 7j/7',
-                ],
-                'active' => true,
-            ],
-        ];
-
-        foreach ($plans as $plan) {
-            Plan::firstOrCreate(['slug' => $plan['slug']], $plan);
+        foreach (Plan::STANDARD_PLANS as $slug => $attributes) {
+            Plan::firstOrCreate(['slug' => $slug], $attributes + ['active' => true]);
         }
     }
 }

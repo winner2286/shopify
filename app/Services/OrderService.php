@@ -57,6 +57,9 @@ class OrderService
         $promoCodeInput = array_key_exists('promo_code', $data)
             ? trim((string) ($data['promo_code'] ?? ''))
             : trim((string) session("checkout_promo_{$shop->id}", ''));
+        if ($promoCodeInput !== '' && ! $shop->canUseFeature('promo_codes') && ! $shop->owner?->isAdmin()) {
+            throw new Exception('Le code promo ne peut plus être utilisé pour cette boutique.');
+        }
 
         $order = DB::transaction(function () use ($shop, $cart, $zone, $data, $promoCodeInput) {
             $productIds = collect(array_keys($cart))

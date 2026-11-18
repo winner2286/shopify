@@ -67,7 +67,7 @@ class PhotoroomIntegrationTest extends TestCase
         Http::assertNotSent(fn ($request) => $request->hasHeader('x-api-key', 'sandbox_test'));
     }
 
-    private function createMerchant(string $email = 'merchant.pr@example.test'): array
+    private function createMerchant(string $email = 'merchant.pr@example.test', string $plan = 'essentiel'): array
     {
         $user = User::factory()->create([
             'email' => $email,
@@ -83,6 +83,7 @@ class PhotoroomIntegrationTest extends TestCase
             'status' => Shop::PUBLISHED,
             'subdomain' => 'maison-pr-'.$user->id,
         ]);
+        $this->subscribeShopToPlan($shop, $plan);
 
         return [$user, $shop];
     }
@@ -298,7 +299,7 @@ class PhotoroomIntegrationTest extends TestCase
             'https://sdk.photoroom.com/v1/segment' => Http::response($fakeCutoutPng, 200, ['Content-Type' => 'image/png']),
         ]);
 
-        [$merchant, $shop] = $this->createMerchant('flyer.owner@example.test');
+        [$merchant, $shop] = $this->createMerchant('flyer.owner@example.test', 'pro');
         $product = Product::withoutGlobalScopes()->create([
             'shop_id' => $shop->id,
             'title' => 'Montre Royale Dorée',
@@ -341,7 +342,7 @@ class PhotoroomIntegrationTest extends TestCase
         ]);
 
         // Isolation multi-boutique : un autre marchand ne doit pas pouvoir détourer ce produit
-        [$otherMerchant] = $this->createMerchant('other.merchant@example.test');
+        [$otherMerchant] = $this->createMerchant('other.merchant@example.test', 'pro');
         $this->actingAs($otherMerchant)->postJson(route('ai.products.photoroom_cutout'), [
             'product_id' => $product->id,
         ])->assertStatus(403);
@@ -402,7 +403,7 @@ class PhotoroomIntegrationTest extends TestCase
     public function test_video_ad_campaign_reports_photoroom_visual_engine_when_configured(): void
     {
         config(['services.photoroom.key' => 'pr_video_key']);
-        [, $shop] = $this->createMerchant('video.pr@example.test');
+        [, $shop] = $this->createMerchant('video.pr@example.test', 'pro');
 
         Product::withoutGlobalScopes()->create([
             'shop_id' => $shop->id,
@@ -459,7 +460,7 @@ class PhotoroomIntegrationTest extends TestCase
         Storage::fake('public');
         config(['services.photoroom.key' => '']);
 
-        [$merchant, $shop] = $this->createMerchant('upload.fallback@example.test');
+        [$merchant, $shop] = $this->createMerchant('upload.fallback@example.test', 'pro');
         $uploadedFile = UploadedFile::fake()->image('article-local.png', 300, 300);
 
         $response = $this->actingAs($merchant)->postJson(route('ai.studio.generate'), [
@@ -533,9 +534,9 @@ class PhotoroomIntegrationTest extends TestCase
             'https://image-api.photoroom.com/v2/edit' => Http::response($fakeStudioPng, 200, ['Content-Type' => 'image/png']),
         ]);
 
-        [$merchant, $shop] = $this->createMerchant('quota.split@example.test');
-        $this->assertSame(80, $shop->aiCreditsRemaining());
-        $this->assertSame(25, $shop->photoroomCreditsRemaining());
+        [$merchant, $shop] = $this->createMerchant('quota.split@example.test', 'pro');
+        $this->assertSame(350, $shop->aiCreditsRemaining());
+        $this->assertSame(60, $shop->photoroomCreditsRemaining());
 
         // 1. Détourage flyer via Photoroom -> consomme uniquement 1 crédit Photoroom
         $cutoutResponse = $this->actingAs($merchant)->postJson(route('ai.products.photoroom_cutout'), [
@@ -547,11 +548,11 @@ class PhotoroomIntegrationTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'engine' => 'photoroom-ai',
-                'photoroom_credits_remaining' => 24,
-                'ai_credits_remaining' => 80,
+                'photoroom_credits_remaining' => 59,
+                'ai_credits_remaining' => 350,
             ]);
 
-        // 2. Génération Studio avec photo produit (Essentiel -> v1/segment + scène locale) -> consomme 1 crédit Photoroom, pas l'IA Système
+        // 2. Studio publicitaire avec photo produit -> consomme un crédit Photoroom.
         $studioResponse = $this->actingAs($merchant)->postJson(route('ai.studio.generate'), [
             'subject' => 'Sac cuir camel sur marbre',
             'style' => 'luxury_showroom',
@@ -563,8 +564,8 @@ class PhotoroomIntegrationTest extends TestCase
             ->assertJson([
                 'status' => 'success',
                 'engine' => 'photoroom-ai',
-                'photoroom_credits_remaining' => 23,
-                'ai_credits_remaining' => 80,
+                'photoroom_credits_remaining' => 58,
+                'ai_credits_remaining' => 350,
             ]);
 
         // 3. Import produit automatique via ImageService -> consomme 1 crédit Photoroom + log dédié
@@ -573,7 +574,7 @@ class PhotoroomIntegrationTest extends TestCase
 
         $shop->refresh();
         $this->assertSame(3, $shop->photoroomCreditsUsedThisMonth());
-        $this->assertSame(22, $shop->photoroomCreditsRemaining());
+        $this->assertSame(57, $shop->photoroomCreditsRemaining());
         $this->assertSame(0, $shop->aiCreditsUsedThisMonth());
         $this->assertDatabaseHas('ai_generations', [
             'shop_id' => $shop->id,
@@ -589,7 +590,7 @@ class PhotoroomIntegrationTest extends TestCase
         config(['services.photoroom.key' => 'pr_blocked_when_quota_zero']);
         Http::fake();
 
-        [$merchant, $shop] = $this->createMerchant('quota.exhausted@example.test');
+        [$merchant, $shop] = $this->createMerchant('quota.exhausted@example.test', 'pro');
         $shop->update([
             'photoroom_credits_used' => $shop->photoroomCreditsMonthly(),
             'ai_credits_used' => 0,
@@ -613,13 +614,13 @@ class PhotoroomIntegrationTest extends TestCase
                 'success' => true,
                 'engine' => 'zanika-product-studio',
                 'photoroom_credits_remaining' => 0,
-                'ai_credits_remaining' => 79,
+                'ai_credits_remaining' => 349,
             ]);
 
         Http::assertNothingSent();
 
         $shop->refresh();
-        $this->assertSame(25, $shop->photoroomCreditsUsedThisMonth());
+        $this->assertSame(60, $shop->photoroomCreditsUsedThisMonth());
         $this->assertSame(1, $shop->aiCreditsUsedThisMonth());
     }
 
@@ -636,28 +637,24 @@ class PhotoroomIntegrationTest extends TestCase
             'https://image-api.photoroom.com/v2/edit' => Http::response($fakeScenePng, 200, ['Content-Type' => 'image/png']),
         ]);
 
-        // 1. Boutique Essentiel -> même avec un style génératif, Smart Cost utilise v1/segment (13 FCFA) et jamais v2/edit
+        // 1. La fiche produit Essentiel peut utiliser le détourage v1, sans accès au studio pub.
         [$essentielUser, $essentielShop] = $this->createMerchant('smart.essentiel@example.test');
         $this->subscribeShopToPlan($essentielShop, 'essentiel');
 
-        $essentielRes = $this->actingAs($essentielUser)->postJson(route('ai.studio.generate'), [
-            'subject' => 'Montre dorée luxe',
-            'style' => 'luxury_showroom',
-            'format' => '1:1',
-            'image' => UploadedFile::fake()->image('montre.png', 300, 300),
+        $essentielRes = $this->actingAs($essentielUser)->postJson(route('ai.products.verify_quality'), [
+            'style' => 'studio_white',
+            'photo' => UploadedFile::fake()->image('montre.png', 300, 300),
         ]);
 
         $essentielRes->assertOk()->assertJson([
             'status' => 'success',
             'engine' => 'photoroom-ai',
-            'model_used' => 'photoroom-v1-segment',
             'photoroom_credits_remaining' => 24,
         ]);
 
         $this->assertDatabaseHas('ai_generations', [
             'shop_id' => $essentielShop->id,
-            'type' => 'ai_visual_generation',
-            'model_used' => 'photoroom-v1-segment',
+            'type' => 'ai_quality_check',
             'cost_estimated_fcfa' => 13,
         ]);
         Http::assertNotSent(fn (HttpClientRequest $req) => str_contains($req->url(), 'v2/edit'));
@@ -775,7 +772,7 @@ class PhotoroomIntegrationTest extends TestCase
 
         $this->actingAs($admin)->get(route('admin.plans'))
             ->assertOk()
-            ->assertSee('Quota Photoroom / mois');
+            ->assertSee('Crédits Photoroom par mois');
     }
 
     public function test_video_ad_campaign_solution_a_enhances_products_with_photoroom_and_caches_for_reuse(): void

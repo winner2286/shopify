@@ -200,6 +200,7 @@
                     @endforeach
                 </div>
 
+                @if ($canApplyPromo)
                 <div style="margin-bottom:1rem;padding-top:.75rem;border-top:1px solid var(--border)">
                     <label for="promo_code" style="display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem">Code promo (optionnel)</label>
                     <div style="display:flex;gap:.5rem">
@@ -216,6 +217,7 @@
                         <div style="font-size:.82rem;color:var(--danger);margin-top:.35rem">{{ session('promo_error') }}</div>
                     @endif
                 </div>
+                @endif
 
                 <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;flex-direction:column;gap:.6rem;font-size:.95rem">
                     <div style="display:flex;justify-content:space-between;color:var(--text-soft)">

@@ -3,6 +3,7 @@
 namespace App\Services\Ai;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -30,14 +31,14 @@ class OpenAiProductSceneService
 
         $lock = Cache::lock('product-scene-openai', 150);
         if (! $lock->get()) {
-            throw ValidationException::withMessages(['photo' => 'Un décor est déjà en préparation. Réessayez dans quelques instants ; vos crédits sont restitués.']);
+            throw new ProductSceneUnavailable('Un décor est déjà en préparation. Réessayez dans quelques instants. Votre quota de décors IA est rétabli.');
         }
 
         try {
             $limit = max(0, (int) config('services.openai_images.daily_limit', 50));
             $counter = 'product-scene-openai:'.now('UTC')->format('Y-m-d');
             if ($limit === 0 || (int) Cache::get($counter, 0) >= $limit) {
-                throw ValidationException::withMessages(['photo' => 'La limite quotidienne de génération de décors est atteinte. Réessayez demain ou choisissez un décor du studio.']);
+                throw new ProductSceneUnavailable('La limite quotidienne de décors IA de Zanika est atteinte. Vous pourrez générer un nouveau décor IA demain. Votre quota est rétabli.');
             }
             Cache::put($counter, (int) Cache::get($counter, 0) + 1, now()->addDay());
 
@@ -56,19 +57,11 @@ class OpenAiProductSceneService
                         'safety_identifier' => hash('sha256', 'product-studio:'.$shopId),
                     ]);
             } catch (ConnectionException) {
-                throw ValidationException::withMessages(['photo' => 'OpenAI n’a pas répondu à temps. Aucun rendu n’a été appliqué et vos crédits plateforme sont restitués. Un appel déjà traité peut rester facturé par OpenAI.']);
+                throw new ProductSceneUnavailable('OpenAI n’a pas répondu à temps. Votre quota de décors IA est rétabli. Un appel déjà traité peut rester facturé par OpenAI.');
             }
 
             if (! $response->successful()) {
-                $referenceId = (string) Str::uuid();
-                Log::warning('OpenAI product background HTTP error', ['status' => $response->status(), 'reference' => $referenceId]);
-                $message = match ($response->status()) {
-                    401, 403 => 'L’accès au moteur de décors OpenAI doit être vérifié par l’administrateur.',
-                    402, 429 => 'Le solde, le quota ou la limite de requêtes OpenAI ne permet pas de créer ce décor actuellement.',
-                    400, 422 => 'Ce décor n’a pas pu être généré. Essayez une autre description ou une autre photo.',
-                    default => 'Le moteur de décors OpenAI est temporairement indisponible.',
-                };
-                throw ValidationException::withMessages(['photo' => $message.' Votre photo est conservée et vos crédits plateforme sont restitués. Référence : '.$referenceId]);
+                throw $this->providerFailure($response);
             }
 
             $encoded = $response->json('data.0.b64_json');
@@ -76,7 +69,7 @@ class OpenAiProductSceneService
             $size = $binary ? @getimagesizefromstring($binary) : false;
             $image = $size && $size[0] === 1024 && $size[1] === 1024 && $size[2] === IMAGETYPE_PNG ? @imagecreatefromstring($binary) : false;
             if (! $image) {
-                throw ValidationException::withMessages(['photo' => 'OpenAI a renvoyé un décor invalide. Votre photo est conservée et vos crédits plateforme sont restitués.']);
+                throw new ProductSceneUnavailable('OpenAI a renvoyé un décor invalide. Votre photo est conservée et votre quota de décors IA est rétabli.');
             }
             imagedestroy($image);
 
@@ -84,6 +77,58 @@ class OpenAiProductSceneService
         } finally {
             $lock->release();
         }
+    }
+
+    private function providerFailure(Response $response): ProductSceneUnavailable
+    {
+        $code = $response->json('error.code');
+        $type = $response->json('error.type');
+        $reason = match ($code) {
+            'credit_balance_exhausted', 'organization_spend_limit_exceeded', 'project_spend_limit_exceeded',
+            'organization_usage_limit_exceeded', 'insufficient_quota', 'billing_hard_limit_reached',
+            'rate_limit_exceeded', 'slow_down', 'server_is_overloaded' => $code,
+            default => match ($type) {
+                'insufficient_quota', 'rate_limit_error' => $type,
+                default => 'unknown',
+            },
+        };
+        $status = $response->status();
+        $transient = in_array($reason, ['rate_limit_exceeded', 'slow_down', 'rate_limit_error', 'server_is_overloaded'], true)
+            || ($reason === 'unknown' && $status === 503);
+        $retryAfter = $transient
+            ? (filter_var($response->header('Retry-After'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null)
+            : null;
+
+        $message = match ($reason) {
+            'credit_balance_exhausted' => 'Le solde de crédits de l’API OpenAI est épuisé. L’administrateur doit vérifier la facturation de l’API.',
+            'organization_spend_limit_exceeded', 'project_spend_limit_exceeded', 'billing_hard_limit_reached' => 'Le plafond de dépenses de l’API OpenAI est atteint. L’administrateur doit vérifier ce plafond.',
+            'organization_usage_limit_exceeded' => 'La limite d’utilisation de l’API OpenAI est atteinte. L’administrateur doit vérifier le quota de l’organisation.',
+            'insufficient_quota' => 'Le compte API OpenAI a atteint une limite de facturation ou de quota. L’administrateur doit vérifier le compte.',
+            'rate_limit_exceeded', 'slow_down', 'rate_limit_error' => 'OpenAI reçoit trop de demandes de décors pour le moment.',
+            'server_is_overloaded' => 'Le moteur de décors OpenAI est surchargé pour le moment.',
+            default => match ($status) {
+                401, 403 => 'L’administrateur doit vérifier l’accès au moteur de décors OpenAI.',
+                402 => 'OpenAI a refusé la génération pour un motif de facturation. L’administrateur doit vérifier le compte API.',
+                429 => 'OpenAI a limité la génération de décors. L’administrateur peut vérifier le motif avec la référence ci-dessous.',
+                400, 422 => 'Le décor ne peut pas être généré à partir de cette demande. Essayez une autre description ou une autre photo.',
+                default => 'Le moteur de décors OpenAI est temporairement indisponible.',
+            },
+        };
+        if ($transient) {
+            $message .= $retryAfter ? " Réessayez dans au moins {$retryAfter} s." : ' Réessayez dans quelques instants.';
+        }
+
+        $referenceId = (string) Str::uuid();
+        $requestId = $response->header('x-request-id');
+        Log::warning('OpenAI product background HTTP error', [
+            'status' => $status,
+            'reference' => $referenceId,
+            'provider_code' => $reason,
+            'provider_request_id' => preg_match('/\Areq_[0-9a-f]{16,64}\z/i', $requestId) ? $requestId : null,
+            'retry_after' => $retryAfter,
+        ]);
+
+        return new ProductSceneUnavailable($message.' Votre photo est conservée et votre quota de décors IA est rétabli. Référence '.$referenceId, $retryAfter);
     }
 
     /** @param array{x: int, y: int, width: int, height: int} $box */

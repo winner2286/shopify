@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Plan;
 use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\User;
@@ -23,7 +24,8 @@ class TrialExpiringMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $daysText = $this->daysRemaining <= 1 ? "1 jour" : "{$this->daysRemaining} jours";
+        $daysText = $this->daysRemaining <= 1 ? '1 jour' : "{$this->daysRemaining} jours";
+
         return new Envelope(
             subject: "⚠️ Il ne vous reste que {$daysText} d'essai gratuit sur Zanika !"
         );
@@ -32,7 +34,8 @@ class TrialExpiringMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.trial-expiring'
+            view: 'emails.trial-expiring',
+            with: ['plans' => Plan::query()->where('active', true)->orderBy('monthly_price')->get()],
         );
     }
 }

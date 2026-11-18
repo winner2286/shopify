@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Plan;
 use App\Models\Shop;
-use App\Models\Subscription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ShopController extends Controller
@@ -17,14 +18,19 @@ class ShopController extends Controller
     public function create(Request $request): View|RedirectResponse
     {
         $user = $request->user();
+        $currentPlan = $user->currentPlan();
+        $shopsCount = $user->shopsCount();
+        $maxShops = $currentPlan->maxShops();
 
-        // 1. Vérification de la limite du forfait
-        if (! $user->canCreateShop()) {
+        if ($shopsCount >= $maxShops) {
+            $upgradePlans = Plan::query()->where('active', true)->orderBy('monthly_price')->get()
+                ->filter(fn (Plan $plan): bool => $plan->maxShops() > $shopsCount);
+
             return view('shops.limit_reached', [
-                'user' => $user,
-                'currentPlan' => $user->currentPlan(),
-                'shopsCount' => $user->shopsCount(),
-                'maxShops' => $user->maxShops(),
+                'currentPlan' => $currentPlan,
+                'shopsCount' => $shopsCount,
+                'maxShops' => $maxShops,
+                'upgradePlans' => $upgradePlans,
             ]);
         }
 
@@ -38,9 +44,9 @@ class ShopController extends Controller
             'defaultCurrency' => $defaultCurrency,
             'countries' => config('platform.countries', ['TG' => 'Togo', 'CI' => 'Côte d\'Ivoire', 'BJ' => 'Bénin', 'SN' => 'Sénégal']),
             'currencies' => config('platform.currencies', ['XOF' => ['name' => 'Franc CFA (BCEAO)']]),
-            'currentPlan' => $user->currentPlan(),
-            'shopsCount' => $user->shopsCount(),
-            'maxShops' => $user->maxShops(),
+            'currentPlan' => $currentPlan,
+            'shopsCount' => $shopsCount,
+            'maxShops' => $maxShops,
         ]);
     }
 
@@ -50,22 +56,6 @@ class ShopController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $user = $request->user();
-
-        // Règle de sécurité : Bloquer si la limite du forfait est atteinte
-        if (! $user->canCreateShop()) {
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'error' => 'limit_reached',
-                    'message' => 'Limite de boutiques atteinte pour votre forfait.',
-                    'upgrade_url' => route('shops.create'),
-                ], 403);
-            }
-
-            return redirect()->route('shops.create')->with(
-                'upgrade_prompt',
-                'Vous avez atteint la limite de boutiques autorisées par votre forfait. Passez au forfait supérieur pour créer une nouvelle boutique.'
-            );
-        }
 
         $validCurrencies = array_keys(config('platform.currencies', ['XOF' => []]));
         $validCountries = array_keys(config('platform.countries', ['TG' => 'Togo']));
@@ -82,40 +72,38 @@ class ShopController extends Controller
         $countryCode = strtoupper($validated['country']);
         $profile = config("platform.country_profiles.{$countryCode}") ?? config('platform.country_profiles.TG');
 
-        // Génération automatique d'un sous-domaine propre, unique et protégé contre les noms réservés
-        $subdomain = Shop::generateUniqueSubdomain($validated['name']);
+        $shop = DB::transaction(function () use ($user, $validated, $countryCode, $profile): ?Shop {
+            $user->newQuery()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if (! $user->canCreateShop()) {
+                return null;
+            }
 
-        $shop = Shop::create([
-            'user_id' => $user->id,
-            'name' => $validated['name'],
-            'subdomain' => $subdomain,
-            'currency' => $validated['currency'],
-            'status' => Shop::DRAFT,
-            'contact' => [
-                'country' => $countryCode,
-                'city' => $profile['city'] ?? 'Lomé',
-            ],
-            'onboarding_step' => 1,
-        ]);
-
-        // Configuration automatique des zones de livraison locales
-        $shop->ensureDefaultShippingZones();
-
-        // Si le compte a déjà un abonnement actif (ex: Pro ou Premium), dupliquer l'abonnement sur la nouvelle boutique
-        $activeSub = Subscription::whereIn('shop_id', $user->shops()->where('id', '!=', $shop->id)->pluck('id'))
-            ->whereIn('status', ['active', 'trial', 'grace'])
-            ->latest('id')
-            ->first();
-
-        if ($activeSub && $activeSub->grantsAccess()) {
-            $shop->subscriptions()->create([
-                'plan_id' => $activeSub->plan_id,
-                'status' => $activeSub->status,
-                'starts_at' => $activeSub->starts_at,
-                'trial_ends_at' => $activeSub->trial_ends_at,
-                'renews_at' => $activeSub->renews_at,
-                'ends_at' => $activeSub->ends_at,
+            $subscription = $user->accountSubscription();
+            $shop = $user->shops()->create([
+                'name' => $validated['name'],
+                'subdomain' => Shop::generateUniqueSubdomain($validated['name']),
+                'currency' => $validated['currency'],
+                'status' => Shop::DRAFT,
+                'contact' => ['country' => $countryCode, 'city' => $profile['city'] ?? 'Lomé'],
+                'onboarding_step' => 1,
             ]);
+            $shop->ensureDefaultShippingZones();
+            if ($subscription) {
+                $shop->subscriptions()->create($subscription->only(['plan_id', 'monthly_price', 'status', 'starts_at', 'trial_ends_at', 'renews_at', 'ends_at']));
+            }
+
+            return $shop;
+        });
+        if (! $shop) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'error' => 'limit_reached',
+                    'message' => 'Limite de boutiques atteinte pour votre forfait.',
+                    'upgrade_url' => route('shops.create'),
+                ], 403);
+            }
+
+            return redirect()->route('shops.create')->with('upgrade_prompt', 'Vous avez atteint la limite de boutiques de votre forfait.');
         }
 
         // Basculer la boutique active sur la nouvelle créée

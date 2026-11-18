@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AiGeneration;
+use App\Models\Plan;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\RembgService;
@@ -11,6 +12,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -40,6 +42,7 @@ class ProductPhotoEnginesTest extends TestCase
     {
         $user = User::factory()->create(['role' => User::ROLE_MERCHANT, 'email_verified_at' => now()]);
         $shop = Shop::create(['user_id' => $user->id, 'name' => 'Studio test', 'status' => 'draft']);
+        $shop->subscriptions()->create(['status' => 'active', 'plan_id' => Plan::where('slug', 'essentiel')->firstOrFail()->id]);
 
         return [$user, $shop];
     }
@@ -93,7 +96,9 @@ class ProductPhotoEnginesTest extends TestCase
         $this->assertGreaterThan(160, $center['red']);
         $this->assertLessThan(40, $center['green']);
         imagedestroy($result);
-        $this->assertSame(12, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        $this->assertSame(1, $shop->studioScenesUsedThisMonth());
+        $response->assertJsonPath('studio_scenes_remaining', 2);
         $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
         $this->assertDatabaseHas('ai_generations', ['shop_id' => $shop->id, 'model_used' => 'gpt-image-2.5-flare', 'prompt_tokens' => 100, 'completion_tokens' => 2000, 'cost_estimated_fcfa' => 40]);
         $this->assertSame(2000, AiGeneration::first()->output_data['usage']['output_tokens']);
@@ -169,21 +174,41 @@ class ProductPhotoEnginesTest extends TestCase
         Http::assertSentCount(1);
     }
 
-    #[TestWith([401])]
-    #[TestWith([402])]
-    #[TestWith([429])]
-    #[TestWith([503])]
-    public function test_openai_rejection_refunds_platform_credits_without_retry_or_photoroom_fallback(int $status): void
+    #[TestWith([401, null, 'vérifier l’accès'])]
+    #[TestWith([402, null, 'motif de facturation'])]
+    #[TestWith([429, null, 'a limité la génération'])]
+    #[TestWith([429, 'credit_balance_exhausted', 'solde de crédits'])]
+    #[TestWith([429, 'project_spend_limit_exceeded', 'plafond de dépenses'])]
+    #[TestWith([429, 'organization_usage_limit_exceeded', 'quota de l’organisation'])]
+    #[TestWith([429, 'slow_down', 'Réessayez dans au moins 42 s.', 42])]
+    #[TestWith([503, 'server_is_overloaded', 'surchargé', 42])]
+    public function test_openai_rejection_refunds_credits_and_offers_an_explicit_studio_alternative(int $status, ?string $code, string $message, ?int $retryAfter = null): void
     {
         Storage::fake('public');
         Http::preventStrayRequests();
         Process::fake([Process::result(output: $this->image(mask: true))]);
         [$merchant, $shop] = $this->merchant();
-        Http::fake(['https://api.openai.com/v1/images/edits' => Http::response(['error' => ['message' => 'PRIVATE_KEY_AND_PROVIDER_DETAILS']], $status)]);
+        Log::spy();
+        Http::fake(['https://api.openai.com/v1/images/edits' => Http::response([
+            'error' => ['code' => $code, 'message' => 'PRIVATE_KEY_AND_PROVIDER_DETAILS'],
+        ], $status, ['Retry-After' => '42', 'x-request-id' => 'req_0123456789abcdef0123456789abcdef'])]);
 
-        $this->postPreview($merchant)->assertUnprocessable()->assertJsonValidationErrors('photo')->assertDontSee('PRIVATE_KEY_AND_PROVIDER_DETAILS')->assertDontSee('test-openai-secret');
+        $response = $this->postPreview($merchant)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('photo')
+            ->assertJsonPath('preview_alternative', 'scene_template')
+            ->assertJsonPath('retry_after', $retryAfter)
+            ->assertDontSee('PRIVATE_KEY_AND_PROVIDER_DETAILS')
+            ->assertDontSee('test-openai-secret');
+        $this->assertStringContainsString($message, $response->json('errors.photo.0'));
+        Log::shouldHaveReceived('warning')->once()->with('OpenAI product background HTTP error', \Mockery::on(function (array $context) use ($code, $status, $retryAfter, $response): bool {
+            return $context['status'] === $status && $context['provider_code'] === ($code ?? 'unknown')
+                && $context['provider_request_id'] === 'req_0123456789abcdef0123456789abcdef'
+                && $context['retry_after'] === $retryAfter && str_contains($response->json('errors.photo.0'), $context['reference']);
+        }));
 
         $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->studioScenesUsedThisMonth());
         $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
         $this->assertSame([], Storage::disk('public')->allFiles());
         Http::assertSentCount(1);
@@ -213,7 +238,8 @@ class ProductPhotoEnginesTest extends TestCase
 
         $this->postPreview($merchant, ['style' => 'scene_template', 'scene_template' => 'podium'])->assertOk()->assertJsonPath('cutout_method', 'rembg_u2netp');
 
-        $this->assertSame(12, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->studioScenesUsedThisMonth());
         $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
         Http::assertNothingSent();
         Process::assertRan(fn () => true);
@@ -229,6 +255,24 @@ class ProductPhotoEnginesTest extends TestCase
         $this->postPreview($merchant)->assertUnprocessable()->assertJsonValidationErrors('style');
 
         $this->assertSame(0, $shop->fresh()->ai_credits_used);
+        Http::assertNothingSent();
+        Process::assertDidntRun(fn () => true);
+    }
+
+    public function test_exhausted_scene_quota_stops_external_processing_but_local_retouch_remains_included(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Process::fake();
+        [$merchant, $shop] = $this->merchant();
+        for ($scene = 0; $scene < 3; $scene++) {
+            $shop->withStudioScene(fn (): bool => true);
+        }
+        $shop->consumeAiCredits(80);
+
+        $this->postPreview($merchant)->assertPaymentRequired()->assertJsonPath('preview_alternative', 'scene_template');
+        $this->postPreview($merchant, ['style' => 'retouch'])->assertOk()->assertJsonPath('studio_scenes_remaining', 0);
+        $this->assertSame(80, $shop->aiCreditsUsedThisMonth());
         Http::assertNothingSent();
         Process::assertDidntRun(fn () => true);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shop;
+use App\Services\AccountCreditService;
 use App\Services\AdminNotificationService;
 use App\Services\ImageService;
 use App\Services\PublicMediaStorage;
@@ -253,7 +254,7 @@ class ShopSettingsController extends Controller
         }
 
         // Suppression de la boutique (cascade sur categories, products, orders, etc.)
-        $shop->delete();
+        app(AccountCreditService::class)->deleteShop($shop);
 
         return redirect()->route('onboarding.step1')->with('status', 'La boutique "'.$shopName.'" a été définitivement supprimée. Vous pouvez désormais créer une nouvelle boutique.');
     }

@@ -157,7 +157,7 @@ class AiOrchestrator
         $messagesPayload[] = ['role' => 'user', 'content' => $userMessage];
 
         // 7. Premier appel LLM avec déclaration des outils (désactivés sur les salutations et questions conversationnelles pour éviter latence/erreurs de schéma)
-        $toolsSchema = $this->isConversationalWithoutTools($userMessage) ? [] : $this->tools->getToolsSchema();
+        $toolsSchema = $this->isConversationalWithoutTools($userMessage) ? [] : $this->tools->getToolsSchema($shop, $user);
         $response = $this->llm->chat($messagesPayload, $toolsSchema, $options);
 
         $totalTokensInput = $response['tokens_input'] ?? 0;
@@ -417,7 +417,7 @@ class AiOrchestrator
         $plan = $shop->currentPlan();
         $planName = $plan->name ?: 'Essentiel';
         $planSlug = $plan->slug ?: 'essentiel';
-        $monthlyCredits = (int) $plan->ai_credits;
+        $monthlyCredits = $shop->aiCreditsMonthly();
         $remainingCredits = $isAdmin ? 9999 : $shop->aiCreditsRemaining();
         $creditsDisplay = $isAdmin ? 'Illimité (Super-Admin)' : "{$remainingCredits} / {$monthlyCredits}";
 
@@ -429,7 +429,7 @@ class AiOrchestrator
             'Suivi des commandes, statuts de livraison, risque COD et zones de livraison',
             'Service client (réponses SAV et brouillons de messages WhatsApp/SMS)',
             'Copies marketing simples (WhatsApp, Facebook, SMS, offres bundle)',
-            'Statistiques de ventes de base et export CSV (/commandes/exporter, /statistiques/exporter)',
+            'Statistiques de ventes de base dans le tableau de bord',
         ];
 
         $restrictedFeatures = [
@@ -454,6 +454,10 @@ class AiOrchestrator
             'advanced_stats' => [
                 'active' => 'Analyses avancées et comparaison de périodes',
                 'restricted' => 'Analyses avancées et comparaison de périodes (réservées aux formules Pro et Premium)',
+            ],
+            'export_accounting' => [
+                'active' => 'Exports CSV des commandes et des ventes compatibles Excel (/commandes/exporter, /statistiques/exporter)',
+                'restricted' => 'Exports CSV des commandes et des ventes (réservés à la formule Premium)',
             ],
         ];
 
@@ -504,7 +508,7 @@ class AiOrchestrator
         // 4. Détection des alertes proactives (jamais sur une simple salutation ni en boucle)
         if ($isPureGreeting) {
             $proactiveText = "--- BAVARDAGE / SALUTATION SIMPLE ---\nLe commerçant t'adresse une simple salutation sans poser de question opérationnelle.\nRÈGLE OBLIGATOIRE : Réponds chaleureusement et brièvement (1 à 2 phrases naturelles, avec le nom de sa boutique) et demande-lui comment tu peux l'aider aujourd'hui. N'affiche AUCUN rapport d'alertes ou de ruptures de stock non sollicité.\n--- FIN ---";
-        } elseif ($priorMessagesCount === 0) {
+        } elseif ($priorMessagesCount === 0 && ($user?->isAdmin() || $shop->owner?->isAdmin() || $shop->canUseFeature('stock_alerts'))) {
             $proactiveText = $this->proactiveAdvisor->formatForPrompt($shop);
         } else {
             $proactiveText = "--- NOTE SUR LES ALERTES DU MOMENT ---\nLa discussion est déjà en cours. Ne répète PAS les alertes de rupture de stock ou d'indicateurs déjà mentionnées au message précédent, sauf si le commerçant te pose expressément une question dessus.\n--- FIN NOTE ---";
@@ -558,6 +562,7 @@ CONTEXTE VÉRIFIÉ DE LA BOUTIQUE :
 RÈGLES STRICTES DE GARDE-FOU (PRIORITÉ ABSOLUE) :
 1. **Contrôle des crédits** : Le crédit nécessaire à ce tour est déjà réservé côté serveur. Le solde indiqué concerne les prochains tours : même s'il vaut 0, traite la demande en cours. Ne promets jamais de nouvelles générations gratuites après épuisement du solde.
 2. **Anti-Hallucination & Respect du forfait** : Ne propose, ne promets et n'exécute JAMAIS une fonctionnalité qui ne figure pas dans « Fonctionnalités réellement actives » (ex : n'invente jamais d'exports comptables PDF ni de codes promo ou scripts vidéo TikTok si la boutique n'y a pas accès selon son forfait ; oriente avec tact vers le forfait adapté si le marchand le demande).
+Les droits et les soldes réellement actifs dans ce contexte priment sur la documentation. Pour les prix et engagements d'abonnement, oriente le marchand vers la grille tarifaire et le prix indiqué au paiement.
 3. **Confidentialité & Sécurité** : Tu ne dois JAMAIS exposer de mots de passe, clés API, secrets, variables d'environnement, jetons de validation (`action_token`) ni d'identifiants techniques internes de Zanika.
 4. **Raisonnement ReAct via Outils Natifs (Sans balises internes)** : Raisonne étape par étape avant d'agir, appelle uniquement les outils JSON déclarés (`tool_calls`) pour lire ou modifier les données réelles de la boutique, appuie-toi strictement sur leurs résultats observés sans jamais inventer de chiffres, et formule ta réponse finale au marchand en français naturel (ou dans sa langue) **sans jamais afficher de balises techniques (`Thought:`, `Action:`, `Action Input:`, `Observation:`, `Answer:`) ni de JSON brut**.
 

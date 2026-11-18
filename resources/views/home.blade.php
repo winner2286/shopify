@@ -4,6 +4,10 @@
 @section('description', 'Créez votre boutique en ligne, vendez sur WhatsApp et TikTok, encaissez par T-Money, Moov Money et cartes, et gérez vos stocks et livraisons facilement.')
 
 @section('content')
+@php
+    $trialOffered = auth()->guest() && $plans->contains(fn ($plan) => $plan->isEssentiel());
+    $merchantSubscription = auth()->user()?->activeShop()?->subscriptionForCheckout();
+@endphp
 <!-- ==========================================================================
      1. HERO SECTION DYNAMIQUE (Style signature Shopify)
      ========================================================================== -->
@@ -60,14 +64,16 @@
                     <div class="hero-input-wrap">
                         <input type="email" name="email" placeholder="Entrez votre adresse e-mail" required class="hero-email-input" aria-label="Adresse e-mail">
                         <button id="hero-register" type="submit" class="btn btn-primary hero-email-btn">
-                            <span>Démarrer l'essai gratuit</span>
+                            <span>{{ $trialOffered ? 'Essayer Essentiel' : 'Créer un compte' }}</span>
                             <x-icon name="arrow-right" :size="16" />
                         </button>
                     </div>
                 </form>
 
                 <div class="hero-trust-row">
-                    <span><x-icon name="check-circle" :size="15" /> 14 jours d'essai gratuit</span>
+                    @if ($trialOffered)
+                        <span><x-icon name="check-circle" :size="15" /> 14 jours d’essai Essentiel</span>
+                    @endif
                     <span><x-icon name="check-circle" :size="15" /> Sans carte bancaire</span>
                     <span><x-icon name="check-circle" :size="15" /> <span class="desktop-only">Prêt en 3 minutes chrono</span><span class="mobile-only">Prêt en 3 min</span></span>
                 </div>
@@ -316,7 +322,9 @@
         <span class="marquee-item"><x-icon name="check-circle" :size="16" /> 0% de commission sur vos ventes</span>
         <span class="marquee-item"><x-icon name="laptop" :size="16" /> Boutique mobile ultra-rapide</span>
         <span class="marquee-item"><x-icon name="shopping-bag" :size="16" /> Gestion centralisée des stocks</span>
-        <span class="marquee-item"><x-icon name="shield" :size="16" /> 14 jours d'essai sans engagement</span>
+        @if ($trialOffered)
+            <span class="marquee-item"><x-icon name="shield" :size="16" /> 14 jours d’essai Essentiel</span>
+        @endif
     </div>
     <div class="marquee-track" aria-hidden="true">
         <span class="marquee-item"><x-icon name="whatsapp" :size="16" /> Commande WhatsApp 1-clic</span>
@@ -326,7 +334,9 @@
         <span class="marquee-item"><x-icon name="check-circle" :size="16" /> 0% de commission sur vos ventes</span>
         <span class="marquee-item"><x-icon name="laptop" :size="16" /> Boutique mobile ultra-rapide</span>
         <span class="marquee-item"><x-icon name="shopping-bag" :size="16" /> Gestion centralisée des stocks</span>
-        <span class="marquee-item"><x-icon name="shield" :size="16" /> 14 jours d'essai sans engagement</span>
+        @if ($trialOffered)
+            <span class="marquee-item"><x-icon name="shield" :size="16" /> 14 jours d’essai Essentiel</span>
+        @endif
     </div>
 </div>
 
@@ -821,150 +831,67 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 </section>
 
 <!-- ==========================================================================
-     7. GRILLE TARIFAIRE AVEC COMMUTATEUR MENSUEL / ANNUEL
+     7. FORMULES MENSUELLES
      ========================================================================== -->
 <section class="section section-subtle" id="tarifs">
     <div class="container">
         <div class="section-head reveal">
             <span class="pillar-tag"><x-icon name="wallet" :size="16" /> Tarifs transparents</span>
             <h2>Des formules simples pour chaque étape de votre croissance</h2>
-            <p>
-                <span class="desktop-only">14 jours d'essai gratuit sur toutes les formules. Sans carte bancaire et sans aucun engagement.</span>
-                <span class="mobile-only">14 jours d'essai gratuit • 0% de commission sur vos ventes.</span>
-            </p>
-        </div>
-
-        <!-- Basculeur dynamique Mensuel / Annuel avec remise de 20% -->
-        <div class="pricing-billing-switcher reveal">
-            <div class="billing-pill-container">
-                <button id="btn-billing-monthly" type="button" class="billing-toggle-btn active">Facturation Mensuelle</button>
-                <button id="btn-billing-yearly" type="button" class="billing-toggle-btn">Facturation Annuelle</button>
-            </div>
-            <span class="billing-discount-badge">-20% d'économie</span>
+            @if ($trialOffered)
+                <p>Essayez Essentiel gratuitement pendant 14 jours, sans carte bancaire.</p>
+            @endif
         </div>
 
         <!-- Sélecteur de formules pour mobile (Accès direct en 1 clic) -->
         <div class="mobile-plan-nav" id="mobile-plan-nav">
-            <button type="button" class="mobile-plan-pill" data-plan-idx="0">Essentiel</button>
-            <button type="button" class="mobile-plan-pill active" data-plan-idx="1">Pro (Recommandé)</button>
-            <button type="button" class="mobile-plan-pill" data-plan-idx="2">Premium</button>
+            @foreach ($plans as $plan)
+                <button type="button" @class(['mobile-plan-pill', 'active' => $loop->first]) data-plan-idx="{{ $loop->index }}" aria-pressed="{{ $loop->first ? 'true' : 'false' }}">{{ $plan->name }}</button>
+            @endforeach
         </div>
         <div class="mobile-swipe-hint">
-            <span>← Glissez pour comparer les 3 formules →</span>
+            <span>← Glissez pour comparer les formules →</span>
         </div>
 
         <div class="pricing-grid">
             @foreach ($plans as $plan)
                 <div class="plan-shopify reveal {{ $plan->slug === 'pro' ? 'featured card-border-beam' : '' }}">
                     @if ($plan->slug === 'pro')
-                        <div class="plan-shopify-badge">Recommandé • Le plus choisi</div>
+                        <div class="plan-shopify-badge">Recommandé</div>
                     @endif
 
-                    <div class="plan-name">{{ $plan->name }}</div>
+                    <h3 class="plan-name">{{ $plan->name }}</h3>
                     <div class="plan-desc">
                         @if ($plan->slug === 'essentiel')
-                            Idéal pour lancer votre boutique en ligne et professionnaliser vos ventes.
+                            Pour publier votre première boutique et préparer votre catalogue.
                         @elseif ($plan->slug === 'pro')
-                            Pour les commerces actifs qui veulent accélérer leurs ventes avec l'IA.
+                            Pour gérer plusieurs boutiques et créer vos promotions et publicités.
                         @else
-                            Pour les grandes marques et commerces à fort volume de commandes.
+                            Pour gérer davantage de boutiques, traiter plus de visuels et exporter vos données.
                         @endif
                     </div>
 
-                    @php
-                        $mPrice = $plan->monthly_price ?: ($plan->slug === 'essentiel' ? 10000 : ($plan->slug === 'pro' ? 15000 : 30000));
-                        $maxP = $plan->max_products ?: ($plan->slug === 'essentiel' ? 50 : ($plan->slug === 'pro' ? 300 : 2500));
-                        $storage = $plan->storage_mb ?: ($plan->slug === 'essentiel' ? 2048 : ($plan->slug === 'pro' ? 8192 : 25600));
-                        $credits = $plan->ai_credits ?: ($plan->slug === 'essentiel' ? 80 : ($plan->slug === 'pro' ? 350 : 1200));
-                        $prCredits = $plan->photoroomCreditsMonthly();
-                        $extraFeats = (!empty($plan->features) && count($plan->features) > 0 && !in_array('Tableau de bord simple', $plan->features))
-                            ? $plan->features
-                            : ($plan->slug === 'essentiel'
-                                ? ['Détourage automatique & Packshot studio blanc (Photoroom HD)', 'Publicité IA : textes & accroches simples', 'Tableau de bord de vente simple', 'Support standard par email']
-                                : ($plan->slug === 'pro'
-                                    ? ['Studio Photo IA Pro : décors générés, ombres réalistes & PNG HD', 'Publicité IA : textes, visuels & scripts TikTok', 'Codes promo & soldes programmées', 'Alertes rupture de stock (WhatsApp/SMS)', 'Statistiques complètes & top ventes', 'Support prioritaire par WhatsApp']
-                                    : ['Suite Studio Photoroom Max : showrooms luxe, lifestyle & podiums IA', 'Retouche catalogue haute capacité & détourage pub en 1 clic', 'Campagnes IA sponsorisées complètes', 'Codes promo illimités & ventes privées', 'Gestion multi-collaborateurs (jusqu\'à 3 accès)', 'Export comptable des commandes (Excel / PDF)', 'Connexion de nom de domaine personnalisé', 'Chargé de compte dédié & Support VIP 7j/7']
-                                )
-                            );
-                    @endphp
-
                     <div class="plan-price-wrap">
-                        <span class="plan-price" data-plan-monthly="{{ $mPrice }}">
-                            {{ number_format($mPrice, 0, ',', ' ') }}
-                        </span>
+                        <span class="plan-price">{{ number_format($merchantSubscription?->monthlyPriceFor($plan) ?? $plan->monthly_price, 0, ',', ' ') }}</span>
                         <span class="plan-period">FCFA / mois</span>
                     </div>
 
-                    <ul class="plan-features">
-                        <li>
-                            <x-icon name="check" :size="16" />
-                            @if ($plan->slug === 'essentiel')
-                                <span><strong>1 boutique</strong> e-commerce incluse</span>
-                            @elseif ($plan->slug === 'pro')
-                                <span><strong>Jusqu'à 3 boutiques</strong> incluses</span>
-                            @else
-                                <span><strong>Boutiques illimitées</strong></span>
-                            @endif
-                        </li>
-                        <li>
-                            <x-icon name="check" :size="16" />
-                            <span>Jusqu'à <strong>{{ number_format($maxP, 0, ',', ' ') }} produits</strong> en catalogue</span>
-                        </li>
-                        <li>
-                            <x-icon name="check" :size="16" />
-                            <span><strong>{{ $storage >= 1024 ? ($storage / 1024).' Go' : $storage.' Mo' }}</strong> d'espace de stockage photos</span>
-                        </li>
-                        <li>
-                            <x-icon name="check" :size="16" />
-                            <span><strong>{{ $credits }} crédits d'IA</strong> par mois</span>
-                        </li>
-                        <li>
-                            <x-icon name="check" :size="16" />
-                            <span>
-                                <strong>{{ $prCredits }} photos Photoroom HD</strong> / mois
-                                @if($plan->slug === 'essentiel')
-                                    <span style="font-size:.82em;color:var(--text-soft)">(packshot blanc)</span>
-                                @elseif($plan->slug === 'pro')
-                                    <span style="font-size:.82em;color:var(--brand-primary);font-weight:600">(Pro · décors IA)</span>
-                                @else
-                                    <span style="font-size:.82em;color:var(--brand-primary);font-weight:600">(Max · luxe & podiums)</span>
-                                @endif
-                            </span>
-                        </li>
-                        <li>
-                            <x-icon name="check" :size="16" />
-                            <span>Commandes WhatsApp en 1 clic</span>
-                        </li>
-                        <li>
-                            <x-icon name="check" :size="16" />
-                            <span>Paiements T-Money, Moov Money & Cash (0% com.)</span>
-                        </li>
-                        <li>
-                            <x-icon name="check" :size="16" />
-                            <span>Boutique physique & itinéraire Maps</span>
-                        </li>
-                        @foreach ($extraFeats as $f)
-                            <li>
-                                <x-icon name="check" :size="16" />
-                                <span>{{ $f }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
+                    @include('subscription.plan-allowances', ['plan' => $plan])
+                    @include('subscription.plan-benefits', ['plan' => $plan])
 
                     @auth
                         <a href="{{ route('subscription.checkout', $plan->slug) }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block plan-cta-btn" style="font-weight:700">
-                            <span>Souscrire via GeniusPay</span>
-                            <span class="plan-btn-price" data-plan-btn-monthly="{{ $mPrice }}">({{ number_format($mPrice, 0, ',', ' ') }} F) →</span>
+                            <span>Choisir {{ $plan->name }}</span>
                         </a>
                     @else
                         <a href="{{ route('register') }}" class="btn {{ $plan->slug === 'pro' ? 'btn-primary' : 'btn-dark' }} btn-block plan-cta-btn" style="font-weight:700">
-                            <span>Démarrer l'essai gratuit</span>
-                            <span style="display:inline-block;margin-left:2px">→</span>
+                            <span>{{ $plan->isEssentiel() ? 'Essayer Essentiel' : 'Créer un compte pour souscrire' }}</span>
                         </a>
                     @endauth
                 </div>
             @endforeach
         </div>
+        @include('subscription.plan-conditions')
     </div>
 </section>
 
@@ -988,7 +915,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                 <span class="faq-chevron"><x-icon name="arrow-right" :size="16" /></span>
             </button>
             <div class="faq-answer">
-                Vos clients choisissent simplement le paiement en ligne via GeniusPay (T-Money, Moov Money ou Carte bancaire) ou le paiement en espèces à la livraison lors de la validation de commande. Le paiement est immédiatement vérifié et consigné dans votre tableau de bord.
+                Vos clients choisissent à la commande parmi les moyens de paiement activés par votre boutique. Les options Mobile Money et carte dépendent du pays et du prestataire. Vous pouvez aussi proposer le paiement à la livraison.
             </div>
         </div>
 
@@ -1014,11 +941,11 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 
         <div class="faq-item reveal">
             <button type="button" class="faq-question">
-                <span>Puis-je utiliser mon propre nom de domaine personnalisé ?</span>
+                <span>Quel lien puis-je partager pour ma boutique ?</span>
                 <span class="faq-chevron"><x-icon name="arrow-right" :size="16" /></span>
             </button>
             <div class="faq-answer">
-                Oui ! Chaque boutique bénéficie d'une adresse gratuite sécurisée (ex: maboutique.zanika.tg) et vous pouvez à tout moment connecter votre propre nom de domaine en .tg, .com ou toute autre extension.
+                Votre boutique dispose d'un lien public Zanika que vous pouvez partager sur WhatsApp, vos réseaux sociaux ou vos supports de vente.
             </div>
         </div>
 
@@ -1028,7 +955,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                 <span class="faq-chevron"><x-icon name="arrow-right" :size="16" /></span>
             </button>
             <div class="faq-answer">
-                Non. Nous appliquons 0% de commission sur vos ventes. Vous payez uniquement votre abonnement mensuel transparent et conservez 100% du fruit de votre travail.
+                Zanika applique 0 % de commission sur vos ventes. Des frais de paiement peuvent s'appliquer selon le prestataire, le pays et le moyen de paiement.
             </div>
         </div>
     </div>
@@ -1049,7 +976,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         </p>
         <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap">
             <a href="{{ route('register') }}" class="btn btn-white btn-lg">
-                <span>Créer ma boutique gratuitement</span>
+                <span>{{ $trialOffered ? 'Essayer Essentiel' : 'Créer un compte' }}</span>
                 <x-icon name="arrow-right" :size="18" />
             </a>
             <a href="{{ route('login') }}" class="btn btn-ghost btn-lg" style="color:#ffffff;border-color:rgba(255,255,255,0.3)">
@@ -1151,7 +1078,9 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
 <div id="mobile-sticky-cta" class="mobile-sticky-cta" aria-hidden="true">
     <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:0.88rem;color:#ffffff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zanika • E-commerce</div>
-        <div style="font-size:0.72rem;color:var(--text-soft)">14 jours d'essai gratuit • Prêt en 3 min</div>
+        @if ($trialOffered)
+            <div style="font-size:0.72rem;color:var(--text-soft)">14 jours d’essai Essentiel</div>
+        @endif
     </div>
     <a href="{{ route('register') }}" class="btn btn-primary btn-sm" style="font-weight:700;padding:0.48rem 1rem;white-space:nowrap;box-shadow:0 0 16px rgba(255,45,109,0.4)">
         Démarrer →
@@ -1183,11 +1112,16 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
         var planPills = document.querySelectorAll('.mobile-plan-pill');
         var planCards = document.querySelectorAll('.pricing-grid .plan-shopify');
         var pricingGrid = document.querySelector('.pricing-grid');
+        function selectPlanPill(index) {
+            planPills.forEach(function (pill, pillIndex) {
+                pill.classList.toggle('active', pillIndex === index);
+                pill.setAttribute('aria-pressed', String(pillIndex === index));
+            });
+        }
         planPills.forEach(function (pill) {
             pill.addEventListener('click', function () {
                 var idx = parseInt(this.getAttribute('data-plan-idx'), 10);
-                planPills.forEach(function (p) { p.classList.remove('active'); });
-                this.classList.add('active');
+                selectPlanPill(idx);
                 if (planCards[idx]) {
                     planCards[idx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 }
@@ -1202,8 +1136,7 @@ Message WhatsApp prêt pour statut : « Alerte bon plan ! Robe Wax disponible en
                         var card = entry.target;
                         var idx = Array.prototype.indexOf.call(planCards, card);
                         if (idx !== -1 && planPills[idx]) {
-                            planPills.forEach(function (p) { p.classList.remove('active'); });
-                            planPills[idx].classList.add('active');
+                            selectPlanPill(idx);
                         }
                     }
                 });

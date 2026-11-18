@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
@@ -36,6 +37,7 @@ class ProductStudioServiceTest extends TestCase
             'name' => 'Boutique Studio '.$user->name,
             'status' => 'draft',
         ]);
+        $shop->subscriptions()->create(['status' => 'active', 'plan_id' => Plan::where('slug', 'essentiel')->firstOrFail()->id]);
 
         return [$user, $shop];
     }
@@ -102,7 +104,7 @@ class ProductStudioServiceTest extends TestCase
         $this->assertSame(127, imagecolorsforindex($cutout, imagecolorat($cutout, 0, 0))['alpha']);
         imagedestroy($cutout);
         $this->assertSame($source, Storage::disk('public')->get($response->json('source_path')));
-        $this->assertSame(12, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
         $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
         Http::assertNothingSent();
     }
@@ -485,7 +487,7 @@ class ProductStudioServiceTest extends TestCase
             'step' => 'studio_packshot',
         ]);
         $shop->refresh();
-        $this->assertEquals(12, $shop->ai_credits_used);
+        $this->assertEquals(0, $shop->ai_credits_used);
     }
 
     /**
@@ -521,7 +523,7 @@ class ProductStudioServiceTest extends TestCase
         ]);
 
         $shop->refresh();
-        $this->assertEquals(6, $shop->ai_credits_used);
+        $this->assertEquals(0, $shop->ai_credits_used);
     }
 
     /**
@@ -573,7 +575,7 @@ class ProductStudioServiceTest extends TestCase
         $corner = imagecolorsforindex($image, imagecolorat($image, 5, 5));
         $this->assertLessThan(50, $corner['red']);
         imagedestroy($image);
-        $this->assertSame(12, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
         Http::assertNothingSent();
     }
 
@@ -689,7 +691,7 @@ class ProductStudioServiceTest extends TestCase
         ])->assertOk()->assertJsonPath('variations.0.type', 'lifestyle')->assertJsonPath('engine', 'photoroom-ai');
 
         $this->assertSame(1, $shop->fresh()->photoroom_credits_used);
-        $this->assertSame(12, $shop->fresh()->ai_credits_used);
+        $this->assertSame(0, $shop->fresh()->ai_credits_used);
         Http::assertSent(function ($request): bool {
             $fields = collect($request->data())->pluck('contents', 'name');
 

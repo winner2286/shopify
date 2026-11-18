@@ -188,10 +188,12 @@
                                 <span>Vitrine</span>
                             </a>
                         @endif
-                        <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm product-mobile-footer-btn" title="Créer une affiche promo">
-                            <x-icon name="image" size="13" />
-                            <span>Affiche IA</span>
-                        </a>
+                        @if (auth()->user()->isAdmin() || $userShop?->canUseFeature('ai_visuals'))
+                            <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm product-mobile-footer-btn" title="Créer une affiche promo">
+                                <x-icon name="image" size="13" />
+                                <span>Affiche IA</span>
+                            </a>
+                        @endif
                         <a href="{{ route('products.edit', $prod) }}" class="btn btn-primary btn-sm product-mobile-footer-btn primary" title="Modifier le produit">
                             <x-icon name="edit-2" size="13" />
                             <span>Modifier</span>
@@ -264,9 +266,11 @@
                             </td>
                             <td style="text-align:right">
                                 <div style="display:inline-flex;gap:.35rem;align-items:center">
-                                    <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem" title="Créer une affiche promo 1-clic pour ce produit">
-                                        <x-icon name="image" size="13" /> <span>Affiche</span>
-                                    </a>
+                                    @if (auth()->user()->isAdmin() || $userShop?->canUseFeature('ai_visuals'))
+                                        <a href="{{ route('ads.flyers', ['produit_id' => $prod->id]) }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem" title="Créer une affiche promo pour ce produit">
+                                            <x-icon name="image" size="13" /> <span>Affiche</span>
+                                        </a>
+                                    @endif
                                     <a href="{{ route('products.edit', $prod) }}" class="btn btn-ghost btn-sm">Modifier</a>
                                 </div>
                             </td>

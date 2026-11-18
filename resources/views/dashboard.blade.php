@@ -3,7 +3,15 @@
 @section('title', 'Mon espace : '.config('platform.name'))
 
 @section('content')
-@php $done = collect($checklist)->where('done', true)->count(); $pct = (int) round($done / count($checklist) * 100); @endphp
+@php
+    $done = collect($checklist)->where('done', true)->count();
+    $pct = (int) round($done / count($checklist) * 100);
+    $sub = $shop?->accountSubscription() ?? $shop?->subscription;
+    $shopPlan = $shop?->currentPlan();
+    $hasSubscriptionAccess = $sub?->grantsAccess() && $sub->plan?->active;
+    $isTrialExpiring = $hasSubscriptionAccess && $sub->isExpiringSoon(3);
+    $daysLeft = $sub?->daysRemaining() ?? 0;
+@endphp
 <div class="container dash">
     @if ($user->isAdmin())
         <div class="card" style="margin-bottom:1.5rem;padding:1rem 1.25rem;background:linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.05));border:1px solid rgba(239, 68, 68, 0.35);border-radius:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
@@ -46,10 +54,9 @@
                     <span>Nouvelle boutique</span>
                 </a>
             @else
-                <a href="{{ route('shops.create') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.35rem;border-color:rgba(197, 34, 61, 0.35);color:var(--brand-3, #c5223d)" title="Passer au plan supérieur pour débloquer plus de boutiques">
-                    <x-icon name="plus" :size="15" />
-                    <span>Nouvelle boutique</span>
-                    <span class="badge" style="background:var(--brand-1, #9e1b32);color:#fff;font-size:.65rem;padding:1px 5px">PRO</span>
+                <a href="{{ route('shops.create') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.35rem;border-color:rgba(197, 34, 61, 0.35);color:var(--brand-3, #c5223d)">
+                    <x-icon name="shop" :size="15" />
+                    <span>Limite de boutiques atteinte</span>
                 </a>
             @endif
             @if ($shop && $shop->subdomain)
@@ -67,12 +74,6 @@
                 <x-icon name="sparkles" :size="15" />
                 <span>Assistant IA</span>
             </a>
-            @if ($shop)
-                <span class="pill" style="border-color:color-mix(in srgb, var(--brand-primary) 35%, var(--border));background:color-mix(in srgb, var(--brand-primary) 10%, transparent)">
-                    Formule : <strong>{{ $currentPlan->name }}</strong>
-                    <span style="font-size:.78rem;opacity:.85">({{ $shop->products()->count() }}/{{ $shop->maxProducts() }} arts • {{ $shop->aiCreditsRemaining() }} crédits IA)</span>
-                </span>
-            @endif
             <span class="pill">Statut : {{ $shop ? ($shop->isPublished() ? 'En ligne' : ($shop->isPaused() ? 'En pause' : 'Brouillon')) : 'Non configurée' }}</span>
         </div>
     </div>
@@ -103,16 +104,6 @@
             </button>
         </div>
     </div>
-            </button>
-        </div>
-    </div>
-
-    @php
-        $sub = $shop?->subscription;
-        $isTrialExpiring = $sub && $sub->isExpiringSoon(3);
-        $daysLeft = $sub?->daysRemaining() ?? 0;
-    @endphp
-
     @if ($isTrialExpiring)
         <div class="card" style="margin-bottom:1.5rem;padding:1.15rem 1.4rem;background:linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.06));border:1px solid rgba(245, 158, 11, 0.4);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
             <div style="display:flex;align-items:center;gap:.9rem">
@@ -122,15 +113,15 @@
                         Votre essai gratuit expire dans {{ $daysLeft <= 1 ? ($daysLeft == 0 ? "quelques heures" : "1 jour") : "$daysLeft jours" }} !
                     </div>
                     <div style="font-size:.87rem;color:var(--text-soft);margin-top:.15rem">
-                        Choisissez votre formule dès maintenant (Essentiel 10 000 FCFA, Pro 15 000 FCFA ou Premium 30 000 FCFA) pour continuer à vendre en ligne sans coupure.
+                        Choisissez une formule pour continuer à utiliser les crédits du studio et de l’assistant après votre essai.
                     </div>
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
-                <a href="{{ route('subscription.checkout', $shop?->currentPlan()->slug ?? 'essentiel') }}" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;box-shadow:0 4px 14px rgba(245, 158, 11, 0.35);color:#fff">
-                    Renouveler via GeniusPay ({{ number_format($shop?->currentPlan()->monthly_price ?? 10000, 0, ',', ' ') }} F) →
+                <a href="{{ route('subscription.checkout', $shopPlan->slug) }}" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;box-shadow:0 4px 14px rgba(245, 158, 11, 0.35);color:#fff">
+                    Souscrire à {{ $shopPlan->name }} ({{ number_format($sub->monthlyPriceFor($shopPlan), 0, ',', ' ') }} F)
                 </a>
-                <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-ghost btn-sm" style="white-space:nowrap;font-size:.82rem">
+                <a href="{{ route('home', ['landing' => 1]) }}#tarifs" class="btn btn-ghost btn-sm" style="white-space:nowrap;font-size:.82rem">
                     Changer de formule
                 </a>
             </div>
@@ -141,22 +132,54 @@
                 <x-icon name="alert-circle" size="28" style="color:#ef4444" />
                 <div>
                     <div style="font-weight:700;color:#ef4444;font-size:1.05rem">
-                        Votre période d'essai gratuit a expiré !
+                        Votre abonnement ou votre essai est arrivé à échéance.
                     </div>
                     <div style="font-size:.87rem;color:var(--text-soft);margin-top:.15rem">
-                        Activez votre abonnement pour continuer à recevoir vos commandes et accéder à toutes les fonctionnalités IA.
+                        Choisissez une formule pour retrouver les fonctionnalités et les crédits associés.
                     </div>
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
-                <a href="{{ route('subscription.checkout', $shop?->currentPlan()->slug ?? 'essentiel') }}" class="btn btn-primary btn-sm" style="font-weight:700;white-space:nowrap;padding:.55rem 1.25rem;background:#ef4444;border-color:#ef4444;color:#fff">
-                    Activer mon forfait ({{ number_format($shop?->currentPlan()->monthly_price ?? 10000, 0, ',', ' ') }} F) →
-                </a>
-                <a href="{{ route('home') }}#tarifs" target="_blank" class="btn btn-ghost btn-sm" style="white-space:nowrap;font-size:.82rem">
+                <a href="{{ route('home', ['landing' => 1]) }}#tarifs" class="btn btn-primary btn-sm" style="white-space:nowrap;font-size:.82rem">
                     Voir toutes les formules
                 </a>
             </div>
         </div>
+    @endif
+
+    @if ($shop && ! $user->isAdmin())
+        <section class="card panel account-plan" aria-labelledby="account-plan-title">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
+                <div>
+                    <h3 id="account-plan-title" style="margin:0">{{ $hasSubscriptionAccess ? 'Votre formule '.$shopPlan->name : 'Votre accès commerçant' }}</h3>
+                    <p class="plan-conditions">
+                        @if ($hasSubscriptionAccess && $sub->isTrial())
+                            Essai jusqu’au {{ $sub->trial_ends_at->format('d/m/Y') }}
+                        @elseif ($hasSubscriptionAccess && $sub->status === 'grace')
+                            Période de grâce jusqu’au {{ $sub->ends_at->format('d/m/Y') }}
+                        @elseif ($hasSubscriptionAccess)
+                            Abonnement actif · {{ number_format($sub->monthlyPriceFor($shopPlan), 0, ',', ' ') }} FCFA par mois
+                        @else
+                            Accès de base · Aucun abonnement actif
+                        @endif
+                    </p>
+                </div>
+                <a href="{{ route('home', ['landing' => 1]) }}#tarifs" class="btn btn-ghost btn-sm">Comparer les formules</a>
+            </div>
+            <dl class="plan-allowances">
+                <div><dt>Boutiques du compte</dt><dd>{{ $userShops->count() }} / {{ $maxShops }}</dd></div>
+                <div><dt>Produits de cette boutique</dt><dd>{{ $shop->products()->count() }} / {{ $shop->maxProducts() }}</dd></div>
+                <div><dt>Crédits IA restants ce mois</dt><dd>{{ $shop->aiCreditsRemaining() }} / {{ $shop->aiCreditsMonthly() }}</dd></div>
+                <div><dt>Décors générés restants ce mois</dt><dd>{{ $shop->studioScenesRemaining() }} / {{ $shop->studioScenesMonthly() }}</dd></div>
+                <div><dt>Crédits Photoroom restants ce mois</dt><dd>{{ $shop->photoroomCreditsRemaining() }} / {{ $shop->photoroomCreditsMonthly() }}</dd></div>
+            </dl>
+            <details>
+                <summary>Voir les fonctionnalités de ma formule</summary>
+                @include('subscription.plan-benefits', ['plan' => $shopPlan])
+                <p class="plan-conditions">{{ $shopPlan->full_generations }} configuration(s) assistée(s) et {{ $shopPlan->storage_mb >= 1024 ? ($shopPlan->storage_mb / 1024).' Go' : $shopPlan->storage_mb.' Mo' }} de stockage par boutique.</p>
+                @include('subscription.plan-conditions')
+            </details>
+        </section>
     @endif
 
     @if (session('status')) <div class="alert alert-ok" role="status">{{ session('status') }}</div> @endif
@@ -195,21 +218,31 @@
                     </strong>
                     <span style="font-size:.85rem;color:var(--text-soft)">En attente</span>
                 </div>
-                <a href="{{ route('analytics.index') }}" style="background:var(--bg-soft);padding:1rem;border-radius:12px;text-align:center;text-decoration:none;display:block;border:1px solid transparent;transition:transform .15s, border-color .15s" title="Voir les statistiques détaillées">
+                @if ($canViewAdvancedStats)
+                    <a href="{{ route('analytics.index') }}" style="background:var(--bg-soft);padding:1rem;border-radius:12px;text-align:center;text-decoration:none;display:block" title="Voir les statistiques détaillées">
+                @else
+                    <div style="background:var(--bg-soft);padding:1rem;border-radius:12px;text-align:center">
+                @endif
                     <strong style="font-size:1.5rem;display:block" class="gradient-text">
                         {{ number_format($totalRevenue, 0, ',', ' ') }}
                     </strong>
                     <span style="font-size:.85rem;color:var(--text-soft);display:block">{{ $shop->currencyLabel() }} encaissés</span>
-                    <span style="font-size:.72rem;color:var(--brand-1);font-weight:600;display:inline-flex;align-items:center;gap:2px;margin-top:.25rem">
-                        Voir stats <x-icon name="arrow-right" :size="11" />
-                    </span>
-                </a>
+                @if ($canViewAdvancedStats)
+                        <span style="font-size:.72rem;color:var(--brand-1);font-weight:600;display:inline-flex;align-items:center;gap:2px;margin-top:.25rem">
+                            Voir stats <x-icon name="arrow-right" :size="11" />
+                        </span>
+                    </a>
+                @else
+                    </div>
+                @endif
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:1rem">
                 <a href="{{ route('orders.index') }}" class="btn btn-primary btn-sm" style="justify-content:center;text-align:center">Gérer commandes</a>
-                <a href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm" style="justify-content:center;text-align:center;color:var(--brand-1);font-weight:600">
-                    <x-icon name="analytics" :size="15" /> Statistiques
-                </a>
+                @if ($canViewAdvancedStats)
+                    <a href="{{ route('analytics.index') }}" class="btn btn-ghost btn-sm" style="justify-content:center;text-align:center;color:var(--brand-1);font-weight:600">
+                        <x-icon name="analytics" :size="15" /> Statistiques
+                    </a>
+                @endif
             </div>
         </section>
 
@@ -220,10 +253,12 @@
                     <strong style="font-size:1.8rem;display:block" class="gradient-text">{{ $productsCount }}</strong>
                     <span style="font-size:.85rem;color:var(--text-soft)">Produits actifs</span>
                 </div>
-                <div style="background:var(--bg-soft);padding:1rem;border-radius:12px;text-align:center">
-                    <strong style="font-size:1.8rem;display:block;color:{{ $lowStockCount > 0 ? 'var(--warn)' : 'var(--text)' }}">{{ $lowStockCount }}</strong>
-                    <span style="font-size:.85rem;color:var(--text-soft)">Stock bas</span>
-                </div>
+                @if ($canViewStockAlerts)
+                    <div style="background:var(--bg-soft);padding:1rem;border-radius:12px;text-align:center">
+                        <strong style="font-size:1.8rem;display:block;color:{{ $lowStockCount > 0 ? 'var(--warn)' : 'var(--text)' }}">{{ $lowStockCount }}</strong>
+                        <span style="font-size:.85rem;color:var(--text-soft)">Stock bas</span>
+                    </div>
+                @endif
             </div>
             <div style="display:flex;gap:.5rem;margin-top:1rem">
                 <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm btn-block">+ Nouveau produit</a>

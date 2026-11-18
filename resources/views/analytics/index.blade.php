@@ -14,6 +14,7 @@
             <a href="{{ route('analytics.advisor') }}" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:.35rem">
                 <x-icon name="sparkles" size="16" /> Conseiller IA & Croissance
             </a>
+            @if (auth()->user()->isAdmin() || $shop->canUseFeature('export_accounting'))
             <a href="{{ route('analytics.export_csv') }}" 
                onclick="exportCsvSafe(event, '{{ route('analytics.export_csv') }}', 'statistiques-ventes-{{ date('Y-m-d') }}.csv')"
                class="btn btn-ghost btn-sm" 
@@ -21,6 +22,7 @@
                title="Exporter les statistiques de ventes au format CSV">
                 <x-icon name="download" size="16" /> Exporter (CSV)
             </a>
+            @endif
             <a href="{{ route('orders.index') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.3rem">
                 <x-icon name="package" size="16" /> Commandes
             </a>

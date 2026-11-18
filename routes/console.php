@@ -6,6 +6,7 @@ use App\Models\ProductImage;
 use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\AccountCreditService;
 use App\Services\Ai\AiMarketingAutomationService;
 use App\Services\PublicMediaStorage;
 use Illuminate\Foundation\Inspiring;
@@ -311,6 +312,9 @@ Artisan::command('ai:run-automations', function (AiMarketingAutomationService $s
     $totalTriggered = 0;
 
     foreach ($shops as $shop) {
+        if (! $shop->canUseFeature('stock_alerts') && ! $shop->owner?->isAdmin()) {
+            continue;
+        }
         $result = $service->runPendingAutomations($shop);
         $triggered = array_filter($result['reports'] ?? [], fn ($r) => ($r['status'] ?? '') === 'triggered');
         $count = count($triggered);
@@ -332,8 +336,9 @@ Schedule::command('ai:run-automations')
 
 // Réinitialisation mensuelle des crédits IA le 1er jour de chaque mois à minuit
 Schedule::call(function () {
-    Shop::withoutGlobalScopes()->update(['ai_credits_used' => 0, 'photoroom_credits_used' => 0]);
-})->monthlyOn(1, '00:00')->name('reset-monthly-ai-credits');
+    $credits = app(AccountCreditService::class);
+    User::query()->whereHas('shops')->eachById(fn (User $user) => $credits->refreshMonth($user));
+})->monthlyOn(1, '00:00')->name('reset-monthly-ai-credits')->withoutOverlapping();
 
 Schedule::command('ai:morning-briefing')
     ->dailyAt('07:00')->withoutOverlapping()->name('ai-morning-briefing');

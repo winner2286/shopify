@@ -68,7 +68,7 @@ class FeexPayController extends Controller
                 return response()->json(['success' => false, 'message' => 'Subscription not found'], 404);
             }
 
-            $verification = $this->verifyApprovedTransaction($reference, $customId, (int) round((float) $plan->monthly_price));
+            $verification = $this->verifyApprovedTransaction($reference, $customId, $sub->monthlyPriceFor($plan));
             if (! $verification) {
                 return response()->json(['success' => false, 'message' => 'Transaction FeexPay non vérifiée'], 422);
             }
@@ -126,7 +126,7 @@ class FeexPayController extends Controller
             $plan = $planId ? Plan::find($planId) : $sub?->plan;
 
             if ($sub && $plan && $reference !== '') {
-                $verification = $this->verifyApprovedTransaction($reference, $customId, (int) round((float) $plan->monthly_price));
+                $verification = $this->verifyApprovedTransaction($reference, $customId, $sub->monthlyPriceFor($plan));
                 if ($verification) {
                     $this->feexPayService->handleSubscriptionPaymentSuccess($sub, $reference, $plan);
 
@@ -222,6 +222,7 @@ class FeexPayController extends Controller
      */
     public function subscriptionCheckout(Request $request, Plan $plan)
     {
+        abort_unless($plan->active, 404);
         $user = $request->user();
         $shop = $user?->activeShop() ?? $user?->shop;
 
@@ -229,19 +230,22 @@ class FeexPayController extends Controller
             return redirect()->route('dashboard')->with('error', 'Veuillez créer une boutique avant de souscrire à un forfait.');
         }
 
-        $subscription = $shop->subscription ?: Subscription::create([
-            'shop_id' => $shop->id,
-            'plan_id' => $plan->id,
-            'status' => 'pending',
-            'starts_at' => now(),
-            'ends_at' => now()->addMonth(),
-        ]);
+        $subscription = DB::transaction(function () use ($user, $shop, $plan): Subscription {
+            $user->newQuery()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            return $shop->subscriptionForCheckout() ?? $shop->subscriptions()->create([
+                'plan_id' => $plan->id,
+                'monthly_price' => $plan->monthly_price,
+                'status' => 'pending',
+            ]);
+        });
         $shop->unsetRelation('subscription');
 
         return view('subscription.checkout', [
             'plan' => $plan,
             'shop' => $shop,
             'subscription' => $subscription,
+            'monthlyPrice' => $subscription->monthlyPriceFor($plan),
         ]);
     }
 
@@ -259,12 +263,14 @@ class FeexPayController extends Controller
         if (! $ownsSubscription) {
             abort(403, 'Accès non autorisé à cet abonnement.');
         }
+        abort_unless($plan->active, 404);
 
         $ref = 'SIM-SUB-'.strtoupper(bin2hex(random_bytes(4)));
+        $monthlyPrice = $subscription->monthlyPriceFor($plan);
         $this->feexPayService->handleSubscriptionPaymentSuccess($subscription, $ref, $plan);
         $user->unsetRelation('shop');
         $user->unsetRelation('active_shop');
 
-        return redirect()->route('dashboard')->with('status', "Simulation réussie : votre forfait {$plan->name} ({$plan->monthly_price} FCFA) a été activé avec succès pour 1 mois supplémentaire.");
+        return redirect()->route('dashboard')->with('status', "Simulation réussie : votre forfait {$plan->name} ({$monthlyPrice} FCFA) a été activé pour un mois supplémentaire.");
     }
 }

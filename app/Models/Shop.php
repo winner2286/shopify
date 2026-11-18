@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\AccountCreditService;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -35,6 +37,7 @@ class Shop extends Model
             'onboarding_step' => 'integer',
             'ai_credits_used' => 'integer',
             'photoroom_credits_used' => 'integer',
+            'studio_scenes_used' => 'integer',
         ];
     }
 
@@ -58,22 +61,17 @@ class Shop extends Model
      */
     public function currentPlan(): Plan
     {
-        $sub = $this->subscription;
-        if ($sub && $sub->grantsAccess() && $sub->plan && $sub->plan->active) {
-            return $sub->plan;
-        }
+        return $this->accountSubscription()?->plan ?? Plan::defaultEssentiel();
+    }
 
-        return Plan::where('slug', 'essentiel')->where('active', true)->first() ?? new Plan([
-            'slug' => 'essentiel',
-            'name' => 'Essentiel',
-            'monthly_price' => 10000,
-            'max_products' => 50,
-            'storage_mb' => 2048,
-            'ai_credits' => 80,
-            'photoroom_credits' => 25,
-            'full_generations' => 1,
-            'active' => true,
-        ]);
+    public function accountSubscription(): ?Subscription
+    {
+        return $this->owner?->accountSubscription();
+    }
+
+    public function subscriptionForCheckout(): ?Subscription
+    {
+        return $this->accountSubscription() ?? $this->subscription()->first();
     }
 
     public function maxProducts(): int
@@ -91,6 +89,18 @@ class Shop extends Model
         return max(0, $this->maxProducts() - $this->products()->count());
     }
 
+    public function createCatalogProduct(array $attributes): Product
+    {
+        return DB::transaction(function () use ($attributes): Product {
+            $shop = static::whereKey($this->id)->lockForUpdate()->firstOrFail();
+            if (! $shop->canAddProduct()) {
+                throw ValidationException::withMessages(['catalogue' => 'La limite de produits de votre formule est atteinte.']);
+            }
+
+            return $shop->products()->create($attributes);
+        });
+    }
+
     public function canUseFeature(string $feature): bool
     {
         return $this->currentPlan()->canAccessFeature($feature);
@@ -98,12 +108,20 @@ class Shop extends Model
 
     public function aiCreditsMonthly(): int
     {
-        return (int) $this->currentPlan()->ai_credits;
+        if ($subscription = $this->accountSubscription()) {
+            return (int) $subscription->plan->ai_credits;
+        }
+        if ($this->user_id && Subscription::whereIn('shop_id', self::where('user_id', $this->user_id)->select('id'))
+            ->where('status', '!=', 'pending')->exists()) {
+            return 0;
+        }
+
+        return (int) Plan::defaultEssentiel()->ai_credits;
     }
 
     public function aiCreditsUsedThisMonth(): int
     {
-        return max(0, (int) $this->ai_credits_used);
+        return max(0, app(AccountCreditService::class)->used($this, AccountCreditService::AI));
     }
 
     public function aiCreditsRemaining(): int
@@ -112,7 +130,9 @@ class Shop extends Model
             return 9999;
         }
 
-        return max(0, $this->aiCreditsMonthly() - (int) $this->ai_credits_used);
+        $limit = $this->aiCreditsMonthly();
+
+        return $limit > 0 ? max(0, $limit - app(AccountCreditService::class)->used($this, AccountCreditService::AI)) : 0;
     }
 
     public function hasEnoughAiCredits(int $cost = 1): bool
@@ -120,19 +140,25 @@ class Shop extends Model
         return $this->aiCreditsRemaining() >= max(1, $cost);
     }
 
-    public function consumeAiCredits(int $cost = 1): void
+    public function consumeAiCredits(int $cost = 1): int
     {
-        $this->safeIncrementCreditColumn('ai_credits_used', $cost);
+        return app(AccountCreditService::class)->consume($this, AccountCreditService::AI, $cost);
+    }
+
+    public function refundAiCredits(int $cost, int $version): void
+    {
+        app(AccountCreditService::class)->refund($this, AccountCreditService::AI, $cost, $version);
     }
 
     public function photoroomCreditsMonthly(): int
     {
-        return $this->currentPlan()->photoroomCreditsMonthly();
+        return $this->accountSubscription()?->plan->photoroomCreditsMonthly()
+            ?? ($this->owner?->isAdmin() ? Plan::defaultEssentiel()->photoroomCreditsMonthly() : 0);
     }
 
     public function photoroomCreditsUsedThisMonth(): int
     {
-        return max(0, (int) $this->photoroom_credits_used);
+        return max(0, app(AccountCreditService::class)->used($this, AccountCreditService::PHOTOROOM));
     }
 
     public function photoroomCreditsRemaining(): int
@@ -141,7 +167,9 @@ class Shop extends Model
             return 9999;
         }
 
-        return max(0, $this->photoroomCreditsMonthly() - (int) $this->photoroom_credits_used);
+        $limit = $this->photoroomCreditsMonthly();
+
+        return $limit > 0 ? max(0, $limit - app(AccountCreditService::class)->used($this, AccountCreditService::PHOTOROOM)) : 0;
     }
 
     public function hasEnoughPhotoroomCredits(int $cost = 1): bool
@@ -156,42 +184,65 @@ class Shop extends Model
         return $this->photoroomCreditsRemaining() >= max(1, $cost);
     }
 
-    public function consumePhotoroomCredits(int $cost = 1): void
+    public function consumePhotoroomCredits(int $cost = 1): int
     {
-        $this->safeIncrementCreditColumn('photoroom_credits_used', $cost);
+        return app(AccountCreditService::class)->consume($this, AccountCreditService::PHOTOROOM, $cost);
     }
 
-    /**
-     * Incrémente un compteur de crédits mensuels avec auto-guérison si une colonne de quota
-     * manque suite à une migration partiellement bloquée en base de production.
-     */
-    protected function safeIncrementCreditColumn(string $column, int $cost): void
+    public function refundPhotoroomCredits(int $cost, int $version): void
     {
-        $amount = max(1, $cost);
-        $limit = $column === 'photoroom_credits_used' ? $this->photoroomCreditsMonthly() : $this->aiCreditsMonthly();
-        $query = static::whereKey($this->id);
-        if (! $this->owner?->isAdmin()) {
-            $query->where($column, '<=', $limit - $amount);
+        app(AccountCreditService::class)->refund($this, AccountCreditService::PHOTOROOM, $cost, $version);
+    }
+
+    public function studioScenesMonthly(): int
+    {
+        return $this->accountSubscription()?->plan->studioScenesMonthly()
+            ?? ($this->owner?->isAdmin() ? Plan::defaultEssentiel()->studioScenesMonthly() : 0);
+    }
+
+    public function studioScenesUsedThisMonth(): int
+    {
+        return max(0, app(AccountCreditService::class)->used($this, AccountCreditService::STUDIO_SCENES));
+    }
+
+    public function studioScenesRemaining(): int
+    {
+        if ($this->owner?->isAdmin()) {
+            return 9999;
         }
-        if ($query->increment($column, $amount) !== 1) {
-            throw ValidationException::withMessages(['credits' => 'Crédits insuffisants pour cette opération.']);
-        }
-        $this->refresh();
+
+        $limit = $this->studioScenesMonthly();
+
+        return $limit > 0 ? max(0, $limit - $this->studioScenesUsedThisMonth()) : 0;
+    }
+
+    public function withStudioScene(\Closure $operation): mixed
+    {
+        return $this->withCreditReservation(AccountCreditService::STUDIO_SCENES, 1, $operation);
+    }
+
+    public function resetAccountCreditUsage(): void
+    {
+        app(AccountCreditService::class)->reset($this);
     }
 
     public function withAiCredits(int $cost, \Closure $operation): mixed
     {
-        $this->consumeAiCredits($cost);
+        return $this->withCreditReservation(AccountCreditService::AI, $cost, $operation);
+    }
+
+    private function withCreditReservation(string $counter, int $cost, \Closure $operation): mixed
+    {
+        $credits = app(AccountCreditService::class);
+        $version = $credits->consume($this, $counter, $cost);
         try {
             $result = $operation();
         } catch (\Throwable $exception) {
-            $this->decrement('ai_credits_used', max(1, $cost));
-            $this->refresh();
+            $credits->refund($this, $counter, $cost, $version);
             throw $exception;
         }
         if ($result === null || $result === false || (is_array($result) && ($result['status'] ?? '') === 'error')) {
-            $this->decrement('ai_credits_used', max(1, $cost));
-            $this->refresh();
+            $credits->refund($this, $counter, $cost, $version);
         }
 
         return $result;

@@ -17,12 +17,12 @@
         </div>
         <h1 style="font-size:2rem;margin:0 0 .5rem">Forfait {{ $plan->name }}</h1>
         <p style="color:var(--text-soft);font-size:1.05rem;max-width:540px;margin:0 auto 1.5rem">
-            Activez votre abonnement pour votre boutique <strong>{{ $shop->name }}</strong> et profitez de l'intégralité de nos fonctionnalités e-commerce et de l'IA.
+            Choisissez les fonctionnalités et quotas du forfait <strong>{{ $plan->name }}</strong> pour votre compte. La boutique sélectionnée est <strong>{{ $shop->name }}</strong>.
         </p>
 
         <div style="display:inline-flex;align-items:baseline;gap:.4rem;background:var(--bg-soft);padding:.8rem 1.6rem;border-radius:14px;border:1px solid var(--border)">
             <span style="font-size:2.4rem;font-weight:800;color:var(--text);letter-spacing:-1px">
-                {{ number_format($plan->monthly_price, 0, ',', ' ') }}
+                {{ number_format($monthlyPrice, 0, ',', ' ') }}
             </span>
             <span style="color:var(--text-soft);font-size:1rem;font-weight:600">FCFA / mois</span>
         </div>
@@ -31,57 +31,12 @@
     <!-- Détail des avantages inclus -->
     <div class="card" style="padding:1.8rem;margin-bottom:1.8rem;border-radius:16px">
         <h3 style="margin-top:0;font-size:1.15rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:.5rem">
-            <x-icon name="check-circle" :size="18" style="color:var(--ok)" /> Ce qui est inclus dans votre forfait {{ $plan->name }} :
+            <x-icon name="check-circle" :size="18" style="color:var(--ok)" /> Ce qui est inclus dans {{ $plan->name }}
         </h3>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem">
-            <div style="background:var(--bg-soft);padding:.9rem 1.1rem;border-radius:10px">
-                <div style="font-size:.82rem;color:var(--text-soft)">Boutiques autorisées</div>
-                <div style="font-weight:700;font-size:1.05rem;color:var(--brand-primary)">{{ $plan->maxShops() >= 999 ? 'Boutiques illimitées' : $plan->maxShops().' boutique'.($plan->maxShops() > 1 ? 's' : '').' incluse'.($plan->maxShops() > 1 ? 's' : '') }}</div>
-            </div>
-            <div style="background:var(--bg-soft);padding:.9rem 1.1rem;border-radius:10px">
-                <div style="font-size:.82rem;color:var(--text-soft)">Catalogue articles</div>
-                <div style="font-weight:700;font-size:1.05rem">Jusqu'à {{ number_format($plan->max_products, 0, ',', ' ') }} produits</div>
-            </div>
-            <div style="background:var(--bg-soft);padding:.9rem 1.1rem;border-radius:10px">
-                <div style="font-size:.82rem;color:var(--text-soft)">Stockage médias</div>
-                <div style="font-weight:700;font-size:1.05rem">{{ $plan->storage_mb >= 1024 ? ($plan->storage_mb / 1024).' Go' : $plan->storage_mb.' Mo' }} haute vitesse</div>
-            </div>
-            <div style="background:var(--bg-soft);padding:.9rem 1.1rem;border-radius:10px">
-                <div style="font-size:.82rem;color:var(--text-soft)">Intelligence Artificielle</div>
-                <div style="font-weight:700;font-size:1.05rem">{{ $plan->ai_credits }} crédits / mois</div>
-            </div>
-            <div style="grid-column:1 / -1;background:linear-gradient(135deg,#f8f5ff 0%,#eef6ff 100%);border:1px solid #d9d6fe;padding:.9rem 1.1rem;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap">
-                <div>
-                    <div style="font-size:.82rem;color:#5925dc;font-weight:600">Studio Photo IA Photoroom</div>
-                    <div style="font-weight:700;font-size:1.05rem;color:#101828">{{ $plan->photoroomCreditsMonthly() }} photos Photoroom HD / mois</div>
-                </div>
-                <div style="font-size:.82rem;font-weight:600;color:#5925dc;background:#fff;padding:.35rem .75rem;border-radius:999px;border:1px solid #d9d6fe">
-                    @if($plan->slug === 'essentiel')
-                        Détourage & Packshot blanc HD
-                    @elseif($plan->slug === 'pro')
-                        Studio Pro : Décors IA & ombres HD
-                    @else
-                        Photoroom Max : Showrooms luxe, lifestyle & podiums IA
-                    @endif
-                </div>
-            </div>
-        </div>
-
-        <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.6rem;font-size:.95rem">
-            <li style="display:flex;align-items:center;gap:.5rem">
-                <x-icon name="check" size="14" style="color:var(--ok)" /> <span>Boutique en ligne personnalisée avec sous-domaine</span>
-            </li>
-            <li style="display:flex;align-items:center;gap:.5rem">
-                <x-icon name="check" size="14" style="color:var(--ok)" /> <span>Intégration WhatsApp & Localisation GPS sur Google Maps</span>
-            </li>
-            <li style="display:flex;align-items:center;gap:.5rem">
-                <x-icon name="check" size="14" style="color:var(--ok)" /> <span>Passerelle de paiement GeniusPay (Mobile Money & Cartes)</span>
-            </li>
-            <li style="display:flex;align-items:center;gap:.5rem">
-                <x-icon name="check" size="14" style="color:var(--ok)" /> <span>0% de commission sur l'ensemble de vos ventes</span>
-            </li>
-        </ul>
+        @include('subscription.plan-allowances', ['plan' => $plan])
+        @include('subscription.plan-benefits', ['plan' => $plan])
+        @include('subscription.plan-conditions')
     </div>
 
     <!-- Passerelle de paiement GeniusPay -->
@@ -97,20 +52,25 @@
         </div>
 
         <p style="color:var(--text-soft);font-size:.95rem;line-height:1.55;margin-bottom:1.4rem">
-            Réglez instantanément avec vos comptes <strong>T-Money, Moov Money, MTN Mobile Money, Orange Money, Wave ou Carte bancaire (Visa / Mastercard)</strong>.
+            GeniusPay affiche les moyens de paiement et les éventuels frais disponibles pour votre transaction.
         </p>
 
         <!-- Conteneur SDK GeniusPay -->
-        <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;margin:1.8rem 0">
-            <div id="feexpay-btn-sub" style="width:100%;max-width:380px;min-height:50px;display:flex;align-items:center;justify-content:center">
-                <button type="button" id="feexpay-trigger-sub-btn" class="btn btn-primary" style="background:#FF2D6D;border-color:#FF2D6D;color:#fff;width:100%;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.4rem;border-radius:10px;box-shadow:0 6px 20px rgba(255,45,109,0.3)">
-                    <x-icon name="credit-card" :size="18" /> Payer {{ number_format($plan->monthly_price, 0, ',', ' ') }} FCFA via GeniusPay
-                </button>
+        @php $canLaunchOnlinePayment = filled(config('feexpay.shop_id')) && filled(config('feexpay.token')) && filled(config('feexpay.sdk_token')); @endphp
+        @if ($canLaunchOnlinePayment)
+            <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;margin:1.8rem 0">
+                <div id="feexpay-btn-sub" style="width:100%;max-width:380px;min-height:50px;display:flex;align-items:center;justify-content:center">
+                    <button type="button" id="feexpay-trigger-sub-btn" class="btn btn-primary" style="background:#FF2D6D;border-color:#FF2D6D;color:#fff;width:100%;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.4rem;border-radius:10px;box-shadow:0 6px 20px rgba(255,45,109,0.3)">
+                        <x-icon name="credit-card" :size="18" /> Payer {{ number_format($monthlyPrice, 0, ',', ' ') }} FCFA via GeniusPay
+                    </button>
+                </div>
+                <p id="feexpay-sub-payment-notice" role="status" hidden style="width:100%;max-width:440px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.85rem 1rem;font-size:.84rem;color:#92400e;line-height:1.45;text-align:center">
+                    GeniusPay n’a pas pu ouvrir le paiement. Vous pouvez réessayer plus tard depuis votre tableau de bord.
+                </p>
             </div>
-            <div id="feexpay-sub-kyc-notice" style="display:none;width:100%;max-width:440px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.85rem 1rem;font-size:.84rem;color:#92400e;line-height:1.45;text-align:center">
-                <x-icon name="info" :size="16" style="vertical-align:-2px;margin-right:4px" /> <strong>Validation KYC en cours chez GeniusPay :</strong> Pour activer les encaissements réels, soumettez vos informations dans votre tableau de bord GeniusPay. Vous pouvez déjà tester l'activation instantanée avec le bouton ci-dessous.
-            </div>
-        </div>
+        @else
+            <p class="plan-conditions">Le paiement en ligne de cet abonnement est actuellement indisponible.</p>
+        @endif
 
         <!-- Simulation pour démonstration et tests locaux Sandbox uniquement -->
         @if (app()->environment('local', 'testing') && config('feexpay.mode', 'SANDBOX') !== 'LIVE')
@@ -128,11 +88,12 @@
     </div>
 </div>
 
+@if ($canLaunchOnlinePayment)
 <script src="https://api-v2.feexpay.me/feexpay-javascript-sdk/index.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const triggerBtn = document.getElementById('feexpay-trigger-sub-btn');
-        const kycNotice = document.getElementById('feexpay-sub-kyc-notice');
+        const paymentNotice = document.getElementById('feexpay-sub-payment-notice');
         const feexShopId = @json(config('feexpay.shop_id'));
         const feexToken = @json(config('feexpay.sdk_token'));
 
@@ -140,14 +101,14 @@
             try {
                 FeexPayButton.init('feexpay-btn-sub', {
                     id: feexShopId,
-                    amount: {{ (int) $plan->monthly_price }},
+                    amount: {{ (int) $monthlyPrice }},
                     token: feexToken,
                     callback_url: '{{ route('geniuspay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}',
                     mode: '{{ config('feexpay.mode', 'SANDBOX') }}',
                     custom_id: 'SUB:{{ $subscription->id }}:{{ $plan->id }}',
-                    description: 'Abonnement {{ addslashes($plan->name) }} Zanika ({{ $plan->monthly_price }} FCFA)',
+                    description: @json('Abonnement '.$plan->name.' Zanika ('.$monthlyPrice.' FCFA)'),
                     currency: 'XOF',
-                    buttonText: 'Payer {{ number_format($plan->monthly_price, 0, ',', ' ') }} FCFA via GeniusPay',
+                    buttonText: 'Payer {{ number_format($monthlyPrice, 0, ',', ' ') }} FCFA via GeniusPay',
                     callback: function(response) {
                         if (response && (response.status === 'SUCCESSFUL' || response.status === 'SUCCESS')) {
                             window.location.href = '{{ route('geniuspay.callback') }}?custom_id=SUB:{{ $subscription->id }}:{{ $plan->id }}&reference=' + (response.reference || '');
@@ -163,7 +124,7 @@
             const errEl = document.querySelector('#feexpay-btn-sub .feexpay-error-message');
             if (errEl) {
                 errEl.style.display = 'none';
-                if (kycNotice) kycNotice.style.display = 'block';
+                if (paymentNotice) paymentNotice.hidden = false;
             }
         }, 1200);
 
@@ -172,10 +133,11 @@
                 if (typeof FeexPayButton !== 'undefined' && typeof FeexPayButton.showPaymentModal === 'function') {
                     FeexPayButton.showPaymentModal();
                 } else {
-                    if (kycNotice) kycNotice.style.display = 'block';
+                    if (paymentNotice) paymentNotice.hidden = false;
                 }
             });
         }
     });
 </script>
+@endif
 @endsection

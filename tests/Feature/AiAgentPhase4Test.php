@@ -10,7 +10,6 @@ use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\AiProactiveAdvisorService;
-use App\Services\Ai\AiShopMemoryService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -21,7 +20,9 @@ class AiAgentPhase4Test extends TestCase
     use RefreshDatabase;
 
     protected Shop $shop;
+
     protected User $user;
+
     protected Plan $plan;
 
     protected function setUp(): void
@@ -55,6 +56,7 @@ class AiAgentPhase4Test extends TestCase
             'currency' => 'FCFA',
             'is_active' => true,
         ]);
+        $this->shop->subscriptions()->create(['plan_id' => Plan::where('slug', 'pro')->firstOrFail()->id, 'status' => 'active']);
     }
 
     public function test_morning_briefing_command_dry_run_does_not_persist(): void
@@ -189,7 +191,7 @@ class AiAgentPhase4Test extends TestCase
             'status' => Product::STATUS_ACTIVE,
         ]);
 
-        $advisor = new AiProactiveAdvisorService();
+        $advisor = new AiProactiveAdvisorService;
         $formatted = $advisor->formatForPrompt($this->shop);
 
         $this->assertStringContainsString('Robe Édition Limitée', $formatted);

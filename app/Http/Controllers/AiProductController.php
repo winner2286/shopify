@@ -7,7 +7,9 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\Ai\AiVisionService;
+use App\Services\Ai\OpenAiProductSceneService;
 use App\Services\Ai\PhotoroomService;
+use App\Services\Ai\ProductSceneUnavailable;
 use App\Services\Ai\ProductStudioService;
 use App\Services\PublicMediaStorage;
 use App\Support\SearchHelper;
@@ -23,26 +25,24 @@ class AiProductController extends Controller
 {
     private function withVisualCredits(Shop $shop, \Closure $operation): ?array
     {
-        $reserved = $shop->hasEnoughAiCredits(1);
-        if ($reserved) {
-            $shop->consumeAiCredits(1);
+        $version = null;
+        if ($shop->hasEnoughAiCredits(1)) {
+            $version = $shop->consumeAiCredits(1);
         }
         try {
             $result = $operation();
         } catch (\Throwable $exception) {
-            if ($reserved) {
-                $shop->decrement('ai_credits_used');
-                $shop->refresh();
+            if ($version !== null) {
+                $shop->refundAiCredits(1, $version);
             }
             throw $exception;
         }
         $succeeded = ($result['status'] ?? '') === 'success';
         $photoroom = ($result['engine'] ?? '') === 'photoroom-ai';
-        if ($reserved && (! $succeeded || $photoroom)) {
-            $shop->decrement('ai_credits_used');
-            $shop->refresh();
+        if ($version !== null && (! $succeeded || $photoroom)) {
+            $shop->refundAiCredits(1, $version);
         }
-        if ($succeeded && ! $photoroom && ! $reserved) {
+        if ($succeeded && ! $photoroom && $version === null) {
             throw ValidationException::withMessages(['credits' => 'Crédits IA insuffisants pour le moteur local.']);
         }
 
@@ -193,10 +193,14 @@ class AiProductController extends Controller
             return response()->json(['error' => 'Boutique introuvable.'], 403);
         }
 
-        if (! $shop->hasEnoughAiCredits(12)) {
+        $style = $request->input('style') ?: 'retouch';
+        $usesOpenAiScene = $style === 'lifestyle' && config('services.product_studio.scene_provider', 'openai') === 'openai'
+            && app(OpenAiProductSceneService::class)->isConfigured();
+        if ($usesOpenAiScene && $shop->studioScenesRemaining() < 1) {
             return response()->json([
-                'status' => 'error',
-                'error' => 'Crédits IA insuffisants (12 crédits requis pour le studio packshot).',
+                'error' => 'Aucun décor IA disponible sur votre forfait pour le moment. Vous pouvez choisir un décor du studio.',
+                'preview_alternative' => 'scene_template',
+                'studio_scenes_remaining' => 0,
             ], 402);
         }
 
@@ -238,9 +242,10 @@ class AiProductController extends Controller
                     $options[$field] = $binary;
                 }
             }
-            $studioResult = $shop->withAiCredits(12, fn () => $studioService->previewProductPhoto(
-                $shop, $imageBinary, $request->input('style') ?: 'retouch', $categoryHint, (string) $request->input('scene_prompt', ''), $options
-            ));
+            $prepare = fn () => $studioService->previewProductPhoto(
+                $shop, $imageBinary, $style, $categoryHint, (string) $request->input('scene_prompt', ''), $options
+            );
+            $studioResult = $usesOpenAiScene ? $shop->withStudioScene($prepare) : $prepare();
 
             // Journalisation et débit des crédits isolés pour ne jamais bloquer la restitution des packshots
             try {
@@ -286,8 +291,18 @@ class AiProductController extends Controller
                 'variations' => $studioResult['variations'] ?? [],
                 'quality_audit' => $studioResult['quality_audit'] ?? null,
                 'duration_ms' => $studioResult['duration_ms'] ?? null,
+                'studio_scenes_remaining' => $shop->studioScenesRemaining(),
+                'photoroom_credits_remaining' => $shop->photoroomCreditsRemaining(),
                 'message' => 'Aperçu prêt. Comparez-le à votre photo avant de valider.',
             ]);
+        } catch (ProductSceneUnavailable $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => ['photo' => [$e->getMessage()]],
+                'preview_alternative' => 'scene_template',
+                'retry_after' => $e->retryAfter,
+                'studio_scenes_remaining' => $shop->studioScenesRemaining(),
+            ], 422);
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -302,7 +317,7 @@ class AiProductController extends Controller
     }
 
     /**
-     * Génère une variante de décor studio supplémentaire (+6 crédits).
+     * Génère une variante préparée localement à partir du détourage.
      */
     public function generateVariant(Request $request, ProductStudioService $studioService): JsonResponse
     {
@@ -319,13 +334,6 @@ class AiProductController extends Controller
         $shop = $user->shop ?? ($user->isAdmin() ? Shop::first() : null);
         if (! $shop) {
             return response()->json(['error' => 'Boutique introuvable.'], 403);
-        }
-
-        if (! $shop->hasEnoughAiCredits(6)) {
-            return response()->json([
-                'status' => 'error',
-                'error' => 'Crédits IA insuffisants (6 crédits requis pour générer une variante studio).',
-            ], 402);
         }
 
         $cutoutPngBinary = null;
@@ -362,9 +370,6 @@ class AiProductController extends Controller
             if ($binary) {
                 $extracted = $studioService->extractCutout($binary, $shop);
                 $cutoutPngBinary = $extracted['binary'] ?? null;
-                if (($extracted['method'] ?? '') === 'photoroom_v1_segment') {
-                    $shop->consumePhotoroomCredits(1);
-                }
             }
         }
 
@@ -372,7 +377,7 @@ class AiProductController extends Controller
             $style = $request->input('style', 'studio_dark');
             $category = $request->input('category', 'general');
 
-            $variation = $shop->withAiCredits(6, fn () => $studioService->renderVariant($shop, $cutoutPngBinary, $style, $category));
+            $variation = $studioService->renderVariant($shop, $cutoutPngBinary, $style, $category);
 
             if ($variation) {
                 AiGeneration::create([

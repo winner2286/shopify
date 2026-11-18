@@ -3,7 +3,6 @@
 namespace App\Services\Ai\Tools;
 
 use App\Models\Category;
-use App\Models\Product;
 use App\Models\Shop;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -201,8 +200,7 @@ class CreateProductTool implements AiToolInterface
         // 4. Création effective du produit
         $uniqueSlug = Str::slug($title).'-'.Str::random(5);
 
-        $product = Product::withoutGlobalScopes()->create([
-            'shop_id' => $shop->id,
+        $product = $shop->createCatalogProduct([
             'title' => $title,
             'slug' => $uniqueSlug,
             'description' => $description ?: null,

@@ -18,6 +18,7 @@ use App\Models\Shop;
 use App\Models\Subscription;
 use App\Models\SystemAlert;
 use App\Models\User;
+use App\Services\AccountCreditService;
 use App\Services\AdminNotificationService;
 use App\Support\SearchHelper;
 use Illuminate\Http\JsonResponse;
@@ -269,16 +270,17 @@ class PlatformAdminController extends Controller
         ]);
 
         $target = $validated['quota_target'] ?? 'ai';
-        $column = $target === 'photoroom' ? 'photoroom_credits_used' : 'ai_credits_used';
+        $column = $target === 'photoroom' ? AccountCreditService::PHOTOROOM : AccountCreditService::AI;
         $label = $target === 'photoroom' ? 'Photoroom Studio' : 'IA Système';
+        $credits = app(AccountCreditService::class);
 
         if ($validated['action_type'] === 'reset_used') {
-            $shop->update([$column => 0]);
-            $msg = "Les crédits {$label} utilisés de la boutique « {$shop->name} » ont été remis à zéro.";
+            $credits->reset($shop, $column);
+            $msg = "Les crédits {$label} utilisés du compte de « {$shop->name} » ont été remis à zéro.";
         } else {
             $bonus = max(1, (int) ($validated['bonus_credits'] ?? 10));
-            $shop->decrement($column, $bonus);
-            $msg = "{$bonus} crédits {$label} bonus ont été accordés à la boutique « {$shop->name} ».";
+            $credits->grant($shop, $column, $bonus);
+            $msg = "{$bonus} crédits {$label} bonus ont été accordés au compte de « {$shop->name} ».";
         }
 
         return back()->with('status', $msg);
@@ -312,19 +314,8 @@ class PlatformAdminController extends Controller
             'ai_credits' => 'required|integer|min:0',
             'photoroom_credits' => 'nullable|integer|min:0',
             'full_generations' => 'required|integer|min:1',
-            'features' => 'nullable|string',
+            'studio_scene_credits' => 'nullable|integer|min:0',
         ]);
-
-        $featuresArray = [];
-        if (! empty($validated['features'])) {
-            $lines = explode("\n", str_replace("\r", '', $validated['features']));
-            foreach ($lines as $line) {
-                $trimmed = trim($line);
-                if ($trimmed !== '') {
-                    $featuresArray[] = $trimmed;
-                }
-            }
-        }
 
         $plan->update([
             'name' => $validated['name'],
@@ -336,7 +327,7 @@ class PlatformAdminController extends Controller
             'photoroom_credits' => $validated['photoroom_credits'] ?? $plan->photoroom_credits ?? 15,
             'full_generations' => $validated['full_generations'],
             'active' => $request->has('active'),
-            'features' => $featuresArray,
+            'studio_scene_credits' => $validated['studio_scene_credits'] ?? $plan->studioScenesMonthly(),
         ]);
 
         return back()->with('status', "La formule « {$plan->name} » a été modifiée avec succès.");
@@ -431,15 +422,17 @@ class PlatformAdminController extends Controller
 
         $shops = $query->paginate(15)->withQueryString();
 
-        $totalActive = Subscription::where('status', 'active')->count();
-        $totalTrial = Subscription::where('status', 'trial')->count();
-        $totalExpired = Subscription::where('status', 'expired')->count();
+        $accountSubscriptions = Shop::query()->with('subscription.plan')->get()->groupBy('user_id')->map(function ($accountShops) {
+            $subscriptions = $accountShops->pluck('subscription')->filter();
 
-        // Chiffre d'Affaires Récurrent Mensuel (MRR) estimé
-        $mrrEstimated = 0;
-        foreach (Subscription::where('status', 'active')->with('plan')->get() as $sub) {
-            $mrrEstimated += (int) ($sub->plan?->monthly_price ?: 0);
-        }
+            return Subscription::governingSubscription($subscriptions)
+                ?? $subscriptions->sortByDesc('id')->first();
+        })->filter();
+        $activeAccounts = $accountSubscriptions->filter(fn (Subscription $subscription): bool => $subscription->status === 'active' && $subscription->grantsAccess());
+        $totalActive = $activeAccounts->count();
+        $totalTrial = $accountSubscriptions->filter(fn (Subscription $subscription): bool => $subscription->isTrial() && $subscription->grantsAccess())->count();
+        $totalExpired = $accountSubscriptions->filter(fn (Subscription $subscription): bool => $subscription->status === 'expired')->count();
+        $mrrEstimated = $activeAccounts->sum(fn (Subscription $subscription): int => $subscription->plan ? $subscription->monthlyPriceFor($subscription->plan) : 0);
 
         return view('admin.subscriptions', compact(
             'shops', 'plans', 'totalActive', 'totalTrial', 'totalExpired',
@@ -460,28 +453,33 @@ class PlatformAdminController extends Controller
             'extend_days' => 'nullable|integer|min:0|max:365',
         ]);
 
-        $sub = $shop->subscription;
-        if (! $sub) {
-            $sub = Subscription::create([
-                'shop_id' => $shop->id,
-                'plan_id' => $validated['plan_id'],
-                'status' => $validated['status'],
-                'starts_at' => now(),
-                'trial_ends_at' => now()->addDays(14),
-            ]);
-        } else {
-            $updateData = [
-                'plan_id' => $validated['plan_id'],
-                'status' => $validated['status'],
-            ];
-            if (! empty($validated['extend_days'])) {
-                $baseDate = ($sub->trial_ends_at && $sub->trial_ends_at->isFuture()) ? $sub->trial_ends_at : now();
-                $updateData['trial_ends_at'] = $baseDate->copy()->addDays((int) $validated['extend_days']);
-            }
-            $sub->update($updateData);
-        }
+        DB::transaction(function () use ($shop, $validated): void {
+            $shop->owner()->lockForUpdate()->firstOrFail();
+            $plan = Plan::findOrFail($validated['plan_id']);
+            $subscription = $shop->accountSubscription() ?? $shop->subscription()->first() ?? $shop->subscriptions()->make();
+            $status = $validated['status'];
+            $days = (int) ($validated['extend_days'] ?? 0);
+            $start = now();
+            $trialEnd = $subscription->trial_ends_at?->isFuture() ? $subscription->trial_ends_at : $start;
+            $paidEnd = $subscription->ends_at?->isFuture() ? $subscription->ends_at : $start;
+            $paidUntil = $days ? $paidEnd->copy()->addDays($days) : ($subscription->ends_at?->isFuture() ? $subscription->ends_at : null);
+            $subscription->fill([
+                'plan_id' => $plan->id,
+                'monthly_price' => match ($status) {
+                    'active' => $subscription->monthlyPriceFor($plan),
+                    'trial' => null,
+                    default => (int) $subscription->plan_id === $plan->id ? $subscription->monthly_price : null,
+                },
+                'status' => $status,
+                'starts_at' => $subscription->starts_at ?? $start,
+                'trial_ends_at' => $status === 'trial' ? $trialEnd->copy()->addDays($days ?: ($trialEnd === $start ? Plan::TRIAL_DAYS : 0)) : null,
+                'ends_at' => $status === 'active' ? $paidUntil : null,
+                'renews_at' => $status === 'active' ? $paidUntil : null,
+            ])->save();
+            $subscription->synchronizeAccount();
+        });
 
-        return back()->with('status', "L'abonnement de la boutique « {$shop->name} » a été mis à jour avec succès.");
+        return back()->with('status', 'L’abonnement du compte commerçant a été mis à jour.');
     }
 
     /**

@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'password', 'role', 'country', 'phone', 'locale', 'terms_accepted_at'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'credit_quota_state'])]
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
@@ -30,6 +30,7 @@ class User extends Authenticatable
             'terms_accepted_at' => 'datetime',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
+            'credit_quota_state' => 'array',
         ];
     }
 
@@ -86,21 +87,14 @@ class User extends Authenticatable
     /**
      * Forfait actif de l'utilisateur (via ses abonnements ou Essentiel par défaut).
      */
+    public function accountSubscription(): ?Subscription
+    {
+        return Subscription::governingSubscription($this->shops()->with('subscription.plan')->get()->pluck('subscription'));
+    }
+
     public function currentPlan(): Plan
     {
-        $activeSub = Subscription::whereIn('shop_id', $this->shops()->pluck('id'))
-            ->whereIn('status', ['active', 'trial', 'grace'])
-            ->with('plan')
-            ->latest('id')
-            ->get()
-            ->first(fn (Subscription $subscription) => $subscription->grantsAccess());
-
-        if ($activeSub && $activeSub->plan && $activeSub->plan->active) {
-            return $activeSub->plan;
-        }
-
-        return Plan::where('slug', 'essentiel')->first()
-            ?? new Plan(['slug' => 'essentiel', 'name' => 'Essentiel', 'max_shops' => 1]);
+        return $this->accountSubscription()?->plan ?? Plan::defaultEssentiel();
     }
 
     /**

@@ -1242,26 +1242,7 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   line-height: 1.5;
 }
 
-/* ---------- Grille Tarifaire & Basculeur de Facturation ---------- */
-.pricing-billing-switcher {
-  display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 3rem;
-}
-.billing-pill-container {
-  display: inline-flex; background: #15151c; border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: var(--radius-pill); padding: 4px;
-}
-.billing-toggle-btn {
-  border: none; background: transparent; padding: .55rem 1.4rem; border-radius: var(--radius-pill);
-  font-weight: 600; font-size: .92rem; color: #cbd5e1 !important; cursor: pointer; transition: all .2s;
-}
-.billing-toggle-btn.active {
-  background: linear-gradient(135deg, #a81c34, #731022) !important; color: #ffffff !important; box-shadow: var(--shadow-sm);
-}
-.billing-discount-badge {
-  background: rgba(158, 27, 50, 0.3); color: #fda4af; border-radius: var(--radius-pill);
-  font-size: .78rem; font-weight: 700; padding: .25rem .75rem; border: 1px solid rgba(158, 27, 50, 0.45);
-}
-
+/* ---------- Formules mensuelles ---------- */
 .pricing-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; align-items: stretch;
 }
@@ -1285,19 +1266,30 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   border-radius: 999px; font-size: .78rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: .05em; box-shadow: 0 2px 8px rgba(158, 27, 50, 0.4);
 }
-.plan-name { font-size: 1.45rem; font-weight: 700; margin-bottom: .4rem; color: #ffffff !important; }
+.plan-name { font-size: 1.45rem; font-weight: 700; margin: 0 0 .4rem; color: #ffffff !important; }
 .plan-desc { font-size: .92rem; color: #cbd5e1 !important; margin-bottom: 1.5rem; min-height: 40px; }
 .plan-price-wrap {
   margin-bottom: 1.8rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);
 }
 .plan-price { font-size: 2.4rem; font-weight: 800; color: #ffffff !important; letter-spacing: -.03em; }
 .plan-period { font-size: .95rem; color: #94a3b8 !important; font-weight: 500; }
-.plan-features { list-style: none; padding: 0; margin: 0 0 2rem; flex: 1; }
-.plan-features li {
-  display: flex; align-items: flex-start; gap: .75rem;
-  font-size: .95rem; color: #f1f5f9 !important; margin-bottom: .9rem;
-}
-.plan-features li svg { color: #f43f5e; flex-shrink: 0; margin-top: 2px; }
+.plan-allowances { display: grid; gap: .4rem; margin: 0 0 1.2rem; }
+.plan-allowances > div { display: flex; justify-content: space-between; align-items: baseline; gap: .55rem; }
+.plan-allowances dt { font-size: .86rem; color: var(--text-soft); }
+.plan-allowances dd { margin: 0; font-size: .9rem; font-weight: 700; white-space: nowrap; }
+.plan-benefits { list-style: none; padding: 0; margin: 0 0 1.25rem; }
+.plan-benefits li { display: flex; align-items: flex-start; gap: .55rem; margin-bottom: .55rem; font-size: .9rem; }
+.plan-benefits li svg { color: var(--brand-primary); flex-shrink: 0; margin-top: 2px; }
+.plan-shopify .plan-benefits { flex: 1; }
+.plan-shopify .plan-allowances { padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.plan-conditions { margin: 0; font-size: .83rem; line-height: 1.55; color: var(--text-soft); }
+#tarifs .plan-conditions { max-width: 780px; margin: 1.5rem auto 0; text-align: center; }
+.account-plan { margin-bottom: 1.5rem; }
+.account-plan .plan-allowances { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: .75rem; margin: 1rem 0; }
+.account-plan .plan-allowances > div { display: block; padding: .6rem .75rem; border-radius: .6rem; background: var(--bg-soft); }
+.account-plan .plan-allowances dd { margin-top: .25rem; }
+.account-plan .plan-benefits { margin: .75rem 0; }
+.account-plan details summary { cursor: pointer; font-weight: 650; }
 
 .plan-shopify .btn {
   width: 100%;
@@ -1316,11 +1308,6 @@ p { margin: 0 0 1.2em; color: var(--text-soft); }
   border-radius: var(--radius-pill);
   word-break: normal;
   overflow-wrap: break-word;
-}
-.plan-shopify .btn .plan-btn-price {
-  font-weight: 700;
-  opacity: 0.95;
-  white-space: nowrap;
 }
 
 /* ---------- FAQ Accordion Fluide ---------- */
@@ -4567,18 +4554,6 @@ button.bottom-nav-item {
 }
 
 /* Grille Tarifaire */
-[data-theme='light'] .billing-pill-container {
-  background: #f1f5f9;
-  border-color: rgba(15, 23, 42, 0.08);
-}
-[data-theme='light'] .billing-toggle-btn {
-  color: #64748b;
-}
-[data-theme='light'] .billing-toggle-btn.active {
-  background: #ffffff;
-  color: #0b0d12 !important;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
-}
 [data-theme='light'] .plan-shopify {
   background: #ffffff;
   border-color: rgba(15, 23, 42, 0.1);
@@ -4595,12 +4570,8 @@ button.bottom-nav-item {
 [data-theme='light'] .plan-desc {
   color: #64748b !important;
 }
-[data-theme='light'] .plan-features li {
-  color: #1e293b !important;
-}
-[data-theme='light'] .plan-features li svg {
-  color: var(--brand-1);
-}
+[data-theme='light'] .plan-shopify .plan-benefits li,
+[data-theme='light'] .plan-shopify .plan-allowances dd { color: #1e293b; }
 
 /* FAQ */
 [data-theme='light'] .faq-item {

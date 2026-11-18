@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Plan;
 use App\Models\User;
+use App\Services\AdminNotificationService;
 use App\Services\VerificationCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class VerificationController extends Controller
 {
@@ -41,13 +45,32 @@ class VerificationController extends Controller
             return back()->withErrors(['code' => 'Code incorrect ou expiré. Vous pouvez demander un nouveau code.']);
         }
 
-        $user->forceFill(['email_verified_at' => now()])->save();
+        DB::transaction(function () use ($user): void {
+            $account = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if ($account->isVerified()) {
+                return;
+            }
+
+            $start = now();
+            $account->forceFill(['email_verified_at' => $start])->save();
+            $shop = $account->shops()->oldest('id')->first();
+            $plan = Plan::where('slug', 'essentiel')->where('active', true)->first();
+            if ($shop && $plan && ! $shop->subscriptions()->exists()) {
+                $shop->subscriptions()->create([
+                    'plan_id' => $plan->id,
+                    'status' => 'trial',
+                    'starts_at' => $start,
+                    'trial_ends_at' => $start->copy()->addDays(Plan::TRIAL_DAYS),
+                ]);
+            }
+        });
+        $user->refresh();
 
         // Notification immédiate du Super-Admin (Mobile Push + Email + Audit Alert)
         try {
-            app(\App\Services\AdminNotificationService::class)->notifyMerchantRegistered($user, $user->shop);
+            app(AdminNotificationService::class)->notifyMerchantRegistered($user, $user->shop);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning("[VerificationController] Notification admin échouée : " . $e->getMessage());
+            Log::warning('[VerificationController] Notification admin échouée : '.$e->getMessage());
         }
 
         $request->session()->forget('pending_user_id');

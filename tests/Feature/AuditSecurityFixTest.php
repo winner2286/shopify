@@ -274,6 +274,7 @@ class AuditSecurityFixTest extends TestCase
     public function test_analytics_revenue_and_average_use_paid_non_cancelled_orders(): void
     {
         [$user, $shop] = $this->fixture();
+        $shop->subscriptions()->create(['plan_id' => Plan::where('slug', 'pro')->firstOrFail()->id, 'status' => 'active']);
         $this->createOrder($shop, 'pending', 'pending', 100);
         $this->createOrder($shop, 'cancelled', 'paid', 300);
         $this->createOrder($shop, 'delivered', 'paid', 200);

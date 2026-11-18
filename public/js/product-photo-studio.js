@@ -4,6 +4,7 @@
     if (!root) return;
     const $ = id => document.getElementById('photo-studio-' + id);
     const dialog = root.querySelector('.photo-studio-dialog');
+    const chooseDecor = $('choose-decor');
     const getFiles = () => Array.from((window.getSelectedEditFiles || window.getSelectedFiles)?.() || document.getElementById('master-photos-input')?.files || []);
     const setFiles = files => {
         const setter = window.setSelectedEditFiles || window.setSelectedFiles;
@@ -25,15 +26,20 @@
     let previewCutout;
     const message = (text, error = false) => { $('status').textContent = text; $('status').dataset.error = String(error); };
     const style = () => root.querySelector('input[name="photo_studio_style"]:checked').value;
+    const noSceneQuota = () => style() === 'lifestyle' && Number(root.dataset.scenesRemaining) < 1;
+    const generationLabel = label => style() === 'lifestyle'
+        ? label + (root.dataset.sceneProvider === 'openai' ? ' · 1 décor IA' : ' · 1 crédit Photoroom')
+        : label;
     const objectUrl = file => {const url = URL.createObjectURL(file); objectUrls.push(url); return url;};
     function resetPreview() {
         preview = null; version++; $('apply').disabled = true;
         $('apply').hidden = true;
         $('generate').hidden = false;
+        chooseDecor.hidden = true;
         $('generate').classList.replace('btn-ghost', 'btn-primary');
         $('apply').textContent = 'Utiliser ce rendu';
-        $('generate').disabled = busy;
-        $('generate').textContent = 'Préparer l’aperçu · 12 crédits IA';
+        $('generate').disabled = busy || noSceneQuota();
+        $('generate').textContent = generationLabel('Préparer l’aperçu');
         $('result').hidden = true;
         $('result').removeAttribute('src');
         $('result-empty').hidden = false;
@@ -93,6 +99,8 @@
     }
     function lock(value) {
         busy = value;
+        const offerDecor = !chooseDecor.hidden;
+        const prioritizeGenerate = !preview && !offerDecor;
         $('source-select').disabled = value;
         $('styles').disabled = value;
         $('scene').disabled = value;
@@ -102,16 +110,22 @@
         $('crop-fields').disabled = value;
         if ($('presentation')) $('presentation').disabled = value;
         $('mask-tools').disabled = value;
-        $('generate').disabled = value || Boolean(preview && style() !== 'lifestyle');
+        $('generate').disabled = value || noSceneQuota() || Boolean(preview && style() !== 'lifestyle');
         $('generate').hidden = Boolean(preview && style() !== 'lifestyle');
-        $('generate').classList.toggle('btn-primary', !preview);
-        $('generate').classList.toggle('btn-ghost', Boolean(preview));
+        $('generate').classList.toggle('btn-primary', prioritizeGenerate);
+        $('generate').classList.toggle('btn-ghost', !prioritizeGenerate);
+        chooseDecor.disabled = value;
+        chooseDecor.classList.toggle('btn-primary', !preview);
+        chooseDecor.classList.toggle('btn-ghost', Boolean(preview));
         $('close').disabled = value;
         $('original').disabled = value;
         $('apply').disabled = value || !preview;
         $('apply').hidden = !preview;
         $('apply').textContent = 'Utiliser ce rendu';
-        $('generate').textContent = value ? 'Préparation en cours…' : preview && style() === 'lifestyle' ? 'Proposer un autre décor · 12 crédits IA' : 'Préparer l’aperçu · 12 crédits IA';
+        $('generate').textContent = value ? 'Préparation en cours…' : generationLabel(
+            offerDecor ? 'Réessayer la mise en scène IA'
+                : preview && style() === 'lifestyle' ? 'Proposer un autre décor' : 'Préparer l’aperçu'
+        );
         root.setAttribute('aria-busy', String(value));
     }
     $('source-select').onchange = chooseSource;
@@ -144,6 +158,14 @@
         resetPreview();
     }
     root.querySelectorAll('input[name="photo_studio_style"]').forEach(input => input.onchange = updateControls);
+    chooseDecor.onclick = () => {
+        if (busy || chooseDecor.hidden) return;
+        root.querySelector('input[name="photo_studio_style"][value="scene_template"]').checked = true;
+        updateControls();
+        $('decor').scrollIntoView({block: 'center'});
+        $('decor').focus({preventScroll: true});
+        message('Choisissez un décor, puis préparez l’aperçu.');
+    };
     $('decor').onchange = () => {sceneDefaults(); resetPreview();};
     $('placement-reset').onclick = () => {sceneDefaults(); resetPreview();};
     if ($('presentation')) $('presentation').onchange = () => {sceneDefaults(); resetPreview();};
@@ -242,13 +264,14 @@
     updateControls();
     $('scene').oninput = resetPreview;
     $('generate').onclick = async () => {
-        if (busy || !source || (preview && style() !== 'lifestyle')) return;
+        if (busy || !source || noSceneQuota() || (preview && style() !== 'lifestyle')) return;
         if (style() === 'lifestyle' && root.dataset.sceneProvider !== 'openai' && !$('scene').value.trim()) return message('Décrivez le décor souhaité avant de préparer l’aperçu.', true);
         const background = $('background').files[0];
         if (style() === 'custom_background' && !background) return message('Choisissez une photo de décor à importer.', true);
         if (style() === 'custom_background' && background.size > 5 * 1024 * 1024) return message('Le décor doit faire moins de 5 Mo.', true);
         const requestVersion = ++version;
         const previousPreview = preview;
+        let offerDecor = !chooseDecor.hidden;
         lock(true);
         message(style() === 'lifestyle' ? 'Préparation du décor et intégration du produit…' : 'Préparation du rendu…');
         try {
@@ -283,6 +306,12 @@
             }
             const response = await fetch(root.dataset.url, {method:'POST', headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}, body});
             const data = await response.json().catch(() => ({}));
+            const remaining = root.dataset.sceneProvider === 'openai' ? data.studio_scenes_remaining : data.photoroom_credits_remaining;
+            if (Number.isInteger(remaining)) {
+                root.dataset.scenesRemaining = String(remaining);
+                if ($('scenes-remaining')) $('scenes-remaining').textContent = remaining;
+            }
+            offerDecor = data.preview_alternative === 'scene_template';
             if (!response.ok || data.status !== 'success') throw new Error(Object.values(data.errors || {}).flat()[0] || data.error || data.message || 'La préparation a échoué. Votre photo reste inchangée.');
             if (requestVersion !== version || root.hidden) return;
             const rendered = data.variations?.find(item => !item.is_source);
@@ -291,6 +320,7 @@
             await $('result').decode();
             if (requestVersion !== version || root.hidden) return;
             preview = rendered;
+            chooseDecor.hidden = true;
             if (data.cutout_url && data.crop_frame) {
                 previewCutout = {url: data.cutout_url, frame: data.crop_frame};
                 $('mask-from-preview').hidden = false;
@@ -306,6 +336,7 @@
             if (requestVersion === version && !root.hidden) {
                 preview = previousPreview;
                 if (preview) $('result').src = preview.url;
+                chooseDecor.hidden = !offerDecor;
                 message(error.message, true);
             }
         } finally {lock(false);}

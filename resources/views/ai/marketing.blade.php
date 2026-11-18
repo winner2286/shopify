@@ -18,12 +18,16 @@
         </div>
 
         <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
-            <a href="{{ route('ai.automations') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.4rem">
-                <x-icon name="zap" size="16" /> Automatisations IA
-            </a>
-            <a href="{{ route('ai.studio') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.4rem">
-                <x-icon name="image" size="16" /> Studio Visuel IA
-            </a>
+            @if (auth()->user()->isAdmin() || $shop->canUseFeature('stock_alerts'))
+                <a href="{{ route('ai.automations') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.4rem">
+                    <x-icon name="zap" size="16" /> Automatisations IA
+                </a>
+            @endif
+            @if (auth()->user()->isAdmin() || $shop->canUseFeature('ai_visuals'))
+                <a href="{{ route('ai.studio') }}" class="btn btn-ghost btn-sm" style="display:inline-flex;align-items:center;gap:.4rem">
+                    <x-icon name="image" size="16" /> Studio visuel IA
+                </a>
+            @endif
             <a href="{{ route('ai.assistant') }}" class="btn btn-primary btn-sm" style="display:inline-flex;align-items:center;gap:.4rem">
                 <x-icon name="message-square" size="16" /> Copilote IA
             </a>

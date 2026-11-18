@@ -22,6 +22,7 @@ class AiGenerationService
         $startTime = microtime(true);
 
         return DB::transaction(function () use ($shop, $data, $uploadedPhotoPaths, $startTime) {
+            $shop->owner()->lockForUpdate()->first();
             $lockedShop = Shop::whereKey($shop->id)->lockForUpdate()->firstOrFail();
             $shop->setRawAttributes($lockedShop->getAttributes(), true);
             $storedData = $shop->onboarding_data ?? [];
@@ -41,7 +42,7 @@ class AiGenerationService
             if ($used >= (int) $shop->currentPlan()->full_generations) {
                 throw ValidationException::withMessages(['generation' => 'Le quota de générations complètes de votre forfait est atteint.']);
             }
-            if (count($uploadedPhotoPaths) > 20 || $shop->products()->count() + (empty($uploadedPhotoPaths) ? 2 : count($uploadedPhotoPaths)) > $shop->maxProducts()) {
+            if (count($uploadedPhotoPaths) > 20 || $shop->products()->count() + (empty($uploadedPhotoPaths) ? 3 : count($uploadedPhotoPaths)) > $shop->maxProducts()) {
                 throw ValidationException::withMessages(['photos' => 'La génération dépasserait les limites de photos ou de produits de votre forfait.']);
             }
             // Étape 1 : Profil de marque

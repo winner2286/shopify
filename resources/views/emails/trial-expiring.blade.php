@@ -39,7 +39,7 @@
                 </p>
                 
                 <p style="margin: 0 0 20px; font-size: 15px; color: #4b5563; line-height: 1.6;">
-                    Votre période d'essai gratuit de 14 jours sur Zanika arrive à échéance le <strong>{{ $subscription->trial_ends_at ? $subscription->trial_ends_at->format('d/m/Y') : 'très bientôt' }}</strong>.
+                    Votre essai sur Zanika arrive à échéance le <strong>{{ $subscription->trial_ends_at ? $subscription->trial_ends_at->format('d/m/Y') : 'très bientôt' }}</strong>.
                 </p>
 
                 <!-- Récapitulatif de la boutique -->
@@ -66,46 +66,39 @@
                 </div>
 
                 <p style="margin: 0 0 20px; font-size: 15px; color: #374151; line-height: 1.6;">
-                    Pour <strong>continuer à recevoir vos commandes clients sur WhatsApp</strong>, encaisser vos paiements par T-Money ou Moov Money et utiliser les outils d'IA sans interruption, choisissez dès aujourd'hui votre formule adaptée :
+                    Pour continuer à recevoir des commandes et accéder aux fonctionnalités de votre formule, choisissez un abonnement mensuel.
                 </p>
 
                 <!-- Grille des formules -->
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
                     <tr>
-                        <td style="padding: 10px; background: #fdf2f4; border: 1px solid #fecdd3; border-radius: 10px; text-align: center; width: 33%;">
-                            <div style="font-size: 12px; font-weight: 700; color: #9f1239;">ESSENTIEL</div>
-                            <div style="font-size: 16px; font-weight: 900; color: #111827; margin: 4px 0;">10 000 F</div>
-                            <div style="font-size: 11px; color: #4b5563;">Jusqu'à 50 articles</div>
-                        </td>
-                        <td style="width: 10px;"></td>
-                        <td style="padding: 10px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 10px; text-align: center; width: 33%; position: relative;">
-                            <div style="font-size: 12px; font-weight: 800; color: #15803d;">PRO</div>
-                            <div style="font-size: 16px; font-weight: 900; color: #111827; margin: 4px 0;">15 000 F</div>
-                            <div style="font-size: 11px; color: #15803d; font-weight: 600;">Recommandé</div>
-                        </td>
-                        <td style="width: 10px;"></td>
-                        <td style="padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; text-align: center; width: 33%;">
-                            <div style="font-size: 12px; font-weight: 700; color: #475569;">PREMIUM</div>
-                            <div style="font-size: 16px; font-weight: 900; color: #111827; margin: 4px 0;">30 000 F</div>
-                            <div style="font-size: 11px; color: #4b5563;">Multi-accès & VIP</div>
-                        </td>
+                        @foreach ($plans as $plan)
+                            <td style="padding: 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 12px; font-weight: 700; color: #475569;">{{ $plan->name }}</div>
+                                <div style="font-size: 16px; font-weight: 900; color: #111827; margin: 4px 0;">{{ number_format($subscription->monthlyPriceFor($plan), 0, ',', ' ') }} FCFA</div>
+                                <div style="font-size: 11px; color: #4b5563;">{{ $plan->maxShops() }} boutique{{ $plan->maxShops() > 1 ? 's' : '' }}</div>
+                            </td>
+                            @unless ($loop->last)
+                                <td style="width: 10px;"></td>
+                            @endunless
+                        @endforeach
                     </tr>
                 </table>
 
                 <!-- Bouton d'action principal -->
                 <div style="text-align: center; margin: 30px 0 24px;">
-                    <a href="{{ route('shop.settings') }}" style="background: linear-gradient(135deg, #FF2D6D 0%, #E11D48 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 700; padding: 14px 28px; border-radius: 999px; display: inline-block; box-shadow: 0 4px 14px rgba(255, 45, 109, 0.4);">
-                        Renouveler et activer ma formule maintenant →
+                    <a href="{{ route('home', ['landing' => 1]) }}#tarifs" style="background: linear-gradient(135deg, #FF2D6D 0%, #E11D48 100%); color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 700; padding: 14px 28px; border-radius: 999px; display: inline-block; box-shadow: 0 4px 14px rgba(255, 45, 109, 0.4);">
+                        Voir les formules
                     </a>
                 </div>
 
                 <!-- Info paiement local & réassurance -->
                 <div style="border-top: 1px solid #e5e7eb; padding-top: 18px; text-align: center;">
                     <div style="font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 6px;">
-                        Règlements simples et instantanés :
+                        Moyens de paiement
                     </div>
                     <div style="font-size: 13px; color: #6b7280;">
-                        T-Money (Togo) • Moov Money • Cartes Bancaires Visa & Mastercard
+                        Les options disponibles sont indiquées au paiement.
                     </div>
                     <p style="margin: 14px 0 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">
                         <strong>Vos données sont protégées :</strong> Tous vos produits, photos et avis clients restent sauvegardés. Si vous ne renouvelez pas tout de suite, votre boutique sera simplement mise en pause temporaire sans aucune suppression.
@@ -118,7 +111,7 @@
         <tr>
             <td align="center" style="padding-top: 24px;">
                 <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">
-                    Besoin d'aide ou d'un conseil ? Répondez simplement à cet email ou contactez l'équipe d'assistance Zanika sur WhatsApp au <strong>+228 90 00 00 00</strong>.<br>
+                    Besoin d’aide ? Répondez à cet email.<br>
                     © {{ date('Y') }} Zanika. Tous droits réservés.
                 </p>
             </td>

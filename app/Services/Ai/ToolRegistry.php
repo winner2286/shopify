@@ -33,6 +33,17 @@ use Illuminate\Support\Facades\Log;
 
 class ToolRegistry
 {
+    private const PLAN_FEATURES = [
+        'compare_sales_periods' => 'advanced_stats',
+        'get_business_recommendations' => 'advanced_stats',
+        'get_sales_analytics' => 'advanced_stats',
+        'get_underperforming_products' => 'advanced_stats',
+        'get_weekly_sales_report' => 'advanced_stats',
+        'get_inventory_alerts' => 'stock_alerts',
+        'generate_video_ad_script' => 'ai_visuals',
+        'manage_discount_codes' => 'promo_codes',
+    ];
+
     /**
      * @var array<string, AiToolInterface>
      */
@@ -95,10 +106,13 @@ class ToolRegistry
     /**
      * Renvoie la liste des schémas JSON pour la déclaration auprès du modèle (OpenAI / OpenRouter / Gemini).
      */
-    public function getToolsSchema(): array
+    public function getToolsSchema(?Shop $shop = null, ?User $user = null): array
     {
         $schemas = [];
         foreach ($this->tools as $tool) {
+            if ($shop && ! $this->canUseTool($tool->name(), $shop, $user)) {
+                continue;
+            }
             $params = $tool->parametersSchema();
             $params['properties'] = (array) ($params['properties'] ?? []);
             unset($params['properties']['confirmed_by_user'], $params['properties']['action_token']);
@@ -140,6 +154,10 @@ class ToolRegistry
             ];
         }
 
+        if (! $this->canUseTool($name, $shop, $user)) {
+            return ['status' => 'error', 'error' => 'Cette fonctionnalité est incluse dans les formules Pro et Premium.'];
+        }
+
         try {
             return $tool->execute($shop, $arguments, $user);
         } catch (\Throwable $e) {
@@ -151,5 +169,12 @@ class ToolRegistry
                 'error' => "L’outil {$name} n’a pas pu terminer cette opération. Réessayez ou contactez le support.",
             ];
         }
+    }
+
+    private function canUseTool(string $name, Shop $shop, ?User $user): bool
+    {
+        $feature = self::PLAN_FEATURES[$name] ?? null;
+
+        return $feature === null || $user?->isAdmin() || $shop->owner?->isAdmin() || $shop->canUseFeature($feature);
     }
 }

@@ -188,8 +188,7 @@ class CreateProductFromPhotoTool implements AiToolInterface
         $baseSlug = Str::slug($actionParams['title']);
         $uniqueSlug = $baseSlug.'-'.Str::lower(Str::random(5));
 
-        $product = Product::withoutGlobalScopes()->create([
-            'shop_id' => $shop->id,
+        $product = $shop->createCatalogProduct([
             'title' => $actionParams['title'],
             'slug' => $uniqueSlug,
             'description' => $actionParams['description'],

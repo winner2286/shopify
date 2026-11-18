@@ -510,7 +510,7 @@ PROMPT;
 
         if ($canUseGenerativeV2) {
             $editParams = $photoroom->mapStyleToEditParams($style, $photoroomSize);
-            $shop?->consumePhotoroomCredits(1);
+            $version = $shop?->consumePhotoroomCredits(1);
             $edited = $photoroom->editProductImage($sourceImageBinary, $editParams);
             if ($edited !== null) {
 
@@ -522,9 +522,8 @@ PROMPT;
                     'ext' => 'png',
                 ];
             }
-            if ($shop !== null) {
-                $shop->decrement('photoroom_credits_used');
-                $shop->refresh();
+            if ($shop !== null && $version !== null) {
+                $shop->refundPhotoroomCredits(1, $version);
             }
         }
 

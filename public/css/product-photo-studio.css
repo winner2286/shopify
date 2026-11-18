@@ -95,6 +95,9 @@ body.photo-studio-open {
 #photo-studio-status:empty {
     display: none;
 }
+#photo-studio-status {
+    overflow-wrap: anywhere;
+}
 .photo-studio-actions {
     display: flex;
     justify-content: flex-end;

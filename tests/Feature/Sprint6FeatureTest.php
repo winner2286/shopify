@@ -6,6 +6,7 @@ use App\Models\Advertisement;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
@@ -37,7 +38,7 @@ class Sprint6FeatureTest extends TestCase
         ]);
     }
 
-    private function createShop(User $user, string $subdomain = 'sprint6-shop'): Shop
+    private function createShop(User $user, string $subdomain = 'sprint6-shop', string $plan = 'pro'): Shop
     {
         $shop = Shop::create([
             'user_id' => $user->id,
@@ -55,6 +56,7 @@ class Sprint6FeatureTest extends TestCase
         ]);
 
         $shop->ensureDefaultShippingZones();
+        $shop->subscriptions()->create(['plan_id' => Plan::where('slug', $plan)->firstOrFail()->id, 'status' => 'active']);
 
         return $shop;
     }
@@ -184,7 +186,7 @@ class Sprint6FeatureTest extends TestCase
     public function test_analytics_dashboard_displays_correct_metrics_and_csv_export(): void
     {
         $merchant = $this->createMerchant();
-        $shop = $this->createShop($merchant);
+        $shop = $this->createShop($merchant, plan: 'premium');
         $product = $this->createProduct($shop, 'Sac Cuir Sahel', 25000);
 
         // Create an order

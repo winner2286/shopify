@@ -1,12 +1,14 @@
 @php
     $photoShop = auth()->user()?->shop;
     $openAiScenes = config('services.product_studio.scene_provider', 'openai') === 'openai';
-    $sceneAvailable = $photoShop && ($openAiScenes
+    $sceneProviderAvailable = $photoShop && ($openAiScenes
         ? app(\App\Services\Ai\OpenAiProductSceneService::class)->isConfigured()
         : $photoShop->canUsePhotoroomGenerativeScene() && app(\App\Services\Ai\PhotoroomService::class)->isConfigured());
+    $sceneRemaining = $openAiScenes ? ($photoShop?->studioScenesRemaining() ?? 0) : ($photoShop?->photoroomCreditsRemaining() ?? 0);
+    $sceneAvailable = $sceneProviderAvailable && $sceneRemaining > 0;
 @endphp
 <link rel="stylesheet" href="{{ asset('css/product-photo-studio.css') }}?v={{ filemtime(public_path('css/product-photo-studio.css')) }}">
-<div id="product-photo-studio" class="photo-studio-backdrop" hidden data-url="{{ route('ai.products.verify_quality') }}" data-scene-available="{{ $sceneAvailable ? 'true' : 'false' }}" data-scene-provider="{{ $openAiScenes ? 'openai' : 'photoroom' }}">
+<div id="product-photo-studio" class="photo-studio-backdrop" hidden data-url="{{ route('ai.products.verify_quality') }}" data-scene-available="{{ $sceneAvailable ? 'true' : 'false' }}" data-scene-provider="{{ $openAiScenes ? 'openai' : 'photoroom' }}" data-scenes-remaining="{{ $sceneRemaining }}">
     <section class="photo-studio-dialog" role="dialog" aria-modal="true" aria-labelledby="photo-studio-title" tabindex="-1">
         <header class="photo-studio-head"><div><h2 id="photo-studio-title">Studio photo produit</h2><p>Recadrez votre photo et comparez le rendu avant de l’utiliser.</p></div><button type="button" class="btn btn-ghost" id="photo-studio-close" aria-label="Fermer le studio">✕</button></header>
         <div class="photo-studio-layout">
@@ -47,15 +49,20 @@
                     @endif
                     <label for="photo-studio-scene">Le décor, la lumière, l’ambiance</label><textarea id="photo-studio-scene" class="input" maxlength="500" rows="3" placeholder="Ex. Une table en pierre claire et une lumière douce de fenêtre."></textarea>@if($openAiScenes)<p class="photo-studio-note">Laissez vide pour proposer un décor selon votre article. Le moteur de génération reçoit une référence cadrée du produit pour créer le décor.</p>@endif
                 </div>
-                @unless($sceneAvailable)<p class="photo-studio-note">{{ $openAiScenes ? 'La génération de décors sera disponible une fois l’accès OpenAI activé par l’administrateur.' : 'Décors IA disponibles avec Photoroom configuré et une formule compatible.' }}</p>@endunless
-                <p class="photo-studio-note">Chaque préparation : 12 crédits IA de la plateforme. Le détourage RemBG et la correction manuelle ne consomment pas de crédits Photoroom. {{ $openAiScenes ? 'Les décors inédits utilisent GPT Image ; chaque nouvelle proposition utilise des crédits. Un échec restitue les crédits plateforme réservés.' : 'Si Photoroom est utilisé, 1 crédit Photoroom est également consommé. Un échec restitue les crédits réservés.' }}</p>
+                @if ($sceneProviderAvailable)
+                    <p class="photo-studio-note"><strong id="photo-studio-scenes-remaining">{{ $sceneRemaining }}</strong> {{ $openAiScenes ? 'décors IA restants' : 'crédits Photoroom restants' }} sur votre compte.</p>
+                @else
+                    <p class="photo-studio-note">La génération de décors est actuellement indisponible. Vous pouvez utiliser les décors du studio.</p>
+                @endif
+                <p class="photo-studio-note">Le recadrage, les retouches et les décors préparés ne débitent aucun crédit IA. Un détourage effectué par Photoroom utilise un crédit Photoroom.</p>
             </div>
         </div>
         <footer class="photo-studio-footer">
             <p id="photo-studio-status" role="status" aria-live="polite"></p>
             <div class="photo-studio-actions">
                 <button type="button" class="btn btn-ghost" id="photo-studio-original">Conserver ma photo</button>
-                <button type="button" class="btn btn-primary" id="photo-studio-generate">Préparer l’aperçu · 12 crédits IA</button>
+                <button type="button" class="btn btn-primary" id="photo-studio-generate">Préparer l’aperçu</button>
+                <button type="button" class="btn btn-primary" id="photo-studio-choose-decor" hidden>Choisir un décor du studio</button>
                 <button type="button" class="btn btn-primary" id="photo-studio-apply" disabled hidden>Utiliser ce rendu</button>
             </div>
         </footer>

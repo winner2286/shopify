@@ -350,14 +350,13 @@ class VideoAdGeneratorService
         }
 
         $useGenerativeTier = $shop->canUsePhotoroomGenerativeScene();
-        $shop->consumePhotoroomCredits(1);
+        $version = $shop->consumePhotoroomCredits(1);
         $prBinary = $useGenerativeTier
             ? $photoroom->studioPackshot($rawBinary, 'studio_white', '1000x1000')
             : $photoroom->removeBackground($rawBinary, ['format' => 'png']);
 
         if (! is_string($prBinary) || $prBinary === '') {
-            $shop->decrement('photoroom_credits_used');
-            $shop->refresh();
+            $shop->refundPhotoroomCredits(1, $version);
 
             return null;
         }

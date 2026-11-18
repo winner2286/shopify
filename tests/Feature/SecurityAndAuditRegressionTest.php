@@ -299,7 +299,7 @@ class SecurityAndAuditRegressionTest extends TestCase
         $this->assertStringNotContainsString('<script', $body);
         $this->assertStringNotContainsString('onload=', $body);
 
-        [$merchant, $shop] = $this->createMerchantWithShop('upload@test.tg', 'shop-upload');
+        [$merchant, $shop] = $this->createMerchantWithShop('upload@test.tg', 'shop-upload', 'pro');
 
         // Rejet SVG sur upload logo
         $svgFile = UploadedFile::fake()->create('evil.svg', 10, 'image/svg+xml');
@@ -499,14 +499,14 @@ class SecurityAndAuditRegressionTest extends TestCase
         $shop->update(['ai_credits_used' => 80]);
         $this->assertSame(0, $shop->fresh()->aiCreditsRemaining());
 
-        // Quota épuisé -> HTTP 402 sur relation client et contrôle studio
+        // Les réponses IA sont limitées. Le recadrage et la retouche locale restent inclus.
         $this->actingAs($merchant)
             ->postJson(route('ai.customer.answer'), ['question' => 'Quel est le prix ?'])
             ->assertStatus(402);
 
         $this->actingAs($merchant)
-            ->postJson(route('ai.products.verify_quality'), ['category_hint' => 'Chaussures'])
-            ->assertStatus(402);
+            ->postJson(route('ai.products.verify_quality'), ['style' => 'retouch', 'photo' => UploadedFile::fake()->image('chaussures.jpg')])
+            ->assertOk();
 
         // Recharge Admin +100 crédits bonus
         $this->actingAs($admin)
@@ -560,8 +560,7 @@ class SecurityAndAuditRegressionTest extends TestCase
                 'type' => 'percentage',
                 'value' => 10,
             ])
-            ->assertRedirect(route('discounts.index'))
-            ->assertSessionHas('error');
+            ->assertForbidden();
 
         $this->assertDatabaseMissing('discount_codes', [
             'shop_id' => $essentielShop->id,
@@ -675,7 +674,7 @@ class SecurityAndAuditRegressionTest extends TestCase
         $this->assertSame(1, Order::withoutGlobalScopes()->where('shop_id', $proShop->id)->count());
     }
 
-    public function test_feexpay_renewal_resets_monthly_ai_credits_used(): void
+    public function test_feexpay_renewal_does_not_reset_ai_credits_in_the_same_month(): void
     {
         [$merchant, $shop, $sub, $proPlan] = $this->createMerchantWithShop('renew-credit@test.tg', 'renew-shop', 'pro');
 
@@ -685,8 +684,8 @@ class SecurityAndAuditRegressionTest extends TestCase
         $feexPayService = app(FeexPayService::class);
         $feexPayService->handleSubscriptionPaymentSuccess($sub, 'TX-RENEW-CREDIT-01', $proPlan);
 
-        $this->assertSame(0, (int) $shop->fresh()->ai_credits_used);
-        $this->assertSame(350, $shop->fresh()->aiCreditsRemaining());
+        $this->assertSame(250, (int) $shop->fresh()->ai_credits_used);
+        $this->assertSame(100, $shop->fresh()->aiCreditsRemaining());
     }
 
     public function test_http_security_headers_and_geniuspay_webhook_protection(): void

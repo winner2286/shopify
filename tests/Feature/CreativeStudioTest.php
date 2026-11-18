@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\AdvertisingController;
 use App\Models\Advertisement;
+use App\Models\Plan;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\AiAdvertisingService;
@@ -24,6 +25,7 @@ class CreativeStudioTest extends TestCase
     {
         $user = User::factory()->create(['role' => 'merchant']);
         $shop = Shop::create(['user_id' => $user->id, 'name' => 'Studio Test', 'subdomain' => 'studio-'.Str::random(10), 'currency' => 'XOF', 'status' => 'published']);
+        $shop->subscriptions()->create(['plan_id' => Plan::where('slug', 'pro')->firstOrFail()->id, 'status' => 'active']);
         $product = $shop->products()->create(['title' => 'Burger Signature', 'slug' => 'burger-signature', 'price' => 4500, 'stock' => 8, 'status' => 'active']);
         $image = 'data:image/webp;base64,'.base64_encode(file_get_contents(public_path('images/catalog/burger.webp')));
         $products = [['id' => $product->id, 'title' => $product->title, 'price' => '4 500 XOF', 'category' => 'La carte', 'imageUrl' => $image]];

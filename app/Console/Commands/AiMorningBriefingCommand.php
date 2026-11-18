@@ -30,15 +30,15 @@ class AiMorningBriefingCommand extends Command
         protected ?AiShopMemoryService $memoryService = null
     ) {
         parent::__construct();
-        $this->advisorService = $advisorService ?? new AiProactiveAdvisorService();
-        $this->memoryService = $memoryService ?? new AiShopMemoryService();
+        $this->advisorService = $advisorService ?? new AiProactiveAdvisorService;
+        $this->memoryService = $memoryService ?? new AiShopMemoryService;
     }
 
     public function handle(): int
     {
-        $this->info("==========================================================");
-        $this->info("   🌅 ZANIKA AI COPILOT — BRIEFING MATINAL PROACTIF     ");
-        $this->info("==========================================================");
+        $this->info('==========================================================');
+        $this->info('   🌅 ZANIKA AI COPILOT — BRIEFING MATINAL PROACTIF     ');
+        $this->info('==========================================================');
 
         $shopIdentifier = $this->option('shop');
         $isDryRun = (bool) $this->option('dry-run');
@@ -55,13 +55,17 @@ class AiMorningBriefingCommand extends Command
         $shops = $query->get();
 
         if ($shops->isEmpty()) {
-            $this->warn("Aucune boutique trouvée pour le briefing.");
+            $this->warn('Aucune boutique trouvée pour le briefing.');
+
             return 0;
         }
 
         $processed = 0;
 
         foreach ($shops as $shop) {
+            if (! $shop->canUseFeature('stock_alerts') && ! $shop->owner?->isAdmin()) {
+                continue;
+            }
             $this->line("\n----------------------------------------------------------");
             $this->info("🏪 Boutique : {$shop->name} (#{$shop->id} - {$shop->currency})");
 
@@ -80,11 +84,11 @@ class AiMorningBriefingCommand extends Command
                     ],
                     [
                         'severity' => $briefing['has_urgent_issues'] ? AiProactiveInsight::SEVERITY_WARNING : AiProactiveInsight::SEVERITY_INFO,
-                        'title' => "Briefing matinal du " . now()->format('d/m/Y'),
+                        'title' => 'Briefing matinal du '.now()->format('d/m/Y'),
                         'explanation' => $briefing['summary_text'],
                         'suggested_action' => [
                             'action' => 'review_morning_priorities',
-                            'label' => "Consulter les commandes en attente et les stocks critiques",
+                            'label' => 'Consulter les commandes en attente et les stocks critiques',
                         ],
                         'is_dismissed' => false,
                     ]
@@ -95,7 +99,7 @@ class AiMorningBriefingCommand extends Command
                     $shop,
                     'past_recommendation',
                     'dernier_briefing_matinal',
-                    "Briefing du " . now()->format('d/m/Y') . " : " . StrLimit($briefing['summary_text'], 140),
+                    'Briefing du '.now()->format('d/m/Y').' : '.StrLimit($briefing['summary_text'], 140),
                     1.0,
                     'ai_morning_briefing'
                 );
@@ -105,8 +109,8 @@ class AiMorningBriefingCommand extends Command
         }
 
         $this->info("\n==========================================================");
-        $this->info("✅ Briefing matinal terminé pour {$processed} boutique(s)." . ($isDryRun ? " (Mode DRY-RUN)" : ""));
-        $this->info("==========================================================");
+        $this->info("✅ Briefing matinal terminé pour {$processed} boutique(s).".($isDryRun ? ' (Mode DRY-RUN)' : ''));
+        $this->info('==========================================================');
 
         return 0;
     }
@@ -149,7 +153,7 @@ class AiMorningBriefingCommand extends Command
             ->where('track_stock', true)
             ->where(function ($q) {
                 $q->where('stock', '<=', 0)
-                  ->orWhereColumn('stock', '<=', 'low_stock_threshold');
+                    ->orWhereColumn('stock', '<=', 'low_stock_threshold');
             })
             ->get();
 
@@ -158,17 +162,17 @@ class AiMorningBriefingCommand extends Command
 
         // 4. Analyse proactive
         $insights = $this->advisorService->syncInsights($shop);
-        $hasUrgentIssues = $outOfStockCount > 0 || $codPendingCount >= 3 || $insights->contains(fn($i) => $i->severity === AiProactiveInsight::SEVERITY_CRITICAL);
+        $hasUrgentIssues = $outOfStockCount > 0 || $codPendingCount >= 3 || $insights->contains(fn ($i) => $i->severity === AiProactiveInsight::SEVERITY_CRITICAL);
 
         // Assemblage des textes
         $lines = [];
-        $lines[] = "📊 Ventes de la veille : {$yesterdayCount} commande(s) pour " . number_format($yesterdayRevenue, 0, ',', ' ') . " {$currency}";
+        $lines[] = "📊 Ventes de la veille : {$yesterdayCount} commande(s) pour ".number_format($yesterdayRevenue, 0, ',', ' ')." {$currency}";
         $lines[] = "📦 À expédier aujourd'hui : {$pendingCount} commande(s) en attente (dont {$codPendingCount} en Paiement à la livraison / COD)";
 
         if ($outOfStockCount > 0 || $lowStockCount > 0) {
             $lines[] = "⚠️  Stocks : {$outOfStockCount} produit(s) en rupture totale, {$lowStockCount} sous le seuil d'alerte";
         } else {
-            $lines[] = "✅ Stocks : Tous les articles sont approvisionnés";
+            $lines[] = '✅ Stocks : Tous les articles sont approvisionnés';
         }
 
         if ($insights->isNotEmpty()) {
@@ -176,7 +180,7 @@ class AiMorningBriefingCommand extends Command
             $lines[] = "💡 Conseil proactif du jour : {$topInsight->title}";
         }
 
-        $summaryText = implode(" | ", $lines);
+        $summaryText = implode(' | ', $lines);
         $formattedConsole = implode("\n", $lines);
 
         return [
@@ -197,5 +201,5 @@ class AiMorningBriefingCommand extends Command
 // Fonction utilitaire de troncature pour le script console
 function StrLimit(string $value, int $limit = 100): string
 {
-    return mb_strlen($value) <= $limit ? $value : mb_substr($value, 0, $limit) . '...';
+    return mb_strlen($value) <= $limit ? $value : mb_substr($value, 0, $limit).'...';
 }

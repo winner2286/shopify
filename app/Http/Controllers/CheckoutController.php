@@ -57,8 +57,11 @@ class CheckoutController extends Controller
 
         $appliedPromo = null;
         $discountAmount = 0;
+        $canApplyPromo = $shop->canUseFeature('promo_codes') || $shop->owner?->isAdmin();
         $sessionCode = trim((string) session("checkout_promo_{$shop->id}", ''));
-        if ($sessionCode !== '') {
+        if (! $canApplyPromo) {
+            session()->forget("checkout_promo_{$shop->id}");
+        } elseif ($sessionCode !== '') {
             $candidate = DiscountCode::withoutGlobalScopes()
                 ->where('shop_id', $shop->id)
                 ->whereRaw('UPPER(code) = ?', [strtoupper($sessionCode)])
@@ -72,7 +75,7 @@ class CheckoutController extends Controller
             }
         }
 
-        return view('storefront.checkout', compact('shop', 'cart', 'zones', 'subtotal', 'cartCount', 'appliedPromo', 'discountAmount'));
+        return view('storefront.checkout', compact('shop', 'cart', 'zones', 'subtotal', 'cartCount', 'appliedPromo', 'discountAmount', 'canApplyPromo'));
     }
 
     /**
@@ -81,6 +84,11 @@ class CheckoutController extends Controller
     public function applyPromoCode(Request $request, string $subdomain): RedirectResponse
     {
         $shop = $this->resolveShop($subdomain);
+        if (! $shop->canUseFeature('promo_codes') && ! $shop->owner?->isAdmin()) {
+            session()->forget("checkout_promo_{$shop->id}");
+
+            return back()->with('error', 'Les codes promo sont indisponibles pour cette boutique.');
+        }
         $subtotal = $this->cartService->getSubtotal($shop);
 
         $request->validate([

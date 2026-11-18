@@ -185,31 +185,36 @@ class FeexPayService
     {
         $target = 'SUB:'.$subscription->id.':'.($newPlan?->id ?? $subscription->plan_id);
         $this->processTransaction($transactionRef, $target, function () use ($subscription, $transactionRef, $newPlan) {
+            $subscription->shop?->owner()->lockForUpdate()->first();
             $lockedSubscription = Subscription::whereKey($subscription->id)->lockForUpdate()->firstOrFail();
             $subscription->setRawAttributes($lockedSubscription->getAttributes(), true);
             $subscription->unsetRelation('plan');
 
             $plan = $newPlan ?? $subscription->plan;
+            $convertingTrial = $subscription->monthly_price === null && $subscription->trial_ends_at !== null;
 
-            $currentEnd = ($subscription->ends_at && $subscription->ends_at->isFuture())
+            $currentEnd = in_array($subscription->status, ['active', 'grace'], true) && $subscription->ends_at?->isFuture()
                 ? $subscription->ends_at
                 : now();
+            $periodEnd = $currentEnd->copy()->addMonthNoOverflow();
 
             $subscription->update([
                 'plan_id' => $plan ? $plan->id : $subscription->plan_id,
+                'monthly_price' => $plan ? $subscription->monthlyPriceFor($plan) : $subscription->monthly_price,
                 'status' => 'active',
                 'starts_at' => $subscription->starts_at ?: now(),
-                'ends_at' => $currentEnd->copy()->addMonth(),
-                'renews_at' => $currentEnd->copy()->addMonth(),
+                'trial_ends_at' => null,
+                'ends_at' => $periodEnd,
+                'renews_at' => $periodEnd,
             ]);
 
             // Réapprovisionnement des crédits IA Système et Photoroom pour le nouveau cycle de facturation
             $shop = $subscription->shop;
             if ($shop) {
-                $shop->update([
-                    'ai_credits_used' => 0,
-                    'photoroom_credits_used' => 0,
-                ]);
+                $subscription->synchronizeAccount();
+                if ($convertingTrial) {
+                    $shop->resetAccountCreditUsage();
+                }
                 $shop->unsetRelation('subscription');
                 $shop->unsetRelation('subscriptions');
                 $shop->owner?->unsetRelation('shop');

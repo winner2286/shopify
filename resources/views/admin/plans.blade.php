@@ -78,51 +78,10 @@
                             </span>
                             <span style="color:var(--text-soft);font-size:.88rem">FCFA / mois</span>
                         </div>
-                        <div style="font-size:.8rem;color:var(--text-faint);margin-top:.2rem">
-                            Annuel (-20%) : {{ number_format(round($p->monthly_price * 0.8), 0, ',', ' ') }} FCFA / mois
-                        </div>
                     </div>
 
-                    <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;flex-direction:column;gap:.55rem;font-size:.88rem">
-                        <div style="display:flex;align-items:center;justify-content:space-between">
-                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="shop" size="15" /> Max Boutiques :</span>
-                            <strong style="color:var(--brand-primary)">{{ $p->maxShops() >= 999 ? 'Illimité' : $p->maxShops() }}</strong>
-                        </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between">
-                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="package" size="15" /> Max Produits :</span>
-                            <strong>{{ number_format($p->max_products, 0, ',', ' ') }}</strong>
-                        </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between">
-                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="image" size="15" /> Stockage Photos :</span>
-                            <strong>{{ $p->storage_mb >= 1024 ? ($p->storage_mb / 1024).' Go' : $p->storage_mb.' Mo' }}</strong>
-                        </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between">
-                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="sparkles" size="15" /> Crédits IA Système / mois :</span>
-                            <strong style="color:var(--brand-primary)">{{ $p->ai_credits }} crédits</strong>
-                        </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between">
-                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="image" size="15" /> Quota Photoroom / mois :</span>
-                            <strong style="color:#7c3aed">{{ $p->photoroomCreditsMonthly() }} photos</strong>
-                        </div>
-                        <div style="display:flex;align-items:center;justify-content:space-between">
-                            <span style="display:inline-flex;align-items:center;gap:.4rem;color:var(--text-soft)"><x-icon name="refresh" size="15" /> Générations complètes :</span>
-                            <strong>{{ $p->full_generations }}</strong>
-                        </div>
-                    </div>
-
-                    @if (!empty($p->features) && count($p->features) > 0)
-                        <div style="margin-top:1rem;padding-top:.8rem;border-top:1px dashed var(--border)">
-                            <div style="font-size:.78rem;font-weight:700;color:var(--text-soft);margin-bottom:.4rem;text-transform:uppercase">Avantages inclus :</div>
-                            <ul style="list-style:none;padding:0;margin:0;font-size:.82rem;display:flex;flex-direction:column;gap:.35rem">
-                                @foreach ($p->features as $feat)
-                                    <li style="display:flex;align-items:center;gap:.4rem">
-                                        <x-icon name="check" size="13" style="color:var(--ok);flex-shrink:0" />
-                                        <span>{{ $feat }}</span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
+                    @include('subscription.plan-allowances', ['plan' => $p])
+                    @include('subscription.plan-benefits', ['plan' => $p])
                 </div>
 
                 <div style="margin-top:1.5rem;border-top:1px solid var(--border);padding-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap">
@@ -171,7 +130,6 @@
                             <div>
                                 <label class="label">Boutiques autorisées *</label>
                                 <input type="number" name="max_shops" class="input" value="{{ old('max_shops', $p->max_shops ?? $p->maxShops()) }}" required min="1">
-                                <small style="color:var(--text-soft);font-size:.74rem">1 = Essentiel, 3 = Pro, 999 = Illimité</small>
                             </div>
                             <div>
                                 <label class="label">Limite de produits en catalogue *</label>
@@ -202,8 +160,8 @@
                         </div>
 
                         <div style="margin-bottom:1rem">
-                            <label class="label">Liste des fonctionnalités & avantages (1 ligne par point)</label>
-                            <textarea name="features" class="input" rows="4" placeholder="Ex: Codes promo, Support WhatsApp...">{{ is_array($p->features) ? implode("\n", $p->features) : '' }}</textarea>
+                            <label class="label" for="studio-scene-credits-{{ $p->id }}">Décors IA par mois et par compte</label>
+                            <input type="number" id="studio-scene-credits-{{ $p->id }}" name="studio_scene_credits" class="input" value="{{ old('studio_scene_credits', $p->studioScenesMonthly()) }}" required min="0">
                         </div>
 
                         <div style="margin-bottom:1.5rem;display:flex;align-items:center;gap:.6rem;background:var(--bg-soft);padding:.75rem;border-radius:8px">

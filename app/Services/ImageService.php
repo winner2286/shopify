@@ -104,7 +104,7 @@ class ImageService
                     $rawBinary = @file_get_contents($filePath);
                     if (is_string($rawBinary) && $rawBinary !== '') {
                         // Smart Cost : import produit en packshot blanc via v1/segment (~13 FCFA) + ombre studio locale
-                        $shop?->consumePhotoroomCredits(1);
+                        $version = $shop?->consumePhotoroomCredits(1);
                         $prBinary = $photoroom->removeBackground($rawBinary, ['format' => 'png']);
                         if ($prBinary !== null) {
                             $prGd = @imagecreatefromstring($prBinary);
@@ -135,9 +135,8 @@ class ImageService
                                 }
                             }
                         }
-                        if (! $photoroomApplied && $shop !== null) {
-                            $shop->decrement('photoroom_credits_used');
-                            $shop->refresh();
+                        if (! $photoroomApplied && $shop !== null && $version !== null) {
+                            $shop->refundPhotoroomCredits(1, $version);
                         }
                     }
                 }

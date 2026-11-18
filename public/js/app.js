@@ -677,46 +677,7 @@
       });
     });
 
-    // 7. Basculeur de tarification Mensuel / Annuel (-20% de remise)
-    var btnMonthly = document.getElementById('btn-billing-monthly');
-    var btnYearly = document.getElementById('btn-billing-yearly');
-    var planPriceEls = document.querySelectorAll('[data-plan-monthly]');
-
-    function updateBilling(isYearly) {
-      if (btnMonthly && btnYearly) {
-        if (isYearly) {
-          btnYearly.classList.add('active');
-          btnMonthly.classList.remove('active');
-        } else {
-          btnMonthly.classList.add('active');
-          btnYearly.classList.remove('active');
-        }
-      }
-
-      planPriceEls.forEach(function (el) {
-        var monthly = parseInt(el.getAttribute('data-plan-monthly'), 10);
-        if (monthly > 0) {
-          var val = isYearly ? Math.round(monthly * 0.8) : monthly;
-          el.textContent = val.toLocaleString('fr-FR');
-          el.style.transform = 'scale(1.1)';
-          setTimeout(function () { el.style.transform = 'scale(1)'; }, 200);
-        }
-      });
-
-      var planBtnPriceEls = document.querySelectorAll('[data-plan-btn-monthly]');
-      planBtnPriceEls.forEach(function (el) {
-        var monthly = parseInt(el.getAttribute('data-plan-btn-monthly'), 10);
-        if (monthly > 0) {
-          var val = isYearly ? Math.round(monthly * 0.8) : monthly;
-          el.textContent = '(' + val.toLocaleString('fr-FR') + ' F) →';
-        }
-      });
-    }
-
-    if (btnMonthly) btnMonthly.addEventListener('click', function () { updateBilling(false); });
-    if (btnYearly) btnYearly.addEventListener('click', function () { updateBilling(true); });
-
-    // 8. FAQ Accordion fluide
+    // 7. FAQ Accordion fluide
     var faqQuestions = document.querySelectorAll('.faq-question');
     faqQuestions.forEach(function (q) {
       q.addEventListener('click', function () {

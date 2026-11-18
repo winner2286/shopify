@@ -116,7 +116,7 @@
                         <span class="badge" style="font-size:.7rem">Forfait {{ $currentPlan->name }}</span>
                     </div>
                     <p style="margin:.3rem 0 0 0;color:var(--text-soft);line-height:1.4">
-                        Vous utilisez actuellement <strong>{{ $shopsCount }} sur {{ $maxShops >= 999 ? 'illimité' : $maxShops }}</strong> boutique(s) allouée(s).
+                        Vous utilisez actuellement <strong>{{ $shopsCount }} sur {{ $maxShops }}</strong> boutique(s) allouée(s).
                     </p>
                     @if ($maxShops < 999)
                         <div style="margin-top:.6rem">
