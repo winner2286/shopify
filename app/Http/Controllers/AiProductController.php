@@ -176,8 +176,13 @@ class AiProductController extends Controller
             'brightness' => 'nullable|integer|between:-15,15',
             'contrast' => 'nullable|integer|between:-10,10',
             'sharpen' => 'nullable|boolean',
+            'presentation' => 'nullable|in:auto,hanging,flat,standing',
+            'crop_top' => 'nullable|integer|between:0,35',
+            'crop_right' => 'nullable|integer|between:0,35',
+            'crop_bottom' => 'nullable|integer|between:0,35',
+            'crop_left' => 'nullable|integer|between:0,35',
             'position_x' => 'nullable|integer|between:10,90',
-            'position_y' => 'nullable|integer|between:30,90',
+            'position_y' => 'nullable|integer|between:15,90',
             'scale' => 'nullable|integer|between:20,85',
             'shadow' => 'nullable|integer|between:0,50',
         ]);
@@ -220,7 +225,10 @@ class AiProductController extends Controller
 
         try {
             $categoryHint = $request->input('category_hint');
-            $options = $request->only(['scene_template', 'brightness', 'contrast', 'sharpen', 'position_x', 'position_y', 'scale', 'shadow']);
+            $options = $request->only([
+                'scene_template', 'brightness', 'contrast', 'sharpen', 'position_x', 'position_y', 'scale', 'shadow',
+                'presentation', 'crop_top', 'crop_right', 'crop_bottom', 'crop_left',
+            ]);
             foreach (['background', 'subject_mask'] as $field) {
                 if ($request->hasFile($field)) {
                     $binary = file_get_contents($request->file($field)->getRealPath());
@@ -272,6 +280,7 @@ class AiProductController extends Controller
                 'product_title' => $studioResult['product_title'] ?? null,
                 'cutout_path' => $studioResult['cutout_path'] ?? null,
                 'cutout_url' => $studioResult['cutout_url'] ?? null,
+                'crop_frame' => $studioResult['crop_frame'] ?? null,
                 'source_path' => $studioResult['source_path'] ?? null,
                 'source_url' => $studioResult['source_url'] ?? null,
                 'variations' => $studioResult['variations'] ?? [],

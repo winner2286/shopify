@@ -199,6 +199,87 @@ class ProductStudioServiceTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_retouch_removes_phone_bars_and_lifts_dark_product_details(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        [$merchant] = $this->createMerchant();
+        $source = imagecreatetruecolor(240, 320);
+        imagefilledrectangle($source, 0, 40, 239, 279, 0x625347);
+        imagefilledrectangle($source, 38, 315, 202, 317, 0xFFFFFF);
+        ob_start();
+        imagepng($source);
+        $original = (string) ob_get_clean();
+
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->createWithContent('capture.png', $original),
+            'style' => 'retouch',
+        ])->assertOk();
+
+        $render = imagecreatefromstring(Storage::disk('public')->get($response->json('variations.0.path')));
+        $center = imagecolorsforindex($render, imagecolorat($render, 500, 500));
+        $this->assertGreaterThan(100, $center['red']);
+        $this->assertEqualsWithDelta(15, $center['red'] - $center['green'], 3);
+        $this->assertEqualsWithDelta($center['red'], (imagecolorat($render, 500, 20) >> 16) & 255, 3);
+        $this->assertEqualsWithDelta($center['red'], (imagecolorat($render, 500, 980) >> 16) & 255, 3);
+        $this->assertSame($original, Storage::disk('public')->get($response->json('source_path')));
+        Http::assertNothingSent();
+    }
+
+    public function test_explicit_crop_keeps_manual_cutout_aligned_with_original_photo(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        [$merchant] = $this->createMerchant();
+        $original = $this->createSampleProductImage();
+
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->createWithContent('photo.jpg', $original),
+            'subject_mask' => UploadedFile::fake()->createWithContent('contours.png', $this->sampleMask()),
+            'style' => 'studio_white',
+            'crop_left' => 20,
+        ])->assertOk()->assertJsonPath('cutout_method', 'manual_mask');
+
+        $response->assertJsonPath('crop_frame.x', 60)->assertJsonPath('crop_frame.width', 240);
+        $cutout = imagecreatefromstring(Storage::disk('public')->get($response->json('cutout_path')));
+        $center = imagecolorsforindex($cutout, imagecolorat($cutout, 90, 150));
+        $this->assertGreaterThan(150, $center['red']);
+        $this->assertSame(0, $center['alpha']);
+        $this->assertSame(127, (imagecolorat($cutout, 0, 0) >> 24) & 127);
+        $this->assertSame($original, Storage::disk('public')->get($response->json('source_path')));
+        Http::assertNothingSent();
+    }
+
+    public function test_dressing_places_both_garments_between_the_rack_posts(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        [$merchant] = $this->createMerchant();
+        $source = imagecreatetruecolor(240, 220);
+        imagealphablending($source, false);
+        imagesavealpha($source, true);
+        imagefill($source, 0, 0, 0x7F000000);
+        imagefilledrectangle($source, 10, 20, 98, 200, 0xBE332B);
+        imagefilledrectangle($source, 140, 20, 230, 200, 0x224DAF);
+        ob_start();
+        imagepng($source);
+        $original = (string) ob_get_clean();
+
+        $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
+            'photo' => UploadedFile::fake()->createWithContent('pantalons.png', $original),
+            'style' => 'scene_template', 'scene_template' => 'dressing',
+        ])->assertOk()->assertJsonPath('cutout_method', 'source_transparency');
+
+        $render = imagecreatefromstring(Storage::disk('public')->get($response->json('variations.0.path')));
+        $red = imagecolorsforindex($render, imagecolorat($render, 330, 515));
+        $blue = imagecolorsforindex($render, imagecolorat($render, 650, 515));
+        $this->assertGreaterThan(85, $red['red'] - $red['blue']);
+        $this->assertGreaterThan(85, $blue['blue'] - $blue['red']);
+        $gap = imagecolorsforindex($render, imagecolorat($render, 490, 515));
+        $this->assertLessThan(60, abs($gap['red'] - $gap['blue']));
+        Http::assertNothingSent();
+    }
+
     /**
      * Test 1 : Détection intelligente de la catégorie pour toutes les catégories e-commerce requises
      */
@@ -696,7 +777,7 @@ class ProductStudioServiceTest extends TestCase
         $source = file_get_contents(public_path('images/catalog/burger.webp'));
         $response = $this->actingAs($merchant)->postJson(route('ai.products.verify_quality'), [
             'photo' => UploadedFile::fake()->createWithContent('photo.webp', $source), 'style' => 'retouch',
-        ])->assertOk()->assertJsonPath('cutout_method', 'none')->assertJsonPath('variations.0.title', 'Retouche légère');
+        ])->assertOk()->assertJsonPath('cutout_method', 'none')->assertJsonPath('variations.0.title', 'Photo recadrée et retouchée');
 
         $this->assertCount(2, $response->json('variations'));
         $this->assertSame($source, Storage::disk('public')->get($response->json('source_path')));

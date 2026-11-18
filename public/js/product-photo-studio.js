@@ -3,6 +3,7 @@
     const root = document.getElementById('product-photo-studio');
     if (!root) return;
     const $ = id => document.getElementById('photo-studio-' + id);
+    const dialog = root.querySelector('.photo-studio-dialog');
     const getFiles = () => Array.from((window.getSelectedEditFiles || window.getSelectedFiles)?.() || document.getElementById('master-photos-input')?.files || []);
     const setFiles = files => {
         const setter = window.setSelectedEditFiles || window.setSelectedFiles;
@@ -11,46 +12,60 @@
         if (!input) throw new Error('Le formulaire ne peut pas recevoir cette photo.');
         const transfer = new DataTransfer(); files.forEach(file => transfer.items.add(file)); input.files = transfer.files;
     };
-    let sources = [], source, preview, sourceFile, busy = false, version = 0, previousFocus, previousOverflow;
+    let sources = [], source, preview, sourceFile, busy = false, version = 0, previousFocus;
+    let pageScroll;
     const objectUrls = [];
     const maskCanvas = $('mask-canvas'), maskContext = maskCanvas.getContext('2d');
     const maskOriginal = document.createElement('canvas');
+    const cropCanvas = $('crop-canvas'), cropContext = cropCanvas.getContext('2d');
+    const cropSides = ['top', 'right', 'bottom', 'left'];
+    const positionControls = ['position-x', 'position-y', 'scale', 'shadow'];
+    const manualPosition = new Set();
     let maskMode = 'erase', maskEdited = false, maskEnabled = false, maskReady = false, drawing = false, lastPoint;
+    let previewCutout;
     const message = (text, error = false) => { $('status').textContent = text; $('status').dataset.error = String(error); };
     const style = () => root.querySelector('input[name="photo_studio_style"]:checked').value;
     const objectUrl = file => {const url = URL.createObjectURL(file); objectUrls.push(url); return url;};
     function resetPreview() {
         preview = null; version++; $('apply').disabled = true;
-        $('apply').textContent = 'Préparez un aperçu pour continuer';
+        $('apply').hidden = true;
+        $('generate').hidden = false;
+        $('generate').classList.replace('btn-ghost', 'btn-primary');
+        $('apply').textContent = 'Utiliser ce rendu';
         $('generate').disabled = busy;
         $('generate').textContent = 'Préparer l’aperçu · 12 crédits IA';
-        if ($('source').getAttribute('src')) $('result').src = $('source').src;
-        else $('result').removeAttribute('src');
-        $('result-label').textContent = 'Aperçu à préparer';
-        message('Votre photo reste inchangée tant que vous ne validez pas un rendu.');
+        $('result').hidden = true;
+        $('result').removeAttribute('src');
+        $('result-empty').hidden = false;
+        $('result-label').textContent = 'Rendu du studio';
+        $('compare-note').hidden = true;
+        message('');
     }
     function chooseSource() {
         source = sources[Number($('source-select').value)];
         if (!source) return;
         sourceFile = source.file || null;
         maskEnabled = false; maskEdited = false; maskReady = false;
+        previewCutout = null;
+        $('mask-from-preview').hidden = true;
+        cropContext.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+        resetCrop();
         $('source').src = source.url;
         resetPreview();
     }
     function close(force = false) {
         if (busy && force !== true) return;
+        if (root.hidden) return;
         root.hidden = true;
-        document.body.style.overflow = previousOverflow || '';
         document.body.classList.remove('photo-studio-open');
+        document.documentElement.classList.remove('photo-studio-open');
+        document.body.style.removeProperty('--photo-studio-page-top');
+        window.scrollTo({left: pageScroll.x, top: pageScroll.y, behavior: 'instant'});
         version++;
-        previousFocus?.focus();
+        previousFocus?.focus({preventScroll: true});
     }
     async function open(file) {
         if (busy) return;
-        if (root.hidden) {
-            previousFocus = document.activeElement;
-            previousOverflow = document.body.style.overflow;
-        }
         objectUrls.splice(0).forEach(url => URL.revokeObjectURL(url));
         sources = getFiles().map((item, index) => ({file:item, index, url:objectUrl(item), label:`Photo ${index + 1} · ${item.name}`}));
         if (file && !sources.some(item => item.file === file)) sources.unshift({file, index:-1, url:objectUrl(file), label:file.name});
@@ -64,9 +79,17 @@
         $('source-select').replaceChildren(...sources.map((item,index) => new Option(item.label, String(index))));
         const requested = file ? sources.findIndex(item => item.file === file) : 0;
         $('source-select').value = String(Math.max(0, requested));
-        chooseSource(); root.hidden = false;
-        document.body.classList.add('photo-studio-open'); document.body.style.overflow = 'hidden';
-        root.querySelector('.photo-studio-dialog').focus();
+        chooseSource();
+        if (root.hidden) {
+            previousFocus = document.activeElement;
+            pageScroll = {x: window.scrollX, y: window.scrollY};
+            document.body.style.setProperty('--photo-studio-page-top', `${-pageScroll.y}px`);
+            document.body.classList.add('photo-studio-open');
+            document.documentElement.classList.add('photo-studio-open');
+        }
+        root.hidden = false;
+        dialog.scrollTop = 0;
+        dialog.focus({preventScroll: true});
     }
     function lock(value) {
         busy = value;
@@ -76,12 +99,18 @@
         $('decor').disabled = value;
         $('background').disabled = value;
         $('adjustment-fields').disabled = value;
+        $('crop-fields').disabled = value;
+        if ($('presentation')) $('presentation').disabled = value;
         $('mask-tools').disabled = value;
         $('generate').disabled = value || Boolean(preview && style() !== 'lifestyle');
+        $('generate').hidden = Boolean(preview && style() !== 'lifestyle');
+        $('generate').classList.toggle('btn-primary', !preview);
+        $('generate').classList.toggle('btn-ghost', Boolean(preview));
         $('close').disabled = value;
         $('original').disabled = value;
         $('apply').disabled = value || !preview;
-        $('apply').textContent = preview ? 'Utiliser ce rendu' : value ? 'Préparation de l’aperçu…' : 'Aucun rendu à utiliser';
+        $('apply').hidden = !preview;
+        $('apply').textContent = 'Utiliser ce rendu';
         $('generate').textContent = value ? 'Préparation en cours…' : preview && style() === 'lifestyle' ? 'Proposer un autre décor · 12 crédits IA' : 'Préparer l’aperçu · 12 crédits IA';
         root.setAttribute('aria-busy', String(value));
     }
@@ -89,14 +118,19 @@
     function sceneDefaults() {
         const option = $('decor').selectedOptions[0];
         $('decor-preview').src = option.dataset.image;
-        for (const [id, key, fallback] of [['position-x','x',50],['position-y','y',85],['scale','scale',65],['shadow','shadow',22]]) {
-            $(id).value = ['custom_background','lifestyle'].includes(style()) ? fallback : option.dataset[key];
-            $(id).nextElementSibling.value = $(id).value;
+        const preset = $('presentation')?.value;
+        const generated = style() === 'lifestyle';
+        const defaultY = generated && preset === 'hanging' ? 28 : generated && preset === 'flat' ? 51 : 82;
+        const defaultScale = generated && preset === 'hanging' ? 62 : generated && preset === 'flat' ? 73 : 68;
+        manualPosition.clear();
+        for (const [id, key, fallback] of [['position-x','x',50],['position-y','y',defaultY],['scale','scale',defaultScale],['shadow','shadow',27]]) {
+            $(id).value = style() === 'scene_template' ? option.dataset[key] : fallback;
+            $(id).nextElementSibling.value = 'Auto';
         }
     }
     function updateControls() {
         const selected = root.querySelector('input[name="photo_studio_style"]:checked');
-        $('style-summary').textContent = '2. ' + selected.closest('label').querySelector('strong').textContent;
+        $('style-summary').textContent = selected.closest('label').querySelector('strong').textContent;
         $('style-picker').open = false;
         const generated = style() === 'lifestyle' && root.dataset.sceneProvider === 'openai';
         const composed = generated || ['scene_template','custom_background'].includes(style());
@@ -111,9 +145,43 @@
     }
     root.querySelectorAll('input[name="photo_studio_style"]').forEach(input => input.onchange = updateControls);
     $('decor').onchange = () => {sceneDefaults(); resetPreview();};
+    $('placement-reset').onclick = () => {sceneDefaults(); resetPreview();};
+    if ($('presentation')) $('presentation').onchange = () => {sceneDefaults(); resetPreview();};
     $('background').onchange = resetPreview;
-    ['brightness','contrast','scale','position-x','position-y','shadow'].forEach(id => $(id).oninput = () => {$(id).nextElementSibling.value = $(id).value; resetPreview();});
+    for (const id of ['brightness', 'contrast', ...positionControls]) $(id).oninput = () => {
+        if (positionControls.includes(id)) manualPosition.add(id);
+        $(id).nextElementSibling.value = $(id).value;
+        resetPreview();
+    };
     $('sharpen').onchange = resetPreview;
+    function drawCrop() {
+        if (!maskReady) return;
+        const {width, height} = cropCanvas;
+        const [top, right, bottom, left] = cropSides.map((side, index) => Number($('crop-' + side).value) / 100 * (index % 2 ? width : height));
+        cropContext.clearRect(0, 0, width, height);
+        cropContext.drawImage(maskOriginal, 0, 0);
+        cropContext.fillStyle = 'rgba(15, 15, 20, .66)';
+        cropContext.fillRect(0, 0, width, top);
+        cropContext.fillRect(0, height - bottom, width, bottom);
+        cropContext.fillRect(0, top, left, height - top - bottom);
+        cropContext.fillRect(width - right, top, right, height - top - bottom);
+        cropContext.strokeStyle = '#fff';
+        cropContext.lineWidth = 2;
+        cropContext.strokeRect(left + 1, top + 1, width - left - right - 2, height - top - bottom - 2);
+    }
+    function resetCrop() {
+        for (const side of cropSides) {
+            $('crop-' + side).value = 0;
+            $('crop-' + side).nextElementSibling.value = '0 %';
+        }
+        drawCrop();
+    }
+    for (const side of cropSides) $('crop-' + side).oninput = event => {
+        event.target.nextElementSibling.value = event.target.value + ' %';
+        drawCrop();
+        resetPreview();
+    };
+    $('crop-reset').onclick = () => {resetCrop(); resetPreview();};
     $('source').onload = () => {
         const image = $('source');
         const ratio = Math.min(1, 720 / Math.max(image.naturalWidth, image.naturalHeight));
@@ -123,6 +191,9 @@
         maskOriginal.getContext('2d').drawImage(image, 0, 0, maskCanvas.width, maskCanvas.height);
         maskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
         maskContext.drawImage(maskOriginal, 0, 0); maskReady = true; maskEdited = false; maskEnabled = false;
+        cropCanvas.width = maskCanvas.width;
+        cropCanvas.height = maskCanvas.height;
+        drawCrop();
         $('mask-use').disabled = true;
     };
     function paint(event) {
@@ -145,6 +216,27 @@
         maskMode = mode; for (const other of ['erase','restore']) $('mask-'+other).setAttribute('aria-pressed', String(other === mode));
     };
     $('mask-reset').onclick = () => {maskContext.clearRect(0,0,maskCanvas.width,maskCanvas.height);maskContext.drawImage(maskOriginal,0,0);maskEdited=false;maskEnabled=false;$('mask-use').disabled=true;resetPreview();};
+    $('mask-from-preview').onclick = async () => {
+        if (!previewCutout || !maskReady || busy) return;
+        const cutout = previewCutout;
+        const sourceBeforeLoad = source;
+        const image = new Image();
+        image.src = cutout.url;
+        try {
+            await image.decode();
+            if (source !== sourceBeforeLoad || busy || root.hidden) return;
+            const frame = cutout.frame;
+            const scaleX = maskCanvas.width / frame.source_width;
+            const scaleY = maskCanvas.height / frame.source_height;
+            maskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+            maskContext.drawImage(image, frame.x * scaleX, frame.y * scaleY, frame.width * scaleX, frame.height * scaleY);
+            maskEdited = true;
+            maskEnabled = false;
+            $('mask-use').disabled = false;
+        } catch {
+            message('Le détourage de l’aperçu ne peut pas être chargé.', true);
+        }
+    };
     $('mask-use').onclick = () => {if (!maskEdited) return;maskEnabled=true;resetPreview();message('Détourage manuel sélectionné. Préparez l’aperçu pour vérifier le résultat dans le décor.');};
     $('mask-disable').onclick = () => {maskEnabled=false;resetPreview();message('Le prochain aperçu utilisera le détourage automatique disponible.');};
     updateControls();
@@ -156,7 +248,9 @@
         if (style() === 'custom_background' && !background) return message('Choisissez une photo de décor à importer.', true);
         if (style() === 'custom_background' && background.size > 5 * 1024 * 1024) return message('Le décor doit faire moins de 5 Mo.', true);
         const requestVersion = ++version;
-        preview = null; lock(true); message('Préparation du rendu choisi. Cela peut prendre quelques instants.');
+        const previousPreview = preview;
+        lock(true);
+        message(style() === 'lifestyle' ? 'Préparation du décor et intégration du produit…' : 'Préparation du rendu…');
         try {
             if (!sourceFile) {
                 const response = await fetch(source.url);
@@ -171,10 +265,15 @@
             const body = new FormData(); body.append('photo', file); body.append('style', style());
             body.append('scene_prompt', $('scene').value.trim());
             body.append('category_hint', document.getElementById('title')?.value.slice(0,200) || '');
+            for (const side of cropSides) {
+                const crop = $('crop-' + side).value;
+                if (Number(crop) > 0) body.append('crop_' + side, crop);
+            }
             if (style() !== 'lifestyle' || root.dataset.sceneProvider === 'openai') {
-                for (const id of ['brightness','contrast','scale','position-x','position-y','shadow']) body.append(id.replaceAll('-','_'), $(id).value);
+                for (const id of ['brightness', 'contrast', ...manualPosition]) body.append(id.replaceAll('-','_'), $(id).value);
                 body.append('sharpen', $('sharpen').checked ? '1' : '0');
-                body.append('scene_template', $('decor').value);
+                if (style() === 'scene_template') body.append('scene_template', $('decor').value);
+                if (style() === 'lifestyle') body.append('presentation', $('presentation').value);
                 if (style() === 'custom_background') body.append('background', background);
                 if (maskEnabled && style() !== 'retouch') {
                     const mask = await new Promise(resolve => maskCanvas.toBlob(resolve, 'image/png'));
@@ -186,13 +285,29 @@
             const data = await response.json().catch(() => ({}));
             if (!response.ok || data.status !== 'success') throw new Error(Object.values(data.errors || {}).flat()[0] || data.error || data.message || 'La préparation a échoué. Votre photo reste inchangée.');
             if (requestVersion !== version || root.hidden) return;
-            preview = data.variations?.find(item => !item.is_source);
-            if (!preview) throw new Error('Aucun aperçu exploitable n’a été reçu.');
-            $('result').src = preview.url; $('result-label').textContent = preview.title;
-            message('Aperçu prêt. Comparez les détails et les couleurs avant de valider.');
+            const rendered = data.variations?.find(item => !item.is_source);
+            if (!rendered) throw new Error('Aucun aperçu exploitable n’a été reçu.');
+            $('result').src = rendered.url;
+            await $('result').decode();
+            if (requestVersion !== version || root.hidden) return;
+            preview = rendered;
+            if (data.cutout_url && data.crop_frame) {
+                previewCutout = {url: data.cutout_url, frame: data.crop_frame};
+                $('mask-from-preview').hidden = false;
+            }
+            $('result').hidden = false;
+            $('result-empty').hidden = true;
+            $('result-label').textContent = preview.title;
+            $('compare-note').textContent = data.quality_audit?.summary || 'Vérifiez les contours, les couleurs et les inscriptions.';
+            $('compare-note').hidden = false;
+            message('Aperçu prêt.');
+            if (window.matchMedia('(max-width: 700px)').matches) dialog.scrollTop = 0;
         } catch (error) {
-            preview = null;
-            if (requestVersion === version && !root.hidden) message(error.message, true);
+            if (requestVersion === version && !root.hidden) {
+                preview = previousPreview;
+                if (preview) $('result').src = preview.url;
+                message(error.message, true);
+            }
         } finally {lock(false);}
     };
     $('apply').onclick = async () => {
@@ -235,12 +350,31 @@
     };
     $('close').onclick = close; $('original').onclick = close;
     root.onclick = event => {if (event.target === root) close();};
+    if (!CSS.supports('overscroll-behavior-y', 'none')) {
+        let previousTouchY;
+        root.addEventListener('touchstart', event => {
+            previousTouchY = event.touches[0]?.clientY;
+        }, {passive: true});
+        root.addEventListener('touchmove', event => {
+            if (event.touches.length !== 1 || !event.cancelable || previousTouchY === undefined) return;
+            const touchY = event.touches[0].clientY;
+            const deltaY = touchY - previousTouchY;
+            previousTouchY = touchY;
+            if (!deltaY || event.target.closest('input[type="range"], canvas')) return;
+            const canScroll = element => element && (deltaY > 0
+                ? element.scrollTop > 0
+                : element.scrollTop + element.clientHeight < element.scrollHeight - 1);
+            if (!dialog.contains(event.target) || (!canScroll(event.target.closest('textarea')) && !canScroll(dialog))) {
+                event.preventDefault();
+            }
+        }, {passive: false});
+    }
     root.addEventListener('keydown', event => {
         if (event.key === 'Escape') {event.preventDefault();close();}
         if (event.key !== 'Tab') return;
         const controls = [...root.querySelectorAll('button:not(:disabled),select:not(:disabled),textarea:not(:disabled),input:not(:disabled)')].filter(el => el.getClientRects().length);
         const first=controls[0],last=controls.at(-1);
-        if (event.shiftKey && (document.activeElement===first || document.activeElement===root.querySelector('.photo-studio-dialog'))) {event.preventDefault();last?.focus();}
+        if (event.shiftKey && (document.activeElement===first || document.activeElement===dialog)) {event.preventDefault();last?.focus();}
         else if (!event.shiftKey && document.activeElement===last) {event.preventDefault();first?.focus();}
     });
     window.triggerAiStudioFromButton = () => open();

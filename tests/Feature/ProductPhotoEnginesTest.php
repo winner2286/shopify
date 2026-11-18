@@ -110,7 +110,7 @@ class ProductPhotoEnginesTest extends TestCase
         Process::assertRan(fn ($process) => $process->input === $source && $process->timeout === 45 && $process->command === [PHP_BINARY, base_path('docker/rembg/cutout.py'), __FILE__]);
     }
 
-    public function test_empty_description_generates_a_scene_from_the_article_and_manual_mask_skips_rembg(): void
+    public function test_hanging_scene_uses_the_cropped_manual_mask_and_scene_layout_without_running_rembg(): void
     {
         Storage::fake('public');
         Http::preventStrayRequests();
@@ -118,11 +118,55 @@ class ProductPhotoEnginesTest extends TestCase
         [$merchant, $shop] = $this->merchant();
         Http::fake(['https://api.openai.com/v1/images/edits' => Http::response(['data' => [['b64_json' => base64_encode($this->image(1024))]]])]);
 
-        $this->postPreview($merchant, ['scene_prompt' => '', 'subject_mask' => UploadedFile::fake()->createWithContent('mask.png', $this->image(mask: true))])->assertOk()->assertJsonPath('cutout_method', 'manual_mask');
+        $response = $this->postPreview($merchant, [
+            'scene_prompt' => '',
+            'category_hint' => 'Pantalon',
+            'presentation' => 'hanging',
+            'crop_top' => 25,
+            'crop_right' => 20,
+            'subject_mask' => UploadedFile::fake()->createWithContent('mask.png', $this->image(mask: true)),
+        ])->assertOk()
+            ->assertJsonPath('cutout_method', 'manual_mask')
+            ->assertJsonPath('crop_frame', ['x' => 0, 'y' => 75, 'width' => 240, 'height' => 225, 'source_width' => 300, 'source_height' => 300]);
+        $this->assertSame($this->image(complex: true), Storage::disk('public')->get($response->json('source_path')));
+        $cutout = imagecreatefromstring(Storage::disk('public')->get($response->json('cutout_path')));
+        $this->assertSame(240, imagesx($cutout));
+        $this->assertSame(225, imagesy($cutout));
+        $this->assertSame(0xB4141E, imagecolorat($cutout, 150, 75) & 0xFFFFFF);
+        $this->assertSame(127, (imagecolorat($cutout, 150, 5) >> 24) & 127);
+        imagedestroy($cutout);
+        Http::assertSent(function ($request): bool {
+            $fields = collect($request->data())->pluck('contents', 'name');
+            $layout = imagecreatefromstring($fields['image']);
+            $background = imagecolorat($layout, 500, 260) & 0xFFFFFF;
+            $product = imagecolorat($layout, 500, 490) & 0xFFFFFF;
+            imagedestroy($layout);
+
+            return str_contains($fields['prompt'], 'rail') && str_contains($fields['prompt'], 'Pantalon')
+                && str_contains($fields['prompt'], 'Invent a distinctive')
+                && $background === 0xD6D5D3 && $product !== $background;
+        });
 
         Process::assertDidntRun(fn () => true);
         Http::assertSentCount(1);
         $this->assertSame(0, $shop->fresh()->photoroom_credits_used);
+    }
+
+    public function test_untitled_product_gets_a_scene_directed_from_the_photo(): void
+    {
+        Storage::fake('public');
+        Process::fake([Process::result(output: $this->image(mask: true))]);
+        [$merchant] = $this->merchant();
+        Http::fake(['https://api.openai.com/v1/images/edits' => Http::response(['data' => [['b64_json' => base64_encode($this->image(1024))]]])]);
+
+        $this->postPreview($merchant, ['scene_prompt' => '', 'category_hint' => ''])->assertOk();
+
+        Http::assertSent(function ($request): bool {
+            $fields = collect($request->data())->pluck('contents', 'name');
+
+            return str_contains($fields['prompt'], 'Infer the original camera angle and physical pose from the pictured article.');
+        });
+        Http::assertSentCount(1);
     }
 
     #[TestWith([401])]
@@ -278,7 +322,7 @@ class ProductPhotoEnginesTest extends TestCase
         Process::fake();
         [$merchant] = $this->merchant();
 
-        $response = $this->actingAs($merchant)->get(route('products.create'))->assertOk()->assertSee('data-scene-provider="openai"', false)->assertSee('data-scene-available="true"', false)->assertSee('Laissez vide pour proposer un décor selon votre article.');
+        $response = $this->actingAs($merchant)->get(route('products.create'))->assertOk()->assertSee('data-scene-provider="openai"', false)->assertSee('data-scene-available="true"', false)->assertSee('value="lifestyle" checked', false)->assertSee('Laissez vide pour proposer un décor selon votre article.');
         if (getenv('CREATIVE_STUDIO_REVIEW') === '1') {
             file_put_contents(storage_path('app/private/studio-review-openai-create.html'), str_replace(
                 ['http://localhost:8080', 'http://localhost'], ['http://127.0.0.1:8127', 'http://127.0.0.1:8127'], $response->getContent()

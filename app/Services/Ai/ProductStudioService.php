@@ -75,6 +75,8 @@ class ProductStudioService
 
         $operation = function (bool $reserved) use ($shop, $imageBinary, $style, $hint, $scene, $options, $openAiScene): array {
             $composer = app(ProductPhotoComposer::class);
+            $processingImage = $this->preparePreviewSource($imageBinary, $composer, $options, $cropFrame);
+            $options['auto_enhance'] ??= true;
             $started = microtime(true);
             $engine = 'zanika-product-studio';
             $method = 'none';
@@ -82,10 +84,10 @@ class ProductStudioService
             $cutout = null;
             $generation = null;
             $title = match ($style) {
-                'retouch' => 'Retouche légère',
+                'retouch' => 'Photo recadrée et retouchée',
                 'studio_ambient' => 'Fond ivoire',
                 'studio_dark' => 'Fond graphite',
-                'lifestyle' => 'Décor personnalisé',
+                'lifestyle' => 'Mise en scène IA',
                 'scene_template' => ProductPhotoComposer::SCENES[$options['scene_template'] ?? 'podium']['title'],
                 'custom_background' => 'Votre décor importé',
                 default => 'Fond blanc',
@@ -96,7 +98,7 @@ class ProductStudioService
                 if (! $reserved) {
                     throw ValidationException::withMessages(['credits' => 'Quota Photoroom insuffisant pour créer ce décor.']);
                 }
-                $binary = $this->photoroom->editProductImage($imageBinary, [
+                $binary = $this->photoroom->editProductImage($processingImage, [
                     'background.prompt' => 'Product photography background only. Keep the photographed product, its packaging, labels, proportions and colors unchanged. No extra products, no text, no logos. '.$scene,
                     'lighting.mode' => 'ai.preserve-hue-and-saturation',
                     'shadow.mode' => null,
@@ -107,29 +109,29 @@ class ProductStudioService
                 $engine = 'photoroom-ai';
                 $method = 'photoroom_v2_edit';
             } elseif ($style === 'retouch') {
-                $source = imagecreatefromstring($this->normalizeImageBinary($imageBinary));
-                $canvas = $this->frameSquareStudio($source, self::TARGET_SIZE);
-                $composer->adjust($canvas, $options);
+                $source = imagecreatefromstring($this->normalizeImageBinary($processingImage));
+                $canvas = $composer->frameRetouch($source, $options);
                 ob_start();
                 imagejpeg($canvas, null, self::JPEG_QUALITY);
                 $binary = (string) ob_get_clean();
                 imagedestroy($canvas);
                 imagedestroy($source);
             } else {
+                $normalized = $this->normalizeImageBinary($processingImage);
                 $cutout = ! empty($options['subject_mask'])
-                    ? $composer->maskSubject($this->normalizeImageBinary($imageBinary), $options['subject_mask'])
-                    : ($this->hasUsableTransparency($imageBinary) ? $imageBinary : null);
+                    ? $composer->maskSubject($normalized, $options['subject_mask'])
+                    : ($this->hasUsableTransparency($processingImage) ? $normalized : null);
                 $method = $cutout ? (! empty($options['subject_mask']) ? 'manual_mask' : 'source_transparency') : 'none';
                 if (! $cutout && app(RembgService::class)->isConfigured()) {
-                    $mask = app(RembgService::class)->removeBackground($this->normalizeImageBinary($imageBinary));
+                    $mask = app(RembgService::class)->removeBackground($normalized);
                     if ($mask && $this->hasUsableTransparency($mask)) {
-                        $cutout = $composer->maskSubject($this->normalizeImageBinary($imageBinary), $mask);
+                        $cutout = $composer->maskSubject($normalized, $mask, refineEdges: true);
                         $method = 'rembg_u2netp';
                         $engine = 'rembg';
                     }
                 }
                 if (! $cutout && $reserved) {
-                    $cutout = $this->photoroom->removeBackground($imageBinary, ['format' => 'png']);
+                    $cutout = $this->photoroom->removeBackground($processingImage, ['format' => 'png']);
                     if ($cutout && $this->hasUsableTransparency($cutout)) {
                         $engine = 'photoroom-ai';
                         $method = 'photoroom_v1_segment';
@@ -137,30 +139,29 @@ class ProductStudioService
                         $cutout = null;
                     }
                 }
-                if (! $cutout && $this->hasUniformBorder($imageBinary)) {
-                    $cutout = $this->segmentBackgroundLocally($imageBinary);
+                if (! $cutout && $this->hasUniformBorder($processingImage)) {
+                    $cutout = $this->segmentBackgroundLocally($processingImage);
                     $method = 'local_uniform_background';
                 }
                 if (! $cutout || ! $this->hasUsableTransparency($cutout)) {
-                    throw ValidationException::withMessages(['photo' => 'Le fond ne peut pas être retiré proprement. Essayez une photo nette sur fond uni, ou choisissez « Retouche légère » pour conserver le décor.']);
+                    throw ValidationException::withMessages(['photo' => 'Le fond ne peut pas être retiré proprement. Recadrez la photo autour du produit, corrigez les contours ou choisissez « Recadrage et retouche ».']);
                 }
                 $subject = imagecreatefromstring($cutout);
                 $composer->adjust($subject, $options);
+                $template = $options['scene_template'] ?? ($style === 'scene_template' ? 'podium' : 'parquet');
+                $placement = $options + ['category' => $category];
+                $composed = $openAiScene || in_array($style, ['scene_template', 'custom_background'], true);
+                $cropped = $composed ? $this->cropTransparentBoundingBox($subject) : $subject;
                 if ($openAiScene) {
-                    $reference = imagecreatefromstring($this->normalizeImageBinary($imageBinary, 1024));
-                    ob_start();
-                    imagepng($reference);
-                    $referenceBinary = (string) ob_get_clean();
-                    imagedestroy($reference);
-                    $generation = app(OpenAiProductSceneService::class)->generateBackground($referenceBinary, trim($scene), (string) $hint, $shop->id);
+                    $placement = $this->directProductScene($placement, $category, (string) $hint);
+                    $box = $composer->placement($cropped, $template, $placement, customBackdrop: true);
+                    $generation = app(OpenAiProductSceneService::class)->generateBackground(
+                        $this->sceneLayoutReference($cropped, $box), trim($scene), (string) $hint, $shop->id, $placement['scene_direction'], $box,
+                    );
                     $engine = 'openai-image';
                 }
-                if ($openAiScene || in_array($style, ['scene_template', 'custom_background'], true)) {
-                    $cropped = $this->cropTransparentBoundingBox($subject);
-                    $canvas = $composer->compose($cropped, $options['scene_template'] ?? ($style === 'scene_template' ? 'podium' : 'parquet'), $options + ['category' => $category], $generation['binary'] ?? $options['background'] ?? null);
-                    if ($cropped !== $subject) {
-                        imagedestroy($cropped);
-                    }
+                if ($composed) {
+                    $canvas = $composer->compose($cropped, $template, $placement, $generation['binary'] ?? $options['background'] ?? null);
                 } else {
                     $canvas = $this->renderStudioPackshot($subject, match ($style) {
                         'studio_dark' => 'dark', 'studio_ambient' => 'ambient_warm', default => 'white',
@@ -170,6 +171,9 @@ class ProductStudioService
                 imagejpeg($canvas, null, self::JPEG_QUALITY);
                 $binary = (string) ob_get_clean();
                 imagedestroy($canvas);
+                if ($cropped !== $subject) {
+                    imagedestroy($cropped);
+                }
                 imagedestroy($subject);
             }
 
@@ -193,11 +197,16 @@ class ProductStudioService
                 'status' => 'success', 'engine' => $engine, 'category' => $category,
                 'product_title' => $hint, 'cutout_method' => $method, 'cutout_path' => $cutoutPath,
                 'cutout_url' => $cutoutPath ? Storage::disk('public')->url($cutoutPath) : null,
+                'crop_frame' => $cropFrame,
                 'source_path' => $sourcePath, 'source_url' => Storage::disk('public')->url($sourcePath),
                 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
                 'model_used' => $generation['model'] ?? $engine,
                 'usage' => $generation['usage'] ?? [],
-                'quality_audit' => ['status' => 'review_required', 'summary' => 'Comparez les contours, les couleurs et les inscriptions avant de valider.'],
+                'quality_audit' => ['status' => 'review_required', 'summary' => match (true) {
+                    $openAiScene => 'Le décor a été créé autour du cadrage du produit, puis ses ombres et sa lumière ont été harmonisées. Comparez le résultat avec votre photo.',
+                    $style === 'retouch' => 'Le cadrage et la lumière ont été ajustés. Comparez le résultat avec votre photo.',
+                    default => 'Vérifiez les contours, les couleurs et les inscriptions avant de valider.',
+                }],
                 'variations' => [
                     ['id' => $id, 'title' => $title, 'type' => $style, 'path' => $path, 'url' => Storage::disk('public')->url($path), 'is_source' => false, 'selected' => true],
                     ['id' => 'source_original', 'title' => 'Photo originale', 'type' => 'source', 'path' => $sourcePath, 'url' => Storage::disk('public')->url($sourcePath), 'is_source' => true, 'selected' => false],
@@ -208,6 +217,80 @@ class ProductStudioService
         return $openAiScene || $style === 'retouch' || ($style !== 'lifestyle' && (! empty($options['subject_mask']) || $this->hasUsableTransparency($imageBinary) || app(RembgService::class)->isConfigured()))
             ? $operation(false)
             : $this->withPhotoroomReservation($shop, $operation, $style === 'lifestyle');
+    }
+
+    private function preparePreviewSource(string $original, ProductPhotoComposer $composer, array &$options, ?array &$frame): string
+    {
+        $hasMask = ! empty($options['subject_mask']);
+        $cropOptions = array_intersect_key($options, array_flip(['crop_left', 'crop_top', 'crop_right', 'crop_bottom']));
+        $normalized = $this->normalizeImageBinary($original, preserveWebpAlpha: true);
+        $source = imagecreatefromstring($normalized);
+        $crop = $composer->cropSource($source, $cropOptions + ['auto_crop' => ! $hasMask], $frame);
+        $frame += ['source_width' => imagesx($source), 'source_height' => imagesy($source)];
+        if ($crop === $source) {
+            imagedestroy($source);
+
+            return $normalized;
+        }
+        if ($hasMask) {
+            $mask = imagecreatefromstring($options['subject_mask']);
+            $maskCrop = $composer->cropSource($mask, $cropOptions);
+            $options['subject_mask'] = $this->encodePreviewPng($maskCrop);
+            if ($maskCrop !== $mask) {
+                imagedestroy($maskCrop);
+            }
+            imagedestroy($mask);
+        }
+        $processingImage = $this->encodePreviewPng($crop);
+        imagedestroy($crop);
+        imagedestroy($source);
+
+        return $processingImage;
+    }
+
+    private function directProductScene(array $options, string $category, string $title): array
+    {
+        $presentation = $options['presentation'] ?? 'auto';
+        $hanging = $category === self::CATEGORY_CLOTHING_HANGING || preg_match('/cintre|portant|suspendu/iu', $title) === 1;
+        $unknownPose = $presentation === 'auto' && $category === self::CATEGORY_GENERAL && ! $hanging;
+        $anchor = match ($presentation) {
+            'hanging' => 'top',
+            'flat' => 'center',
+            'standing' => 'bottom',
+            default => match (true) {
+                $hanging => 'top',
+                $unknownPose || in_array($category, [self::CATEGORY_CLOTHING_FLAT, self::CATEGORY_JEWELRY], true) => 'center',
+                default => 'bottom',
+            },
+        };
+        $defaults = match ($anchor) {
+            'top' => ['position_y' => 28, 'scale' => 62, 'shadow' => 12],
+            'center' => ['position_y' => 51, 'scale' => 73, 'shadow' => $unknownPose ? 12 : 24],
+            'bottom' => ['position_y' => 82, 'scale' => 68, 'shadow' => 27],
+        };
+
+        return $options + ['anchor' => $anchor, 'scene_direction' => $unknownPose ? 'auto' : $anchor, 'position_x' => 50] + $defaults;
+    }
+
+    /** @param array{x: int, y: int, width: int, height: int} $box */
+    private function sceneLayoutReference(\GdImage $subject, array $box): string
+    {
+        $guide = imagecreatetruecolor(self::TARGET_SIZE, self::TARGET_SIZE);
+        imagefill($guide, 0, 0, 0xD6D5D3);
+        imagecopyresampled($guide, $subject, $box['x'], $box['y'], 0, 0, $box['width'], $box['height'], imagesx($subject), imagesy($subject));
+        $binary = $this->encodePreviewPng($guide);
+        imagedestroy($guide);
+
+        return $binary;
+    }
+
+    private function encodePreviewPng(\GdImage $image): string
+    {
+        imagesavealpha($image, true);
+        ob_start();
+        imagepng($image);
+
+        return (string) ob_get_clean();
     }
 
     private function hasUsableTransparency(string $binary): bool
@@ -960,7 +1043,7 @@ PROMPT;
      * Redimensionne en mémoire une image haute résolution (ex: smartphone 12-24 MP)
      * afin d'éviter les dépassements mémoire et timeouts PHP sur le serveur.
      */
-    public function normalizeImageBinary(string $imageBinary, int $maxDim = 1200): string
+    public function normalizeImageBinary(string $imageBinary, int $maxDim = 1200, bool $preserveWebpAlpha = false): string
     {
         if (! function_exists('imagecreatefromstring') || trim($imageBinary) === '') {
             return $imageBinary;
@@ -992,7 +1075,7 @@ PROMPT;
         imagedestroy($src);
 
         ob_start();
-        if (str_starts_with($imageBinary, "\x89PNG")) {
+        if (str_starts_with($imageBinary, "\x89PNG") || ($preserveWebpAlpha && substr($imageBinary, 8, 4) === 'WEBP')) {
             imagepng($dst);
         } else {
             imagejpeg($dst, null, 90);

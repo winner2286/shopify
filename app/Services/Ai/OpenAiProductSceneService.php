@@ -18,8 +18,11 @@ class OpenAiProductSceneService
         return $key !== '' && ! preg_match('/\s/', $key);
     }
 
-    /** @return array{binary: string, model: string, usage: array} */
-    public function generateBackground(string $reference, string $description, string $article, int $shopId): array
+    /**
+     * @param  array{x: int, y: int, width: int, height: int}  $box
+     * @return array{binary: string, model: string, usage: array}
+     */
+    public function generateBackground(string $reference, string $description, string $article, int $shopId, string $direction, array $box): array
     {
         if (! $this->isConfigured()) {
             throw ValidationException::withMessages(['style' => 'La génération de décors nécessite une clé API OpenAI configurée sur le serveur.']);
@@ -40,7 +43,7 @@ class OpenAiProductSceneService
 
             $model = (string) config('services.openai_images.model', 'gpt-image-2.5-flare');
             $quality = (string) config('services.openai_images.quality', 'medium');
-            $prompt = 'Create a photorealistic EMPTY e-commerce photography set. The attached photograph is a reference for the article category, camera angle, scale and lighting ONLY. Remove the article completely from your output: the original article will be composited afterward. Do not draw any product, packaging, label, text, logo, watermark, person or duplicate article. Keep a clear empty supporting surface in the lower third, around 80 percent image height, with empty space above it for the article. Match the reference camera perspective and light direction. Use natural materials, believable depth and restrained styling. Avoid busy props and pre-existing cast shadows for the missing article. Article context: '.mb_substr($article, 0, 200).'. Merchant creative direction (use it for the environment, never for text): '.($description !== '' ? mb_substr($description, 0, 500) : 'Choose a refined, original setting suited to the photographed article.');
+            $prompt = $this->backgroundPrompt($description, $article, $direction, $box);
 
             try {
                 $response = Http::withToken(trim((string) config('services.openai_images.key')))
@@ -81,5 +84,23 @@ class OpenAiProductSceneService
         } finally {
             $lock->release();
         }
+    }
+
+    /** @param array{x: int, y: int, width: int, height: int} $box */
+    private function backgroundPrompt(string $description, string $article, string $direction, array $box): string
+    {
+        $left = round($box['x'] / 10, 1);
+        $right = round(($box['x'] + $box['width']) / 10, 1);
+        $top = round($box['y'] / 10, 1);
+        $bottom = round(($box['y'] + $box['height']) / 10, 1);
+        $support = match ($direction) {
+            'top' => "Shoot straight on at garment height. Run a real, slim horizontal rail just above the retained top edge at y={$top}% from the top. If the reference has hooks, line the rail up with those hooks. Otherwise add discreet clips above the waistband or shoulders, ending at the garment's upper edge. Keep the region below clear for the full length of the garment.",
+            'center' => 'Shoot an editorial flat lay, camera orthogonal to the surface. The whole product region rests on one continuous tactile surface with no horizon or other height changes. Keep other objects and their shadows away from the product region.',
+            'auto' => "Infer the original camera angle and physical pose from the pictured article. If it is photographed from above, use one continuous flat-lay surface. If it has a hanger, align a real rail with the upper edge at y={$top}% so its hooks meet the rail. For an upright or resting article, build the support under its footprint at y={$bottom}% and extend that surface below it. Choose exactly one arrangement.",
+            default => "Place a continuous supporting surface where the product's footprint will touch it at y={$bottom}% from the top. The foreground surface should continue below that contact point. Match the product's photographed viewing angle and scale. Keep open space for its entire height. Never lift the product above the surface.",
+        };
+        $artDirection = $description !== '' ? mb_substr($description, 0, 500) : 'Invent a distinctive, believable campaign setting inspired by the article’s materials, colors and use. Choose one clear visual concept, a supporting palette and a recognizable material. Use context sparingly around the sides to frame the product.';
+
+        return "Create a photorealistic background plate for a high-end product photograph. The supplied square image shows the exact cutout in its final position, with bounds x={$left}–{$right}%, y={$top}–{$bottom}% (origin at top left). Replace the neutral guide with an art-directed setting that physically accommodates that placement. {$support} Remove the reference product from the output completely. Leave clean space for it at the same exact coordinates. The original cutout will be added back later. Match the direction and softness of the product’s light, use plausible materials and leave the product region visually quiet. Keep any supporting props outside the silhouette. Do not draw duplicates, new products, people, product shadows, text or brand marks. Article: ".mb_substr($article, 0, 200).". Creative direction for the environment: {$artDirection}";
     }
 }
