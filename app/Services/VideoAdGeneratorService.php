@@ -9,7 +9,9 @@ use App\Models\ProductImage;
 use App\Models\Shop;
 use App\Services\Ai\AdCreativeDirection;
 use App\Services\Ai\PhotoroomService;
+use App\Services\Ai\ProductStudioService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -266,8 +268,7 @@ class VideoAdGeneratorService
         $primary = $product->primaryImage ?? $product->images->first();
 
         if ($primary) {
-            // 1. Cache Photoroom vidéo réutilisable ou sublimation Photoroom Solution A à la demande
-            $cachedOrEnhanced = $this->resolveCachedOrEnhancedPhotoroomImage($primary, $shop, $enhancePhotoroom);
+            $cachedOrEnhanced = $this->resolveCachedOrEnhancedImage($primary, $shop, $enhancePhotoroom);
             if ($cachedOrEnhanced !== null) {
                 return $cachedOrEnhanced;
             }
@@ -307,11 +308,7 @@ class VideoAdGeneratorService
         return '';
     }
 
-    /**
-     * Retourne l'image Photoroom mise en cache pour cette photo produit (0 crédit) ou
-     * appelle Photoroom une seule fois en mode Smart Cost puis la met en cache sur disque.
-     */
-    protected function resolveCachedOrEnhancedPhotoroomImage(
+    protected function resolveCachedOrEnhancedImage(
         ProductImage $primary,
         Shop $shop,
         bool $enhancePhotoroom
@@ -329,11 +326,18 @@ class VideoAdGeneratorService
             return null;
         }
 
-        $photoroom = app(PhotoroomService::class);
-        if (! $photoroom->isConfigured() || ! $shop->hasEnoughPhotoroomCredits(1)) {
-            return null;
-        }
+        return Cache::lock('video-photo:'.$shop->id.':'.$primary->id, 150)->get(function () use ($primary, $shop, $cacheRelPath): ?string {
+            $cached = Storage::disk('public')->get($cacheRelPath);
+            if (is_string($cached) && $cached !== '') {
+                return 'data:image/png;base64,'.base64_encode($cached);
+            }
 
+            return $this->enhanceVideoImage($primary, $shop, $cacheRelPath);
+        }) ?: null;
+    }
+
+    private function enhanceVideoImage(ProductImage $primary, Shop $shop, string $cacheRelPath): ?string
+    {
         $rawBinary = null;
         if (! empty($primary->path) && Storage::disk('public')->exists($primary->path)) {
             $rawBinary = Storage::disk('public')->get($primary->path);
@@ -346,6 +350,18 @@ class VideoAdGeneratorService
         }
 
         if (! is_string($rawBinary) || $rawBinary === '') {
+            return null;
+        }
+
+        $cutout = app(ProductStudioService::class)->tryRembgCutout($rawBinary);
+        if ($cutout) {
+            app(PublicMediaStorage::class)->put($cacheRelPath, $cutout);
+
+            return 'data:image/png;base64,'.base64_encode($cutout);
+        }
+
+        $photoroom = app(PhotoroomService::class);
+        if (! $photoroom->isConfigured() || ! $shop->hasEnoughPhotoroomCredits(1)) {
             return null;
         }
 

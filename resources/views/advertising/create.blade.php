@@ -360,34 +360,34 @@
                 $prRemaining = $shop->photoroomCreditsRemaining();
                 $prMonthly = $shop->photoroomCreditsMonthly();
                 $prCanEnhance = $prConfigured && $shop->hasEnoughPhotoroomCredits(1);
+                $rembgConfigured = app(\App\Services\Ai\RembgService::class)->isConfigured();
+                $canEnhance = $rembgConfigured || $prCanEnhance;
             @endphp
-            @if ($prConfigured)
+            @if ($prConfigured || $rembgConfigured)
                 <div style="margin-top:1.5rem;padding:1rem 1.15rem;border-radius:var(--radius-sm);border:1px solid rgba(158, 27, 50, 0.25);background:rgba(158, 27, 50, 0.04)">
-                    <label style="display:flex;align-items:flex-start;gap:.75rem;cursor:{{ $prCanEnhance ? 'pointer' : 'not-allowed' }};margin:0">
+                    <label style="display:flex;align-items:flex-start;gap:.75rem;cursor:{{ $canEnhance ? 'pointer' : 'not-allowed' }};margin:0">
                         <input
                             type="checkbox"
                             name="enhance_photoroom"
                             value="1"
-                            {{ old('enhance_photoroom', $prCanEnhance ? '1' : '') ? 'checked' : '' }}
-                            {{ $prCanEnhance ? '' : 'disabled' }}
+                            {{ old('enhance_photoroom', $canEnhance ? '1' : '') ? 'checked' : '' }}
+                            {{ $canEnhance ? '' : 'disabled' }}
                             style="margin-top:.2rem;width:18px;height:18px;accent-color:var(--brand-1);flex-shrink:0"
                         >
                         <div style="flex:1;min-width:0">
                             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.25rem">
                                 <span style="font-weight:700;font-size:.94rem;color:var(--text);display:inline-flex;align-items:center;gap:.4rem">
                                     <x-icon name="sparkles" :size="16" style="color:var(--brand-1)" />
-                                    <span>Sublimer les photos produits avec Photoroom HD</span>
+                                    <span>Détourer les photos des produits</span>
                                 </span>
-                                <span class="badge {{ $prCanEnhance ? 'badge-ok' : 'badge-draft' }}" style="font-size:.75rem">
-                                    {{ $prRemaining }} / {{ $prMonthly }} photos Photoroom HD restantes
-                                </span>
+                                @if ($prConfigured)
+                                    <span class="badge {{ $prCanEnhance ? 'badge-ok' : 'badge-draft' }}" style="font-size:.75rem">
+                                        {{ $prRemaining }} / {{ $prMonthly }} crédits Photoroom restants
+                                    </span>
+                                @endif
                             </div>
                             <p style="margin:0;font-size:.82rem;color:var(--text-soft);line-height:1.4">
-                                @if ($prCanEnhance)
-                                    Chaque photo produit est détourée et mise en valeur par Photoroom une seule fois, puis réutilisée gratuitement dans toutes vos prochaines vidéos publicitaires.
-                                @else
-                                    Quota Photoroom mensuel atteint : vos vidéos utilisent automatiquement le moteur Studio local Zanika sans aucun frais supplémentaire.
-                                @endif
+                                Les photos détourées sont réutilisées dans vos prochaines vidéos. Un traitement de secours par Photoroom utilise un crédit Photoroom si votre solde le permet.
                             </p>
                         </div>
                     </label>

@@ -498,6 +498,8 @@ PROMPT;
         int $targetHeight,
         ?Shop $shop = null
     ): ?array {
+        $studioService = app(ProductStudioService::class);
+        $localCutout = $studioService->tryRembgCutout($sourceImageBinary);
         $photoroom = app(PhotoroomService::class);
         $canUsePhotoroom = $photoroom->isConfigured()
             && ($shop === null || $shop->hasEnoughPhotoroomCredits(1));
@@ -508,7 +510,7 @@ PROMPT;
             && $isGenerativeScene
             && ($shop === null || $shop->canUsePhotoroomGenerativeScene());
 
-        if ($canUseGenerativeV2) {
+        if (! $localCutout && $canUseGenerativeV2) {
             $editParams = $photoroom->mapStyleToEditParams($style, $photoroomSize);
             $version = $shop?->consumePhotoroomCredits(1);
             $edited = $photoroom->editProductImage($sourceImageBinary, $editParams);
@@ -527,9 +529,9 @@ PROMPT;
             }
         }
 
-        // Bascule : détourage (Photoroom v1/segment si configuré et quota actif, sinon local) + scène studio aux dimensions exactes
-        $studioService = app(ProductStudioService::class);
-        $cutout = $studioService->extractCutout($sourceImageBinary, $shop);
+        $cutout = $localCutout
+            ? ['binary' => $localCutout, 'method' => 'rembg_u2netp']
+            : $studioService->extractCutout($sourceImageBinary, $shop, tryRembg: false);
         $cutoutPng = $cutout['binary'] ?? null;
 
         if (! $cutoutPng || ! function_exists('imagecreatefromstring')) {
@@ -603,7 +605,7 @@ PROMPT;
 
         return [
             'binary' => $binary,
-            'model_used' => $isPhotoroomCutout ? 'photoroom-v1-segment' : 'zanika-product-studio',
+            'model_used' => $isPhotoroomCutout ? 'photoroom-v1-segment' : ($localCutout ? 'rembg_u2netp' : 'zanika-product-studio'),
             'engine' => $isPhotoroomCutout ? 'photoroom-ai' : 'zanika-product-studio',
             'step' => $isPhotoroomCutout ? 'image_studio_photoroom_segment' : 'image_studio_local',
             'ext' => 'jpg',

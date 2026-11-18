@@ -7,6 +7,8 @@ use App\Models\Plan;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\Ai\RembgService;
+use App\Services\ImageService;
+use App\Services\VideoAdGeneratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
@@ -38,16 +40,16 @@ class ProductPhotoEnginesTest extends TestCase
         ]);
     }
 
-    private function merchant(): array
+    private function merchant(string $plan = 'essentiel'): array
     {
         $user = User::factory()->create(['role' => User::ROLE_MERCHANT, 'email_verified_at' => now()]);
         $shop = Shop::create(['user_id' => $user->id, 'name' => 'Studio test', 'status' => 'draft']);
-        $shop->subscriptions()->create(['status' => 'active', 'plan_id' => Plan::where('slug', 'essentiel')->firstOrFail()->id]);
+        $shop->subscriptions()->create(['status' => 'active', 'plan_id' => Plan::where('slug', $plan)->firstOrFail()->id]);
 
         return [$user, $shop];
     }
 
-    private function image(int $size = 300, bool $mask = false, bool $complex = false): string
+    private function image(int $size = 300, bool $mask = false, bool $complex = false, bool $diffuse = false): string
     {
         $image = imagecreatetruecolor($size, $size);
         imagealphablending($image, false);
@@ -55,6 +57,9 @@ class ProductPhotoEnginesTest extends TestCase
         imagefill($image, 0, 0, imagecolorallocatealpha($image, 30, 90, 170, $mask ? 127 : 0));
         if ($complex) {
             imagefilledrectangle($image, 0, 0, $size / 2, $size, imagecolorallocate($image, 200, 100, 20));
+        }
+        if ($diffuse) {
+            imagefilledrectangle($image, $size * .15, $size * .15, $size * .85, $size * .85, imagecolorallocatealpha($image, 0, 255, 30, 60));
         }
         imagefilledrectangle($image, $size * .3, $size * .3, $size * .7, $size * .7, imagecolorallocate($image, $mask ? 0 : 180, $mask ? 255 : 20, 30));
         ob_start();
@@ -71,6 +76,69 @@ class ProductPhotoEnginesTest extends TestCase
             'photo' => UploadedFile::fake()->createWithContent('article.png', $this->image(complex: true)),
             'style' => 'lifestyle', 'scene_prompt' => 'Chambre lumineuse avec parquet', 'category_hint' => 'Baskets bordeaux',
         ]);
+    }
+
+    public function test_studio_import_uses_rembg_and_preserves_the_photoroom_balance(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Process::fake([Process::result(output: $this->image(mask: true))]);
+        [, $shop] = $this->merchant();
+        $photo = UploadedFile::fake()->createWithContent('article.png', $this->image(complex: true));
+
+        $result = app(ImageService::class)->processAndStore($photo, "shops/{$shop->id}/products", 'studio');
+
+        $this->assertSame('rembg', $result['engine']);
+        Storage::disk('public')->assertExists($result['path']);
+        $this->assertSame(0, $shop->photoroomCreditsUsedThisMonth());
+        Process::assertRanTimes(fn () => true, 1);
+        Http::assertNothingSent();
+    }
+
+    public function test_import_uses_photoroom_once_when_the_rembg_mask_is_too_diffuse(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Process::fake([Process::result(output: $this->image(mask: true, diffuse: true))]);
+        Http::fake(['https://sdk.photoroom.com/v1/segment' => Http::response($this->image(mask: true), 200, ['Content-Type' => 'image/png'])]);
+        [, $shop] = $this->merchant();
+        $photo = UploadedFile::fake()->createWithContent('article.png', $this->image(complex: true));
+
+        $result = app(ImageService::class)->processAndStore($photo, "shops/{$shop->id}/products", 'studio');
+
+        $this->assertSame('photoroom-ai', $result['engine']);
+        $this->assertSame(1, $shop->photoroomCreditsUsedThisMonth());
+        Process::assertRanTimes(fn () => true, 1);
+        Http::assertSentCount(1);
+    }
+
+    public function test_video_reuses_the_rembg_cutout_and_marketing_visual_prefers_rembg(): void
+    {
+        Storage::fake('public');
+        Http::preventStrayRequests();
+        Process::fake([Process::result(output: $this->image(mask: true))]);
+        [$merchant, $shop] = $this->merchant('pro');
+        $source = $this->image(complex: true);
+        $product = $shop->products()->create(['title' => 'Article', 'slug' => 'article', 'price' => 1500]);
+        $path = "shops/{$shop->id}/products/article.png";
+        Storage::disk('public')->put($path, $source);
+        $product->images()->create(['path' => $path]);
+
+        $videos = app(VideoAdGeneratorService::class);
+        $first = $videos->resolveProductImageUrl($product, $shop, true);
+        $this->assertStringStartsWith('data:image/png;base64,', $first);
+        $this->assertNotSame('data:image/png;base64,'.base64_encode($source), $first);
+        $this->assertSame($first, $videos->resolveProductImageUrl($product, $shop, true));
+        Process::assertRanTimes(fn () => true, 1);
+
+        $this->actingAs($merchant)->postJson(route('ai.studio.generate'), [
+            'subject' => 'Mettre en valeur cet article', 'style' => 'luxury_showroom', 'format' => '1:1',
+            'image' => UploadedFile::fake()->createWithContent('article.png', $source),
+        ])->assertOk()->assertJsonPath('model_used', 'rembg_u2netp');
+
+        $this->assertSame(0, $shop->photoroomCreditsUsedThisMonth());
+        Process::assertRanTimes(fn () => true, 2);
+        Http::assertNothingSent();
     }
 
     public function test_generated_scene_uses_rembg_and_one_openai_call_preserving_original_product_pixels(): void

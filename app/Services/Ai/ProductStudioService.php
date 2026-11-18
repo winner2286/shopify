@@ -293,7 +293,7 @@ class ProductStudioService
         return (string) ob_get_clean();
     }
 
-    private function hasUsableTransparency(string $binary): bool
+    private function hasUsableTransparency(string $binary, bool $checkSolidForeground = false): bool
     {
         $image = @imagecreatefromstring($binary);
         if (! $image) {
@@ -301,6 +301,7 @@ class ProductStudioService
         }
         $transparent = 0;
         $opaque = 0;
+        $solid = 0;
         $total = 0;
         $step = max(1, (int) ceil(max(imagesx($image), imagesy($image)) / 100));
         for ($y = 0; $y < imagesy($image); $y += $step) {
@@ -308,12 +309,14 @@ class ProductStudioService
                 $alpha = (imagecolorsforindex($image, imagecolorat($image, $x, $y)))['alpha'];
                 $transparent += $alpha > 110 ? 1 : 0;
                 $opaque += $alpha < 30 ? 1 : 0;
+                $solid += $alpha <= 12 ? 1 : 0;
                 $total++;
             }
         }
         imagedestroy($image);
 
-        return $transparent / max(1, $total) > .04 && $opaque / max(1, $total) > .04;
+        return $transparent / max(1, $total) > .04 && $opaque / max(1, $total) > .04
+            && (! $checkSolidForeground || $solid / max(1, $total - $transparent) >= .8);
     }
 
     private function hasUniformBorder(string $binary): bool
@@ -874,18 +877,42 @@ PROMPT;
         ];
     }
 
-    /**
-     * Extrait le produit de son arrière-plan (Détourage précis et fidèle).
-     * Priorité 1 : API Photoroom v1/segment (si configurée).
-     * Priorité 2 : API RMBG distante.
-     * Priorité 3 : Bascule instantanée sur l'algorithme local GD haute précision.
-     *
-     * @return array{binary: string|null, method: string}
-     */
-    public function extractCutout(string $imageBinary, ?Shop $shop = null, bool $reserved = false): array
+    public function tryRembgCutout(string $imageBinary): ?string
     {
+        $rembg = app(RembgService::class);
+        if (! $rembg->isConfigured()) {
+            return null;
+        }
+
+        $normalized = $this->normalizeImageBinary($imageBinary, preserveWebpAlpha: true);
+        if (str_starts_with($normalized, "\x89PNG") && $this->hasUsableTransparency($normalized)) {
+            return $normalized;
+        }
+        try {
+            $mask = $rembg->removeBackground($normalized);
+        } catch (ValidationException) {
+            return null;
+        }
+        if (! $mask || ! $this->hasUsableTransparency($mask, checkSolidForeground: true)) {
+            return null;
+        }
+
+        $cutout = app(ProductPhotoComposer::class)->maskSubject($normalized, $mask, refineEdges: true);
+
+        return $this->hasUsableTransparency($cutout) ? $cutout : null;
+    }
+
+    /** @return array{binary: string|null, method: string} */
+    public function extractCutout(string $imageBinary, ?Shop $shop = null, bool $reserved = false, bool $tryRembg = true): array
+    {
+        if ($this->hasUsableTransparency($imageBinary)) {
+            return ['binary' => $imageBinary, 'method' => 'source_transparency'];
+        }
+        if ($tryRembg && ($cutout = $this->tryRembgCutout($imageBinary))) {
+            return ['binary' => $cutout, 'method' => 'rembg_u2netp'];
+        }
         if ($shop !== null && ! $reserved) {
-            return $this->withPhotoroomReservation($shop, fn (bool $hasReservation) => $this->extractReservedCutout($imageBinary, $shop, $hasReservation));
+            return $this->withPhotoroomReservation($shop, fn (bool $hasReservation) => $this->extractReservedCutout($imageBinary, $shop, $hasReservation), forcePhotoroom: true);
         }
 
         return $this->extractReservedCutout($imageBinary, $shop, $reserved);
@@ -918,21 +945,7 @@ PROMPT;
 
     private function extractReservedCutout(string $imageBinary, ?Shop $shop, bool $reserved): array
     {
-        if ($this->hasUsableTransparency($imageBinary)) {
-            return ['binary' => $imageBinary, 'method' => 'source_transparency'];
-        }
-        if (app(RembgService::class)->isConfigured()) {
-            $mask = app(RembgService::class)->removeBackground($this->normalizeImageBinary($imageBinary));
-            if ($mask && $this->hasUsableTransparency($mask)) {
-                return ['binary' => app(ProductPhotoComposer::class)->maskSubject($this->normalizeImageBinary($imageBinary), $mask), 'method' => 'rembg_u2netp'];
-            }
-            if (! $this->hasUniformBorder($imageBinary)) {
-                return ['binary' => null, 'method' => 'failed'];
-            }
-        }
-        // 1. Priorité Photoroom v1/segment (si clé API configurée et quota Photoroom actif)
-        $canUsePhotoroom = ! app(RembgService::class)->isConfigured() && $this->photoroom->isConfigured()
-            && ($shop === null || $reserved);
+        $canUsePhotoroom = $this->photoroom->isConfigured() && ($shop === null || $reserved);
 
         if ($canUsePhotoroom) {
             $photoroomCutout = $this->photoroom->removeBackground($imageBinary, ['format' => 'png']);
@@ -944,7 +957,10 @@ PROMPT;
             }
         }
 
-        // 2. Tenter l'appel vers un endpoint RMBG rapide uniquement si explicitement activé
+        if (app(RembgService::class)->isConfigured() && ! $this->hasUniformBorder($imageBinary)) {
+            return ['binary' => null, 'method' => 'failed'];
+        }
+
         if (config('services.rmbg.enabled', false)) {
             $apiCutout = $this->tryRemoteRmbg($imageBinary);
             if ($apiCutout && strlen($apiCutout) > 500) {

@@ -6,6 +6,7 @@ use App\Models\AiGeneration;
 use App\Models\Shop;
 use App\Services\Ai\PhotoroomService;
 use App\Services\Ai\ProductStudioService;
+use App\Services\Ai\RembgService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -22,7 +23,7 @@ class ImageService
 
     /**
      * Traite, redimensionne et convertit une image uploadée en WebP optimisé.
-     * Supporte le mode 'studio' (Photoroom AI Studio + fallback local) et 'original' (conservation brute).
+     * Supporte le mode 'studio' (RemBG, Photoroom ou retouche locale) et 'original' (conservation brute).
      * Retourne ['path' => ..., 'thumbnail_path' => ..., 'size_bytes' => ..., 'image_data' => ...]
      */
     public function processAndStore(UploadedFile $file, string $directory, string $enhancementMode = 'studio'): array
@@ -86,9 +87,14 @@ class ImageService
             }
             imagecopyresampled($mainImage, $sourceImage, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
         } else {
-            // Mode "Sublimer avec l'IA" (Photoroom Studio si quota Photoroom actif pour la boutique, sinon studio local)
-            $photoroomApplied = false;
+            $mainImage = null;
             if (! str_contains($directory, 'logo')) {
+                $mainImage = $this->renderRembgPackshot($sourceImage, $targetSize);
+                if ($mainImage) {
+                    $usedEngine = 'rembg';
+                }
+            }
+            if (! $mainImage && ! str_contains($directory, 'logo')) {
                 $shop = null;
                 if (preg_match('#^shops/(\d+)(?:/|$)#', trim(str_replace('\\', '/', $directory), '/'), $match)) {
                     $shop = Shop::withoutGlobalScopes()->find((int) $match[1]);
@@ -116,7 +122,6 @@ class ImageService
                                 } else {
                                     $mainImage = $prGd;
                                 }
-                                $photoroomApplied = true;
                                 $usedEngine = 'photoroom-ai';
 
                                 if ($shop !== null) {
@@ -135,14 +140,14 @@ class ImageService
                                 }
                             }
                         }
-                        if (! $photoroomApplied && $shop !== null && $version !== null) {
+                        if (! $mainImage && $shop !== null && $version !== null) {
                             $shop->refundPhotoroomCredits(1, $version);
                         }
                     }
                 }
             }
 
-            if (! $photoroomApplied) {
+            if (! $mainImage) {
                 $sourceImage = $this->enhancePhotoQuality($sourceImage);
                 $mainImage = $this->formatStudioSquare($sourceImage, $targetSize);
             }
@@ -202,6 +207,36 @@ class ImageService
             'enhancement_mode' => $enhancementMode,
             'engine' => $usedEngine,
         ];
+    }
+
+    private function renderRembgPackshot(\GdImage $source, int $size): ?\GdImage
+    {
+        if (! app(RembgService::class)->isConfigured()) {
+            return null;
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        [$newWidth, $newHeight] = $this->calculateDimensions($width, $height, $size, $size);
+        $reference = imagecreatetruecolor($newWidth, $newHeight);
+        $this->preserveTransparency($reference);
+        imagecopyresampled($reference, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+        ob_start();
+        imagepng($reference);
+        $binary = (string) ob_get_clean();
+        imagedestroy($reference);
+
+        $studio = app(ProductStudioService::class);
+        $cutout = $studio->tryRembgCutout($binary);
+        if (! $cutout) {
+            return null;
+        }
+
+        $subject = imagecreatefromstring($cutout);
+        $packshot = $studio->renderStudioPackshot($subject, 'white', $size);
+        imagedestroy($subject);
+
+        return $packshot;
     }
 
     /**

@@ -812,7 +812,7 @@ class PhotoroomIntegrationTest extends TestCase
         // L'écran de création affiche bien l'option Photoroom Solution A
         $this->actingAs($merchant)->get(route('ads.create'))
             ->assertOk()
-            ->assertSee('Sublimer les photos produits avec Photoroom HD');
+            ->assertSee('Détourer les photos des produits');
 
         // 1. Première vidéo avec sublimation Photoroom -> 1 seul appel Photoroom, mise en cache sur disque
         $firstResponse = $this->actingAs($merchant)->post(route('ads.store'), [
