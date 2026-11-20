@@ -23,7 +23,7 @@
     <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=4">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=4">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=4">
-    <link rel="manifest" href="{{ asset('manifest.json') }}?v=4">
+    <link rel="manifest" href="{{ asset('manifest.json') }}?v=5">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,6 +31,7 @@
     <meta name="theme-color" content="#07080C" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-title" content="Zanika">
     
+    <script src="{{ asset('js/pwa-install.js') }}?v={{ filemtime(public_path('js/pwa-install.js')) }}" @auth data-mobile-install @endauth></script>
     <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -174,7 +175,7 @@
                                     <x-icon name="sun" :size="15" />
                                     <span>Changer de thème (Sombre / Clair)</span>
                                 </button>
-                                <button type="button" class="nav-more-item" onclick="openInstallGuideModal()" style="width:100%;background:transparent;border:none;text-align:left;font-family:inherit;cursor:pointer;color:var(--brand-1)">
+                                <button type="button" class="nav-more-item" data-pwa-guide style="width:100%;background:transparent;border:none;text-align:left;font-family:inherit;cursor:pointer;color:var(--brand-1)">
                                     <x-icon name="download" :size="15" />
                                     <span>Installer l'application</span>
                                 </button>
@@ -367,7 +368,7 @@
                     <span style="font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--bg-soft);border:1px solid var(--border);color:var(--text)">Basculer</span>
                 </button>
 
-                <button type="button" class="mobile-plus-item" onclick="openInstallGuideModal()" style="width:100%;background:linear-gradient(135deg, rgba(158,27,50,0.12), rgba(244,63,94,0.08));border:1px solid rgba(158,27,50,0.3);text-align:left;font-family:inherit;cursor:pointer">
+                <button type="button" class="mobile-plus-item" data-pwa-guide style="width:100%;background:linear-gradient(135deg, rgba(158,27,50,0.12), rgba(244,63,94,0.08));border:1px solid rgba(158,27,50,0.3);text-align:left;font-family:inherit;cursor:pointer">
                     <div class="mobile-plus-icon" style="background:linear-gradient(135deg, var(--brand-1), #dc2626);color:#ffffff;box-shadow:0 3px 10px rgba(158,27,50,0.35)">
                         <x-icon name="download" :size="20" />
                     </div>
@@ -554,267 +555,164 @@
             });
         </script>
 
-        <!-- Modal Guide Installation Écran d'accueil (PWA / Raccourci Mobile) -->
-        <div id="install-guide-modal" class="install-guide-modal" role="dialog" aria-modal="true" aria-labelledby="install-modal-title" style="display:none">
-            <div class="install-guide-backdrop" onclick="closeInstallGuideModal()"></div>
-            <div class="install-guide-dialog">
-                <!-- En-tête -->
-                <div class="install-guide-header">
-                    <div class="install-app-preview">
-                        <img src="{{ asset('apple-touch-icon.png') }}?v=3" alt="Zanika" class="install-app-icon" width="50" height="50">
-                        <div>
-                            <h3 id="install-modal-title" class="install-modal-title">Installer Zanika</h3>
-                            <p class="install-modal-subtitle">Accédez à votre boutique en 1 clic depuis votre écran d'accueil</p>
-                        </div>
-                    </div>
-                    <button type="button" class="install-modal-close" onclick="closeInstallGuideModal()" aria-label="Fermer">✕</button>
-                </div>
-
-                <!-- Onglets OS (iOS / Android) -->
-                <div class="install-tabs-nav" role="tablist">
-                    <button type="button" id="tab-btn-ios" class="install-tab-btn active" role="tab" aria-selected="true" onclick="switchInstallTab('ios')">
-                        <span class="tab-icon">
-                            <x-icon name="apple" :size="20" />
-                        </span>
-                        <span>iPhone & iPad</span>
-                        <small class="tab-sub">Navigateur Safari</small>
-                    </button>
-                    <button type="button" id="tab-btn-android" class="install-tab-btn" role="tab" aria-selected="false" onclick="switchInstallTab('android')">
-                        <span class="tab-icon">
-                            <x-icon name="android" :size="20" />
-                        </span>
-                        <span>Android</span>
-                        <small class="tab-sub">Chrome / Samsung</small>
-                    </button>
-                </div>
-
-                <!-- Bouton d'installation native (si supporté par Chrome / Android) -->
-                <div id="pwa-native-install-wrap" style="display:none;margin-bottom:1rem">
-                    <button type="button" id="pwa-native-install-btn" class="btn btn-primary" style="width:100%;padding:.85rem;font-size:1rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;box-shadow:0 4px 16px rgba(158,27,50,0.4)">
-                        <x-icon name="download" :size="20" />
-                        <span>Installer l'application maintenant</span>
-                    </button>
-                </div>
-
-                <!-- Contenu Onglet iOS (Safari) -->
-                <div id="install-content-ios" class="install-tab-content active" role="tabpanel">
-                    <div class="install-steps-list">
-                        <div class="install-step-item">
-                            <div class="install-step-badge">1</div>
-                            <div class="install-step-body">
-                                <strong>Appuyez sur le bouton Partager</strong>
-                                <p>Dans <strong>Safari</strong>, touchez l'icône de partage 
-                                    <span class="ios-share-badge">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                                    </span> 
-                                    située dans la barre de menu en bas de votre écran.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="install-step-item">
-                            <div class="install-step-badge">2</div>
-                            <div class="install-step-body">
-                                <strong>Sélectionnez « Sur l'écran d'accueil »</strong>
-                                <p>Faites défiler le menu vers le bas et touchez l'option 
-                                    <span class="ios-action-badge">
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                                        Sur l'écran d'accueil
-                                    </span>.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="install-step-item">
-                            <div class="install-step-badge">3</div>
-                            <div class="install-step-body">
-                                <strong>Touchez « Ajouter »</strong>
-                                <p>Confirmez en haut à droite. L'icône Zanika est désormais sur votre téléphone et s'ouvrira en plein écran comme une vraie application !</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Contenu Onglet Android (Chrome / Samsung) -->
-                <div id="install-content-android" class="install-tab-content" role="tabpanel" style="display:none">
-                    <div class="install-steps-list">
-                        <div class="install-step-item">
-                            <div class="install-step-badge">1</div>
-                            <div class="install-step-body">
-                                <strong>Ouvrez le menu Chrome</strong>
-                                <p>Touchez les <strong>3 petits points ⋮</strong> tout en haut à droite du navigateur.</p>
-                            </div>
-                        </div>
-
-                        <div class="install-step-item">
-                            <div class="install-step-badge">2</div>
-                            <div class="install-step-body">
-                                <strong>Sélectionnez « Installer l'application »</strong>
-                                <p>Appuyez sur <strong>« Installer l'application »</strong> (ou <strong>« Ajouter à l'écran d'accueil »</strong> selon votre téléphone).</p>
-                            </div>
-                        </div>
-
-                        <div class="install-step-item">
-                            <div class="install-step-badge">3</div>
-                            <div class="install-step-body">
-                                <strong>Validez l'installation</strong>
-                                <p>Confirmez. L'application Zanika est prête à être utilisée depuis votre écran d'accueil !</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pied de modale -->
-                <div class="install-guide-footer">
-                    <div class="install-footer-note">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#10b981;flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        <span>Ultra-léger, aucune place prise en mémoire, mises à jour automatiques.</span>
-                    </div>
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="closeInstallGuideModal()" style="font-weight:600">J'ai compris</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bannière flottante d'installation PWA Mobile Zanika -->
-        <div id="pwa-floating-banner" style="display:none;position:fixed;bottom:72px;left:50%;transform:translateX(-50%);z-index:9990;width:calc(100% - 24px);max-width:440px;background:rgba(15, 23, 42, 0.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(158,27,50,0.4);border-radius:14px;padding:.75rem 1rem;box-shadow:0 8px 30px rgba(0,0,0,0.55);align-items:center;justify-content:space-between;gap:.75rem;box-sizing:border-box">
-            <div style="display:flex;align-items:center;gap:.65rem;min-width:0">
-                <img src="{{ asset('images/brand/icon-192.png') }}" alt="Zanika" style="width:38px;height:38px;border-radius:9px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.3);flex-shrink:0">
-                <div style="min-width:0;line-height:1.25">
-                    <strong style="font-size:.86rem;color:#ffffff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zanika Cockpit</strong>
-                    <span style="font-size:.74rem;color:#94a3b8;display:block">Installer l'application sur votre écran</span>
-                </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
-                <button type="button" onclick="triggerPwaInstallFromBanner()" class="btn btn-sm btn-primary" style="padding:.45rem .85rem;font-size:.8rem;font-weight:700;border-radius:8px;box-shadow:0 2px 10px rgba(158,27,50,0.4)">
-                    Installer
-                </button>
-                <button type="button" onclick="dismissPwaBanner()" aria-label="Fermer" style="background:transparent;border:none;color:#94a3b8;padding:.3rem .5rem;cursor:pointer;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center">
-                    ✕
-                </button>
-            </div>
-        </div>
-
-        <script>
-            var _deferredInstallPrompt = null;
-
-            function isPwaStandalone() {
-                return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || 
-                       (window.navigator && window.navigator.standalone === true);
-            }
-
-            function checkAndShowPwaBanner() {
-                if (isPwaStandalone()) return;
-                if (sessionStorage.getItem('zanika_pwa_dismissed')) return;
-                
-                var banner = document.getElementById('pwa-floating-banner');
-                if (banner) {
-                    banner.style.display = 'flex';
-                }
-            }
-
-            function dismissPwaBanner() {
-                var banner = document.getElementById('pwa-floating-banner');
-                if (banner) banner.style.display = 'none';
-                sessionStorage.setItem('zanika_pwa_dismissed', '1');
-            }
-
-            function triggerPwaInstallFromBanner() {
-                dismissPwaBanner();
-                if (_deferredInstallPrompt) {
-                    _deferredInstallPrompt.prompt();
-                    _deferredInstallPrompt.userChoice.then(function(choice) {
-                        if (choice.outcome === 'accepted') {
-                            var banner = document.getElementById('pwa-floating-banner');
-                            if (banner) banner.style.display = 'none';
-                        }
-                        _deferredInstallPrompt = null;
-                    });
-                } else {
-                    openInstallGuideModal();
-                }
-            }
-
-            window.addEventListener('beforeinstallprompt', function(e) {
-                e.preventDefault();
-                _deferredInstallPrompt = e;
-                var wrap = document.getElementById('pwa-native-install-wrap');
-                if (wrap) wrap.style.display = 'block';
-                checkAndShowPwaBanner();
-            });
-
-            // Afficher discrètement la bannière après 3 secondes sur mobile si pas encore installé
-            window.addEventListener('DOMContentLoaded', function() {
-                var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                if (isMobile && !isPwaStandalone()) {
-                    setTimeout(checkAndShowPwaBanner, 2500);
-                }
-            });
-
-            function openInstallGuideModal() {
-                closeMobilePlusMenu();
-                var m = document.getElementById('install-guide-modal');
-                if (!m) return;
-                
-                var ua = navigator.userAgent || navigator.vendor || window.opera || '';
-                var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-                
-                switchInstallTab(isIOS ? 'ios' : 'android');
-                m.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-
-            function closeInstallGuideModal() {
-                var m = document.getElementById('install-guide-modal');
-                if (m) {
-                    m.style.display = 'none';
-                    document.body.style.overflow = '';
-                }
-            }
-
-            function switchInstallTab(platform) {
-                var tabIos = document.getElementById('tab-btn-ios');
-                var tabAndroid = document.getElementById('tab-btn-android');
-                var contentIos = document.getElementById('install-content-ios');
-                var contentAndroid = document.getElementById('install-content-android');
-                
-                if (platform === 'ios') {
-                    if (tabIos) { tabIos.classList.add('active'); tabIos.setAttribute('aria-selected', 'true'); }
-                    if (tabAndroid) { tabAndroid.classList.remove('active'); tabAndroid.setAttribute('aria-selected', 'false'); }
-                    if (contentIos) contentIos.style.display = 'block';
-                    if (contentAndroid) contentAndroid.style.display = 'none';
-                } else {
-                    if (tabAndroid) { tabAndroid.classList.add('active'); tabAndroid.setAttribute('aria-selected', 'true'); }
-                    if (tabIos) { tabIos.classList.remove('active'); tabIos.setAttribute('aria-selected', 'false'); }
-                    if (contentAndroid) contentAndroid.style.display = 'block';
-                    if (contentIos) contentIos.style.display = 'none';
-                }
-            }
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closeInstallGuideModal();
-                }
-            });
-
-            document.addEventListener('DOMContentLoaded', function() {
-                var nativeBtn = document.getElementById('pwa-native-install-btn');
-                if (nativeBtn) {
-                    nativeBtn.addEventListener('click', function() {
-                        if (_deferredInstallPrompt) {
-                            _deferredInstallPrompt.prompt();
-                            _deferredInstallPrompt.userChoice.then(function(choice) {
-                                if (choice.outcome === 'accepted') {
-                                    closeInstallGuideModal();
-                                }
-                                _deferredInstallPrompt = null;
-                            });
-                        }
-                    });
-                }
-            });
-        </script>
         @include('partials.ai_bubble')
     @endauth
+
+    <!-- Guide d'installation de Zanika -->
+    <div id="install-guide-modal" class="install-guide-modal" role="dialog" aria-modal="true" aria-labelledby="install-modal-title" style="display:none">
+        <div class="install-guide-backdrop" data-pwa-close></div>
+        <div class="install-guide-dialog">
+            <!-- En-tête -->
+            <div class="install-guide-header">
+                <div class="install-app-preview">
+                    <img src="{{ asset('apple-touch-icon.png') }}?v=3" alt="Zanika" class="install-app-icon" width="50" height="50">
+                    <div>
+                        <h3 id="install-modal-title" class="install-modal-title">Installer Zanika</h3>
+                        <p class="install-modal-subtitle">Ouvrez Zanika directement depuis votre appareil.</p>
+                    </div>
+                </div>
+                <button type="button" class="install-modal-close" data-pwa-close aria-label="Fermer">✕</button>
+            </div>
+
+            <!-- Onglets OS (iOS / Android) -->
+            <div class="install-tabs-nav" role="tablist">
+                <button type="button" id="tab-btn-ios" class="install-tab-btn active" role="tab" aria-selected="true" aria-controls="install-content-ios" data-pwa-platform="ios">
+                    <span class="tab-icon">
+                        <x-icon name="apple" :size="20" />
+                    </span>
+                    <span>iPhone & iPad</span>
+                    <small class="tab-sub">Navigateur Safari</small>
+                </button>
+                <button type="button" id="tab-btn-android" class="install-tab-btn" role="tab" aria-selected="false" aria-controls="install-content-android" data-pwa-platform="android">
+                    <span class="tab-icon">
+                        <x-icon name="android" :size="20" />
+                    </span>
+                    <span>Android</span>
+                    <small class="tab-sub">Chrome / Samsung</small>
+                </button>
+            </div>
+
+            <div id="pwa-native-install-wrap" style="display:none;margin-bottom:1rem">
+                <button type="button" id="pwa-native-install-btn" data-pwa-install class="btn btn-primary" style="width:100%;padding:.85rem;font-size:1rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.5rem;box-shadow:0 4px 16px rgba(158,27,50,0.4)">
+                    <x-icon name="download" :size="20" />
+                    <span>Installer l'application maintenant</span>
+                </button>
+            </div>
+
+            <!-- Contenu Onglet iOS (Safari) -->
+            <div id="install-content-ios" class="install-tab-content" role="tabpanel">
+                <div class="install-steps-list">
+                    <div class="install-step-item">
+                        <div class="install-step-badge">1</div>
+                        <div class="install-step-body">
+                            <strong>Appuyez sur le bouton Partager</strong>
+                            <p>Dans <strong>Safari</strong>, touchez l'icône de partage
+                                <span class="ios-share-badge">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                                </span>
+                                située dans la barre de menu en bas de votre écran.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="install-step-item">
+                        <div class="install-step-badge">2</div>
+                        <div class="install-step-body">
+                            <strong>Sélectionnez « Sur l'écran d'accueil »</strong>
+                            <p>Faites défiler le menu vers le bas et touchez l'option
+                                <span class="ios-action-badge">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;display:inline-block"><rect width="18" height="18" x="3" y="3" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                    Sur l'écran d'accueil
+                                </span>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="install-step-item">
+                        <div class="install-step-badge">3</div>
+                        <div class="install-step-body">
+                            <strong>Touchez « Ajouter »</strong>
+                            <p>Confirmez en haut à droite. L'icône Zanika est désormais sur votre téléphone et s'ouvrira en plein écran comme une vraie application !</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu Onglet Android (Chrome / Samsung) -->
+            <div id="install-content-android" class="install-tab-content" role="tabpanel" hidden>
+                <div class="install-steps-list">
+                    <div class="install-step-item">
+                        <div class="install-step-badge">1</div>
+                        <div class="install-step-body">
+                            <strong>Ouvrez le menu Chrome</strong>
+                            <p>Touchez les <strong>3 petits points ⋮</strong> tout en haut à droite du navigateur.</p>
+                        </div>
+                    </div>
+
+                    <div class="install-step-item">
+                        <div class="install-step-badge">2</div>
+                        <div class="install-step-body">
+                            <strong>Sélectionnez « Installer l'application »</strong>
+                            <p>Appuyez sur <strong>« Installer l'application »</strong> (ou <strong>« Ajouter à l'écran d'accueil »</strong> selon votre téléphone).</p>
+                        </div>
+                    </div>
+
+                    <div class="install-step-item">
+                        <div class="install-step-badge">3</div>
+                        <div class="install-step-body">
+                            <strong>Validez l'installation</strong>
+                            <p>Confirmez. L'application Zanika est prête à être utilisée depuis votre écran d'accueil !</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="install-content-desktop" class="install-tab-content" hidden>
+                <div class="install-steps-list">
+                    <div class="install-step-item">
+                        <div class="install-step-body">
+                            <strong>Google Chrome</strong>
+                            <p>Dans le menu ⋮, ouvrez <strong>Caster, enregistrer et partager</strong>, puis cliquez sur <strong>Installer la page en tant qu’appli</strong>.</p>
+                        </div>
+                    </div>
+                    <div class="install-step-item">
+                        <div class="install-step-body">
+                            <strong>Microsoft Edge</strong>
+                            <p>Dans le menu ⋯, ouvrez <strong>Autres outils</strong>, puis <strong>Applications</strong> et <strong>Installer ce site en tant qu’application</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pied de modale -->
+            <div class="install-guide-footer">
+                <div class="install-footer-note">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#10b981;flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span>Ultra-léger, aucune place prise en mémoire, mises à jour automatiques.</span>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" data-pwa-close style="font-weight:600">J'ai compris</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bannière d'installation de Zanika -->
+    <div id="pwa-floating-banner" style="display:none;position:fixed;bottom:72px;left:50%;transform:translateX(-50%);z-index:9990;width:calc(100% - 24px);max-width:440px;background:rgba(15, 23, 42, 0.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(158,27,50,0.4);border-radius:14px;padding:.75rem 1rem;box-shadow:0 8px 30px rgba(0,0,0,0.55);align-items:center;justify-content:space-between;gap:.75rem;box-sizing:border-box">
+        <div style="display:flex;align-items:center;gap:.65rem;min-width:0">
+            <img src="{{ asset('images/brand/icon-192.png') }}" alt="Zanika" style="width:38px;height:38px;border-radius:9px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.3);flex-shrink:0">
+            <div style="min-width:0;line-height:1.25">
+                <strong style="font-size:.86rem;color:#ffffff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zanika Cockpit</strong>
+                <span id="pwa-banner-description" style="font-size:.74rem;color:#94a3b8;display:block">Installer l'application sur votre écran</span>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+            <button type="button" id="pwa-banner-install" data-pwa-install class="btn btn-sm btn-primary" style="padding:.45rem .85rem;font-size:.8rem;font-weight:700;border-radius:8px;box-shadow:0 2px 10px rgba(158,27,50,0.4)">
+                Installer
+            </button>
+            <button type="button" id="pwa-banner-dismiss" aria-label="Fermer" style="background:transparent;border:none;color:#94a3b8;padding:.3rem .5rem;cursor:pointer;font-size:1.1rem;line-height:1;display:flex;align-items:center;justify-content:center">
+                ✕
+            </button>
+        </div>
+    </div>
 
     @hasSection('footer')
         @yield('footer')
