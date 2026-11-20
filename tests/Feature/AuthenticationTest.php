@@ -58,7 +58,8 @@ class AuthenticationTest extends TestCase
             ->assertSee('js/pwa-install.js')
             ->assertSee('id="pwa-floating-banner"', false)
             ->assertSee('id="pwa-banner-install" data-pwa-install', false)
-            ->assertDontSee('id="install-content-desktop"', false);
+            ->assertSee('id="install-content-desktop"', false)
+            ->assertSee('data-pwa-desktop-browser="edge"', false);
         $this->get('/inscription')->assertOk();
         $this->get('/connexion')->assertOk();
         $this->get('/mot-de-passe-oublie')->assertOk();

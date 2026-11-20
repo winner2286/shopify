@@ -667,6 +667,21 @@
                 </div>
             </div>
 
+            <div id="install-content-desktop" class="install-tab-content" hidden>
+                <div class="install-steps-list">
+                    <div class="install-step-item">
+                        <div class="install-step-body">
+                            <strong>Installer depuis votre navigateur</strong>
+                            <p data-pwa-desktop-browser="edge" hidden>Dans Edge, ouvrez <strong>⋯ → Autres outils → Applications → Installer ce site en tant qu’application</strong>.</p>
+                            <p data-pwa-desktop-browser="chrome" hidden>Cliquez sur l’icône d’installation dans la barre d’adresse. Dans Chrome, vous pouvez aussi ouvrir <strong>⋮ → Caster, enregistrer et partager → Installer la page en tant qu’appli</strong>.</p>
+                            <p data-pwa-desktop-browser="firefox-windows" hidden>Dans Firefox pour Windows, cliquez sur l’icône d’application web dans la barre d’adresse.</p>
+                            <p data-pwa-desktop-browser="safari" hidden>Dans Safari sur Mac, ouvrez <strong>Fichier → Ajouter au Dock</strong>.</p>
+                            <p data-pwa-desktop-browser="other" hidden>Utilisez l’icône d’installation dans la barre d’adresse si elle apparaît. Vous pouvez aussi ouvrir Zanika avec Chrome ou Edge pour l’installer.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Pied de modale -->
             <div class="install-guide-footer">
                 <div class="install-footer-note">

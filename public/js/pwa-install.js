@@ -5,6 +5,7 @@
     const isMobile = isIOS || /Android/.test(userAgent);
     const showMobileBanner = document.currentScript.hasAttribute('data-mobile-install');
     const standalone = window.matchMedia('(display-mode: standalone)');
+    const dismissalKey = isMobile ? 'zanika_pwa_dismissed' : 'zanika_pwa_desktop_dismissed';
 
     let installPrompt;
     let supportsWebInstall = typeof navigator.install === 'function';
@@ -40,19 +41,28 @@
         let mobileDelayElapsed = false;
 
         try {
-            bannerDismissed = sessionStorage.getItem('zanika_pwa_dismissed') === '1';
+            bannerDismissed = sessionStorage.getItem(dismissalKey) === '1';
         } catch {}
 
         if (!isMobile) {
             document.getElementById('pwa-banner-description').textContent =
                 'Accédez à Zanika depuis votre bureau';
+            const desktopBrowsers = [
+                ['edge', /Edg\//],
+                ['firefox-windows', /Windows.*Firefox\//],
+                ['safari', /Macintosh.*Version\/.*Safari\//],
+                ['chrome', /Chrome\//],
+            ];
+            const browser = desktopBrowsers.find(([, pattern]) => pattern.test(userAgent))?.[0] ?? 'other';
+            modal.querySelectorAll('[data-pwa-desktop-browser]').forEach((instruction) => {
+                instruction.hidden = instruction.dataset.pwaDesktopBrowser !== browser;
+            });
+            tabs.style.display = 'none';
         }
 
         updateControls = () => {
             const canInstall = !installed && (supportsWebInstall || Boolean(installPrompt));
-            const showBanner = isMobile
-                ? showMobileBanner && (canInstall || mobileDelayElapsed)
-                : canInstall;
+            const showBanner = !isMobile || (showMobileBanner && (canInstall || mobileDelayElapsed));
 
             banner.style.display = !installed && !bannerDismissed && showBanner ? 'flex' : 'none';
             nativeInstall.style.display = canInstall ? 'block' : 'none';
@@ -60,7 +70,7 @@
                 button.disabled = installPending;
             });
             menuInstallButtons.forEach((button) => {
-                button.style.display = !installed && (isMobile || canInstall) ? '' : 'none';
+                button.style.display = installed ? 'none' : '';
             });
 
             if (installed) closeGuide();
@@ -78,13 +88,13 @@
         }
 
         function openGuide(trigger) {
-            if (!isMobile || modal.style.display === 'flex') return;
+            if (modal.style.display === 'flex') return;
 
             if (document.getElementById('mobile-plus-sheet')?.classList.contains('open')) {
                 closeMobilePlusMenu();
             }
             guideTrigger = trigger;
-            selectPlatform(isIOS ? 'ios' : 'android');
+            selectPlatform(isMobile ? (isIOS ? 'ios' : 'android') : 'desktop');
             overflowBeforeGuide = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
             modal.style.display = 'flex';
@@ -99,27 +109,43 @@
             guideTrigger?.focus();
         }
 
+        function waitForInstallPrompt() {
+            return new Promise((resolve) => {
+                const finish = () => {
+                    clearTimeout(timeout);
+                    window.removeEventListener('beforeinstallprompt', finish);
+                    resolve();
+                };
+                const timeout = setTimeout(finish, 600);
+                window.addEventListener('beforeinstallprompt', finish);
+            });
+        }
+
         async function install(event) {
             if (installed || installPending) return;
 
             const trigger = event.currentTarget;
-            if (!supportsWebInstall && !installPrompt) {
-                openGuide(trigger);
-                return;
-            }
-
             installPending = true;
             updateControls();
             try {
+                // Le premier clic peut déclencher beforeinstallprompt sur les versions Chromium antérieures.
+                if (!isMobile && !supportsWebInstall && !installPrompt
+                    && 'onbeforeinstallprompt' in window && navigator.userActivation?.isActive) {
+                    await waitForInstallPrompt();
+                }
+                if (installed) return;
+
                 if (supportsWebInstall) {
                     await navigator.install();
                     installed = true;
-                } else {
+                } else if (installPrompt && navigator.userActivation?.isActive !== false) {
                     const prompt = installPrompt;
                     installPrompt = undefined;
                     await prompt.prompt();
                     const choice = await prompt.userChoice;
                     installed = installed || choice.outcome === 'accepted';
+                } else {
+                    openGuide(trigger);
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -142,7 +168,7 @@
         banner.querySelector('#pwa-banner-dismiss').addEventListener('click', () => {
             bannerDismissed = true;
             try {
-                sessionStorage.setItem('zanika_pwa_dismissed', '1');
+                sessionStorage.setItem(dismissalKey, '1');
             } catch {}
             updateControls();
         });
