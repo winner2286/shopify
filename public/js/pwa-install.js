@@ -47,17 +47,6 @@
         if (!isMobile) {
             document.getElementById('pwa-banner-description').textContent =
                 'Accédez à Zanika depuis votre bureau';
-            const desktopBrowsers = [
-                ['edge', /Edg\//],
-                ['firefox-windows', /Windows.*Firefox\//],
-                ['safari', /Macintosh.*Version\/.*Safari\//],
-                ['chrome', /Chrome\//],
-            ];
-            const browser = desktopBrowsers.find(([, pattern]) => pattern.test(userAgent))?.[0] ?? 'other';
-            modal.querySelectorAll('[data-pwa-desktop-browser]').forEach((instruction) => {
-                instruction.hidden = instruction.dataset.pwaDesktopBrowser !== browser;
-            });
-            tabs.style.display = 'none';
         }
 
         updateControls = () => {
@@ -94,7 +83,7 @@
                 closeMobilePlusMenu();
             }
             guideTrigger = trigger;
-            selectPlatform(isMobile ? (isIOS ? 'ios' : 'android') : 'desktop');
+            selectPlatform(isIOS ? 'ios' : 'android');
             overflowBeforeGuide = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
             modal.style.display = 'flex';
@@ -116,9 +105,18 @@
                     window.removeEventListener('beforeinstallprompt', finish);
                     resolve();
                 };
-                const timeout = setTimeout(finish, 600);
+                const timeout = setTimeout(finish, 1500);
                 window.addEventListener('beforeinstallprompt', finish);
             });
+        }
+
+        function showInstallUnavailable(trigger) {
+            if (isMobile) {
+                openGuide(trigger);
+                return;
+            }
+
+            window.BoutiqToast?.('Le navigateur n’a pas pu lancer l’installation.', 'warning');
         }
 
         async function install(event) {
@@ -145,12 +143,14 @@
                     const choice = await prompt.userChoice;
                     installed = installed || choice.outcome === 'accepted';
                 } else {
-                    openGuide(trigger);
+                    showInstallUnavailable(trigger);
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     supportsWebInstall = false;
-                    openGuide(trigger);
+                    showInstallUnavailable(trigger);
+                } else if (!isMobile) {
+                    window.BoutiqToast?.('L’installation n’a pas abouti.', 'info');
                 }
             } finally {
                 installPending = false;
