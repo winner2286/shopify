@@ -29,6 +29,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const banner = document.getElementById('pwa-floating-banner');
+        const bannerInstallButton = document.getElementById('pwa-banner-install');
         const modal = document.getElementById('install-guide-modal');
         const nativeInstall = document.getElementById('pwa-native-install-wrap');
         const tabs = modal.querySelector('.install-tabs-nav');
@@ -54,6 +55,7 @@
             const showBanner = !isMobile || (showMobileBanner && (canInstall || mobileDelayElapsed));
 
             banner.style.display = !installed && !bannerDismissed && showBanner ? 'flex' : 'none';
+            bannerInstallButton.textContent = installPending ? 'Installation…' : 'Installer';
             nativeInstall.style.display = canInstall ? 'block' : 'none';
             installButtons.forEach((button) => {
                 button.disabled = installPending;
@@ -105,7 +107,8 @@
                     window.removeEventListener('beforeinstallprompt', finish);
                     resolve();
                 };
-                const timeout = setTimeout(finish, 1500);
+                // Chromium conserve l’activation du clic pendant au plus cinq secondes.
+                const timeout = setTimeout(finish, 4500);
                 window.addEventListener('beforeinstallprompt', finish);
             });
         }
