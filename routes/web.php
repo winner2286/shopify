@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::get('/zanika.webmanifest', [HomeController::class, 'manifest'])->name('pwa.manifest');
 Route::get('/recu/{orderNumber}', [OrderController::class, 'publicReceipt'])->name('orders.public_receipt');
 
 Route::middleware('guest')->group(function () {

@@ -29,6 +29,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const banner = document.getElementById('pwa-floating-banner');
+        const bannerDescription = document.getElementById('pwa-banner-description');
         const bannerInstallButton = document.getElementById('pwa-banner-install');
         const modal = document.getElementById('install-guide-modal');
         const nativeInstall = document.getElementById('pwa-native-install-wrap');
@@ -39,6 +40,7 @@
         let overflowBeforeGuide;
         let guideTrigger;
         let bannerDismissed = false;
+        let installedInBrowser = false;
         let mobileDelayElapsed = false;
 
         try {
@@ -46,22 +48,24 @@
         } catch {}
 
         if (!isMobile) {
-            document.getElementById('pwa-banner-description').textContent =
-                'Accédez à Zanika depuis votre bureau';
+            bannerDescription.textContent = 'Accédez à Zanika depuis votre bureau';
         }
 
         updateControls = () => {
             const canInstall = !installed && (supportsWebInstall || Boolean(installPrompt));
             const showBanner = !isMobile || (showMobileBanner && (canInstall || mobileDelayElapsed));
+            const canOpen = installedInBrowser && supportsWebInstall;
 
             banner.style.display = !installed && !bannerDismissed && showBanner ? 'flex' : 'none';
-            bannerInstallButton.textContent = installPending ? 'Installation…' : 'Installer';
+            bannerInstallButton.style.display = installedInBrowser && !canOpen ? 'none' : '';
+            const actionLabel = canOpen ? 'Ouvrir' : 'Installer';
+            bannerInstallButton.textContent = installPending ? 'En cours…' : actionLabel;
             nativeInstall.style.display = canInstall ? 'block' : 'none';
             installButtons.forEach((button) => {
                 button.disabled = installPending;
             });
             menuInstallButtons.forEach((button) => {
-                button.style.display = installed ? 'none' : '';
+                button.style.display = installed || installedInBrowser ? 'none' : '';
             });
 
             if (installed) closeGuide();
@@ -119,11 +123,14 @@
                 return;
             }
 
-            window.BoutiqToast?.('Le navigateur n’a pas pu lancer l’installation.', 'warning');
+            const message = installedInBrowser
+                ? 'Le navigateur n’a pas pu ouvrir Zanika.'
+                : 'Le navigateur n’a pas pu lancer l’installation.';
+            window.BoutiqToast?.(message, 'warning');
         }
 
         async function install(event) {
-            if (installed || installPending) return;
+            if (installed || installPending || (installedInBrowser && !supportsWebInstall)) return;
 
             const trigger = event.currentTarget;
             installPending = true;
@@ -134,7 +141,7 @@
                     && 'onbeforeinstallprompt' in window && navigator.userActivation?.isActive) {
                     await waitForInstallPrompt();
                 }
-                if (installed) return;
+                if (installed || (installedInBrowser && !supportsWebInstall)) return;
 
                 if (supportsWebInstall) {
                     await navigator.install();
@@ -153,7 +160,10 @@
                     supportsWebInstall = false;
                     showInstallUnavailable(trigger);
                 } else if (!isMobile) {
-                    window.BoutiqToast?.('L’installation n’a pas abouti.', 'info');
+                    const message = installedInBrowser
+                        ? 'L’ouverture de Zanika n’a pas abouti.'
+                        : 'L’installation n’a pas abouti.';
+                    window.BoutiqToast?.(message, 'info');
                 }
             } finally {
                 installPending = false;
@@ -185,6 +195,18 @@
                 updateControls();
             }, 2500);
         }
+
+        if (!isMobile && !installed && typeof navigator.getInstalledRelatedApps === 'function') {
+            const appId = new URL('/', window.location.href).href;
+            navigator.getInstalledRelatedApps().then((apps) => {
+                installedInBrowser = apps.some((app) => app.platform === 'webapp' && app.id === appId);
+                if (installedInBrowser) {
+                    bannerDescription.textContent = 'Zanika est déjà installée dans ce navigateur.';
+                    updateControls();
+                }
+            }).catch(() => {});
+        }
+
         updateControls();
     });
 })();

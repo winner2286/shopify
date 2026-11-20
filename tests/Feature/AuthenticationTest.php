@@ -55,6 +55,7 @@ class AuthenticationTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('Essentiel')
+            ->assertSee('rel="manifest" href="/zanika.webmanifest"', false)
             ->assertSee('js/pwa-install.js')
             ->assertSee('id="pwa-floating-banner"', false)
             ->assertSee('id="pwa-banner-install" data-pwa-install', false)
@@ -62,6 +63,21 @@ class AuthenticationTest extends TestCase
         $this->get('/inscription')->assertOk();
         $this->get('/connexion')->assertOk();
         $this->get('/mot-de-passe-oublie')->assertOk();
+    }
+
+    public function test_le_manifeste_identifie_zanika_sur_le_domaine_courant(): void
+    {
+        config()->set('app.url', 'https://zanika.example.test');
+
+        $this->get('https://zanika.example.test/zanika.webmanifest')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/manifest+json')
+            ->assertJsonPath('id', '/')
+            ->assertJsonPath('start_url', '/')
+            ->assertJsonPath('scope', '/')
+            ->assertJsonPath('related_applications.0.platform', 'webapp')
+            ->assertJsonPath('related_applications.0.url', '/zanika.webmanifest')
+            ->assertJsonPath('related_applications.0.id', 'https://zanika.example.test/');
     }
 
     public function test_inscription_cree_compte_non_verifie_et_envoie_un_code(): void

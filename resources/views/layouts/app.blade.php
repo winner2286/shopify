@@ -23,7 +23,7 @@
     <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=4">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=4">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=4">
-    <link rel="manifest" href="{{ asset('manifest.json') }}?v=5">
+    <link rel="manifest" href="{{ route('pwa.manifest', absolute: false) }}">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -684,7 +684,7 @@
             <img src="{{ asset('images/brand/icon-192.png') }}" alt="Zanika" style="width:38px;height:38px;border-radius:9px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.3);flex-shrink:0">
             <div style="min-width:0;line-height:1.25">
                 <strong style="font-size:.86rem;color:#ffffff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zanika Cockpit</strong>
-                <span id="pwa-banner-description" style="font-size:.74rem;color:#94a3b8;display:block">Installer l'application sur votre écran</span>
+                <span id="pwa-banner-description" aria-live="polite" style="font-size:.74rem;color:#94a3b8;display:block">Installer l'application sur votre écran</span>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
