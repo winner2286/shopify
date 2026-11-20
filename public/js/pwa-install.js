@@ -4,7 +4,6 @@
         || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isMobile = isIOS || /Android/.test(userAgent);
     const showMobileBanner = document.currentScript.hasAttribute('data-mobile-install');
-    const hasDesktopGuide = !isMobile && /Chrome\/|Edg\//.test(userAgent);
     const standalone = window.matchMedia('(display-mode: standalone)');
 
     let installPrompt;
@@ -29,12 +28,11 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const banner = document.getElementById('pwa-floating-banner');
-        const bannerButton = document.getElementById('pwa-banner-install');
         const modal = document.getElementById('install-guide-modal');
         const nativeInstall = document.getElementById('pwa-native-install-wrap');
         const tabs = modal.querySelector('.install-tabs-nav');
         const closeButton = modal.querySelector('.install-modal-close');
-        const guideButtons = document.querySelectorAll('[data-pwa-guide]');
+        const menuInstallButtons = document.querySelectorAll('[data-pwa-install-menu]');
         const installButtons = document.querySelectorAll('[data-pwa-install]');
         let overflowBeforeGuide;
         let guideTrigger;
@@ -54,21 +52,18 @@
             const canInstall = !installed && (supportsWebInstall || Boolean(installPrompt));
             const showBanner = isMobile
                 ? showMobileBanner && (canInstall || mobileDelayElapsed)
-                : canInstall || hasDesktopGuide;
+                : canInstall;
 
             banner.style.display = !installed && !bannerDismissed && showBanner ? 'flex' : 'none';
-            bannerButton.textContent = canInstall || isMobile ? 'Installer' : 'Voir comment';
             nativeInstall.style.display = canInstall ? 'block' : 'none';
             installButtons.forEach((button) => {
                 button.disabled = installPending;
             });
+            menuInstallButtons.forEach((button) => {
+                button.style.display = !installed && (isMobile || canInstall) ? '' : 'none';
+            });
 
-            if (installed) {
-                guideButtons.forEach((button) => {
-                    button.style.display = 'none';
-                });
-                closeGuide();
-            }
+            if (installed) closeGuide();
         };
 
         function selectPlatform(platform) {
@@ -83,14 +78,13 @@
         }
 
         function openGuide(trigger) {
-            if (modal.style.display === 'flex') return;
+            if (!isMobile || modal.style.display === 'flex') return;
 
             if (document.getElementById('mobile-plus-sheet')?.classList.contains('open')) {
                 closeMobilePlusMenu();
             }
             guideTrigger = trigger;
-            tabs.style.display = isMobile ? '' : 'none';
-            selectPlatform(isMobile ? (isIOS ? 'ios' : 'android') : 'desktop');
+            selectPlatform(isIOS ? 'ios' : 'android');
             overflowBeforeGuide = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
             modal.style.display = 'flex';
@@ -139,9 +133,6 @@
         }
 
         installButtons.forEach((button) => button.addEventListener('click', install));
-        guideButtons.forEach((button) => {
-            button.addEventListener('click', () => openGuide(button));
-        });
         modal.querySelectorAll('[data-pwa-close]').forEach((button) => {
             button.addEventListener('click', closeGuide);
         });

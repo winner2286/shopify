@@ -175,7 +175,7 @@
                                     <x-icon name="sun" :size="15" />
                                     <span>Changer de thème (Sombre / Clair)</span>
                                 </button>
-                                <button type="button" class="nav-more-item" data-pwa-guide style="width:100%;background:transparent;border:none;text-align:left;font-family:inherit;cursor:pointer;color:var(--brand-1)">
+                                <button type="button" class="nav-more-item" data-pwa-install data-pwa-install-menu style="display:none;width:100%;background:transparent;border:none;text-align:left;font-family:inherit;cursor:pointer;color:var(--brand-1)">
                                     <x-icon name="download" :size="15" />
                                     <span>Installer l'application</span>
                                 </button>
@@ -368,7 +368,7 @@
                     <span style="font-size:0.75rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--bg-soft);border:1px solid var(--border);color:var(--text)">Basculer</span>
                 </button>
 
-                <button type="button" class="mobile-plus-item" data-pwa-guide style="width:100%;background:linear-gradient(135deg, rgba(158,27,50,0.12), rgba(244,63,94,0.08));border:1px solid rgba(158,27,50,0.3);text-align:left;font-family:inherit;cursor:pointer">
+                <button type="button" class="mobile-plus-item" data-pwa-install data-pwa-install-menu style="display:none;width:100%;background:linear-gradient(135deg, rgba(158,27,50,0.12), rgba(244,63,94,0.08));border:1px solid rgba(158,27,50,0.3);text-align:left;font-family:inherit;cursor:pointer">
                     <div class="mobile-plus-icon" style="background:linear-gradient(135deg, var(--brand-1), #dc2626);color:#ffffff;box-shadow:0 3px 10px rgba(158,27,50,0.35)">
                         <x-icon name="download" :size="20" />
                     </div>
@@ -662,23 +662,6 @@
                         <div class="install-step-body">
                             <strong>Validez l'installation</strong>
                             <p>Confirmez. L'application Zanika est prête à être utilisée depuis votre écran d'accueil !</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="install-content-desktop" class="install-tab-content" hidden>
-                <div class="install-steps-list">
-                    <div class="install-step-item">
-                        <div class="install-step-body">
-                            <strong>Google Chrome</strong>
-                            <p>Dans le menu ⋮, ouvrez <strong>Caster, enregistrer et partager</strong>, puis cliquez sur <strong>Installer la page en tant qu’appli</strong>.</p>
-                        </div>
-                    </div>
-                    <div class="install-step-item">
-                        <div class="install-step-body">
-                            <strong>Microsoft Edge</strong>
-                            <p>Dans le menu ⋯, ouvrez <strong>Autres outils</strong>, puis <strong>Applications</strong> et <strong>Installer ce site en tant qu’application</strong>.</p>
                         </div>
                     </div>
                 </div>
